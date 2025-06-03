@@ -1,0 +1,11 @@
+spring.application.name: HongBookStore
+
+#spring:
+#  datasource:
+#    url: jdbc:mysql://localhost:3306/campus?serverTimezone=Asia/Seoul&useSSL=false
+#    username: root
+#    password: secret
+#  jpa:
+#    hibernate:
+#      ddl-auto: update
+#    open-in-view: false

@@ -29,8 +29,11 @@ dependencies {
     // JPA
     // implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
     // MySQL DB
-    // runtimeOnly 'com.mysql:mysql-connector-j'
+    // runtimeOnly 'com.mysql:mysql-connector-j:8.4.0'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -44,4 +47,49 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// 프론트엔드와 백엔드 함께 build하기
+def frontendDir = "$projectDir/src/main/frontend"
+
+sourceSets {
+    main {
+        resources { srcDirs = ["$projectDir/src/main/resources"]
+        }
+    }
+}
+
+processResources {
+    dependsOn "copyReactBuildFiles"
+}
+
+tasks.register("installReact", Exec) {
+    workingDir "$frontendDir"
+    inputs.dir "$frontendDir"
+    group = BasePlugin.BUILD_GROUP
+    if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
+        commandLine "npm.cmd", "audit", "fix"
+        commandLine "npm.cmd", "install"
+    } else {
+        commandLine "npm", "audit", "fix"
+        commandLine "npm", "install"
+    }
+}
+
+tasks.register("buildReact", Exec) {
+    dependsOn "installReact"
+    workingDir "$frontendDir"
+    inputs.dir "$frontendDir"
+    group = BasePlugin.BUILD_GROUP
+    if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
+        commandLine "npm.cmd", "run-script", "build"
+    } else {
+        commandLine "npm", "run-script", "build"
+    }
+}
+
+tasks.register("copyReactBuildFiles", Copy) {
+    dependsOn "buildReact"
+    from "$frontendDir/build"
+    into "$projectDir/src/main/resources/static"
 }
