@@ -237,7 +237,7 @@ function Register() {
           <div className="input-group email-group">
             <input
               name="emailId"
-              placeholder={t('emailIdPlaceholder') || t('emailPlaceholder')}
+              placeholder={t('emailIdPlaceholder')}
               value={form.emailId}
               onChange={handleChange}
             />
@@ -247,7 +247,7 @@ function Register() {
               value={form.emailDomain}
               onChange={handleDomainChange}
             >
-              <option value="">{t('domainSelect') || '선택'}</option>
+              <option value="">{t('domainSelect')}</option>
               {EMAIL_DOMAINS.map(domain => (
                 <option key={domain} value={domain}>{domain}</option>
               ))}
@@ -255,12 +255,12 @@ function Register() {
             {showCustomDomain && (
               <input
                 name="customDomain"
-                placeholder={t('customDomainPlaceholder') || '직접입력'}
+                placeholder={t('customDomainPlaceholder')}
                 value={form.customDomain}
                 onChange={handleChange}
               />
             )}
-            <button type="button" onClick={handleEmailCheck}>{t('emailCheck') || t('idCheck')}</button>
+            <button type="button" onClick={handleEmailCheck}>{t('emailCheck')}</button>
           </div>
           {emailCheckMsg && (
             <div style={{ color: emailCheckColor, fontSize: '13px', marginBottom: '8px', marginLeft: '2px' }}>{emailCheckMsg}</div>

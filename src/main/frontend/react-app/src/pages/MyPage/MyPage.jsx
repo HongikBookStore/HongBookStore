@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { useTranslation } from 'react-i18next';
 
 const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/150';
 
@@ -489,6 +490,7 @@ const StepIndicator = styled.div`
 `;
 
 const MyPage = () => {
+  const { t } = useTranslation();
   const [isVerified, setIsVerified] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -600,7 +602,7 @@ const MyPage = () => {
         </ProfileImage>
         <ProfileInfo>
           <ProfileName>
-            <h2>John Doe</h2>
+            <h2>{t('profileName', 'John Doe')}</h2>
             <RatingSection>
               <AverageRating rating={8.5}>8.5</AverageRating>
               <RatingCount>(24)</RatingCount>
@@ -611,25 +613,25 @@ const MyPage = () => {
 
       <SettingsContainer>
         <SettingsSection>
-          <h3>Email Address</h3>
+          <h3>{t('emailAddress')}</h3>
           <div className="email-display">
             <i className="fas fa-envelope"></i>
-            <span>john.doe@example.com</span>
+            <span>{t('profileEmail', 'john.doe@example.com')}</span>
           </div>
         </SettingsSection>
 
         <SettingsSection>
           <h3>
-            School Verification
+            {t('schoolVerification')}
             <span className={`verification-status ${isVerified ? 'verified' : 'not-verified'}`}>
               <i className={`fas fa-${isVerified ? 'check-circle' : 'exclamation-circle'}`}></i>
-              {isVerified ? 'Verified' : 'Not Verified'}
+              {isVerified ? t('verified') : t('notVerified')}
             </span>
           </h3>
-          <p>Verify your school email to access all features</p>
+          <p>{t('verifySchoolEmailDesc')}</p>
           
           {!isVerified && !showVerificationForm && (
-            <Button onClick={() => setShowVerificationForm(true)}>Verify School Email</Button>
+            <Button onClick={() => setShowVerificationForm(true)}>{t('verifySchoolEmail')}</Button>
           )}
 
           {showVerificationForm && !isVerified && (
@@ -638,12 +640,12 @@ const MyPage = () => {
                 <StepIndicator>
                   <div className={`step ${verificationStep === 'email' ? 'active' : 'completed'}`}>
                     <i className={`fas fa-${verificationStep === 'email' ? 'envelope' : 'check-circle'}`}></i>
-                    Enter School Email
+                    {t('enterSchoolEmail')}
                   </div>
                   <div className="step-divider"></div>
                   <div className={`step ${verificationStep === 'code' ? 'active' : ''}`}>
                     <i className={`fas fa-${verificationStep === 'code' ? 'key' : 'key'}`}></i>
-                    Enter Verification Code
+                    {t('enterVerificationCode')}
                   </div>
                 </StepIndicator>
 
@@ -651,15 +653,15 @@ const MyPage = () => {
                   <>
                     <EmailInput
                       type="email"
-                      placeholder="Enter your school email address"
+                      placeholder={t('enterSchoolEmail')}
                       value={schoolEmail}
                       onChange={(e) => setSchoolEmail(e.target.value)}
                     />
-                    <Button onClick={handleSendVerification}>Send Verification Code</Button>
+                    <Button onClick={handleSendVerification}>{t('sendVerificationCode')}</Button>
                     {verificationStatus === 'error' && (
                       <VerificationMessage className="error">
                         <i className="fas fa-exclamation-circle"></i>
-                        Please enter a valid school email address.
+                        {t('emailInvalid')}
                       </VerificationMessage>
                     )}
                   </>
@@ -668,7 +670,7 @@ const MyPage = () => {
                     <InputGroup>
                       <VerificationInput
                         type="text"
-                        placeholder="Enter 6-digit code"
+                        placeholder={t('enterVerificationCode')}
                         maxLength={6}
                         value={verificationCode}
                         onChange={(e) => {
@@ -684,13 +686,13 @@ const MyPage = () => {
                     {verificationStatus === 'error' && (
                       <VerificationMessage className="error">
                         <i className="fas fa-exclamation-circle"></i>
-                        Invalid verification code. Please try again.
+                        {t('invalidVerificationCode')}
                       </VerificationMessage>
                     )}
 
                     <VerificationMessage className="info">
                       <i className="fas fa-info-circle"></i>
-                      We've sent a verification code to {schoolEmail}
+                      {t('sendVerificationCode')} {schoolEmail}
                     </VerificationMessage>
 
                     <ResendButton 
@@ -699,8 +701,8 @@ const MyPage = () => {
                     >
                       <i className="fas fa-redo"></i>
                       {resendTimer > 0 
-                        ? `Resend code in ${resendTimer}s` 
-                        : 'Resend verification code'}
+                        ? t('resendCodeIn', { sec: resendTimer })
+                        : t('resendCode')}
                     </ResendButton>
                   </>
                 )}
@@ -711,14 +713,14 @@ const MyPage = () => {
           {isVerified && (
             <VerificationMessage className="success">
               <i className="fas fa-check-circle"></i>
-              Your school email has been successfully verified.
+              {t('yourSchoolEmailVerified')}
             </VerificationMessage>
           )}
         </SettingsSection>
 
         <LocationSection>
-          <h3>Location Management</h3>
-          <p>Manage your preferred meeting locations for book exchanges</p>
+          <h3>{t('locationManagement')}</h3>
+          <p>{t('manageLocations')}</p>
           
           <div className="location-list">
             {locations.map(location => (
@@ -730,15 +732,14 @@ const MyPage = () => {
                 <div className="location-actions">
                   <IconButton 
                     onClick={() => handleSetDefault(location.id)}
-                    title={location.isDefault ? "Default Location" : "Set as Default"}
+                    title={location.isDefault ? t('defaultLocation') : t('setDefault')}
                   >
-                    <i className={`fas fa-${location.isDefault ? 'star' : 'star'}`} 
-                       style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
+                    <i className={`fas fa-star`} style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
                   </IconButton>
                   <IconButton 
                     onClick={() => handleDeleteLocation(location.id)}
                     className="danger"
-                    title="Delete Location"
+                    title={t('deleteLocation')}
                   >
                     <i className="fas fa-trash"></i>
                   </IconButton>
@@ -752,39 +753,39 @@ const MyPage = () => {
               <div className="add-location-form">
                 <Input
                   type="text"
-                  placeholder="Location Name"
+                  placeholder={t('locationName')}
                   value={newLocation.name}
                   onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
                 />
                 <Input
                   type="text"
-                  placeholder="Address"
+                  placeholder={t('address')}
                   value={newLocation.address}
                   onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
                 />
                 <div className="button-group">
-                  <Button onClick={handleAddLocation}>Add Location</Button>
-                  <Button onClick={() => setShowAddForm(false)}>Cancel</Button>
+                  <Button onClick={handleAddLocation}>{t('addNewLocation')}</Button>
+                  <Button onClick={() => setShowAddForm(false)}>{t('cancel')}</Button>
                 </div>
               </div>
             ) : (
               <Button onClick={() => setShowAddForm(true)}>
-                <i className="fas fa-plus"></i> Add New Location
+                <i className="fas fa-plus"></i> {t('addNewLocation')}
               </Button>
             )}
           </div>
         </LocationSection>
 
         <SettingsSection>
-          <h3>Change Password</h3>
-          <p>Update your account password</p>
-          <Button>Change Password</Button>
+          <h3>{t('changePassword')}</h3>
+          <p>{t('changePasswordDesc')}</p>
+          <Button>{t('changePassword')}</Button>
         </SettingsSection>
 
         <SettingsSection>
-          <h3>Delete Account</h3>
-          <p>Permanently delete your account and all associated data</p>
-          <Button className="danger">Delete Account</Button>
+          <h3>{t('deleteAccount')}</h3>
+          <p>{t('deleteAccountDesc')}</p>
+          <Button className="danger">{t('deleteAccount')}</Button>
         </SettingsSection>
       </SettingsContainer>
     </MyPageContainer>

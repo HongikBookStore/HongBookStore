@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
 
 const FooterContainer = styled.footer`
   background: var(--text);
@@ -122,29 +123,30 @@ const FooterBottom = styled.div`
 `;
 
 const Footer = () => {
+  const { t } = useTranslation();
   return (
     <FooterContainer>
       <FooterContent>
         <FooterSection>
-          <h3>Quick Links</h3>
+          <h3>{t('quickLinks')}</h3>
           <ul>
-            <li><FooterLink to="/marketplace">Book Market</FooterLink></li>
-            <li><FooterLink to="/community">Community</FooterLink></li>
-            <li><FooterLink to="/map">Map</FooterLink></li>
-            <li><FooterLink to="/mypage">My Page</FooterLink></li>
+            <li><FooterLink to="/marketplace">{t('marketplace')}</FooterLink></li>
+            <li><FooterLink to="/community">{t('community')}</FooterLink></li>
+            <li><FooterLink to="/map">{t('map')}</FooterLink></li>
+            <li><FooterLink to="/mypage">{t('mypage')}</FooterLink></li>
           </ul>
         </FooterSection>
         <FooterSection>
-          <h3>Support</h3>
+          <h3>{t('support')}</h3>
           <ul>
-            <li><FooterLink to="/faq">FAQ</FooterLink></li>
-            <li><FooterLink to="/contact">Contact Us</FooterLink></li>
-            <li><FooterLink to="/privacy">Privacy Policy</FooterLink></li>
-            <li><FooterLink to="/terms">Terms of Service</FooterLink></li>
+            <li><FooterLink to="/faq">{t('faq')}</FooterLink></li>
+            <li><FooterLink to="/contact">{t('contactUs')}</FooterLink></li>
+            <li><FooterLink to="/privacy">{t('privacyPolicy')}</FooterLink></li>
+            <li><FooterLink to="/terms">{t('termsOfService')}</FooterLink></li>
           </ul>
         </FooterSection>
         <FooterSection>
-          <h3>Connect With Us</h3>
+          <h3>{t('connectWithUs')}</h3>
           <SocialLinks>
             <SocialLink href="#" aria-label="Facebook">
               <i className="fab fa-facebook"></i>
@@ -159,7 +161,7 @@ const Footer = () => {
         </FooterSection>
       </FooterContent>
       <FooterBottom>
-        <p>&copy; {new Date().getFullYear()} Hong Bookstore. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Hong Bookstore. {t('allRightsReserved')}</p>
       </FooterBottom>
     </FooterContainer>
   );

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
 
 const HeroSection = styled.section`
   min-height: 100vh;
@@ -128,17 +129,17 @@ const SecondaryButton = styled(Button)`
 `;
 
 const Hero = () => {
+  const { t } = useTranslation();
   return (
     <HeroSection>
       <HeroContent>
-        <Title>Welcome to Hong Bookstore</Title>
+        <Title>{t('welcomeTitle')}</Title>
         <Description>
-          Discover, share, and trade books with fellow readers in your community.
-          Join our vibrant book-loving community today!
+          {t('welcomeDesc')}
         </Description>
         <ButtonGroup>
-          <PrimaryButton to="/marketplace">Explore Books</PrimaryButton>
-          <SecondaryButton to="/register">Join Now</SecondaryButton>
+          <PrimaryButton to="/marketplace">{t('exploreBooks')}</PrimaryButton>
+          <SecondaryButton to="/register">{t('joinNow')}</SecondaryButton>
         </ButtonGroup>
       </HeroContent>
     </HeroSection>

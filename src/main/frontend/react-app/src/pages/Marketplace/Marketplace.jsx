@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
 
 const MarketplaceContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -165,22 +166,23 @@ const BookStatus = styled.span`
 `;
 
 const Marketplace = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sample book data
   const books = [
     {
       id: 1,
-      title: "The Great Gatsby",
-      author: "F. Scott Fitzgerald",
+      title: t('gatsby'),
+      author: t('fitzgerald'),
       price: "15,000",
       status: "available",
       image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&auto=format&fit=crop&q=60"
     },
     {
       id: 2,
-      title: "To Kill a Mockingbird",
-      author: "Harper Lee",
+      title: t('mockingbird'),
+      author: t('harperlee'),
       price: "12,000",
       status: "reserved",
       image: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=500&auto=format&fit=crop&q=60"
@@ -191,9 +193,9 @@ const Marketplace = () => {
   return (
     <MarketplaceContainer>
       <Header>
-        <Title>Book Marketplace</Title>
+        <Title>{t('marketplaceTitle')}</Title>
         <Description>
-          Discover and trade books with fellow readers. Find your next favorite book or sell your collection.
+          {t('marketplaceDesc')}
         </Description>
       </Header>
 
@@ -202,14 +204,14 @@ const Marketplace = () => {
           <i className="fas fa-search"></i>
           <input
             type="text"
-            placeholder="Search books..."
+            placeholder={t('searchBooks')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </SearchBar>
         <FilterButton>
           <i className="fas fa-filter"></i>
-          Filter
+          {t('filter')}
         </FilterButton>
       </Controls>
 
@@ -224,7 +226,7 @@ const Marketplace = () => {
               <BookAuthor>{book.author}</BookAuthor>
               <BookPrice>₩{book.price}</BookPrice>
               <BookStatus status={book.status}>
-                {book.status === 'available' ? 'Available' : 'Reserved'}
+                {book.status === 'available' ? t('available') : t('reserved')}
               </BookStatus>
             </BookInfo>
           </BookCard>

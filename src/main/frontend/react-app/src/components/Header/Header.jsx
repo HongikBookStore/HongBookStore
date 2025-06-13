@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 
 const HeaderContainer = styled.header`
   background: rgba(255, 255, 255, 0.8);
@@ -139,17 +141,53 @@ const Hamburger = styled.button`
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [lang, setLang] = useState(localStorage.getItem('lang') || 'ko');
+  const isLoggedIn = !!localStorage.getItem('token');
+
+  const handleLangChange = (e) => {
+    const newLang = e.target.value;
+    setLang(newLang);
+    localStorage.setItem('lang', newLang);
+    i18n.changeLanguage(newLang);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+    window.location.reload();
+  };
 
   return (
     <HeaderContainer>
       <NavContainer>
+        <div style={{ position: 'absolute', left: '2rem' }}>
+          <select value={lang} onChange={handleLangChange}>
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
         <Logo to="/">Hong Bookstore</Logo>
         <NavLinks isOpen={isOpen}>
-          <li><NavLink to="/marketplace">Book Market</NavLink></li>
-          <li><NavLink to="/community">Community</NavLink></li>
-          <li><NavLink to="/map">Map</NavLink></li>
-          <li><NavLink to="/mypage">My Page</NavLink></li>
+          <li><NavLink to="/marketplace">{t('marketplace')}</NavLink></li>
+          <li><NavLink to="/community">{t('community')}</NavLink></li>
+          <li><NavLink to="/map">{t('map')}</NavLink></li>
+          <li><NavLink to="/mypage">{t('mypage')}</NavLink></li>
         </NavLinks>
+        <div style={{ position: 'absolute', right: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {!isLoggedIn ? (
+            <>
+              <NavLink to="/login">{t('login')}</NavLink>
+              <NavLink to="/register">{t('signup')}</NavLink>
+            </>
+          ) : (
+            <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '1.125rem', color: 'var(--text)' }}>
+              {t('logout')}
+            </button>
+          )}
+        </div>
         <Hamburger onClick={() => setIsOpen(!isOpen)}>
           <span />
           <span />
