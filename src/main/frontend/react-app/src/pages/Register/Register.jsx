@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import '../i18n';
-import './Register.css';
+import '../../i18n';
+import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import Header from './Header';
+import Header from '../../components/Header/Header';
 
 const EMAIL_DOMAINS = [
   'naver.com',
@@ -14,6 +14,154 @@ const EMAIL_DOMAINS = [
   'daum.net',
   '직접입력'
 ];
+
+const RegisterContainer = styled.div`
+  padding: 8rem 2rem 4rem;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  @media (max-width: 600px) {
+    padding: 4rem 0.5rem 2rem;
+    max-width: 98vw;
+  }
+`;
+
+const Title = styled.h2`
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 2rem;
+`;
+
+const StyledForm = styled.form`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+`;
+
+const InputGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  &.email-group {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+    &.email-group {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+`;
+
+const Input = styled.input`
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  transition: var(--transition);
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+`;
+
+const Select = styled.select`
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  transition: var(--transition);
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+`;
+
+const CheckButton = styled.button`
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  &:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+`;
+
+const SubmitButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 0.5rem;
+  &:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+`;
+
+const SocialSection = styled.div`
+  margin-top: 2rem;
+  text-align: center;
+`;
+
+const SocialBtn = styled.button`
+  margin: 0 0.5rem;
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+  background: ${({ type }) =>
+    type === 'naver' ? '#03c75a' :
+    type === 'kakao' ? '#fee500' :
+    type === 'google' ? '#4285F4' :
+    'var(--primary)'};
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: var(--transition);
+  &:hover {
+    opacity: 0.85;
+  }
+`;
+
+const Message = styled.div`
+  color: ${({ color }) => color || 'var(--primary)'};
+  font-size: 1rem;
+  margin: 0.5rem 0 0 2px;
+  text-align: left;
+`;
 
 function Register() {
   const { t, i18n } = useTranslation();
@@ -217,56 +365,55 @@ function Register() {
   };
 
   return (
-    <div className="register-container">
+    <>
       <Header lang={lang} onLangChange={handleLangChange} />
-      <main className="main-content">
-        <h2 className="page-title">{t('signup')}</h2>
-        <form className="register-form" onSubmit={handleSubmit}>
-          <div className="input-group">
-            <input
+      <RegisterContainer>
+        <Title>{t('signup')}</Title>
+        <StyledForm onSubmit={handleSubmit}>
+          <InputGroup>
+            <Input
               name="userId"
               placeholder={t('idPlaceholder')}
               value={form.userId}
               onChange={handleChange}
             />
-            <button type="button" onClick={handleIdCheck}>{t('idCheck')}</button>
-          </div>
-          {idCheckMsg && (
-            <div style={{ color: idCheckColor, fontSize: '13px', marginBottom: '8px', marginLeft: '2px' }}>{idCheckMsg}</div>
-          )}
-          <div className="input-group email-group">
-            <input
+            <CheckButton type="button" onClick={handleIdCheck}>{t('idCheck')}</CheckButton>
+          </InputGroup>
+          {idCheckMsg && <Message color={idCheckColor}>{idCheckMsg}</Message>}
+          <InputGroup className="email-group">
+            <Input
               name="emailId"
               placeholder={t('emailIdPlaceholder')}
               value={form.emailId}
               onChange={handleChange}
+              style={{ minWidth: 0, flex: 2 }}
             />
             <span>@</span>
-            <select
+            <Select
               name="emailDomain"
               value={form.emailDomain}
               onChange={handleDomainChange}
+              style={{ minWidth: 0, flex: 1 }}
             >
               <option value="">{t('domainSelect')}</option>
               {EMAIL_DOMAINS.map(domain => (
                 <option key={domain} value={domain}>{domain}</option>
               ))}
-            </select>
+            </Select>
             {showCustomDomain && (
-              <input
+              <Input
                 name="customDomain"
                 placeholder={t('customDomainPlaceholder')}
                 value={form.customDomain}
                 onChange={handleChange}
+                style={{ minWidth: 0, flex: 1 }}
               />
             )}
-            <button type="button" onClick={handleEmailCheck}>{t('emailCheck')}</button>
-          </div>
-          {emailCheckMsg && (
-            <div style={{ color: emailCheckColor, fontSize: '13px', marginBottom: '8px', marginLeft: '2px' }}>{emailCheckMsg}</div>
-          )}
-          <div className="input-group">
-            <input
+            <CheckButton type="button" onClick={handleEmailCheck} style={{ whiteSpace: 'nowrap', height: '42px', marginLeft: 4 }}>{t('emailCheck')}</CheckButton>
+          </InputGroup>
+          {emailCheckMsg && <Message color={emailCheckColor}>{emailCheckMsg}</Message>}
+          <InputGroup>
+            <Input
               name="password"
               type={showPw ? 'text' : 'password'}
               placeholder={t('pwPlaceholder')}
@@ -282,12 +429,10 @@ function Register() {
             >
               {showPw ? <FaEyeSlash /> : <FaEye />}
             </button>
-          </div>
-          {pwMsg && (
-            <div style={{ color: pwMsgColor, fontSize: '13px', marginBottom: '8px', marginLeft: '2px' }}>{pwMsg}</div>
-          )}
-          <div className="input-group">
-            <input
+          </InputGroup>
+          {pwMsg && <Message color={pwMsgColor}>{pwMsg}</Message>}
+          <InputGroup>
+            <Input
               name="password2"
               type={showPw2 ? 'text' : 'password'}
               placeholder={t('pw2Placeholder')}
@@ -303,23 +448,19 @@ function Register() {
             >
               {showPw2 ? <FaEyeSlash /> : <FaEye />}
             </button>
-          </div>
-          {pw2Msg && (
-            <div style={{ color: pw2MsgColor, fontSize: '13px', marginBottom: '8px', marginLeft: '2px' }}>{pw2Msg}</div>
-          )}
-          <button type="submit">{t('submit')}</button>
-        </form>
-        {submitMsg && (
-          <div style={{ color: submitMsgColor, fontSize: '15px', margin: '16px 0 0 2px', textAlign: 'center' }}>{submitMsg}</div>
-        )}
-        <div className="social-login-section">
-          <p>{t('social')}</p>
-          <button className="social-btn naver" type="button" onClick={() => handleSocialLogin('naver')}>{t('naver')}</button>
-          <button className="social-btn kakao" type="button" onClick={() => handleSocialLogin('kakao')}>{t('kakao')}</button>
-          <button className="social-btn google" type="button" onClick={() => handleSocialLogin('google')}>{t('google')}</button>
-        </div>
-      </main>
-    </div>
+          </InputGroup>
+          {pw2Msg && <Message color={pw2MsgColor}>{pw2Msg}</Message>}
+          <SubmitButton type="submit">{t('submit')}</SubmitButton>
+        </StyledForm>
+        {submitMsg && <Message color={submitMsgColor}>{submitMsg}</Message>}
+        <SocialSection>
+          <p>{t('socialLogin')}</p>
+          <SocialBtn type="naver" aria-label="Naver Login" onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
+          <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
+          <SocialBtn type="google" aria-label="Google Login" onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
+        </SocialSection>
+      </RegisterContainer>
+    </>
   );
 }
 

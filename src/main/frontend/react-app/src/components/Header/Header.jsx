@@ -15,7 +15,8 @@ const HeaderContainer = styled.header`
   z-index: 1000;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 `;
 
 const NavContainer = styled.nav`
@@ -24,9 +25,9 @@ const NavContainer = styled.nav`
   margin: 0 auto;
   padding: 0 4rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 5rem;
+  flex-direction: column;
+  align-items: stretch;
+  position: relative;
 
   @media (max-width: 1440px) {
     padding: 0 3rem;
@@ -36,9 +37,34 @@ const NavContainer = styled.nav`
     padding: 0 2rem;
   }
 
-  @media (max-width: 768px) {
-    padding: 0 1.5rem;
+  @media (max-width: 900px) {
+    padding: 0 0.5rem;
   }
+`;
+
+const FlexRow = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 48px;
+  padding: 0.25rem 0 0.15rem 0;
+  @media (max-width: 900px) {
+    min-height: 40px;
+    padding: 0.1rem 0;
+  }
+`;
+
+const LeftBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+`;
+
+const LangSelectBox = styled.div`
+  display: flex;
+  align-items: center;
+  margin-right: 1.2rem;
 `;
 
 const Logo = styled(Link)`
@@ -60,22 +86,30 @@ const Logo = styled(Link)`
 
 const NavLinks = styled.ul`
   display: flex;
-  gap: 3rem;
+  gap: 2rem;
   list-style: none;
-
-  @media (max-width: 768px) {
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin: 0;
+  @media (max-width: 900px) {
     display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
     flex-direction: column;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.97);
     backdrop-filter: blur(12px);
-    padding: 1.5rem;
+    padding: 1.5rem 0.5rem 1.5rem 0.5rem;
     box-shadow: var(--shadow-xl);
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    gap: 1.5rem;
+    gap: 1.2rem;
+    z-index: 2000;
+    align-items: stretch;
+    margin: 0;
+    justify-content: flex-start;
   }
 `;
 
@@ -139,6 +173,27 @@ const Hamburger = styled.button`
   }
 `;
 
+const MenuBox = styled.div`
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  flex-wrap: nowrap;
+  @media (max-width: 900px) {
+    display: none;
+  }
+`;
+
+const MobileMenuActions = styled.div`
+  display: none;
+  @media (max-width: 900px) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    align-items: stretch;
+  }
+`;
+
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -162,37 +217,55 @@ const Header = () => {
   return (
     <HeaderContainer>
       <NavContainer>
-        <div style={{ position: 'absolute', left: '2rem' }}>
-          <select value={lang} onChange={handleLangChange}>
-            <option value="ko">한국어</option>
-            <option value="en">English</option>
-            <option value="ja">日本語</option>
-          </select>
-        </div>
-        <Logo to="/">Hong Bookstore</Logo>
-        <NavLinks isOpen={isOpen}>
-          <li><NavLink to="/marketplace">{t('marketplace')}</NavLink></li>
-          <li><NavLink to="/community">{t('community')}</NavLink></li>
-          <li><NavLink to="/map">{t('map')}</NavLink></li>
-          <li><NavLink to="/mypage">{t('mypage')}</NavLink></li>
-        </NavLinks>
-        <div style={{ position: 'absolute', right: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          {!isLoggedIn ? (
-            <>
-              <NavLink to="/login">{t('login')}</NavLink>
-              <NavLink to="/register">{t('signup')}</NavLink>
-            </>
-          ) : (
-            <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '1.125rem', color: 'var(--text)' }}>
-              {t('logout')}
-            </button>
-          )}
-        </div>
-        <Hamburger onClick={() => setIsOpen(!isOpen)}>
-          <span />
-          <span />
-          <span />
-        </Hamburger>
+        <FlexRow>
+          <LangSelectBox>
+            <select value={lang} onChange={handleLangChange}>
+              <option value="ko">한국어</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
+          </LangSelectBox>
+          <LeftBox>
+            <Logo to="/">Hong Bookstore</Logo>
+          </LeftBox>
+          <>
+            <Hamburger onClick={() => setIsOpen(!isOpen)}>
+              <span />
+              <span />
+              <span />
+            </Hamburger>
+            <NavLinks isOpen={isOpen}>
+              <li><NavLink to="/marketplace" onClick={() => setIsOpen(false)}>{t('marketplace')}</NavLink></li>
+              <li><NavLink to="/community" onClick={() => setIsOpen(false)}>{t('community')}</NavLink></li>
+              <li><NavLink to="/map" onClick={() => setIsOpen(false)}>{t('map')}</NavLink></li>
+              <li><NavLink to="/mypage" onClick={() => setIsOpen(false)}>{t('mypage')}</NavLink></li>
+              <MobileMenuActions>
+                {!isLoggedIn ? (
+                  <>
+                    <NavLink to="/login" onClick={() => setIsOpen(false)}>{t('login')}</NavLink>
+                    <NavLink to="/register" onClick={() => setIsOpen(false)}>{t('signup')}</NavLink>
+                  </>
+                ) : (
+                  <button onClick={() => { setIsOpen(false); handleLogout(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '1.125rem', color: 'var(--text)' }}>
+                    {t('logout')}
+                  </button>
+                )}
+              </MobileMenuActions>
+            </NavLinks>
+            <MenuBox>
+              {!isLoggedIn ? (
+                <>
+                  <NavLink to="/login">{t('login')}</NavLink>
+                  <NavLink to="/register">{t('signup')}</NavLink>
+                </>
+              ) : (
+                <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '1.125rem', color: 'var(--text)' }}>
+                  {t('logout')}
+                </button>
+              )}
+            </MenuBox>
+          </>
+        </FlexRow>
       </NavContainer>
     </HeaderContainer>
   );

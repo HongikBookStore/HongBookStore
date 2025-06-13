@@ -90,5 +90,6 @@
   "yourSchoolEmailVerified": "学校メールの認証が完了しました。",
   "cancel": "キャンセル",
   "profileName": "名前",
-  "profileEmail": "メール"
+  "profileEmail": "メール",
+  "socialLogin": "ソーシャルアカウントでログイン"
 } 

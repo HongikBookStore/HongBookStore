@@ -5,12 +5,14 @@ import Hero from './components/Hero/Hero';
 import Footer from './components/Footer/Footer';
 import Marketplace from './pages/Marketplace/Marketplace';
 import MyPage from './pages/MyPage/MyPage';
+import Login from './pages/Login/Login';
+import Register from './pages/Register/Register';
+import FindId from './pages/FindId/FindId';
+import FindPw from './pages/FindPw/FindPw';
 
 // Placeholder components for other pages
 const Community = () => <div>Community Page</div>;
 const Map = () => <div>Map Page</div>;
-const Login = () => <div>Login Page</div>;
-const Register = () => <div>Register Page</div>;
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/find-id" element={<FindId />} />
+        <Route path="/find-pw" element={<FindPw />} />
       </Routes>
       <Footer />
     </Router>

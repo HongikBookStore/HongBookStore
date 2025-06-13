@@ -90,5 +90,6 @@
   "yourSchoolEmailVerified": "Your school email has been successfully verified.",
   "cancel": "Cancel",
   "profileName": "Name",
-  "profileEmail": "Email"
+  "profileEmail": "Email",
+  "socialLogin": "Login with social account"
 } 
