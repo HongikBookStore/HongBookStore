@@ -19,7 +19,7 @@ public class UserService {
 
     @Transactional
     public ApiResponse<Long> signUp(SignUpRequest req) {
-        if (userRepository.existByEmail(req.email())) {
+        if (userRepository.existsByEmail(req.email())) {
             return new ApiResponse<>(false, "이미 사용중인 이메일입니다.", null);
         }
         if (userRepository.existsByUsername(req.username())) {
