@@ -38,8 +38,9 @@ const HeroContent = styled.div`
 const Title = styled.h1`
   font-size: 5rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.2;
   margin-bottom: 2rem;
+  padding-bottom: 0.3em;
   background: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0.8));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -129,14 +130,20 @@ const SecondaryButton = styled(Button)`
 `;
 
 const Hero = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  let title;
+  if (i18n.language === 'ko') {
+    title = <>{'홍북서점에 오신 것을'}<br />{'환영합니다'}</>;
+  } else if (i18n.language === 'ja') {
+    title = <>{'ホンチェッパンへようこそ'}<br />{'!'} </>;
+  } else {
+    title = <>{'Welcome to'}<br />{'Hong Bookstore'}</>;
+  }
   return (
     <HeroSection>
       <HeroContent>
-        <Title>{t('welcomeTitle')}</Title>
-        <Description>
-          {t('welcomeDesc')}
-        </Description>
+        <Title dangerouslySetInnerHTML={{ __html: t('welcomeTitle') }} />
+        <Description dangerouslySetInnerHTML={{ __html: t('welcomeDesc') }} />
         <ButtonGroup>
           <PrimaryButton to="/marketplace">{t('exploreBooks')}</PrimaryButton>
           <SecondaryButton to="/register">{t('joinNow')}</SecondaryButton>
