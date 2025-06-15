@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 
+import { signUp } from '../../api/user';
+
 const EMAIL_DOMAINS = [
   'naver.com',
   'kakao.com',
@@ -298,7 +300,7 @@ function Register() {
   };
 
   // 회원가입 버튼 동작
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setSubmitMsg('');
     // 아이디
@@ -338,130 +340,169 @@ function Register() {
       setSubmitMsgColor('red');
       return;
     }
-    // (실제 서비스라면 여기서 서버로 전송)
-    setSubmitMsg(t('registerSuccess'));
-    setSubmitMsgColor('green');
-    setForm({
-      userId: '',
-      emailId: '',
-      emailDomain: '',
-      customDomain: '',
-      password: '',
-      password2: '',
-    });
-    setIdCheckMsg('');
-    setEmailCheckMsg('');
-    setPwMsg('');
-    setPw2Msg('');
-    setTimeout(() => {
-      navigate('/login');
-    }, 1000);
+
+    // 서버에 회원가입 요청
+    try {
+      await signUp({
+        email,
+        username: form.userId.trim(),
+        password: form.password
+      });
+      setSubmitMsg(t('registerSuccess'));
+      setSubmitMsgColor('green');
+
+      // 입력값 리셋
+      setForm({
+        userId: '',
+        emailId: '',
+        emailDomain: '',
+        customDomain: '',
+        password: '',
+        password2: '',
+      });
+      setIdCheckMsg('');
+      setEmailCheckMsg('');
+      setPwMsg('');
+      setPw2Msg('');
+
+      // 1초 뒤 로그인 화면으로 이동
+      setTimeout(() => {
+        navigate('/login');
+      }, 1000);
+    } catch (err) {
+      // 백엔드에서 400/409 등 오류 메시지 전달 시 표시
+      setSubmitMsg(err.message || t('registerFail'));
+      setSubmitMsgColor('red');
+    }
   };
 
-  // 소셜 로그인 리다이렉트
-  const handleSocialLogin = provider => {
-    // 실제 서비스에서는 백엔드에서 제공하는 OAuth URL로 이동
-    window.location.href = `/oauth2/authorization/${provider}`;
-  };
+    // 소셜 로그인 리다이렉트
+    const handleSocialLogin = provider => {
+      // 실제 서비스에서는 백엔드에서 제공하는 OAuth URL로 이동
+      window.location.href = `/oauth2/authorization/${provider}`;
+    };
 
-  return (
-    <>
-      <Header lang={lang} onLangChange={handleLangChange} />
-      <RegisterContainer>
-        <Title>{t('signup')}</Title>
-        <StyledForm onSubmit={handleSubmit}>
-          <InputGroup>
-            <Input
-              name="userId"
-              placeholder={t('idPlaceholder')}
-              value={form.userId}
-              onChange={handleChange}
-            />
-            <CheckButton type="button" onClick={handleIdCheck}>{t('idCheck')}</CheckButton>
-          </InputGroup>
-          {idCheckMsg && <Message color={idCheckColor}>{idCheckMsg}</Message>}
-          <InputGroup className="email-group">
-            <Input
-              name="emailId"
-              placeholder={t('emailIdPlaceholder')}
-              value={form.emailId}
-              onChange={handleChange}
-              style={{ minWidth: 0, flex: 2 }}
-            />
-            <span>@</span>
-            <Select
-              name="emailDomain"
-              value={form.emailDomain}
-              onChange={handleDomainChange}
-              style={{ minWidth: 0, flex: 1 }}
-            >
-              <option value="">{t('domainSelect')}</option>
-              {EMAIL_DOMAINS.map(domain => (
-                <option key={domain} value={domain}>{domain}</option>
-              ))}
-            </Select>
-            {showCustomDomain && (
+    return (
+      <>
+        <Header lang={lang} onLangChange={handleLangChange} />
+        <RegisterContainer>
+          <Title>{t('signup')}</Title>
+          <StyledForm onSubmit={handleSubmit}>
+            <InputGroup>
               <Input
-                name="customDomain"
-                placeholder={t('customDomainPlaceholder')}
-                value={form.customDomain}
+                name="userId"
+                placeholder={t('idPlaceholder')}
+                value={form.userId}
                 onChange={handleChange}
-                style={{ minWidth: 0, flex: 1 }}
               />
-            )}
-            <CheckButton type="button" onClick={handleEmailCheck} style={{ whiteSpace: 'nowrap', height: '42px', marginLeft: 4 }}>{t('emailCheck')}</CheckButton>
-          </InputGroup>
-          {emailCheckMsg && <Message color={emailCheckColor}>{emailCheckMsg}</Message>}
-          <InputGroup>
-            <Input
-              name="password"
-              type={showPw ? 'text' : 'password'}
-              placeholder={t('pwPlaceholder')}
-              value={form.password}
-              onChange={handlePasswordChange}
-            />
-            <button
-              type="button"
-              tabIndex={-1}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, marginLeft: 4, display: 'flex', alignItems: 'center' }}
-              onClick={() => setShowPw(v => !v)}
-              aria-label={showPw ? t('hidePw') : t('showPw')}
-            >
-              {showPw ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </InputGroup>
-          {pwMsg && <Message color={pwMsgColor}>{pwMsg}</Message>}
-          <InputGroup>
-            <Input
-              name="password2"
-              type={showPw2 ? 'text' : 'password'}
-              placeholder={t('pw2Placeholder')}
-              value={form.password2}
-              onChange={handlePassword2Change}
-            />
-            <button
-              type="button"
-              tabIndex={-1}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, marginLeft: 4, display: 'flex', alignItems: 'center' }}
-              onClick={() => setShowPw2(v => !v)}
-              aria-label={showPw2 ? t('hidePw') : t('showPw')}
-            >
-              {showPw2 ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </InputGroup>
-          {pw2Msg && <Message color={pw2MsgColor}>{pw2Msg}</Message>}
-          <SubmitButton type="submit">{t('submit')}</SubmitButton>
-        </StyledForm>
-        {submitMsg && <Message color={submitMsgColor}>{submitMsg}</Message>}
-        <SocialSection>
-          <p>{t('socialLogin')}</p>
-          <SocialBtn type="naver" aria-label="Naver Login" onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
-          <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
-          <SocialBtn type="google" aria-label="Google Login" onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
-        </SocialSection>
-      </RegisterContainer>
-    </>
-  );
-}
+              <CheckButton type="button" onClick={handleIdCheck}>{t('idCheck')}</CheckButton>
+            </InputGroup>
+            {idCheckMsg && <Message color={idCheckColor}>{idCheckMsg}</Message>}
+            <InputGroup className="email-group">
+              <Input
+                name="emailId"
+                placeholder={t('emailIdPlaceholder')}
+                value={form.emailId}
+                onChange={handleChange}
+                style={{ minWidth: 0, flex: 2 }}
+              />
+              <span>@</span>
+              <Select
+                name="emailDomain"
+                value={form.emailDomain}
+                onChange={handleDomainChange}
+                style={{ minWidth: 0, flex: 1 }}
+              >
+                <option value="">{t('domainSelect')}</option>
+                {EMAIL_DOMAINS.map(domain => (
+                  <option key={domain} value={domain}>{domain}</option>
+                ))}
+              </Select>
+              {showCustomDomain && (
+                <Input
+                  name="customDomain"
+                  placeholder={t('customDomainPlaceholder')}
+                  value={form.customDomain}
+                  onChange={handleChange}
+                  style={{ minWidth: 0, flex: 1 }}
+                />
+              )}
+              <CheckButton type="button" onClick={handleEmailCheck} style={{
+                whiteSpace: 'nowrap',
+                height: '42px',
+                marginLeft: 4
+              }}>{t('emailCheck')}</CheckButton>
+            </InputGroup>
+            {emailCheckMsg && <Message color={emailCheckColor}>{emailCheckMsg}</Message>}
+            <InputGroup>
+              <Input
+                name="password"
+                type={showPw ? 'text' : 'password'}
+                placeholder={t('pwPlaceholder')}
+                value={form.password}
+                onChange={handlePasswordChange}
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 20,
+                  marginLeft: 4,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                onClick={() => setShowPw(v => !v)}
+                aria-label={showPw ? t('hidePw') : t('showPw')}
+              >
+                {showPw ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </InputGroup>
+            {pwMsg && <Message color={pwMsgColor}>{pwMsg}</Message>}
+            <InputGroup>
+              <Input
+                name="password2"
+                type={showPw2 ? 'text' : 'password'}
+                placeholder={t('pw2Placeholder')}
+                value={form.password2}
+                onChange={handlePassword2Change}
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 20,
+                  marginLeft: 4,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                onClick={() => setShowPw2(v => !v)}
+                aria-label={showPw2 ? t('hidePw') : t('showPw')}
+              >
+                {showPw2 ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </InputGroup>
+            {pw2Msg && <Message color={pw2MsgColor}>{pw2Msg}</Message>}
+            <SubmitButton type="submit">{t('submit')}</SubmitButton>
+          </StyledForm>
+          {submitMsg && <Message color={submitMsgColor}>{submitMsg}</Message>}
+          <SocialSection>
+            <p>{t('socialLogin')}</p>
+            <SocialBtn type="naver" aria-label="Naver Login"
+                       onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
+            <SocialBtn type="kakao" aria-label="Kakao Login"
+                       onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
+            <SocialBtn type="google" aria-label="Google Login"
+                       onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
+          </SocialSection>
+        </RegisterContainer>
+      </>
+    );
+  }
 
 export default Register; 

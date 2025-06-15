@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
+
+import { login } from '../../api/user';      // ① 로그인 API
+import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
 
 const LoginContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -124,6 +127,7 @@ const Message = styled.div`
 
 function Login() {
   const { t, i18n } = useTranslation();
+  const { save } = useContext(AuthCtx);
   const [form, setForm] = useState({
     userId: '',
     password: '',
@@ -147,17 +151,24 @@ function Login() {
     i18n.changeLanguage(e.target.value);
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!form.userId.trim() || !form.password) {
       setMsg(t('loginRequired'));
       setMsgColor('red');
       return;
     }
-    // 실제 서비스에서는 서버 인증 요청
-    setMsg(t('loginSuccess'));
-    setMsgColor('green');
-    // 로그인 성공 시 메인 페이지 등으로 이동 가능
+
+    try {
+      const {token, user} = await login(form.userId.trim(), form.password); // ③ 백엔드 호출
+      save(token, user);                     // ④ JWT·User 전역 저장
+      setMsg(t('loginSuccess'));
+      setMsgColor('green');
+      setTimeout(() => navigate('/'), 500);  // 홈으로
+    } catch (err) {
+      setMsg(err.message || t('loginFail'));
+      setMsgColor('red');
+    }
   };
 
   // 소셜 로그인 리다이렉트
