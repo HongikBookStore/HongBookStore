@@ -23,9 +23,9 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<?>> login(@RequestParam String username,
-                                                @RequestParam String password) {
-        var res = userService.verifyLogin(username, password);
+    public ResponseEntity<ApiResponse<String>> login(@RequestParam String username,
+                                                     @RequestParam String password) {
+        var res = userService.loginAndIssueToken(username,password);
         return res.success() ? ResponseEntity.ok(res) : ResponseEntity.status(401).body(res);
     }
 }

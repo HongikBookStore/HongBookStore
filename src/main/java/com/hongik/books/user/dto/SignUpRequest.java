@@ -9,4 +9,3 @@ public record SignUpRequest (
         @Size(min = 4, max = 20) @NotBlank String username,
         @Size(min = 8, message = "비밀번호는 최소 8자 이상입니다.") @NotBlank String password) {
 }
-
