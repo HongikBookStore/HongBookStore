@@ -144,7 +144,7 @@ const SocialBtn = styled.button`
   border-radius: var(--radius);
   font-weight: 600;
   font-size: 1rem;
-  color: white;
+  color: ${({ type }) => (type === 'kakao' ? '#222' : 'white')};
   background: ${({ type }) =>
     type === 'naver' ? '#03c75a' :
     type === 'kakao' ? '#fee500' :
@@ -153,6 +153,8 @@ const SocialBtn = styled.button`
   margin-bottom: 0.5rem;
   cursor: pointer;
   transition: var(--transition);
+  min-width: 80px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   &:hover {
     opacity: 0.85;
   }
@@ -176,16 +178,16 @@ function Register() {
     password2: '',
   });
   const [lang, setLang] = useState(i18n.language || 'ko');
-  const [idCheckMsg, setIdCheckMsg] = useState('');
+  const [idCheckMsgKey, setIdCheckMsgKey] = useState('');
   const [idCheckColor, setIdCheckColor] = useState('');
-  const [emailCheckMsg, setEmailCheckMsg] = useState('');
+  const [emailCheckMsgKey, setEmailCheckMsgKey] = useState('');
   const [emailCheckColor, setEmailCheckColor] = useState('');
   const [showCustomDomain, setShowCustomDomain] = useState(false);
-  const [pwMsg, setPwMsg] = useState('');
+  const [pwMsgKey, setPwMsgKey] = useState('');
   const [pwMsgColor, setPwMsgColor] = useState('');
-  const [pw2Msg, setPw2Msg] = useState('');
+  const [pw2MsgKey, setPw2MsgKey] = useState('');
   const [pw2MsgColor, setPw2MsgColor] = useState('');
-  const [submitMsg, setSubmitMsg] = useState('');
+  const [submitMsgKey, setSubmitMsgKey] = useState('');
   const [submitMsgColor, setSubmitMsgColor] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
@@ -197,8 +199,8 @@ function Register() {
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    if (e.target.name === 'userId') setIdCheckMsg('');
-    if (e.target.name === 'emailId' || e.target.name === 'emailDomain' || e.target.name === 'customDomain') setEmailCheckMsg('');
+    if (e.target.name === 'userId') setIdCheckMsgKey('');
+    if (e.target.name === 'emailId' || e.target.name === 'emailDomain' || e.target.name === 'customDomain') setEmailCheckMsgKey('');
   };
 
   const handleLangChange = e => {
@@ -206,152 +208,135 @@ function Register() {
     i18n.changeLanguage(e.target.value);
   };
 
-  // 아이디 중복확인 (임시: 랜덤)
   const handleIdCheck = () => {
     if (!form.userId.trim()) {
-      setIdCheckMsg(t('idRequired'));
+      setIdCheckMsgKey('idRequired');
       setIdCheckColor('red');
       return;
     }
     const isDuplicate = Math.random() < 0.5;
     if (isDuplicate) {
-      setIdCheckMsg(t('idDuplicate'));
+      setIdCheckMsgKey('idDuplicate');
       setIdCheckColor('red');
     } else {
-      setIdCheckMsg(t('idAvailable'));
+      setIdCheckMsgKey('idAvailable');
       setIdCheckColor('green');
     }
   };
 
-  // 이메일 도메인 선택 핸들러
   const handleDomainChange = e => {
     setForm({ ...form, emailDomain: e.target.value, customDomain: '' });
     setShowCustomDomain(e.target.value === '직접입력');
-    setEmailCheckMsg('');
+    setEmailCheckMsgKey('');
   };
 
-  // 이메일 중복확인 (임시: 랜덤)
   const handleEmailCheck = () => {
     const email = form.emailId.trim() + '@' + (showCustomDomain ? form.customDomain.trim() : form.emailDomain);
     if (!form.emailId.trim() || !(showCustomDomain ? form.customDomain.trim() : form.emailDomain)) {
-      setEmailCheckMsg(t('emailRequired'));
+      setEmailCheckMsgKey('emailRequired');
       setEmailCheckColor('red');
       return;
     }
-    // 간단한 이메일 유효성 검사
     const emailPattern = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
     if (!emailPattern.test(email)) {
-      setEmailCheckMsg(t('emailInvalid'));
+      setEmailCheckMsgKey('emailInvalid');
       setEmailCheckColor('red');
       return;
     }
     const isDuplicate = Math.random() < 0.5;
     if (isDuplicate) {
-      setEmailCheckMsg(t('emailDuplicate'));
+      setEmailCheckMsgKey('emailDuplicate');
       setEmailCheckColor('red');
     } else {
-      setEmailCheckMsg(t('emailAvailable'));
+      setEmailCheckMsgKey('emailAvailable');
       setEmailCheckColor('green');
     }
   };
 
-  // 비밀번호 조건 체크
   const handlePasswordChange = e => {
     const value = e.target.value;
     setForm({ ...form, password: value });
-    // 조건: 8~16자, 영문/숫자/특수문자 포함
     const pwPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,16}$/;
     if (!value) {
-      setPwMsg('');
+      setPwMsgKey('');
     } else if (!pwPattern.test(value)) {
-      setPwMsg(t('pwInvalid'));
+      setPwMsgKey('pwInvalid');
       setPwMsgColor('red');
     } else {
-      setPwMsg(t('pwValid'));
+      setPwMsgKey('pwValid');
       setPwMsgColor('green');
     }
-    // 비밀번호 확인도 동시에 체크
     if (form.password2) {
       if (value === form.password2) {
-        setPw2Msg(t('pwMatch'));
+        setPw2MsgKey('pwMatch');
         setPw2MsgColor('green');
       } else {
-        setPw2Msg(t('pwNotMatch'));
+        setPw2MsgKey('pwNotMatch');
         setPw2MsgColor('red');
       }
     } else {
-      setPw2Msg('');
+      setPw2MsgKey('');
     }
   };
 
-  // 비밀번호 확인 입력
   const handlePassword2Change = e => {
     const value = e.target.value;
     setForm({ ...form, password2: value });
     if (!value) {
-      setPw2Msg('');
+      setPw2MsgKey('');
     } else if (form.password === value) {
-      setPw2Msg(t('pwMatch'));
+      setPw2MsgKey('pwMatch');
       setPw2MsgColor('green');
     } else {
-      setPw2Msg(t('pwNotMatch'));
+      setPw2MsgKey('pwNotMatch');
       setPw2MsgColor('red');
     }
   };
 
-  // 회원가입 버튼 동작
   const handleSubmit = async e => {
     e.preventDefault();
-    setSubmitMsg('');
-    // 아이디
+    setSubmitMsgKey('');
     if (!form.userId.trim()) {
-      setSubmitMsg(t('idRequired'));
+      setSubmitMsgKey('idRequired');
       setSubmitMsgColor('red');
       return;
     }
-    // 이메일
     const email = form.emailId.trim() + '@' + (showCustomDomain ? form.customDomain.trim() : form.emailDomain);
     if (!form.emailId.trim() || !(showCustomDomain ? form.customDomain.trim() : form.emailDomain)) {
-      setSubmitMsg(t('emailRequired'));
+      setSubmitMsgKey('emailRequired');
       setSubmitMsgColor('red');
       return;
     }
     const emailPattern = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
     if (!emailPattern.test(email)) {
-      setSubmitMsg(t('emailInvalid'));
+      setSubmitMsgKey('emailInvalid');
       setSubmitMsgColor('red');
       return;
     }
-    // 비밀번호
     const pwPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,16}$/;
     if (!form.password) {
-      setSubmitMsg(t('pwInvalid'));
+      setSubmitMsgKey('pwInvalid');
       setSubmitMsgColor('red');
       return;
     }
     if (!pwPattern.test(form.password)) {
-      setSubmitMsg(t('pwInvalid'));
+      setSubmitMsgKey('pwInvalid');
       setSubmitMsgColor('red');
       return;
     }
-    // 비밀번호 일치
     if (form.password !== form.password2) {
-      setSubmitMsg(t('pwNotMatch'));
+      setSubmitMsgKey('pwNotMatch');
       setSubmitMsgColor('red');
       return;
     }
-
-    // 서버에 회원가입 요청
     try {
       await signUp({
         email,
         username: form.userId.trim(),
         password: form.password
       });
-      setSubmitMsg(t('registerSuccess'));
+      setSubmitMsgKey('registerSuccess');
       setSubmitMsgColor('green');
-
-      // 입력값 리셋
       setForm({
         userId: '',
         emailId: '',
@@ -360,149 +345,144 @@ function Register() {
         password: '',
         password2: '',
       });
-      setIdCheckMsg('');
-      setEmailCheckMsg('');
-      setPwMsg('');
-      setPw2Msg('');
-
-      // 1초 뒤 로그인 화면으로 이동
+      setIdCheckMsgKey('');
+      setEmailCheckMsgKey('');
+      setPwMsgKey('');
+      setPw2MsgKey('');
       setTimeout(() => {
         navigate('/login');
       }, 1000);
     } catch (err) {
-      // 백엔드에서 400/409 등 오류 메시지 전달 시 표시
-      setSubmitMsg(err.message || t('registerFail'));
+      setSubmitMsgKey('registerFail');
       setSubmitMsgColor('red');
     }
   };
 
-    // 소셜 로그인 리다이렉트
-    const handleSocialLogin = provider => {
-      // 실제 서비스에서는 백엔드에서 제공하는 OAuth URL로 이동
-      window.location.href = `/oauth2/authorization/${provider}`;
-    };
+  const handleSocialLogin = provider => {
+    window.location.href = `/oauth2/authorization/${provider}`;
+  };
 
-    return (
-      <>
-        <Header lang={lang} onLangChange={handleLangChange} />
-        <RegisterContainer>
-          <Title>{t('signup')}</Title>
-          <StyledForm onSubmit={handleSubmit}>
-            <InputGroup>
+  return (
+    <>
+      <Header lang={lang} onLangChange={handleLangChange} />
+      <RegisterContainer>
+        <Title>{t('signup')}</Title>
+        <StyledForm onSubmit={handleSubmit}>
+          <InputGroup>
+            <Input
+              name="userId"
+              placeholder={t('idPlaceholder')}
+              value={form.userId}
+              onChange={handleChange}
+            />
+            <CheckButton type="button" onClick={handleIdCheck}>{t('idCheck')}</CheckButton>
+          </InputGroup>
+          {idCheckMsgKey && <Message color={idCheckColor}>{t(idCheckMsgKey)}</Message>}
+          <InputGroup className="email-group">
+            <Input
+              name="emailId"
+              placeholder={t('emailIdPlaceholder')}
+              value={form.emailId}
+              onChange={handleChange}
+              style={{ minWidth: 0, flex: 2 }}
+            />
+            <span>@</span>
+            <Select
+              name="emailDomain"
+              value={form.emailDomain}
+              onChange={handleDomainChange}
+              style={{ minWidth: 0, flex: 1 }}
+            >
+              <option value="">{t('domainSelect')}</option>
+              {EMAIL_DOMAINS.map(domain => (
+                <option key={domain} value={domain}>{domain}</option>
+              ))}
+            </Select>
+            {showCustomDomain && (
               <Input
-                name="userId"
-                placeholder={t('idPlaceholder')}
-                value={form.userId}
+                name="customDomain"
+                placeholder={t('customDomainPlaceholder')}
+                value={form.customDomain}
                 onChange={handleChange}
-              />
-              <CheckButton type="button" onClick={handleIdCheck}>{t('idCheck')}</CheckButton>
-            </InputGroup>
-            {idCheckMsg && <Message color={idCheckColor}>{idCheckMsg}</Message>}
-            <InputGroup className="email-group">
-              <Input
-                name="emailId"
-                placeholder={t('emailIdPlaceholder')}
-                value={form.emailId}
-                onChange={handleChange}
-                style={{ minWidth: 0, flex: 2 }}
-              />
-              <span>@</span>
-              <Select
-                name="emailDomain"
-                value={form.emailDomain}
-                onChange={handleDomainChange}
                 style={{ minWidth: 0, flex: 1 }}
-              >
-                <option value="">{t('domainSelect')}</option>
-                {EMAIL_DOMAINS.map(domain => (
-                  <option key={domain} value={domain}>{domain}</option>
-                ))}
-              </Select>
-              {showCustomDomain && (
-                <Input
-                  name="customDomain"
-                  placeholder={t('customDomainPlaceholder')}
-                  value={form.customDomain}
-                  onChange={handleChange}
-                  style={{ minWidth: 0, flex: 1 }}
-                />
-              )}
-              <CheckButton type="button" onClick={handleEmailCheck} style={{
-                whiteSpace: 'nowrap',
-                height: '42px',
-                marginLeft: 4
-              }}>{t('emailCheck')}</CheckButton>
-            </InputGroup>
-            {emailCheckMsg && <Message color={emailCheckColor}>{emailCheckMsg}</Message>}
-            <InputGroup>
-              <Input
-                name="password"
-                type={showPw ? 'text' : 'password'}
-                placeholder={t('pwPlaceholder')}
-                value={form.password}
-                onChange={handlePasswordChange}
               />
-              <button
-                type="button"
-                tabIndex={-1}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 20,
-                  marginLeft: 4,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-                onClick={() => setShowPw(v => !v)}
-                aria-label={showPw ? t('hidePw') : t('showPw')}
-              >
-                {showPw ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </InputGroup>
-            {pwMsg && <Message color={pwMsgColor}>{pwMsg}</Message>}
-            <InputGroup>
-              <Input
-                name="password2"
-                type={showPw2 ? 'text' : 'password'}
-                placeholder={t('pw2Placeholder')}
-                value={form.password2}
-                onChange={handlePassword2Change}
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 20,
-                  marginLeft: 4,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-                onClick={() => setShowPw2(v => !v)}
-                aria-label={showPw2 ? t('hidePw') : t('showPw')}
-              >
-                {showPw2 ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </InputGroup>
-            {pw2Msg && <Message color={pw2MsgColor}>{pw2Msg}</Message>}
-            <SubmitButton type="submit">{t('submit')}</SubmitButton>
-          </StyledForm>
-          {submitMsg && <Message color={submitMsgColor}>{submitMsg}</Message>}
-          <SocialSection>
-            <p>{t('socialLogin')}</p>
-            <SocialBtn type="naver" aria-label="Naver Login"
-                       onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
-            <SocialBtn type="kakao" aria-label="Kakao Login"
-                       onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
-            <SocialBtn type="google" aria-label="Google Login"
-                       onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
-          </SocialSection>
-        </RegisterContainer>
-      </>
-    );
-  }
+            )}
+            <CheckButton type="button" onClick={handleEmailCheck} style={{
+              whiteSpace: 'nowrap',
+              height: '42px',
+              marginLeft: 4
+            }}>{t('emailCheck')}</CheckButton>
+          </InputGroup>
+          {emailCheckMsgKey && <Message color={emailCheckColor}>{t(emailCheckMsgKey)}</Message>}
+          <InputGroup>
+            <Input
+              name="password"
+              type={showPw ? 'text' : 'password'}
+              placeholder={t('pwPlaceholder')}
+              value={form.password}
+              onChange={handlePasswordChange}
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 20,
+                marginLeft: 4,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              onClick={() => setShowPw(v => !v)}
+              aria-label={showPw ? t('hidePw') : t('showPw')}
+            >
+              {showPw ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </InputGroup>
+          {pwMsgKey && <Message color={pwMsgColor}>{t(pwMsgKey)}</Message>}
+          <InputGroup>
+            <Input
+              name="password2"
+              type={showPw2 ? 'text' : 'password'}
+              placeholder={t('pw2Placeholder')}
+              value={form.password2}
+              onChange={handlePassword2Change}
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 20,
+                marginLeft: 4,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              onClick={() => setShowPw2(v => !v)}
+              aria-label={showPw2 ? t('hidePw') : t('showPw')}
+            >
+              {showPw2 ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </InputGroup>
+          {pw2MsgKey && <Message color={pw2MsgColor}>{t(pw2MsgKey)}</Message>}
+          <SubmitButton type="submit">{t('submit')}</SubmitButton>
+        </StyledForm>
+        {submitMsgKey && <Message color={submitMsgColor}>{t(submitMsgKey)}</Message>}
+        <SocialSection>
+          <p>{t('socialLogin')}</p>
+          <SocialBtn type="naver" aria-label="Naver Login"
+                     onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
+          <SocialBtn type="kakao" aria-label="Kakao Login"
+                     onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
+          <SocialBtn type="google" aria-label="Google Login"
+                     onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
+        </SocialSection>
+      </RegisterContainer>
+    </>
+  );
+}
 
 export default Register; 
