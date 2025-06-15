@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import '../../i18n';
+import '../../i18n.js';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import Header from '../../components/Header/Header';
+import Header from '../../components/Header/Header.jsx';
 
 const EMAIL_DOMAINS = [
   'naver.com',
