@@ -23,3 +23,7 @@ logging:
     type:
         descriptor:
         sql: trace
+
+jwt:
+  secret: super-secret-key-change-me-0123456789
+  expire-min: 60        # 액세스 토큰 유효기간(분) – 60분
