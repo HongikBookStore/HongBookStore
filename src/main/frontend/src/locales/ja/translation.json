@@ -91,5 +91,6 @@
   "cancel": "キャンセル",
   "profileName": "名前",
   "profileEmail": "メール",
-  "socialLogin": "ソーシャルアカウントでログイン"
+  "socialLogin": "ソーシャルアカウントでログイン",
+  "logout": "ログアウト"
 } 

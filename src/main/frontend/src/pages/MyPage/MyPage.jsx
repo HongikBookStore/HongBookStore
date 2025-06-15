@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/150';
 
@@ -491,6 +492,7 @@ const StepIndicator = styled.div`
 
 const MyPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [isVerified, setIsVerified] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -506,6 +508,12 @@ const MyPage = () => {
   ]);
   const [newLocation, setNewLocation] = useState({ name: '', address: '' });
   const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem('jwt')) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleSetDefault = (locationId) => {
     setLocations(locations.map(loc => ({

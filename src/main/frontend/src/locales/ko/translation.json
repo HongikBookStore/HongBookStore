@@ -91,5 +91,6 @@
   "yourSchoolEmailVerified": "학교 이메일 인증이 완료되었습니다.",
   "cancel": "취소",
   "profileName": "이름",
-  "profileEmail": "이메일"
+  "profileEmail": "이메일",
+  "logout": "로그아웃"
 } 

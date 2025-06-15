@@ -91,5 +91,6 @@
   "cancel": "Cancel",
   "profileName": "Name",
   "profileEmail": "Email",
-  "socialLogin": "Login with social account"
+  "socialLogin": "Login with social account",
+  "logout": "Logout"
 } 
