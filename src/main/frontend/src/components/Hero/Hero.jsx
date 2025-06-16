@@ -130,15 +130,7 @@ const SecondaryButton = styled(Button)`
 `;
 
 const Hero = () => {
-  const { t, i18n } = useTranslation();
-  let title;
-  if (i18n.language === 'ko') {
-    title = <>{'홍북서점에 오신 것을'}<br />{'환영합니다'}</>;
-  } else if (i18n.language === 'ja') {
-    title = <>{'ホンチェッパンへようこそ'}<br />{'!'} </>;
-  } else {
-    title = <>{'Welcome to'}<br />{'Hong Bookstore'}</>;
-  }
+  const { t } = useTranslation();
   return (
     <HeroSection>
       <HeroContent>
