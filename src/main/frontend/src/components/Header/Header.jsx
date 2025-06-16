@@ -197,13 +197,9 @@ const MobileMenuActions = styled.div`
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const [lang, setLang] = useState(i18n.language);
+  const { t } = useTranslation();
+  const [lang, setLang] = useState(localStorage.getItem('lang') || 'ko');
   const isLoggedIn = !!localStorage.getItem('jwt');
-
-  useEffect(() => {
-    setLang(i18n.language);
-  }, [i18n.language]);
 
   const handleLangChange = (e) => {
     const newLang = e.target.value;

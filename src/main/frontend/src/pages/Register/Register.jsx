@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 
-import { signUp } from '../../api/user';
+import { signUp, checkUsername, checkEmail } from '../../api/user';
 
 const EMAIL_DOMAINS = [
   'naver.com',
@@ -208,19 +208,30 @@ function Register() {
     i18n.changeLanguage(e.target.value);
   };
 
-  const handleIdCheck = () => {
-    if (!form.userId.trim()) {
-      setIdCheckMsgKey('idRequired');
+  // 아이디 중복확인 (백엔드 연동)
+  const handleIdCheck = async () => {
+    const username = form.userId.trim();
+
+    // 입력값 검증
+    if (!username) {
+      setIdCheckMsg(t('idRequired'));
       setIdCheckColor('red');
       return;
     }
-    const isDuplicate = Math.random() < 0.5;
-    if (isDuplicate) {
-      setIdCheckMsgKey('idDuplicate');
+
+    try {
+      const { available } = await checkUsername(username);
+      if (available) {
+        setIdCheckMsg(t('idAvailable'));
+        setIdCheckColor('green');
+      } else {
+        setIdCheckMsg(t('idDuplicate'));
+        setIdCheckColor('red');
+      }
+    } catch (err) {
+      // 네트워크 오류 등
+      setIdCheckMsg(err.message || t('networkError'));
       setIdCheckColor('red');
-    } else {
-      setIdCheckMsgKey('idAvailable');
-      setIdCheckColor('green');
     }
   };
 
@@ -230,28 +241,38 @@ function Register() {
     setEmailCheckMsgKey('');
   };
 
-  const handleEmailCheck = () => {
-    const email = form.emailId.trim() + '@' + (showCustomDomain ? form.customDomain.trim() : form.emailDomain);
-    if (!form.emailId.trim() || !(showCustomDomain ? form.customDomain.trim() : form.emailDomain)) {
-      setEmailCheckMsgKey('emailRequired');
-      setEmailCheckColor('red');
-      return;
-    }
-    const emailPattern = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
-    if (!emailPattern.test(email)) {
-      setEmailCheckMsgKey('emailInvalid');
-      setEmailCheckColor('red');
-      return;
-    }
-    const isDuplicate = Math.random() < 0.5;
-    if (isDuplicate) {
-      setEmailCheckMsgKey('emailDuplicate');
-      setEmailCheckColor('red');
-    } else {
-      setEmailCheckMsgKey('emailAvailable');
+  // 이메일 중복확인 (백엔드 연동)
+  const handleEmailCheck = async () => {
+  const email = form.emailId.trim() + '@' + (showCustomDomain ? form.customDomain.trim() : form.emailDomain);
+
+  // 이메일 입력값 검증
+  if (!form.emailId.trim() || !(showCustomDomain ? form.customDomain.trim() : form.emailDomain)) {
+    setEmailCheckMsg(t('emailRequired'));
+    setEmailCheckColor('red');
+    return;
+  }
+  // 간단 이메일 유효성
+  const pattern = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
+  if (!pattern.test(email)) {
+    setEmailCheckMsg(t('emailInvalid'));
+    setEmailCheckColor('red');
+    return;
+  }
+
+  try {
+    const { available } = await checkEmail(email);
+    if (available) {
+      setEmailCheckMsg(t('emailAvailable'));
       setEmailCheckColor('green');
+    } else {
+      setEmailCheckMsg(t('emailDuplicate'));
+      setEmailCheckColor('red');
     }
-  };
+  } catch (err) {
+    setEmailCheckMsg(err.message || t('networkError'));
+    setEmailCheckColor('red');
+  }
+};
 
   const handlePasswordChange = e => {
     const value = e.target.value;
