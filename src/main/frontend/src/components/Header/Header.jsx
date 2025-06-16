@@ -199,7 +199,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'ko');
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn = !!localStorage.getItem('jwt');
 
   const handleLangChange = (e) => {
     const newLang = e.target.value;
