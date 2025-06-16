@@ -38,8 +38,9 @@ const HeroContent = styled.div`
 const Title = styled.h1`
   font-size: 5rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.2;
   margin-bottom: 2rem;
+  padding-bottom: 0.3em;
   background: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0.8));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -133,10 +134,8 @@ const Hero = () => {
   return (
     <HeroSection>
       <HeroContent>
-        <Title>{t('welcomeTitle')}</Title>
-        <Description>
-          {t('welcomeDesc')}
-        </Description>
+        <Title dangerouslySetInnerHTML={{ __html: t('welcomeTitle') }} />
+        <Description dangerouslySetInnerHTML={{ __html: t('welcomeDesc') }} />
         <ButtonGroup>
           <PrimaryButton to="/marketplace">{t('exploreBooks')}</PrimaryButton>
           <SecondaryButton to="/register">{t('joinNow')}</SecondaryButton>

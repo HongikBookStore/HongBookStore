@@ -49,12 +49,12 @@
   "termsOfService": "利用規約",
   "connectWithUs": "SNSでつながる",
   "allRightsReserved": "全著作権所有",
-  "welcomeTitle": "ホンチェッパンへようこそ",
-  "welcomeDesc": "あなたの地域で本を見つけて、共有し、交換しましょう。今すぐ活気ある読書コミュニティに参加しよう！",
+  "welcomeTitle": "ホンチェッパンへ<br/>ようこそ！",
+  "welcomeDesc": "あなたの地域で本を見つけて、共有し、交換しましょう。<br/>今すぐ活気ある読書コミュニティに参加しよう！",
   "exploreBooks": "本を探す",
   "joinNow": "新規登録",
   "marketplaceTitle": "ブックマーケット",
-  "marketplaceDesc": "他の読者と本を交換・取引しましょう。次のお気に入りの本を見つけたり、コレクションを販売したりできます。",
+  "marketplaceDesc": "他の読者と本を交換・取引しましょう。<br/>次のお気に入りの本を見つけたり、コレクションを販売したりできます。",
   "searchBooks": "本を検索...",
   "filter": "フィルター",
   "available": "取引可能",
@@ -91,5 +91,6 @@
   "cancel": "キャンセル",
   "profileName": "名前",
   "profileEmail": "メール",
-  "socialLogin": "ソーシャルアカウントでログイン"
+  "socialLogin": "ソーシャルアカウントでログイン",
+  "logout": "ログアウト"
 } 

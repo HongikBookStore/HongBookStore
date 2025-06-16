@@ -86,8 +86,9 @@ function FindId() {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [lang, setLang] = useState(i18n.language || 'ko');
-  const [msg, setMsg] = useState('');
+  const [msgKey, setMsgKey] = useState('');
   const [msgColor, setMsgColor] = useState('');
+  const [foundId, setFoundId] = useState('');
 
   const handleLangChange = e => {
     setLang(e.target.value);
@@ -97,18 +98,21 @@ function FindId() {
   const handleSubmit = e => {
     e.preventDefault();
     if (!email.trim()) {
-      setMsg(t('emailRequired'));
+      setMsgKey('emailRequired');
       setMsgColor('red');
+      setFoundId('');
       return;
     }
     // 임시: test@test.com만 성공, 그 외는 에러
     if (email.trim() !== 'test@test.com') {
-      setMsg(t('emailNotFound'));
+      setMsgKey('emailNotFound');
       setMsgColor('red');
+      setFoundId('');
       return;
     }
-    setMsg(t('findIdResult', { id: 'hong1234' }));
+    setMsgKey('findIdResult');
     setMsgColor('green');
+    setFoundId('hong1234');
   };
 
   return (
@@ -122,12 +126,16 @@ function FindId() {
               name="email"
               placeholder={t('emailPlaceholder')}
               value={email}
-              onChange={e => { setEmail(e.target.value); setMsg(''); }}
+              onChange={e => { setEmail(e.target.value); setMsgKey(''); setFoundId(''); }}
             />
           </InputGroup>
           <SubmitButton type="submit">{t('findId')}</SubmitButton>
         </StyledForm>
-        {msg && <Message color={msgColor}>{msg}</Message>}
+        {msgKey && (
+          <Message color={msgColor}>
+            {msgKey === 'findIdResult' ? t(msgKey, {id: foundId}) : t(msgKey)}
+          </Message>
+        )}
       </FindContainer>
     </>
   );
