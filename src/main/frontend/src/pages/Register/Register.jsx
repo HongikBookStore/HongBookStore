@@ -277,7 +277,8 @@ function Register() {
   const handlePasswordChange = e => {
     const value = e.target.value;
     setForm({ ...form, password: value });
-    const pwPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,16}$/;
+    // 조건: 8~16자, 영문/숫자/특수문자 포함
+    const pwPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,16}$/;
     if (!value) {
       setPwMsgKey('');
     } else if (!pwPattern.test(value)) {
@@ -334,7 +335,8 @@ function Register() {
       setSubmitMsgColor('red');
       return;
     }
-    const pwPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,16}$/;
+    // 비밀번호
+    const pwPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,16}$/;
     if (!form.password) {
       setSubmitMsgKey('pwInvalid');
       setSubmitMsgColor('red');

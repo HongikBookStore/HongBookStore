@@ -1,17 +1,39 @@
 spring.application.name: HongBookStore
 
+### DB ###
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://hongbookstore-db.cl0asg8wa0o0.ap-northeast-2.rds.amazonaws.com:3306/hongBookstore?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
     password: hongikbookproj
+
+### Email ###
+  mail:
+    default-encoding: UTF-8
+    host: smtp.gmail.com
+    port: 587
+    username:
+    password:
+    properties:
+      mail:
+        mime:
+          charset: UTF-8
+        transport:
+          protocol: smtp
+        debug: true
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+### JPA ###
   jpa:
     hibernate:
       ddl-auto: update
     open-in-view: false
 
-# 로그 설정
+### Log ###
 logging:
   level:
     root: info
@@ -24,6 +46,7 @@ logging:
         descriptor:
         sql: trace
 
+### JWT ###
 jwt:
   secret: super-secret-key-change-me-0123456789
   expire-min: 60        # 액세스 토큰 유효기간(분) – 60분
