@@ -214,7 +214,7 @@ function Register() {
 
     // 입력값 검증
     if (!username) {
-      setIdCheckMsg(t('idRequired'));
+      setIdCheckMsgKey('idRequired');
       setIdCheckColor('red');
       return;
     }
@@ -222,15 +222,15 @@ function Register() {
     try {
       const { available } = await checkUsername(username);
       if (available) {
-        setIdCheckMsg(t('idAvailable'));
+        setIdCheckMsgKey('idAvailable');
         setIdCheckColor('green');
       } else {
-        setIdCheckMsg(t('idDuplicate'));
+        setIdCheckMsgKey('idDuplicate');
         setIdCheckColor('red');
       }
     } catch (err) {
       // 네트워크 오류 등
-      setIdCheckMsg(err.message || t('networkError'));
+      setIdCheckMsgKey('networkError');
       setIdCheckColor('red');
     }
   };
@@ -243,36 +243,36 @@ function Register() {
 
   // 이메일 중복확인 (백엔드 연동)
   const handleEmailCheck = async () => {
-  const email = form.emailId.trim() + '@' + (showCustomDomain ? form.customDomain.trim() : form.emailDomain);
+    const email = form.emailId.trim() + '@' + (showCustomDomain ? form.customDomain.trim() : form.emailDomain);
 
-  // 이메일 입력값 검증
-  if (!form.emailId.trim() || !(showCustomDomain ? form.customDomain.trim() : form.emailDomain)) {
-    setEmailCheckMsg(t('emailRequired'));
-    setEmailCheckColor('red');
-    return;
-  }
-  // 간단 이메일 유효성
-  const pattern = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
-  if (!pattern.test(email)) {
-    setEmailCheckMsg(t('emailInvalid'));
-    setEmailCheckColor('red');
-    return;
-  }
+    // 이메일 입력값 검증
+    if (!form.emailId.trim() || !(showCustomDomain ? form.customDomain.trim() : form.emailDomain)) {
+      setEmailCheckMsgKey('emailRequired');
+      setEmailCheckColor('red');
+      return;
+    }
+    // 간단 이메일 유효성
+    const pattern = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
+    if (!pattern.test(email)) {
+      setEmailCheckMsgKey('emailInvalid');
+      setEmailCheckColor('red');
+      return;
+    }
 
-  try {
-    const { available } = await checkEmail(email);
-    if (available) {
-      setEmailCheckMsg(t('emailAvailable'));
-      setEmailCheckColor('green');
-    } else {
-      setEmailCheckMsg(t('emailDuplicate'));
+    try {
+      const { available } = await checkEmail(email);
+      if (available) {
+        setEmailCheckMsgKey('emailAvailable');
+        setEmailCheckColor('green');
+      } else {
+        setEmailCheckMsgKey('emailDuplicate');
+        setEmailCheckColor('red');
+      }
+    } catch (err) {
+      setEmailCheckMsgKey('networkError');
       setEmailCheckColor('red');
     }
-  } catch (err) {
-    setEmailCheckMsg(err.message || t('networkError'));
-    setEmailCheckColor('red');
-  }
-};
+  };
 
   const handlePasswordChange = e => {
     const value = e.target.value;
