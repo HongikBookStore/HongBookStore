@@ -45,4 +45,9 @@ public class UserController {
         return Map.of("available", available);
     }
 
+    @GetMapping("/find-id")
+    public ApiResponse<String> findId(@RequestParam String email){
+        return userService.findUsernameByEmail(email);
+    }
+
 }

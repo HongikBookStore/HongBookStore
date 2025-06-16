@@ -12,6 +12,10 @@ export const checkUsername = (username) =>
 export const checkEmail = (email) =>
     api(`/api/users/email-check?email=${encodeURIComponent(email)}`);     // { available: true|false }
 
+// 이메일로 아이디 찾기
+export const findIdByEmail = email =>
+  api(`/api/users/find-id?email=${encodeURIComponent(email)}`);
+
 
 // 로그인 → 토큰
 export const login = async (username, password) => {
