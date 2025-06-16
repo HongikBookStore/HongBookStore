@@ -77,11 +77,17 @@ const Message = styled.div`
   text-align: center;
 `;
 
+const Title = styled.h2`
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+`;
+
 function FindPw() {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [lang, setLang] = useState(i18n.language || 'ko');
-  const [msg, setMsg] = useState('');
+  const [msgKey, setMsgKey] = useState('');
   const [msgColor, setMsgColor] = useState('');
 
   const handleLangChange = e => {
@@ -92,41 +98,39 @@ function FindPw() {
   const handleSubmit = e => {
     e.preventDefault();
     if (!email.trim()) {
-      setMsg(t('emailRequired'));
+      setMsgKey('emailRequired');
       setMsgColor('red');
       return;
     }
     // 임시: test@test.com만 성공, 그 외는 에러
     if (email.trim() !== 'test@test.com') {
-      setMsg(t('emailNotFound'));
+      setMsgKey('emailNotFound');
       setMsgColor('red');
       return;
     }
-    setMsg(t('findPwResult'));
+    setMsgKey('findPwResult');
     setMsgColor('green');
   };
 
   return (
-    <div className="register-container">
+    <>
       <Header lang={lang} onLangChange={handleLangChange} />
-      <main className="main-content">
-        <h2 className="page-title">{t('findPw')}</h2>
-        <form className="register-form" onSubmit={handleSubmit}>
-          <div className="input-group">
-            <input
+      <FindContainer>
+        <Title>{t('findPw')}</Title>
+        <StyledForm onSubmit={handleSubmit}>
+          <InputGroup>
+            <Input
               name="email"
               placeholder={t('emailPlaceholder')}
               value={email}
-              onChange={e => { setEmail(e.target.value); setMsg(''); }}
+              onChange={e => { setEmail(e.target.value); setMsgKey(''); }}
             />
-          </div>
-          <button type="submit">{t('findPw')}</button>
-        </form>
-        {msg && (
-          <div style={{ color: msgColor, fontSize: '15px', margin: '16px 0 0 2px', textAlign: 'center' }}>{msg}</div>
-        )}
-      </main>
-    </div>
+          </InputGroup>
+          <SubmitButton type="submit">{t('findPw')}</SubmitButton>
+        </StyledForm>
+        {msgKey && <Message color={msgColor}>{t(msgKey)}</Message>}
+      </FindContainer>
+    </>
   );
 }
 

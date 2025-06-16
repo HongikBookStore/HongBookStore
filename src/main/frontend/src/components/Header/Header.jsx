@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
@@ -197,9 +197,13 @@ const MobileMenuActions = styled.div`
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const [lang, setLang] = useState(localStorage.getItem('lang') || 'ko');
+  const { t, i18n } = useTranslation();
+  const [lang, setLang] = useState(i18n.language);
   const isLoggedIn = !!localStorage.getItem('jwt');
+
+  useEffect(() => {
+    setLang(i18n.language);
+  }, [i18n.language]);
 
   const handleLangChange = (e) => {
     const newLang = e.target.value;
@@ -209,7 +213,8 @@ const Header = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('user');
     navigate('/');
     window.location.reload();
   };

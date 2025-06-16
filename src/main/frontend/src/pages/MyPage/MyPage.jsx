@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const MyPageContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -489,6 +490,7 @@ const StepIndicator = styled.div`
 
 const MyPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [isVerified, setIsVerified] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -524,6 +526,12 @@ const MyPage = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showPhotoMenu]);
+
+  useEffect(() => {
+    if (!localStorage.getItem('jwt')) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleSetDefault = (locationId) => {
     setLocations(locations.map(loc => ({
