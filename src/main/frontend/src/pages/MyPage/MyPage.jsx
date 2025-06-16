@@ -510,6 +510,19 @@ const MyPage = () => {
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const photoMenuRef = useRef();
 
+  // jwt 체크
+  const token = localStorage.getItem('jwt');
+  useEffect(() => {
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate, token]);
+
+  if (!token) {
+    // jwt 없으면 아무것도 렌더하지 않음(혹은 로딩 스피너 등)
+    return null;
+  }
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -526,12 +539,6 @@ const MyPage = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showPhotoMenu]);
-
-  useEffect(() => {
-    if (!localStorage.getItem('jwt')) {
-      navigate('/login');
-    }
-  }, [navigate]);
 
   const handleSetDefault = (locationId) => {
     setLocations(locations.map(loc => ({
