@@ -28,6 +28,9 @@ const Description = styled.p`
   color: var(--text-light);
   max-width: 600px;
   margin: 0 auto;
+  line-height: 1.7;
+  padding-bottom: 0.3em;
+  word-break: keep-all;
 `;
 
 const Controls = styled.div`
@@ -194,9 +197,7 @@ const Marketplace = () => {
     <MarketplaceContainer>
       <Header>
         <Title>{t('marketplaceTitle')}</Title>
-        <Description>
-          {t('marketplaceDesc')}
-        </Description>
+        <Description dangerouslySetInnerHTML={{ __html: t('marketplaceDesc') }} />
       </Header>
 
       <Controls>

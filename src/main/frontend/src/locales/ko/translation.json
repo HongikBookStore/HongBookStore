@@ -50,12 +50,12 @@
   "termsOfService": "이용약관",
   "connectWithUs": "소셜 미디어",
   "allRightsReserved": "모든 권리 보유",
-  "welcomeTitle": "홍북서점에 오신 것을 환영합니다",
-  "welcomeDesc": "여러분의 지역에서 책을 발견하고, 공유하고, 교환하세요. 지금 바로 활기찬 독서 커뮤니티에 참여하세요!",
+  "welcomeTitle": "홍북서점에 오신 것을<br/>환영합니다",
+  "welcomeDesc": "여러분의 지역에서 책을 발견하고, 공유하고, 교환하세요.<br/>지금 바로 활기찬 독서 커뮤니티에 참여하세요!",
   "exploreBooks": "도서 둘러보기",
   "joinNow": "회원가입",
   "marketplaceTitle": "북마켓",
-  "marketplaceDesc": "다른 독자들과 책을 교환하고 거래하세요. 당신의 다음 인생책을 찾거나 소장 도서를 판매해보세요.",
+  "marketplaceDesc": "다른 독자들과 책을 교환하고 거래하세요.<br/>당신의 다음 인생책을 찾거나 소장 도서를 판매해보세요.",
   "searchBooks": "도서 검색...",
   "filter": "필터",
   "available": "거래 가능",
@@ -91,5 +91,6 @@
   "yourSchoolEmailVerified": "학교 이메일 인증이 완료되었습니다.",
   "cancel": "취소",
   "profileName": "이름",
-  "profileEmail": "이메일"
+  "profileEmail": "이메일",
+  "logout": "로그아웃"
 } 

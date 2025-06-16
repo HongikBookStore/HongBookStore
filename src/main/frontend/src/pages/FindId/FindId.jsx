@@ -88,8 +88,9 @@ function FindId() {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [lang, setLang] = useState(i18n.language || 'ko');
-  const [msg, setMsg] = useState('');
+  const [msgKey, setMsgKey] = useState('');
   const [msgColor, setMsgColor] = useState('');
+  const [foundId, setFoundId] = useState('');
 
   const handleLangChange = e => {
     setLang(e.target.value);
@@ -100,8 +101,9 @@ function FindId() {
     e.preventDefault();
 
     if (!email.trim()) {
-      setMsg(t('emailRequired'));
+      setMsgKey('emailRequired');
       setMsgColor('red');
+      setFoundId('');
       return;
     }
 
@@ -131,12 +133,16 @@ function FindId() {
               name="email"
               placeholder={t('emailPlaceholder')}
               value={email}
-              onChange={e => { setEmail(e.target.value); setMsg(''); }}
+              onChange={e => { setEmail(e.target.value); setMsgKey(''); setFoundId(''); }}
             />
           </InputGroup>
           <SubmitButton type="submit">{t('findId')}</SubmitButton>
         </StyledForm>
-        {msg && <Message color={msgColor}>{msg}</Message>}
+        {msgKey && (
+          <Message color={msgColor}>
+            {msgKey === 'findIdResult' ? t(msgKey, {id: foundId}) : t(msgKey)}
+          </Message>
+        )}
       </FindContainer>
     </>
   );

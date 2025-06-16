@@ -11,7 +11,7 @@ import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
 
 const LoginContainer = styled.div`
   padding: 8rem 2rem 4rem;
-  max-width: 400px;
+  max-width: 500px;
   margin: 0 auto;
   background: var(--background);
   border-radius: var(--radius-lg);
