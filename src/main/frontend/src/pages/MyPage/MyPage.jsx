@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
-
-const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/150';
 
 const MyPageContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -498,7 +496,7 @@ const MyPage = () => {
   const [resendTimer, setResendTimer] = useState(0);
   const [schoolEmail, setSchoolEmail] = useState('');
   const [verificationStep, setVerificationStep] = useState('email');
-  const [profileImage, setProfileImage] = useState(DEFAULT_PROFILE_IMAGE);
+  const [profileImage, setProfileImage] = useState(null);
   const [isDefaultImage, setIsDefaultImage] = useState(true);
   const [locations, setLocations] = useState([
     { id: 1, name: 'Hongik University Main Gate', address: '94 Wausan-ro, Mapo-gu, Seoul', isDefault: true },
@@ -506,6 +504,26 @@ const MyPage = () => {
   ]);
   const [newLocation, setNewLocation] = useState({ name: '', address: '' });
   const [showAddForm, setShowAddForm] = useState(false);
+  const fileInputRef = useRef();
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+  const photoMenuRef = useRef();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (photoMenuRef.current && !photoMenuRef.current.contains(event.target)) {
+        setShowPhotoMenu(false);
+      }
+    }
+    if (showPhotoMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPhotoMenu]);
 
   const handleSetDefault = (locationId) => {
     setLocations(locations.map(loc => ({
@@ -534,13 +552,25 @@ const MyPage = () => {
     }
   };
 
+  const handlePhotoMenuClick = () => {
+    setShowPhotoMenu((prev) => !prev);
+  };
+
+  const handlePhotoMenuSelect = (option) => {
+    setShowPhotoMenu(false);
+    if (option === 'default') {
+      setProfileImage(null);
+    } else if (option === 'upload') {
+      fileInputRef.current.click();
+    }
+  };
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result);
-        setIsDefaultImage(false);
       };
       reader.readAsDataURL(file);
     }
@@ -590,15 +620,65 @@ const MyPage = () => {
     <MyPageContainer>
       <ProfileSection>
         <ProfileImage>
-          <img src={profileImage} alt="Profile" />
-          <PhotoChangeButton as="label">
+          {profileImage ? (
+            <img src={profileImage} alt="Profile" />
+          ) : (
+            <i className="fas fa-user" style={{ fontSize: '80px', color: 'var(--primary)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}></i>
+          )}
+          <PhotoChangeButton type="button" onClick={handlePhotoMenuClick}>
             <i className="fas fa-camera"></i>
-            <HiddenFileInput
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-            />
           </PhotoChangeButton>
+          {showPhotoMenu && (
+            <div ref={photoMenuRef} style={{
+              position: 'absolute',
+              top: '110%',
+              right: 0,
+              background: 'white',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              boxShadow: 'var(--shadow)',
+              zIndex: 10,
+              minWidth: '140px',
+              padding: '0.5rem 0',
+            }}>
+              <button style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                padding: '0.75rem 1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                color: 'var(--text)',
+                fontSize: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }} onClick={() => handlePhotoMenuSelect('default')}>
+                <i className="fas fa-user"></i> Default Icon
+              </button>
+              <button style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                padding: '0.75rem 1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                color: 'var(--text)',
+                fontSize: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }} onClick={() => handlePhotoMenuSelect('upload')}>
+                <i className="fas fa-upload"></i> Upload Photo
+              </button>
+            </div>
+          )}
+          <HiddenFileInput
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+          />
         </ProfileImage>
         <ProfileInfo>
           <ProfileName>
