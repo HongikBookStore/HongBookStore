@@ -110,15 +110,18 @@ function FindId() {
     try {
       const { success, data } = await findIdByEmail(email.trim());
       if (success) {
-        setMsg(t('findIdResult', { id: data }));
+        setMsgKey('findIdResult');
         setMsgColor('green');
+        setFoundId(data);
       } else {
-        setMsg(t('emailNotFound'));
+        setMsgKey('emailNotFound');
         setMsgColor('red');
+        setFoundId('');
       }
     } catch (err) {
-      setMsg(err.message || t('networkError'));
+      setMsgKey('networkError');
       setMsgColor('red');
+      setFoundId('');
     }
   };
 
