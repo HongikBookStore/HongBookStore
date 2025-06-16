@@ -4,6 +4,8 @@ import '../../i18n.js';
 import styled from 'styled-components';
 import Header from '../../components/Header/Header.jsx';
 
+import { findIdByEmail } from '../../api/user';
+
 const FindContainer = styled.div`
   padding: 8rem 2rem 4rem;
   max-width: 400px;
@@ -94,21 +96,28 @@ function FindId() {
     i18n.changeLanguage(e.target.value);
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
+
     if (!email.trim()) {
       setMsg(t('emailRequired'));
       setMsgColor('red');
       return;
     }
-    // 임시: test@test.com만 성공, 그 외는 에러
-    if (email.trim() !== 'test@test.com') {
-      setMsg(t('emailNotFound'));
+
+    try {
+      const { success, data } = await findIdByEmail(email.trim());
+      if (success) {
+        setMsg(t('findIdResult', { id: data }));
+        setMsgColor('green');
+      } else {
+        setMsg(t('emailNotFound'));
+        setMsgColor('red');
+      }
+    } catch (err) {
+      setMsg(err.message || t('networkError'));
       setMsgColor('red');
-      return;
     }
-    setMsg(t('findIdResult', { id: 'hong1234' }));
-    setMsgColor('green');
   };
 
   return (

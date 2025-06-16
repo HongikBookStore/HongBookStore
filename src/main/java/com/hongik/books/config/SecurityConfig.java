@@ -99,7 +99,7 @@ public class SecurityConfig {
                                 "/api/users/login",
                                 "/api/users/id-check",
                                 "/api/users/email-check",
-                                "/error",
+                                "/api/users/find-id",
                                 "/actuator/health"
                         ).permitAll()
                         .requestMatchers("/api/**").authenticated()

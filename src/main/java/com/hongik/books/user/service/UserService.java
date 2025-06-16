@@ -63,6 +63,13 @@ public class UserService {
                 .orElseGet(() -> new ApiResponse<>(false, "아이디/비번 오류", null));
     }
 
+    @Transactional(readOnly = true)
+    public ApiResponse<String> findUsernameByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .map(u -> new ApiResponse<>(true, "OK", u.getUsername()))
+                .orElseGet(() -> new ApiResponse<>(false, "존재하지 않는 이메일입니다.", null));
+    }
+
     @Transactional
     public void verifyStudent(Long userId) {
         userRepository.findById(userId).ifPresent(u -> u.setStudentVerified(true));
