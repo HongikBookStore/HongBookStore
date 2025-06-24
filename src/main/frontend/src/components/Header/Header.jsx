@@ -122,6 +122,50 @@ const LangSelect = styled.select`
     content: '🌍';
     margin-right: 0.5rem;
   }
+
+  .lang-text {
+    display: inline;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    
+    .lang-text {
+      display: none;
+    }
+    
+    option {
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    padding: 0.5rem;
+    min-width: 60px;
+    
+    .lang-text {
+      display: none;
+    }
+    
+    option {
+      font-size: 0.75rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.4rem 0.5rem;
+    min-width: 50px;
+    font-size: 0.75rem;
+    
+    .lang-text {
+      display: none;
+    }
+    
+    option {
+      font-size: 0.7rem;
+    }
+  }
 `;
 
 const Logo = styled(Link)`
@@ -256,7 +300,7 @@ const Hamburger = styled.button`
     transform: rotate(-45deg) translate(6px, -6px);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     display: flex;
   }
 `;
@@ -415,10 +459,10 @@ const Header = () => {
           <LeftBox>
             <LangSelectBox>
               <LangSelect value={i18n.language} onChange={handleLangChange}>
-                <option value="ko">🇰🇷 한국어</option>
-                <option value="en">🇺🇸 English</option>
-                <option value="ja">🇯🇵 日本語</option>
-                <option value="zh">🇨🇳 中文</option>
+                <option value="ko">🇰🇷 <span className="lang-text">한국어</span></option>
+                <option value="en">🇺🇸 <span className="lang-text">English</span></option>
+                <option value="ja">🇯🇵 <span className="lang-text">日本語</span></option>
+                <option value="zh">🇨🇳 <span className="lang-text">中文</span></option>
               </LangSelect>
             </LangSelectBox>
             <Logo to="/">
@@ -427,10 +471,10 @@ const Header = () => {
           </LeftBox>
 
           <NavLinks isOpen={isOpen}>
-            <li><NavLink to="/mypage">마이페이지</NavLink></li>
-            <li><NavLink to="/marketplace">책거래게시판</NavLink></li>
-            <li><NavLink to="/map">지도</NavLink></li>
-            <li><NavLink to="/ai-chat">AI 챗봇</NavLink></li>
+            <li><NavLink to="/mypage" onClick={() => setIsOpen(false)}>마이페이지</NavLink></li>
+            <li><NavLink to="/marketplace" onClick={() => setIsOpen(false)}>책거래게시판</NavLink></li>
+            <li><NavLink to="/map" onClick={() => setIsOpen(false)}>지도</NavLink></li>
+            <li><NavLink to="/ai-chat" onClick={() => setIsOpen(false)}>AI 챗봇</NavLink></li>
           </NavLinks>
 
           <MenuBox>
