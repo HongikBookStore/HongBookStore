@@ -18,11 +18,13 @@ import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
 import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
 import BookWrite from './pages/BookWrite/BookWrite.jsx';
 import BookDetail from './pages/BookDetail/BookDetail';
-import Chat from './pages/Chat/Chat.jsx';
+import ChatList from './pages/Chat/ChatList.jsx';
+import ChatRoom from './pages/Chat/ChatRoom.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
 const Map = () => <div>Map Page</div>;
+const AIChatbot = () => <div style={{padding: '64px 0', textAlign: 'center', fontSize: '1.5rem'}}>AI 챗봇 준비중입니다.</div>;
 
 function App() {
     const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +68,8 @@ function App() {
                 <Route path="/bookstore" element={<MyBookstore />} />
                 <Route path="/bookstore/add" element={<BookWrite />} />
                 <Route path="/book/:id" element={<BookDetail />} />
-                <Route path="/chat" element={<Chat />} />
+                <Route path="/chat" element={<ChatList />} />
+                <Route path="/chat/:id" element={<ChatRoom />} />
                 <Route path="/community" element={<Community />} />
                 <Route path="/map" element={<Map />} />
                 <Route path="/mypage" element={<MyPage />} />
@@ -74,6 +77,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/find-id" element={<FindId />} />
                 <Route path="/find-pw" element={<FindPw />} />
+                <Route path="/ai-chat" element={<AIChatbot />} />
             </Routes>
             <Footer />
         </Router>

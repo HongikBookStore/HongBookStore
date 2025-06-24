@@ -350,7 +350,8 @@ const Footer = () => {
             <li><FooterLink to="/marketplace">책거래게시판</FooterLink></li>
             <li><FooterLink to="/wanted">구하기 게시판</FooterLink></li>
             <li><FooterLink to="/bookstore">나의 책방</FooterLink></li>
-            <li><FooterLink to="/chat">AI챗봇</FooterLink></li>
+            <li><FooterLink to="/ai-chat">AI 챗봇</FooterLink></li>
+            <li><FooterLink to="/chat">거래 채팅</FooterLink></li>
             <li><FooterLink to="/map">지도</FooterLink></li>
           </ul>
         </FooterSection>

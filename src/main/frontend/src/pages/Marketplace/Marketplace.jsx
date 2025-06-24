@@ -916,7 +916,7 @@ const Marketplace = () => {
   return (
     <MarketplaceContainer>
       <Header>
-        <Title>Book Trading Board</Title>
+        <Title>책거래게시판</Title>
         <Description>
           홍익대학교 학생들과 함께하는 중고책 거래 플랫폼입니다.
           필요한 교재를 찾거나 사용하지 않는 책을 판매해보세요.
@@ -928,19 +928,19 @@ const Marketplace = () => {
           active={activeSubMenu === 'booksale'}
           onClick={() => handleSubMenuClick('booksale')}
         >
-          Book Sale Write
+          책 판매 글쓰기
         </SubMenuButton>
         <SubMenuButton
           active={activeSubMenu === 'wanted'}
           onClick={() => handleSubMenuClick('wanted')}
         >
-          Wanted Board
+          구하기 게시판
         </SubMenuButton>
         <SubMenuButton
           active={activeSubMenu === 'mybookstore'}
           onClick={() => handleSubMenuClick('mybookstore')}
         >
-          My Bookstore
+          나의 책방
         </SubMenuButton>
         <SubMenuButton
           active={activeSubMenu === 'chat'}

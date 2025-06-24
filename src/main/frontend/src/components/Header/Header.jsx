@@ -420,11 +420,7 @@ const Header = () => {
             <li><NavLink to="/mypage">마이페이지</NavLink></li>
             <li><NavLink to="/marketplace">책거래게시판</NavLink></li>
             <li><NavLink to="/map">지도</NavLink></li>
-            <li>
-              <NavLink as="button" type="button" style={{background: 'none', border: 'none', color: 'var(--text)', fontWeight: 600, fontSize: '1.125rem', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)', cursor: 'not-allowed', opacity: 0.7}} tabIndex={-1} onClick={e => e.preventDefault()}>
-                채팅
-              </NavLink>
-            </li>
+            <li><NavLink to="/ai-chat">AI 챗봇</NavLink></li>
           </NavLinks>
 
           <MenuBox>

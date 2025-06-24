@@ -15,12 +15,12 @@ const ChatContainer = styled.div`
   border-radius: 10px;
   overflow: hidden;
   box-sizing: border-box;
-  padding-top: 24px;
+  padding-top: 0;
   @media (max-width: 900px) {
-    padding-top: 16px;
+    padding-top: 0;
   }
   @media (max-width: 600px) {
-    padding-top: 12px;
+    padding-top: 0;
   }
 `;
 
@@ -257,17 +257,17 @@ const NoMessages = styled.div`
   padding: 40px 20px;
 `;
 
-const Chat = () => {
+const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-  const { chatId } = useParams();
+  const { id } = useParams();
 
   // 임시 데이터
   const mockChatData = {
-    id: chatId || '1',
+    id: id || '1',
     user: {
       name: '김학생',
       avatar: null
@@ -368,7 +368,7 @@ const Chat = () => {
   };
 
   const handleBack = () => {
-    navigate('/marketplace');
+    navigate('/chat');
   };
 
   const formatTime = (timestamp) => {
@@ -471,4 +471,4 @@ const Chat = () => {
   );
 };
 
-export default Chat; 
+export default ChatRoom; 
