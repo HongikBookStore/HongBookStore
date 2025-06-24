@@ -335,7 +335,7 @@ const ChatListPage = () => {
   }, []);
 
   const handleBack = () => {
-    navigate(-1);
+    navigate('/marketplace');
   };
 
   const handleChatClick = (chatId) => {

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n.js';
+import bookIcon from '../../assets/book.svg';
 
 const slideDown = keyframes`
   from {
@@ -135,9 +136,16 @@ const Logo = styled(Link)`
   gap: 0.75rem;
   transition: var(--transition);
   position: relative;
-
-  &:hover {
-    transform: translateY(-2px);
+  min-width: 0;
+  flex-shrink: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  @media (max-width: 900px) {
+    font-size: 1.2rem;
+  }
+  @media (max-width: 600px) {
+    font-size: 1.1rem;
   }
 `;
 
@@ -413,7 +421,9 @@ const Header = () => {
                 <option value="zh">🇨🇳 中文</option>
               </LangSelect>
             </LangSelectBox>
-            <Logo to="/">홍북스토어</Logo>
+            <Logo to="/">
+              홍책방
+            </Logo>
           </LeftBox>
 
           <NavLinks isOpen={isOpen}>

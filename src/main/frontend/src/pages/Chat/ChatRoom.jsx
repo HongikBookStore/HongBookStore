@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const ChatContainer = styled.div`
@@ -96,20 +96,85 @@ const BookTitle = styled.div`
 const HeaderRight = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
 `;
 
-const MenuButton = styled.button`
-  padding: 8px;
-  background: none;
-  border: none;
-  color: #666;
+const ChatMenuButton = styled.button`
+  background: ${props => props.active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'var(--surface)'};
+  color: ${props => props.active ? 'white' : 'var(--text)'};
+  border: 2px solid ${props => props.active ? 'transparent' : 'var(--border)'};
+  border-radius: var(--radius-lg);
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 5px;
-  transition: background 0.3s;
+  transition: var(--transition);
+  box-shadow: ${props => props.active ? 'var(--shadow-lg)' : 'none'};
+  min-width: 120px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 10px;
+  margin-right: 0;
+  height: 44px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: translateX(-100%);
+    transition: 0.6s;
+  }
+
+  &:hover::before {
+    transform: translateX(100%);
+  }
 
   &:hover {
-    background: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(124, 58, 237, 0.05);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    color: #bbb;
+    background: #f5f5f5;
+    border-color: #eee;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    min-width: auto;
+    width: 100%;
+    font-size: 0.95rem;
+    padding: 0.7rem 1rem;
+  }
+`;
+
+const ExitButton = styled(ChatMenuButton)`
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 2px solid rgba(239, 68, 68, 0.2);
+  &:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
 `;
 
@@ -169,6 +234,12 @@ const SystemMessage = styled.div`
   border-radius: 15px;
   align-self: center;
   max-width: 80%;
+  &.cancel {
+    color: #d32f2f;
+    background: #fff0f0;
+    border: 1px solid #ffcdd2;
+    font-weight: 600;
+  }
 `;
 
 const ChatInput = styled.div`
@@ -257,6 +328,88 @@ const NoMessages = styled.div`
   padding: 40px 20px;
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalBox = styled.div`
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px 24px 24px 24px;
+  min-width: 320px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+`;
+
+const ModalTitle = styled.div`
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+`;
+
+const ModalTextarea = styled.textarea`
+  width: 100%;
+  min-height: 60px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 1rem;
+  resize: none;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+`;
+
+const ModalButton = styled.button`
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #007bff;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: #0056b3; }
+  &[data-variant='cancel'] {
+    background: #ccc;
+    color: #333;
+    &:hover { background: #bbb; }
+  }
+`;
+
+const ReportRadio = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+`;
+
+const RadioInput = styled.input`
+  accent-color: #ff4d4f;
+`;
+
+// 반응형 width 감지 훅
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return width;
+}
+
 const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -264,6 +417,46 @@ const ChatRoom = () => {
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const { id } = useParams();
+  const [isReserved, setIsReserved] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [showReportExitModal, setShowReportExitModal] = useState(false);
+  const width = useWindowWidth();
+
+  // 버튼 텍스트 반응형
+  const getLabel = (type) => {
+    if (width <= 600) return '';
+    if (width <= 900) {
+      switch (type) {
+        case 'report': return '신고';
+        case 'reserve': return '예약';
+        case 'reserve-cancel': return '예약 취소';
+        case 'complete': return '완료';
+        case 'complete-cancel': return '완료 취소';
+        default: return '';
+      }
+    }
+    switch (type) {
+      case 'report': return '신고하기';
+      case 'reserve': return '예약하기';
+      case 'reserve-cancel': return '예약 취소하기';
+      case 'complete': return '거래 완료';
+      case 'complete-cancel': return '거래 완료 취소';
+      default: return '';
+    }
+  };
+
+  // 아이콘 색상 동적
+  const iconColor = (activeColor, isActive, isHover) => {
+    if (isActive || isHover) return activeColor;
+    return '#bbb';
+  };
+
+  // 버튼 hover 상태 관리
+  const [hovered, setHovered] = useState('');
 
   // 임시 데이터
   const mockChatData = {
@@ -379,6 +572,82 @@ const ChatRoom = () => {
     });
   };
 
+  const handleReserve = () => {
+    setIsReserved(true);
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now(), type: 'system', content: '상대방이 예약을 요청했습니다.', timestamp: new Date().toLocaleString('ko-KR') }
+    ]);
+  };
+
+  const handleCancelReserve = () => {
+    setShowCancelModal(true);
+  };
+
+  const handleCancelConfirm = () => {
+    setIsReserved(false);
+    setShowCancelModal(false);
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now(), type: 'system', content: `예약이 취소되었습니다. 사유: ${cancelReason}`, timestamp: new Date().toLocaleString('ko-KR'), cancel: true }
+    ]);
+    setCancelReason('');
+  };
+
+  const handleCancelClose = () => {
+    setShowCancelModal(false);
+    setCancelReason('');
+  };
+
+  const handleExit = () => {
+    if(window.confirm('채팅방을 나가시겠습니까?')) {
+      navigate('/chat');
+    }
+  };
+
+  const getToday = () => {
+    const d = new Date();
+    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  };
+
+  const handleComplete = () => {
+    if (!isCompleted) {
+      setIsCompleted(true);
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now(), type: 'system', content: '거래가 완료되었습니다.', timestamp: new Date().toLocaleString('ko-KR') }
+      ]);
+    } else {
+      setIsCompleted(false);
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now(), type: 'system', content: '거래 완료가 취소되었습니다.', timestamp: new Date().toLocaleString('ko-KR') }
+      ]);
+    }
+  };
+
+  const handleReport = () => {
+    setShowReportModal(true);
+    setReportReason('');
+  };
+
+  const handleReportSubmit = (e) => {
+    e.preventDefault();
+    if (!reportReason) return;
+    setShowReportModal(false);
+    setShowReportExitModal(true);
+    // 실제 신고 API 연동은 추후 구현
+  };
+
+  const handleReportExit = () => {
+    setShowReportExitModal(false);
+    navigate('/chat');
+  };
+
+  const handleReportStay = () => {
+    setShowReportExitModal(false);
+  };
+
   return (
     <>
       <div className="header-spacer" />
@@ -386,7 +655,7 @@ const ChatRoom = () => {
         <ChatHeader>
           <HeaderLeft>
             <BackButton onClick={handleBack}>
-              <FaArrowLeft /> 뒤로가기
+              <FaArrowLeft />
             </BackButton>
             <ChatInfo>
               <UserAvatar>
@@ -401,19 +670,118 @@ const ChatRoom = () => {
               </UserInfo>
             </ChatInfo>
           </HeaderLeft>
-          <HeaderRight>
-            <MenuButton>
-              <FaEllipsisV />
-            </MenuButton>
+          <HeaderRight style={{gap: 0}}>
+            <ChatMenuButton
+              onClick={handleReport}
+              title="신고하기"
+              onMouseEnter={() => setHovered('report')}
+              onMouseLeave={() => setHovered('')}
+            >
+              <FaExclamationTriangle style={{ color: iconColor('#ffb300', false, hovered==='report'), fontSize: '1.1em' }} />
+              {getLabel('report')}
+            </ChatMenuButton>
+            {isReserved ? (
+              <ChatMenuButton
+                onClick={handleCancelReserve}
+                title="예약 취소하기"
+                disabled={isCompleted}
+                onMouseEnter={() => setHovered('reserve-cancel')}
+                onMouseLeave={() => setHovered('')}
+              >
+                <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve-cancel'), fontSize: '1.1em' }} />
+                {getLabel('reserve-cancel')}
+              </ChatMenuButton>
+            ) : (
+              <ChatMenuButton
+                onClick={handleReserve}
+                title="예약하기"
+                disabled={isCompleted}
+                onMouseEnter={() => setHovered('reserve')}
+                onMouseLeave={() => setHovered('')}
+              >
+                <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve'), fontSize: '1.1em' }} />
+                {getLabel('reserve')}
+              </ChatMenuButton>
+            )}
+            <ChatMenuButton
+              onClick={handleComplete}
+              title={isCompleted ? "거래 완료 취소" : "거래 완료"}
+              disabled={!isReserved && !isCompleted}
+              onMouseEnter={() => setHovered(isCompleted ? 'complete-cancel' : 'complete')}
+              onMouseLeave={() => setHovered('')}
+            >
+              <FaCheckCircle style={{ color: iconColor('#1976d2', isCompleted, hovered===(isCompleted?'complete-cancel':'complete')), fontSize: '1.1em' }} />
+              {getLabel(isCompleted ? 'complete-cancel' : 'complete')}
+            </ChatMenuButton>
+            <ExitButton onClick={handleExit} title="채팅방 나가기">
+              <FaSignOutAlt /> {width > 600 && '나가기'}
+            </ExitButton>
           </HeaderRight>
         </ChatHeader>
-
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fa', padding: '8px 0', fontSize: '0.95rem', color: '#666', gap: 8 }}>
+          <FaCalendarAlt style={{ opacity: 0.7 }} />
+          <span>{getToday()}</span>
+        </div>
+        {showCancelModal && (
+          <ModalOverlay>
+            <ModalBox>
+              <ModalTitle>예약 취소 사유를 입력하세요</ModalTitle>
+              <ModalTextarea
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="예: 일정 변경, 거래 취소 등"
+              />
+              <ModalActions>
+                <ModalButton data-variant="cancel" onClick={handleCancelClose}>취소</ModalButton>
+                <ModalButton onClick={handleCancelConfirm} disabled={!cancelReason.trim()}>확인</ModalButton>
+              </ModalActions>
+            </ModalBox>
+          </ModalOverlay>
+        )}
+        {showReportModal && (
+          <ModalOverlay>
+            <ModalBox as="form" onSubmit={handleReportSubmit}>
+              <ModalTitle>신고 사유를 선택하세요</ModalTitle>
+              <ReportRadio>
+                <RadioInput type="radio" name="report" value="욕설/비방" checked={reportReason === '욕설/비방'} onChange={e => setReportReason(e.target.value)} />
+                욕설/비방
+              </ReportRadio>
+              <ReportRadio>
+                <RadioInput type="radio" name="report" value="사기/허위매물" checked={reportReason === '사기/허위매물'} onChange={e => setReportReason(e.target.value)} />
+                사기/허위매물
+              </ReportRadio>
+              <ReportRadio>
+                <RadioInput type="radio" name="report" value="스팸/광고" checked={reportReason === '스팸/광고'} onChange={e => setReportReason(e.target.value)} />
+                스팸/광고
+              </ReportRadio>
+              <ReportRadio>
+                <RadioInput type="radio" name="report" value="기타" checked={reportReason === '기타'} onChange={e => setReportReason(e.target.value)} />
+                기타
+              </ReportRadio>
+              <ModalActions>
+                <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
+                <ModalButton type="submit" disabled={!reportReason}>제출</ModalButton>
+              </ModalActions>
+            </ModalBox>
+          </ModalOverlay>
+        )}
+        {showReportExitModal && (
+          <ModalOverlay>
+            <ModalBox>
+              <ModalTitle>신고가 접수되었습니다.<br/>채팅방에서 나가시겠습니까?</ModalTitle>
+              <ModalActions>
+                <ModalButton data-variant="cancel" onClick={handleReportStay}>아니오</ModalButton>
+                <ModalButton onClick={handleReportExit}>예</ModalButton>
+              </ModalActions>
+            </ModalBox>
+          </ModalOverlay>
+        )}
         <ChatMessages>
           {messages.length > 0 ? (
             messages.map(message => (
               <MessageGroup key={message.id}>
                 {message.type === 'system' ? (
-                  <SystemMessage>{message.content}</SystemMessage>
+                  <SystemMessage className={message.cancel ? 'cancel' : ''}>{message.content}</SystemMessage>
                 ) : (
                   <Message isOwn={message.sender === 'own'}>
                     {message.content}
@@ -433,7 +801,6 @@ const ChatRoom = () => {
           )}
           <div ref={messagesEndRef} />
         </ChatMessages>
-
         <ChatInput>
           <InputContainer>
             <MessageInput
@@ -450,7 +817,6 @@ const ChatRoom = () => {
               <FaPaperPlane />
             </SendButton>
           </InputContainer>
-          
           <QuickActions>
             <QuickActionButton onClick={() => handleQuickAction('가격 협의 가능')}>
               가격 협의 가능
