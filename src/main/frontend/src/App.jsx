@@ -12,6 +12,13 @@ import Login from './pages/Login/Login.jsx';
 import Register from './pages/Register/Register.jsx';
 import FindId from './pages/FindId/FindId.jsx';
 import FindPw from './pages/FindPw/FindPw.jsx';
+import Search from './pages/Search/Search.jsx';
+import Wanted from './pages/Wanted/Wanted.jsx';
+import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
+import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
+import BookWrite from './pages/BookWrite/BookWrite.jsx';
+import BookDetail from './pages/BookDetail/BookDetail';
+import Chat from './pages/Chat/Chat.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -53,6 +60,13 @@ function App() {
             <Routes>
                 <Route path="/" element={<Hero />} />
                 <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/wanted" element={<Wanted />} />
+                <Route path="/wanted/write" element={<WantedWrite />} />
+                <Route path="/bookstore" element={<MyBookstore />} />
+                <Route path="/bookstore/add" element={<BookWrite />} />
+                <Route path="/book/:id" element={<BookDetail />} />
+                <Route path="/chat" element={<Chat />} />
                 <Route path="/community" element={<Community />} />
                 <Route path="/map" element={<Map />} />
                 <Route path="/mypage" element={<MyPage />} />
