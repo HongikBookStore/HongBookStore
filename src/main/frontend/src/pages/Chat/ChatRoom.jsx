@@ -218,10 +218,18 @@ const Message = styled.div`
 `;
 
 const MessageTime = styled.div`
-  font-size: 0.8rem;
-  color: ${props => props.isOwn ? 'rgba(255,255,255,0.7)' : '#999'};
-  margin-top: 5px;
-  text-align: ${props => props.isOwn ? 'right' : 'left'};
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 4px;
+  white-space: nowrap;
+  
+  ${props => props.isOwn ? `
+    align-self: flex-end;
+    text-align: right;
+  ` : `
+    align-self: flex-start;
+    text-align: left;
+  `}
 `;
 
 const SystemMessage = styled.div`
@@ -783,12 +791,14 @@ const ChatRoom = () => {
                 {message.type === 'system' ? (
                   <SystemMessage className={message.cancel ? 'cancel' : ''}>{message.content}</SystemMessage>
                 ) : (
-                  <Message isOwn={message.sender === 'own'}>
-                    {message.content}
+                  <>
+                    <Message isOwn={message.sender === 'own'}>
+                      {message.content}
+                    </Message>
                     <MessageTime isOwn={message.sender === 'own'}>
                       {formatTime(message.timestamp)}
                     </MessageTime>
-                  </Message>
+                  </>
                 )}
               </MessageGroup>
             ))
