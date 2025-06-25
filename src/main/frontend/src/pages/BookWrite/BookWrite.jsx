@@ -1,7 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle } from 'react-icons/fa';
+import { useNavigate, useLocation } from 'react-router-dom';
+import WarningModal from '../../components/WarningModal/WarningModal';
+import { useWriting } from '../../contexts/WritingContext';
+
+const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 150px;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #007bff;
+  }
+`;
 
 const WriteContainer = styled.div`
   max-width: 800px;
@@ -448,6 +468,277 @@ const OriginalPriceInput = styled.input`
   }
 `;
 
+const InputTypeSelector = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const InputTypeButtons = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const InputTypeButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  border: 2px solid ${props => props.active ? '#007bff' : '#ddd'};
+  background: ${props => props.active ? '#007bff' : 'white'};
+  color: ${props => props.active ? 'white' : '#333'};
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #007bff;
+    background: ${props => props.active ? '#0056b3' : '#f8f9ff'};
+  }
+`;
+
+const BookSearchModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const BookSearchContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const BookList = styled.div`
+  max-height: 400px;
+  overflow-y: auto;
+`;
+
+const BookItem = styled.div`
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #007bff;
+    background: #f8f9ff;
+  }
+
+  &.selected {
+    border-color: #007bff;
+    background: #e3f2fd;
+  }
+`;
+
+const BookTitle = styled.div`
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+`;
+
+const BookInfo = styled.div`
+  color: #666;
+  font-size: 0.9rem;
+`;
+
+const ModalButtons = styled.div`
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+`;
+
+const ModalButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &.primary {
+    background: #007bff;
+    color: white;
+
+    &:hover {
+      background: #0056b3;
+    }
+  }
+
+  &.secondary {
+    background: #6c757d;
+    color: white;
+
+    &:hover {
+      background: #5a6268;
+    }
+  }
+`;
+
+const SelectedBookDisplay = styled.div`
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+`;
+
+const DiscountInfo = styled.div`
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+`;
+
+const ButtonSection = styled.div`
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+`;
+
+const SaveDraftButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #218838;
+  }
+
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+`;
+
+const InfoButton = styled.button`
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.2s;
+  &:hover {
+    color: #0056b3;
+  }
+`;
+
+const InfoModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+`;
+
+const InfoModalContent = styled.div`
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  text-align: center;
+`;
+
+const InfoTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.98rem;
+  th, td {
+    border: 1px solid #eee;
+    padding: 0.5rem 0.75rem;
+  }
+  th {
+    background: #f8f9fa;
+    font-weight: 600;
+  }
+`;
+
+const InfoModalClose = styled.button`
+  margin-top: 1rem;
+  padding: 0.5rem 1.2rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  &:hover {
+    background: #0056b3;
+  }
+`;
+
+const RecommendButton = styled.button`
+  margin-left: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: #f1f3f9;
+  color: #007bff;
+  border: 1px solid #cce1ff;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  &:hover {
+    background: #e3f0ff;
+    color: #0056b3;
+  }
+`;
+
+const InfoDescription = styled.div`
+  margin-bottom: 1rem;
+  text-align: left;
+`;
+
+const InfoNote = styled.div`
+  margin-top: 1rem;
+  text-align: left;
+`;
+
 // 카테고리 데이터
 const CATEGORIES = {
   '전공': {
@@ -475,26 +766,72 @@ const CATEGORIES = {
 };
 
 const BookWrite = () => {
+  console.log('BookWrite 컴포넌트 렌더링 시작');
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const { startWriting, stopWriting } = useWriting();
+  
   const [formData, setFormData] = useState({
-    bookType: 'official', // 'official' | 'printed'
+    bookType: 'official',
     title: '',
     isbn: '',
     author: '',
-    mainCategory: '', // 대분류
-    subCategory: '', // 중분류
-    detailCategory: '', // 소분류
-    writingCondition: '', // 필기 상태
-    tearCondition: '', // 찢어짐 정도
-    waterCondition: '', // 물흘림 정도
-    originalPrice: '', // 원가
-    price: '', // 희망 가격
-    location: 'campus', // 'campus' | 'offcampus'
-    negotiable: false
+    mainCategory: '',
+    subCategory: '',
+    detailCategory: '',
+    writingCondition: '',
+    tearCondition: '',
+    waterCondition: '',
+    originalPrice: '',
+    price: '',
+    description: ''
   });
-  const [images, setImages] = useState([]);
   const [errors, setErrors] = useState({});
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [inputType, setInputType] = useState('title'); // 'title' or 'isbn'
+  const [showBookSearch, setShowBookSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
+  // 컴포넌트 마운트 시 글쓰기 시작
+  useEffect(() => {
+    console.log('BookWrite 컴포넌트 마운트됨');
+    startWriting('sale');
+    
+    // 컴포넌트 언마운트 시 글쓰기 종료
+    return () => {
+      console.log('BookWrite 컴포넌트 언마운트됨');
+      stopWriting();
+    };
+  }, [startWriting, stopWriting]);
+
+  // 폼 데이터 변경 감지
+  useEffect(() => {
+    const hasChanges = Object.values(formData).some(value => 
+      value && value.toString().trim() !== ''
+    ) || images.length > 0;
+    setHasUnsavedChanges(hasChanges);
+  }, [formData, images]);
+
+  // 브라우저 뒤로가기/앞으로가기 감지
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // 할인율 계산 함수
   const calculateDiscountRate = () => {
@@ -522,6 +859,16 @@ const BookWrite = () => {
   };
 
   // 추천 가격 계산
+  // 현재는 책 상태(필기, 찢어짐, 물흘림)를 기준으로 할인율을 계산하여 추천 가격을 산정합니다.
+  // 
+  // 할인율 계산 기준:
+  // - 필기 상태: 없음(0%) ~ 많음(15%)
+  // - 찢어짐 정도: 없음(0%) ~ 심함(10%)
+  // - 물흘림 정도: 없음(0%) ~ 심함(10%)
+  // - 최대 할인율: 35%
+  //
+  // TODO: 실제 구현 시에는 시장 가격 데이터베이스나 
+  // 유사 책의 거래 이력을 참고하여 더 정확한 추천 가격을 제공해야 합니다.
   const getRecommendedPrice = () => {
     if (!formData.originalPrice) return null;
     const discountRate = calculateDiscountRate();
@@ -622,50 +969,145 @@ const BookWrite = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     
-    if (!validateForm()) {
-      return;
-    }
-
     setLoading(true);
-
     try {
       // 실제로는 API 호출
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('책 등록:', { ...formData, images });
       alert('책이 성공적으로 등록되었습니다!');
-      navigate('/bookstore');
+      stopWriting(); // 글쓰기 종료
+      navigate('/marketplace');
     } catch (error) {
-      console.error('책 등록 실패:', error);
-      alert('책 등록에 실패했습니다. 다시 시도해주세요.');
+      console.error('등록 실패:', error);
+      alert('등록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveDraft = async () => {
-    setLoading(true);
-
     try {
       // 실제로는 API 호출
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log('임시저장:', { ...formData, images });
       alert('임시저장되었습니다!');
+      stopWriting(); // 글쓰기 종료
     } catch (error) {
       console.error('임시저장 실패:', error);
-      alert('임시저장에 실패했습니다. 다시 시도해주세요.');
-    } finally {
-      setLoading(false);
+      alert('임시저장에 실패했습니다.');
+    }
+  };
+
+  // 안전한 네비게이션 함수
+  const safeNavigate = (path) => {
+    if (hasUnsavedChanges) {
+      setPendingNavigation(path);
+      setShowWarningModal(true);
+    } else {
+      navigate(path);
+    }
+  };
+
+  // 경고 모달에서 나가기 선택
+  const handleConfirmExit = () => {
+    setShowWarningModal(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  // 경고 모달에서 취소 선택
+  const handleCancelExit = () => {
+    setShowWarningModal(false);
+    setPendingNavigation(null);
+  };
+
+  // 임시저장 후 나가기
+  const handleSaveDraftAndExit = async () => {
+    try {
+      await handleSaveDraft();
+      setShowWarningModal(false);
+      if (pendingNavigation) {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }
+    } catch (error) {
+      console.error('임시저장 실패:', error);
+      // 임시저장 실패 시에도 나가기
+      setShowWarningModal(false);
+      if (pendingNavigation) {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }
     }
   };
 
   const handleCancel = () => {
-    if (window.confirm('작성 중인 내용이 사라집니다. 정말 나가시겠습니까?')) {
-      navigate('/bookstore');
-    }
+    safeNavigate('/marketplace');
   };
+
+  // 책 검색 함수
+  const handleBookSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    // 임시 검색 결과 (실제로는 API 호출)
+    const mockResults = [
+      {
+        isbn: '9788966262472',
+        title: '자바의 정석',
+        author: '남궁성',
+        publisher: '도우출판',
+        publishedDate: '2016-01-15'
+      },
+      {
+        isbn: '9788994492032',
+        title: '자바의 정석 (기초편)',
+        author: '남궁성',
+        publisher: '도우출판',
+        publishedDate: '2015-03-20'
+      },
+      {
+        isbn: '9788966262489',
+        title: '자바의 정석 (고급편)',
+        author: '남궁성',
+        publisher: '도우출판',
+        publishedDate: '2016-02-10'
+      }
+    ].filter(book => 
+      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.isbn.includes(searchQuery)
+    );
+    
+    setSearchResults(mockResults);
+  };
+
+  // 책 선택 함수
+  const handleBookSelect = (book) => {
+    setSelectedBook(book);
+    setFormData(prev => ({
+      ...prev,
+      title: book.title,
+      isbn: book.isbn,
+      author: book.author
+    }));
+  };
+
+  // 책 검색 모달 닫기
+  const handleCloseBookSearch = () => {
+    setShowBookSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // 책 검색 모달 열기
+  const handleOpenBookSearch = () => {
+    setShowBookSearch(true);
+  };
+
+  console.log('BookWrite 컴포넌트 렌더링 완료');
+
+  const recommended = getRecommendedPrice();
 
   return (
     <>
@@ -707,20 +1149,96 @@ const BookWrite = () => {
           <FormSection>
             <SectionTitle>책 정보</SectionTitle>
             
-            <FormGroup>
-              <Label>
-                책 제목 또는 ISBN <Required>*</Required>
-              </Label>
-              <Input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                placeholder="책 제목 또는 ISBN을 입력해주세요"
-              />
-              <HelpText>책 제목 또는 ISBN 중 하나를 입력해주세요</HelpText>
-              {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-            </FormGroup>
+            <InputTypeSelector>
+              <Label>입력 방식 선택 <Required>*</Required></Label>
+              <InputTypeButtons>
+                <InputTypeButton
+                  type="button"
+                  active={inputType === 'title'}
+                  onClick={() => setInputType('title')}
+                >
+                  책 제목으로 입력
+                </InputTypeButton>
+                <InputTypeButton
+                  type="button"
+                  active={inputType === 'isbn'}
+                  onClick={() => setInputType('isbn')}
+                >
+                  ISBN으로 검색
+                </InputTypeButton>
+              </InputTypeButtons>
+            </InputTypeSelector>
+
+            {inputType === 'title' ? (
+              <FormGroup>
+                <Label>
+                  책 제목 <Required>*</Required>
+                </Label>
+                <Input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="책 제목을 입력해주세요"
+                />
+                {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
+              </FormGroup>
+            ) : (
+              <FormGroup>
+                <Label>
+                  ISBN 검색 <Required>*</Required>
+                </Label>
+                {selectedBook ? (
+                  <SelectedBookDisplay>
+                    <BookTitle>{selectedBook.title}</BookTitle>
+                    <BookInfo>
+                      저자: {selectedBook.author} | 출판사: {selectedBook.publisher} | ISBN: {selectedBook.isbn}
+                    </BookInfo>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBook(null)}
+                      style={{
+                        marginTop: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        background: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      다시 선택
+                    </button>
+                  </SelectedBookDisplay>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Input
+                      type="text"
+                      placeholder="ISBN 또는 책 제목으로 검색"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleOpenBookSearch}
+                      style={{
+                        padding: '0.75rem 1rem',
+                        background: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <FaSearch />
+                    </button>
+                  </div>
+                )}
+                {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
+              </FormGroup>
+            )}
 
             <FormGroup>
               <Label>
@@ -918,7 +1436,7 @@ const BookWrite = () => {
 
             <FormGroup>
               <Label>
-                물흘림 정도 <Required>*</Required>
+                물기 상태 <Required>*</Required>
               </Label>
               <ToggleContainer>
                 <ToggleOption>
@@ -939,7 +1457,7 @@ const BookWrite = () => {
                     checked={formData.waterCondition === '중'}
                     onChange={handleInputChange}
                   />
-                  <ToggleText>중 (약간 물흘림)</ToggleText>
+                  <ToggleText>중 (약간 물기)</ToggleText>
                 </ToggleOption>
                 <ToggleOption>
                   <input
@@ -949,22 +1467,24 @@ const BookWrite = () => {
                     checked={formData.waterCondition === '하'}
                     onChange={handleInputChange}
                   />
-                  <ToggleText>하 (많이 물흘림)</ToggleText>
+                  <ToggleText>하 (많이 물기)</ToggleText>
                 </ToggleOption>
               </ToggleContainer>
               {errors.waterCondition && <ErrorMessage>{errors.waterCondition}</ErrorMessage>}
             </FormGroup>
           </FormSection>
 
-          {/* 6. 거래 희망 가격 */}
+          {/* 6. 가격 정보 */}
           <FormSection>
-            <SectionTitle>거래 정보</SectionTitle>
+            <SectionTitle>
+              <FaMoneyBillWave /> 가격 정보
+            </SectionTitle>
             
             <FormGroup>
               <Label>
                 원가 <Required>*</Required>
               </Label>
-              <OriginalPriceInput
+              <Input
                 type="number"
                 name="originalPrice"
                 value={formData.originalPrice}
@@ -977,82 +1497,212 @@ const BookWrite = () => {
 
             <FormGroup>
               <Label>
-                희망 가격 <Required>*</Required>
+                판매가 <Required>*</Required>
               </Label>
               <Input
                 type="number"
                 name="price"
                 value={formData.price}
                 onChange={handleInputChange}
-                placeholder="희망 가격을 입력해주세요"
+                placeholder="판매가를 입력해주세요"
                 min="0"
               />
-              {formData.originalPrice && formData.writingCondition && formData.tearCondition && formData.waterCondition && (
-                <PriceRecommendation>
-                  <RecommendationText>
-                    📊 상태 기반 가격 추천:
-                  </RecommendationText>
-                  <DiscountText>
-                    {getRecommendedPrice()?.discountRate}% 할인 적용 → {getRecommendedPrice()?.recommendedPrice?.toLocaleString()}원 추천
-                  </DiscountText>
-                </PriceRecommendation>
-              )}
               {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
-            </FormGroup>
-
-            {/* 7. 거래 지역 */}
-            <FormGroup>
-              <Label>거래 지역</Label>
-              <SwitchContainer>
-                <SwitchLabel>거래 지역:</SwitchLabel>
-                <SwitchButton
-                  type="button"
-                  className={formData.location === 'campus' ? 'active' : ''}
-                  onClick={() => setFormData(prev => ({ ...prev, location: 'campus' }))}
-                >
-                  교내
-                </SwitchButton>
-                <SwitchButton
-                  type="button"
-                  className={formData.location === 'offcampus' ? 'active' : ''}
-                  onClick={() => setFormData(prev => ({ ...prev, location: 'offcampus' }))}
-                >
-                  교외
-                </SwitchButton>
-              </SwitchContainer>
-            </FormGroup>
-
-            {/* 8. 네고 여부 */}
-            <FormGroup>
-              <Label>가격 협의</Label>
-              <SwitchContainer>
-                <SwitchLabel>가격 협의:</SwitchLabel>
-                <SwitchButton
-                  type="button"
-                  className={formData.negotiable ? 'active' : ''}
-                  onClick={() => setFormData(prev => ({ ...prev, negotiable: !prev.negotiable }))}
-                >
-                  {formData.negotiable ? '가능' : '불가능'}
-                </SwitchButton>
-              </SwitchContainer>
+              
+              {formData.originalPrice && recommended && (
+                <DiscountInfo>
+                  할인율: {recommended.discountRate}%
+                  ({(formData.originalPrice - recommended.recommendedPrice).toLocaleString()}원 할인)
+                  <br />
+                  추천가: <b>{recommended.recommendedPrice.toLocaleString()}원</b>
+                  <RecommendButton
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, price: recommended.recommendedPrice }))}
+                  >
+                    추천 가격으로 입력
+                  </RecommendButton>
+                  <InfoButton type="button" onClick={() => setShowInfoModal(true)} title="추천 거래 가격 산정 기준 안내">
+                    <FaInfoCircle />
+                  </InfoButton>
+                </DiscountInfo>
+              )}
             </FormGroup>
           </FormSection>
 
-          <ButtonGroup>
-            <CancelButton type="button" onClick={handleCancel}>
-              취소
-            </CancelButton>
-            <SaveButton type="button" onClick={handleSaveDraft} disabled={loading}>
-              <FaSave />
-              임시저장
-            </SaveButton>
-            <SubmitButton type="submit" disabled={loading}>
-              <FaCheck />
-              {loading ? '등록 중...' : '책 등록하기'}
-            </SubmitButton>
-          </ButtonGroup>
+          {/* 7. 상세 설명 */}
+          <FormSection>
+            <SectionTitle>상세 설명</SectionTitle>
+            
+            <FormGroup>
+              <Label>상세 설명</Label>
+              <TextArea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="책에 대한 상세한 설명을 입력해주세요 (선택사항)"
+              />
+            </FormGroup>
+          </FormSection>
+
+          {/* 버튼 영역 */}
+          <ButtonSection>
+            <ButtonGroup>
+              <CancelButton type="button" onClick={handleCancel}>
+                취소
+              </CancelButton>
+              <SaveDraftButton type="button" onClick={handleSaveDraft}>
+                <FaSave /> 임시저장
+              </SaveDraftButton>
+              <SubmitButton type="submit" disabled={loading}>
+                {loading ? '등록 중...' : '등록하기'}
+              </SubmitButton>
+            </ButtonGroup>
+          </ButtonSection>
         </WriteForm>
       </WriteContainer>
+
+      {/* 책 검색 모달 */}
+      {showBookSearch && (
+        <BookSearchModal>
+          <BookSearchContent>
+            <h3>책 검색</h3>
+            <SearchInput
+              type="text"
+              placeholder="ISBN 또는 책 제목으로 검색하세요"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleBookSearch()}
+            />
+            <button
+              onClick={handleBookSearch}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                marginBottom: '1rem'
+              }}
+            >
+              검색
+            </button>
+            
+            {searchResults.length > 0 && (
+              <BookList>
+                {searchResults.map((book, index) => (
+                  <BookItem
+                    key={index}
+                    onClick={() => handleBookSelect(book)}
+                    className={selectedBook?.isbn === book.isbn ? 'selected' : ''}
+                  >
+                    <BookTitle>{book.title}</BookTitle>
+                    <BookInfo>
+                      저자: {book.author} | 출판사: {book.publisher} | ISBN: {book.isbn}
+                    </BookInfo>
+                  </BookItem>
+                ))}
+              </BookList>
+            )}
+            
+            <ModalButtons>
+              <ModalButton
+                type="button"
+                className="secondary"
+                onClick={handleCloseBookSearch}
+              >
+                취소
+              </ModalButton>
+              <ModalButton
+                type="button"
+                className="primary"
+                onClick={() => {
+                  if (selectedBook) {
+                    handleCloseBookSearch();
+                  }
+                }}
+                disabled={!selectedBook}
+              >
+                선택 완료
+              </ModalButton>
+            </ModalButtons>
+          </BookSearchContent>
+        </BookSearchModal>
+      )}
+
+      {/* 경고 모달 */}
+      <WarningModal
+        isOpen={showWarningModal}
+        onClose={handleCancelExit}
+        onConfirm={handleConfirmExit}
+        onCancel={handleCancelExit}
+        onSaveDraft={handleSaveDraftAndExit}
+        type="sale"
+        showSaveDraft={true}
+      />
+
+      {/* 정보 모달 */}
+      {showInfoModal && (
+        <InfoModalOverlay onClick={() => setShowInfoModal(false)}>
+          <InfoModalContent onClick={e => e.stopPropagation()}>
+            <h3>📚 추천 거래 가격 산정 기준표</h3>
+            <InfoDescription>
+              <p>원가 대비 최대 할인율을 기준으로 추천 가격을 계산합니다.</p>
+              <p>각 항목별 할인율이 누적되어 적용됩니다.</p>
+            </InfoDescription>
+            <InfoTable>
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th>가중치</th>
+                  <th>상태별 할인율</th>
+                  <th>상세 설명</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>필기 상태</strong></td>
+                  <td>15%</td>
+                  <td>상: 2.25% / 중: 5.25% / 하: 8.25%</td>
+                  <td>연필, 펜 등으로 필기된 정도에 따라 할인</td>
+                </tr>
+                <tr>
+                  <td><strong>찢어짐 정도</strong></td>
+                  <td>35%</td>
+                  <td>상: 5.25% / 중: 12.25% / 하: 19.25%</td>
+                  <td>책장, 표지 등의 찢어짐 정도에 따라 할인</td>
+                </tr>
+                <tr>
+                  <td><strong>물흘림 정도</strong></td>
+                  <td>50%</td>
+                  <td>상: 7.5% / 중: 17.5% / 하: 27.5%</td>
+                  <td>물에 젖은 흔적이나 얼룩 정도에 따라 할인</td>
+                </tr>
+                <tr style={{backgroundColor: '#f8f9fa'}}>
+                  <td><strong>중고책 기본 할인</strong></td>
+                  <td>-</td>
+                  <td>10%</td>
+                  <td>새책이 아닌 모든 중고책에 기본 적용</td>
+                </tr>
+                <tr style={{backgroundColor: '#e3f2fd', fontWeight: 'bold'}}>
+                  <td colSpan={2}><strong>최대 총 할인율</strong></td>
+                  <td><strong>약 65%</strong></td>
+                  <td><strong>모든 상태가 '하'일 때</strong></td>
+                </tr>
+              </tbody>
+            </InfoTable>
+            <InfoNote>
+              <p><strong>💡 참고사항:</strong></p>
+              <ul>
+                <li>각 항목의 상태는 '상/중/하'로 평가됩니다</li>
+                <li>할인율은 원가에서 차감되어 추천가가 계산됩니다</li>
+                <li>실제 판매가는 자유롭게 설정 가능합니다</li>
+              </ul>
+            </InfoNote>
+            <InfoModalClose onClick={() => setShowInfoModal(false)}>확인</InfoModalClose>
+          </InfoModalContent>
+        </InfoModalOverlay>
+      )}
     </>
   );
 };

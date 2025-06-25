@@ -639,6 +639,13 @@ const SectionTitle = styled.h2`
 `;
 
 // 할인율에 따른 책 상태 반환 함수
+// 현재는 할인율을 기준으로 책 상태를 자동 판단하고 있습니다:
+// - 할인율 20% 이하: 상 (좋은 상태)
+// - 할인율 21-40%: 중 (보통 상태)  
+// - 할인율 41% 이상: 하 (낮은 상태)
+// 
+// TODO: 실제 구현 시에는 사용자가 직접 책 상태를 평가할 수 있도록 
+// 별도의 상태 입력 필드를 제공해야 합니다.
 const getBookCondition = (discountRate) => {
   if (discountRate <= 20) return { text: '상', color: '#28a745', bgColor: '#d4edda' };
   if (discountRate <= 40) return { text: '중', color: '#ffc107', bgColor: '#fff3cd' };

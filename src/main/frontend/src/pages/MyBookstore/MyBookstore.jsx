@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaEdit, FaTrash, FaEye, FaBook, FaUser, FaClock, FaMoneyBillWave, FaChartLine } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaEye, FaBook, FaUser, FaClock, FaMoneyBillWave, FaChartLine, FaHeart, FaSearch, FaHandPaper, FaArrowRight, FaRegEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const BookstoreContainer = styled.div`
@@ -233,6 +233,225 @@ const NoBooks = styled.div`
   text-align: center;
   padding: 60px 20px;
   color: #666;
+`;
+
+const SectionContainer = styled.div`
+  margin-bottom: 40px;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 1.5rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const ViewMoreButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  color: #007bff;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+`;
+
+const CompactBookCard = styled.div`
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  }
+`;
+
+const CompactBookImage = styled.div`
+  width: 60px;
+  height: 80px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  flex-shrink: 0;
+`;
+
+const CompactBookInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const CompactBookTitle = styled.h4`
+  font-size: 1rem;
+  margin-bottom: 5px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const CompactBookMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+`;
+
+const CompactBookPrice = styled.div`
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #007bff;
+`;
+
+const CompactBookStatus = styled.span`
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  
+  ${props => {
+    switch(props.status) {
+      case 'SALE': return 'background: #d4edda; color: #155724;';
+      case 'RESERVED': return 'background: #fff3cd; color: #856404;';
+      case 'SOLD': return 'background: #f8d7da; color: #721c24;';
+      default: return 'background: #e2e3e5; color: #383d41;';
+    }
+  }}
+`;
+
+const CompactBookActions = styled.div`
+  display: flex;
+  gap: 5px;
+`;
+
+const CompactActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #666;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+  }
+
+  &.delete:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 2rem;
+  color: #ccc;
+  margin-bottom: 10px;
+`;
+
+const CompactList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const WantedCard = styled.div`
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  }
+`;
+
+const WantedIcon = styled.div`
+  width: 50px;
+  height: 50px;
+  background: #fff3cd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #856404;
+  flex-shrink: 0;
+`;
+
+const WantedInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const WantedTitle = styled.h4`
+  font-size: 1rem;
+  margin-bottom: 5px;
+  color: #333;
+`;
+
+const WantedMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #666;
+  font-size: 0.8rem;
+`;
+
+const WantedBudget = styled.div`
+  font-size: 1rem;
+  font-weight: bold;
+  color: #28a745;
 `;
 
 const MyBookstore = () => {

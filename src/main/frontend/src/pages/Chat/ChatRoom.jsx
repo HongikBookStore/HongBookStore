@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const ChatContainer = styled.div`
@@ -265,10 +265,66 @@ const InputContainer = styled.div`
   align-items: flex-end;
 `;
 
+const MessageStatus = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  margin-top: 2px;
+  
+  ${props => props.isOwn ? `
+    align-self: flex-end;
+    justify-content: flex-end;
+  ` : `
+    align-self: flex-start;
+    justify-content: flex-start;
+  `}
+`;
+
+const StatusIcon = styled.span`
+  color: ${props => {
+    if (props.status === 'sending') return '#ffa726';
+    if (props.status === 'read') return '#2196f3';
+    if (props.status === 'failed') return '#f44336';
+    return '#9e9e9e';
+  }};
+  font-size: 0.8rem;
+`;
+
+const RetryButton = styled.button`
+  background: none;
+  border: none;
+  color: #f44336;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: rgba(244, 67, 54, 0.1);
+  }
+`;
+
+const ProfanityWarning = styled.div`
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+`;
+
 const MessageInput = styled.textarea`
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid ${props => props.hasProfanity ? '#f44336' : '#ddd'};
   border-radius: 20px;
   resize: none;
   font-family: inherit;
@@ -279,17 +335,17 @@ const MessageInput = styled.textarea`
   min-height: 44px;
 
   &:focus {
-    border-color: #007bff;
+    border-color: ${props => props.hasProfanity ? '#f44336' : '#007bff'};
   }
 `;
 
 const SendButton = styled.button`
   padding: 12px 16px;
-  background: #007bff;
+  background: ${props => props.disabled ? '#ccc' : '#007bff'};
   color: white;
   border: none;
   border-radius: 50%;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   transition: background 0.3s;
   display: flex;
   align-items: center;
@@ -298,12 +354,7 @@ const SendButton = styled.button`
   height: 44px;
 
   &:hover {
-    background: #0056b3;
-  }
-
-  &:disabled {
-    background: #ccc;
-    cursor: not-allowed;
+    background: ${props => props.disabled ? '#ccc' : '#0056b3'};
   }
 `;
 
@@ -399,12 +450,80 @@ const ReportRadio = styled.label`
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-  font-size: 1rem;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  
+  &:hover {
+    color: #007bff;
+  }
 `;
 
 const RadioInput = styled.input`
-  accent-color: #ff4d4f;
+  margin: 0;
+  cursor: pointer;
+`;
+
+const RetryModalOverlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const RetryModalBox = styled.div`
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 320px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+`;
+
+const RetryModalTitle = styled.div`
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+`;
+
+const RetryModalMessage = styled.div`
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.4;
+`;
+
+const RetryModalActions = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+`;
+
+const RetryModalButton = styled.button`
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  
+  &.cancel {
+    background: #f1f3f4;
+    color: #333;
+    &:hover { background: #e8eaed; }
+  }
+  
+  &.confirm {
+    background: #007bff;
+    color: white;
+    &:hover { background: #0056b3; }
+  }
 `;
 
 // 반응형 width 감지 훅
@@ -419,12 +538,53 @@ function useWindowWidth() {
 }
 
 const ChatRoom = () => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      type: 'message',
+      content: '안녕하세요! 책에 대해 문의드립니다.',
+      sender: 'other',
+      timestamp: '2024-01-15 14:30:00',
+      status: 'read'
+    },
+    {
+      id: 2,
+      type: 'message',
+      content: '네, 어떤 점이 궁금하신가요?',
+      sender: 'own',
+      timestamp: '2024-01-15 14:32:00',
+      status: 'read'
+    },
+    {
+      id: 3,
+      type: 'message',
+      content: '책 상태가 어떤가요?',
+      sender: 'other',
+      timestamp: '2024-01-15 14:33:00',
+      status: 'read'
+    },
+    {
+      id: 4,
+      type: 'message',
+      content: '거의 새책 상태입니다!',
+      sender: 'own',
+      timestamp: '2024-01-15 14:35:00',
+      status: 'read'
+    },
+    {
+      id: 5,
+      type: 'message',
+      content: '네트워크 오류로 전송 실패한 메시지 예시입니다.',
+      sender: 'own',
+      timestamp: '2024-01-15 14:36:00',
+      status: 'failed'
+    }
+  ]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { chatId } = useParams();
   const [isReserved, setIsReserved] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -432,6 +592,11 @@ const ChatRoom = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [showReportExitModal, setShowReportExitModal] = useState(false);
+  const [hovered, setHovered] = useState('');
+  const [hasProfanity, setHasProfanity] = useState(false);
+  const [profanityWarning, setProfanityWarning] = useState('');
+  const [showRetryModal, setShowRetryModal] = useState(false);
+  const [retryMessageId, setRetryMessageId] = useState(null);
   const width = useWindowWidth();
 
   // 버튼 텍스트 반응형
@@ -463,64 +628,6 @@ const ChatRoom = () => {
     return '#bbb';
   };
 
-  // 버튼 hover 상태 관리
-  const [hovered, setHovered] = useState('');
-
-  // 임시 데이터
-  const mockChatData = {
-    id: id || '1',
-    user: {
-      name: '김학생',
-      avatar: null
-    },
-    book: {
-      title: '자바의 정석',
-      price: 15000
-    }
-  };
-
-  const mockMessages = [
-    {
-      id: 1,
-      type: 'system',
-      content: '채팅이 시작되었습니다.',
-      timestamp: '2024-01-15 14:30'
-    },
-    {
-      id: 2,
-      type: 'message',
-      content: '안녕하세요! 자바의 정석 책에 대해 문의드립니다.',
-      sender: 'other',
-      timestamp: '2024-01-15 14:31'
-    },
-    {
-      id: 3,
-      type: 'message',
-      content: '안녕하세요! 어떤 점이 궁금하신가요?',
-      sender: 'own',
-      timestamp: '2024-01-15 14:32'
-    },
-    {
-      id: 4,
-      type: 'message',
-      content: '책 상태가 어떤가요? 하이라이트나 메모가 있나요?',
-      sender: 'other',
-      timestamp: '2024-01-15 14:33'
-    },
-    {
-      id: 5,
-      type: 'message',
-      content: '거의 새책 상태이고, 하이라이트는 없습니다. 깨끗하게 보관했어요.',
-      sender: 'own',
-      timestamp: '2024-01-15 14:35'
-    }
-  ];
-
-  useEffect(() => {
-    setMessages(mockMessages);
-    scrollToBottom();
-  }, []);
-
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -530,30 +637,109 @@ const ChatRoom = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || hasProfanity) return;
 
-    setLoading(true);
-    
+    const messageId = Date.now();
     const message = {
-      id: Date.now(),
+      id: messageId,
       type: 'message',
       content: newMessage.trim(),
       sender: 'own',
-      timestamp: new Date().toLocaleString('ko-KR')
+      timestamp: new Date().toLocaleString('ko-KR'),
+      status: 'sending'
     };
 
+    // 메시지를 즉시 추가 (전송 중 상태)
     setMessages(prev => [...prev, message]);
     setNewMessage('');
-    setLoading(false);
+    setLoading(true);
 
-    // 실제로는 API 호출하여 메시지 전송
-    console.log('메시지 전송:', message);
+    try {
+      // 실제로는 API 호출하여 메시지 전송
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      // 전송 성공 시 바로 읽음 상태로 변경
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, status: 'read' }
+          : msg
+      ));
+
+    } catch (error) {
+      console.error('메시지 전송 실패:', error);
+      // 전송 실패 시 상태 업데이트
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, status: 'failed' }
+          : msg
+      ));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const handleRetryMessage = async (messageId) => {
+    const message = messages.find(msg => msg.id === messageId);
+    if (!message) return;
+
+    // 메시지 상태를 전송 중으로 변경
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, status: 'sending' }
+        : msg
+    ));
+
+    try {
+      // 재전송 시도
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      // 재전송 성공 시 바로 읽음 상태로 변경
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, status: 'read' }
+          : msg
+      ));
+
+    } catch (error) {
+      console.error('메시지 재전송 실패:', error);
+      // 재전송 실패
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, status: 'failed' }
+          : msg
+      ));
+    }
+  };
+
+  const handleRetryClick = (messageId) => {
+    setRetryMessageId(messageId);
+    setShowRetryModal(true);
+  };
+
+  const handleRetryConfirm = async () => {
+    if (retryMessageId) {
+      setShowRetryModal(false);
+      await handleRetryMessage(retryMessageId);
+      setRetryMessageId(null);
+    }
+  };
+
+  const handleRetryCancel = () => {
+    setShowRetryModal(false);
+    setRetryMessageId(null);
+  };
+
+  const handleMessageChange = (e) => {
+    const text = e.target.value;
+    setNewMessage(text);
+    
+    // 비속어 감지
+    if (detectProfanity(text)) {
+      setHasProfanity(true);
+      setProfanityWarning('부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
+    } else {
+      setHasProfanity(false);
+      setProfanityWarning('');
     }
   };
 
@@ -566,6 +752,13 @@ const ChatRoom = () => {
     };
 
     setNewMessage(quickMessages[action]);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   const handleBack = () => {
@@ -656,6 +849,52 @@ const ChatRoom = () => {
     setShowReportExitModal(false);
   };
 
+  // 비속어 감지 함수
+  const detectProfanity = (text) => {
+    const profanityList = [
+      '씨발', '개새끼', '병신', '미친', '바보', '멍청이', '돌아이', '등신',
+      'fuck', 'shit', 'bitch', 'asshole', 'damn', 'hell'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    return profanityList.some(word => lowerText.includes(word));
+  };
+
+  // 메시지 상태 표시 컴포넌트
+  const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
+    const getStatusText = () => {
+      switch (status) {
+        case 'sending': return '전송 중...';
+        case 'read': return '읽음';
+        case 'failed': return '전송 실패';
+        default: return '';
+      }
+    };
+
+    const getStatusIcon = () => {
+      switch (status) {
+        case 'sending': return '⏳';
+        case 'read': return <FaEye size={10} />;
+        case 'failed': return <FaExclamationCircle size={10} />;
+        default: return '';
+      }
+    };
+
+    return (
+      <MessageStatus isOwn={isOwn}>
+        <StatusIcon status={status}>
+          {getStatusIcon()}
+        </StatusIcon>
+        <span>{getStatusText()}</span>
+        {status === 'failed' && onRetry && (
+          <RetryButton onClick={onRetry} title="재전송">
+            <FaRedo size={10} />
+          </RetryButton>
+        )}
+      </MessageStatus>
+    );
+  };
+
   return (
     <>
       <div className="header-spacer" />
@@ -670,10 +909,10 @@ const ChatRoom = () => {
                 <FaUser />
               </UserAvatar>
               <UserInfo>
-                <UserName>{mockChatData.user.name}</UserName>
+                <UserName>{messages[0].sender === 'other' ? '김학생' : '학생'}</UserName>
                 <BookTitle>
                   <FaBook size={12} />
-                  {mockChatData.book.title} - {mockChatData.book.price.toLocaleString()}원
+                  {messages[0].content.split(' - ')[0]} - {messages[0].content.split(' - ')[1]}원
                 </BookTitle>
               </UserInfo>
             </ChatInfo>
@@ -798,6 +1037,13 @@ const ChatRoom = () => {
                     <MessageTime isOwn={message.sender === 'own'}>
                       {formatTime(message.timestamp)}
                     </MessageTime>
+                    {message.sender === 'own' && message.status && (
+                      <MessageStatusIndicator 
+                        status={message.status} 
+                        isOwn={true}
+                        onRetry={() => handleRetryClick(message.id)}
+                      />
+                    )}
                   </>
                 )}
               </MessageGroup>
@@ -812,17 +1058,24 @@ const ChatRoom = () => {
           <div ref={messagesEndRef} />
         </ChatMessages>
         <ChatInput>
+          {profanityWarning && (
+            <ProfanityWarning>
+              <FaExclamationCircle />
+              {profanityWarning}
+            </ProfanityWarning>
+          )}
           <InputContainer>
             <MessageInput
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleMessageChange}
               onKeyPress={handleKeyPress}
               placeholder="메시지를 입력하세요..."
               rows={1}
+              hasProfanity={hasProfanity}
             />
             <SendButton 
               onClick={handleSendMessage} 
-              disabled={!newMessage.trim() || loading}
+              disabled={!newMessage.trim() || loading || hasProfanity}
             >
               <FaPaperPlane />
             </SendButton>
@@ -843,6 +1096,24 @@ const ChatRoom = () => {
           </QuickActions>
         </ChatInput>
       </ChatContainer>
+      {showRetryModal && (
+        <RetryModalOverlay onClick={handleRetryCancel}>
+          <RetryModalBox onClick={e => e.stopPropagation()}>
+            <RetryModalTitle>메시지 재전송</RetryModalTitle>
+            <RetryModalMessage>
+              전송에 실패한 메시지를 다시 전송하시겠습니까?
+            </RetryModalMessage>
+            <RetryModalActions>
+              <RetryModalButton className="cancel" onClick={handleRetryCancel}>
+                취소
+              </RetryModalButton>
+              <RetryModalButton className="confirm" onClick={handleRetryConfirm}>
+                재전송
+              </RetryModalButton>
+            </RetryModalActions>
+          </RetryModalBox>
+        </RetryModalOverlay>
+      )}
     </>
   );
 };

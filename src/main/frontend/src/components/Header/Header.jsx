@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n.js';
 import bookIcon from '../../assets/book.svg';
+import { AuthCtx } from '../../contexts/AuthContext';
+import { useWriting } from '../../contexts/WritingContext';
+import WarningModal from '../WarningModal/WarningModal';
 
 const slideDown = keyframes`
   from {
@@ -379,9 +382,10 @@ const UserMenu = styled.div`
 `;
 
 const UserAvatar = styled.div`
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
+  overflow: hidden;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   display: flex;
   align-items: center;
@@ -391,6 +395,27 @@ const UserAvatar = styled.div`
   cursor: pointer;
   transition: var(--transition);
   box-shadow: var(--shadow);
+  border: 2px solid white;
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .default-avatar {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
 
   &:hover {
     transform: scale(1.1);
@@ -429,14 +454,21 @@ const MobileMenuActions = styled.div`
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { user, token } = useContext(AuthCtx);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isWriting, writingType } = useWriting();
 
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
-    setIsLoggedIn(!!token);
-  }, []);
+    // AuthContext의 token과 localStorage의 jwt를 모두 확인
+    const localToken = localStorage.getItem('jwt');
+    const isAuthenticated = !!(token || localToken);
+    setIsLoggedIn(isAuthenticated);
+  }, [token]);
 
   const handleLangChange = (e) => {
     i18n.changeLanguage(e.target.value);
@@ -444,96 +476,273 @@ const Header = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('jwt');
+    localStorage.removeItem('user');
     setIsLoggedIn(false);
     navigate('/');
+    // 페이지 새로고침으로 AuthContext 상태 초기화
+    window.location.reload();
   };
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
 
+  // 안전한 네비게이션 함수
+  const safeNavigate = (path) => {
+    if (isWriting) {
+      setPendingNavigation(path);
+      setShowWarningModal(true);
+    } else {
+      navigate(path);
+    }
+  };
+
+  // 경고 모달에서 나가기 선택
+  const handleConfirmExit = () => {
+    setShowWarningModal(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  // 경고 모달에서 취소 선택
+  const handleCancelExit = () => {
+    setShowWarningModal(false);
+    setPendingNavigation(null);
+  };
+
+  // 기본 아바타 생성 함수
+  const getDefaultAvatar = () => {
+    if (user && user.username) {
+      return user.username.charAt(0).toUpperCase();
+    }
+    // localStorage에서 사용자 정보 확인
+    try {
+      const localUser = localStorage.getItem('user');
+      if (localUser) {
+        const parsedUser = JSON.parse(localUser);
+        if (parsedUser && parsedUser.username) {
+          return parsedUser.username.charAt(0).toUpperCase();
+        }
+      }
+    } catch (error) {
+      console.error('사용자 정보 파싱 오류:', error);
+    }
+    return 'U';
+  };
+
+  // 사용자 정보 가져오기 (AuthContext 또는 localStorage)
+  const getUserInfo = () => {
+    if (user) return user;
+    try {
+      const localUser = localStorage.getItem('user');
+      return localUser ? JSON.parse(localUser) : null;
+    } catch (error) {
+      console.error('사용자 정보 파싱 오류:', error);
+      return null;
+    }
+  };
+
+  const currentUser = getUserInfo();
+
   return (
-    <HeaderContainer>
-      <NavContainer>
-        <FlexRow>
-          <LeftBox>
-            <LangSelectBox>
-              <LangSelect value={i18n.language} onChange={handleLangChange}>
-                <option value="ko">🇰🇷 <span className="lang-text">한국어</span></option>
-                <option value="en">🇺🇸 <span className="lang-text">English</span></option>
-                <option value="ja">🇯🇵 <span className="lang-text">日本語</span></option>
-                <option value="zh">🇨🇳 <span className="lang-text">中文</span></option>
-              </LangSelect>
-            </LangSelectBox>
-            <Logo to="/">
-              홍책방
-            </Logo>
-          </LeftBox>
+    <>
+      <HeaderContainer>
+        <NavContainer>
+          <FlexRow>
+            <LeftBox>
+              <LangSelectBox>
+                <LangSelect value={i18n.language} onChange={handleLangChange}>
+                  <option value="ko">🇰🇷 <span className="lang-text">한국어</span></option>
+                  <option value="en">🇺🇸 <span className="lang-text">English</span></option>
+                  <option value="ja">🇯🇵 <span className="lang-text">日本語</span></option>
+                  <option value="zh">🇨🇳 <span className="lang-text">中文</span></option>
+                </LangSelect>
+              </LangSelectBox>
+              <Logo to="/" onClick={(e) => {
+                if (isWriting) {
+                  e.preventDefault();
+                  safeNavigate('/');
+                }
+              }}>
+                홍책방
+              </Logo>
+            </LeftBox>
 
-          <NavLinks isOpen={isOpen}>
-            <li><NavLink to="/mypage" onClick={() => setIsOpen(false)}>마이페이지</NavLink></li>
-            <li><NavLink to="/marketplace" onClick={() => setIsOpen(false)}>책거래게시판</NavLink></li>
-            <li><NavLink to="/map" onClick={() => setIsOpen(false)}>지도</NavLink></li>
-            <li><NavLink to="/ai-chat" onClick={() => setIsOpen(false)}>AI 챗봇</NavLink></li>
-          </NavLinks>
+            <NavLinks isOpen={isOpen}>
+              <li>
+                <NavLink 
+                  to="/marketplace" 
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/marketplace');
+                    }
+                    setIsOpen(false);
+                  }}
+                >
+                  책거래게시판
+                </NavLink>
+              </li>
+              <li>
+                <NavLink 
+                  to="/map" 
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/map');
+                    }
+                    setIsOpen(false);
+                  }}
+                >
+                  지도
+                </NavLink>
+              </li>
+              <li>
+                <NavLink 
+                  to="/ai-chat" 
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/ai-chat');
+                    }
+                    setIsOpen(false);
+                  }}
+                >
+                  AI 챗봇
+                </NavLink>
+              </li>
+            </NavLinks>
 
-          <MenuBox>
-            {isLoggedIn ? (
-              <UserMenu>
-                <UserAvatar onClick={() => navigate('/mypage')} />
-                <LogoutButton onClick={handleLogout}>
-                  로그아웃
-                </LogoutButton>
-              </UserMenu>
-            ) : (
-              <>
-                <LoginButton to="/login">
-                  로그인
-                </LoginButton>
-                <RegisterButton to="/register">
-                  회원가입
-                </RegisterButton>
-              </>
-            )}
-          </MenuBox>
-
-          <Hamburger 
-            onClick={toggleMenu} 
-            className={isOpen ? 'active' : ''}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </Hamburger>
-        </FlexRow>
-
-        <MobileMenuActions>
-          {isOpen && (
-            <>
+            <MenuBox>
               {isLoggedIn ? (
-                <>
-                  <NavLink to="/mypage" onClick={() => setIsOpen(false)}>
-                    마이페이지
-                  </NavLink>
+                <UserMenu>
+                  <UserAvatar 
+                    onClick={() => {
+                      if (isWriting) {
+                        safeNavigate('/mypage');
+                      } else {
+                        navigate('/mypage');
+                      }
+                    }} 
+                    title="마이페이지"
+                  >
+                    {currentUser && currentUser.profileImage ? (
+                      <img src={currentUser.profileImage} alt="Profile" />
+                    ) : (
+                      <div className="default-avatar">
+                        {getDefaultAvatar()}
+                      </div>
+                    )}
+                  </UserAvatar>
                   <LogoutButton onClick={handleLogout}>
                     로그아웃
                   </LogoutButton>
-                </>
+                </UserMenu>
               ) : (
                 <>
-                  <LoginButton to="/login" onClick={() => setIsOpen(false)}>
+                  <LoginButton 
+                    to="/login"
+                    onClick={(e) => {
+                      if (isWriting) {
+                        e.preventDefault();
+                        safeNavigate('/login');
+                      }
+                    }}
+                  >
                     로그인
                   </LoginButton>
-                  <RegisterButton to="/register" onClick={() => setIsOpen(false)}>
+                  <RegisterButton 
+                    to="/register"
+                    onClick={(e) => {
+                      if (isWriting) {
+                        e.preventDefault();
+                        safeNavigate('/register');
+                      }
+                    }}
+                  >
                     회원가입
                   </RegisterButton>
                 </>
               )}
-            </>
-          )}
-        </MobileMenuActions>
-      </NavContainer>
-    </HeaderContainer>
+            </MenuBox>
+
+            <Hamburger 
+              onClick={toggleMenu} 
+              className={isOpen ? 'active' : ''}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </Hamburger>
+          </FlexRow>
+
+          <MobileMenuActions>
+            {isOpen && (
+              <>
+                {isLoggedIn ? (
+                  <>
+                    <NavLink 
+                      to="/mypage" 
+                      onClick={(e) => {
+                        if (isWriting) {
+                          e.preventDefault();
+                          safeNavigate('/mypage');
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      마이페이지
+                    </NavLink>
+                    <LogoutButton onClick={handleLogout}>
+                      로그아웃
+                    </LogoutButton>
+                  </>
+                ) : (
+                  <>
+                    <LoginButton 
+                      to="/login" 
+                      onClick={(e) => {
+                        if (isWriting) {
+                          e.preventDefault();
+                          safeNavigate('/login');
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      로그인
+                    </LoginButton>
+                    <RegisterButton 
+                      to="/register" 
+                      onClick={(e) => {
+                        if (isWriting) {
+                          e.preventDefault();
+                          safeNavigate('/register');
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      회원가입
+                    </RegisterButton>
+                  </>
+                )}
+              </>
+            )}
+          </MobileMenuActions>
+        </NavContainer>
+      </HeaderContainer>
+
+      {/* 경고 모달 */}
+      <WarningModal
+        isOpen={showWarningModal}
+        onClose={handleCancelExit}
+        onConfirm={handleConfirmExit}
+        onCancel={handleCancelExit}
+        type={writingType}
+        showSaveDraft={writingType === 'sale'}
+      />
+    </>
   );
 };
 

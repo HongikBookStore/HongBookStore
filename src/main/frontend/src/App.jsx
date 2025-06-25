@@ -20,6 +20,8 @@ import BookWrite from './pages/BookWrite/BookWrite.jsx';
 import BookDetail from './pages/BookDetail/BookDetail';
 import ChatList from './pages/Chat/ChatList.jsx';
 import ChatRoom from './pages/Chat/ChatRoom.jsx';
+import { AuthProvider } from './contexts/AuthContext';
+import { WritingProvider } from './contexts/WritingContext';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -56,31 +58,35 @@ function App() {
     }
 
     return (
-        <Router>
-            <GlobalStyles />
-            <Header />
-            <Routes>
-                <Route path="/" element={<Hero />} />
-                <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/wanted" element={<Wanted />} />
-                <Route path="/wanted/write" element={<WantedWrite />} />
-                <Route path="/bookstore" element={<MyBookstore />} />
-                <Route path="/bookstore/add" element={<BookWrite />} />
-                <Route path="/book/:id" element={<BookDetail />} />
-                <Route path="/chat" element={<ChatList />} />
-                <Route path="/chat/:id" element={<ChatRoom />} />
-                <Route path="/community" element={<Community />} />
-                <Route path="/map" element={<Map />} />
-                <Route path="/mypage" element={<MyPage />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/find-id" element={<FindId />} />
-                <Route path="/find-pw" element={<FindPw />} />
-                <Route path="/ai-chat" element={<AIChatbot />} />
-            </Routes>
-            <Footer />
-        </Router>
+        <AuthProvider>
+            <WritingProvider>
+                <Router>
+                    <GlobalStyles />
+                    <Header />
+                    <Routes>
+                        <Route path="/" element={<Hero />} />
+                        <Route path="/marketplace" element={<Marketplace />} />
+                        <Route path="/search" element={<Search />} />
+                        <Route path="/wanted" element={<Wanted />} />
+                        <Route path="/wanted/write" element={<WantedWrite />} />
+                        <Route path="/bookstore" element={<MyBookstore />} />
+                        <Route path="/bookstore/add" element={<BookWrite />} />
+                        <Route path="/book/:id" element={<BookDetail />} />
+                        <Route path="/chat" element={<ChatList />} />
+                        <Route path="/chat/:id" element={<ChatRoom />} />
+                        <Route path="/community" element={<Community />} />
+                        <Route path="/map" element={<Map />} />
+                        <Route path="/mypage" element={<MyPage />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/find-id" element={<FindId />} />
+                        <Route path="/find-pw" element={<FindPw />} />
+                        <Route path="/ai-chat" element={<AIChatbot />} />
+                    </Routes>
+                    <Footer />
+                </Router>
+            </WritingProvider>
+        </AuthProvider>
     );
 }
 

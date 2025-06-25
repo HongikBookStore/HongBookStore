@@ -173,8 +173,6 @@ const Hero = () => {
       <FloatingElement />
       <FloatingElement />
       <FloatingElement />
-      <BookIcon>📖</BookIcon>
-      <BookIcon>📚</BookIcon>
       
       <HeroContent>
         <Title dangerouslySetInnerHTML={{ __html: t('welcomeTitle') }} />
