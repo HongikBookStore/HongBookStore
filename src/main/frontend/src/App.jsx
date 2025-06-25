@@ -82,6 +82,10 @@ function App() {
                         <Route path="/find-id" element={<FindId />} />
                         <Route path="/find-pw" element={<FindPw />} />
                         <Route path="/ai-chat" element={<AIChatbot />} />
+                        <Route path="/marketplace/:id" element={<BookDetail />} />
+                        <Route path="/bookwrite/:id" element={<BookWrite />} />
+                        <Route path="/wanted/:id" element={<WantedWrite />} />
+                        <Route path="/wantedwrite/:id" element={<WantedWrite />} />
                     </Routes>
                     <Footer />
                 </Router>

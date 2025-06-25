@@ -208,7 +208,7 @@ const NavLinks = styled.ul`
   animation: ${fadeIn} 0.6s ease-out 0.2s backwards;
   
   @media (max-width: 900px) {
-    display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+    display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
     flex-direction: column;
     position: absolute;
     top: 100%;
@@ -554,10 +554,10 @@ const Header = () => {
             <LeftBox>
               <LangSelectBox>
                 <LangSelect value={i18n.language} onChange={handleLangChange}>
-                  <option value="ko">🇰🇷 <span className="lang-text">한국어</span></option>
-                  <option value="en">🇺🇸 <span className="lang-text">English</span></option>
-                  <option value="ja">🇯🇵 <span className="lang-text">日本語</span></option>
-                  <option value="zh">🇨🇳 <span className="lang-text">中文</span></option>
+                  <option value="ko">🇰🇷 한국어</option>
+                  <option value="en">🇺🇸 English</option>
+                  <option value="ja">🇯🇵 日本語</option>
+                  <option value="zh">🇨🇳 中文</option>
                 </LangSelect>
               </LangSelectBox>
               <Logo to="/" onClick={(e) => {
@@ -570,7 +570,7 @@ const Header = () => {
               </Logo>
             </LeftBox>
 
-            <NavLinks isOpen={isOpen}>
+            <NavLinks $isOpen={isOpen}>
               <li>
                 <NavLink 
                   to="/marketplace" 

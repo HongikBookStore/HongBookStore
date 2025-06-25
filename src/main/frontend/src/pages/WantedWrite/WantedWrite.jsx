@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaBook, FaGraduationCap, FaTag, FaMoneyBillWave, FaSave, FaArrowLeft, FaSearch } from 'react-icons/fa';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
@@ -456,6 +456,24 @@ const WantedWrite = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { startWriting, stopWriting } = useWriting();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+
+  // mock 데이터 (실제로는 API 호출)
+  const mockWantedPosts = [
+    {
+      id: '301',
+      title: '자바의 정석 구합니다',
+      isbn: '',
+      author: '김학생',
+      condition: '상',
+      price: '15000',
+      mainCategory: '전공',
+      subCategory: '공과대학',
+      detailCategory: '컴퓨터공학과',
+    },
+    // ... 필요한 만큼 추가 ...
+  ];
 
   // 컴포넌트 마운트 시 글쓰기 시작
   useEffect(() => {
@@ -487,6 +505,26 @@ const WantedWrite = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // 수정 모드일 때 기존 데이터 불러오기
+  useEffect(() => {
+    if (isEdit) {
+      // 실제로는 API 호출
+      const found = mockWantedPosts.find(post => post.id === id);
+      if (found) {
+        setFormData({
+          title: found.title || '',
+          isbn: found.isbn || '',
+          author: found.author || '',
+          condition: found.condition || '',
+          price: found.price || '',
+          mainCategory: found.mainCategory || '',
+          subCategory: found.subCategory || '',
+          detailCategory: found.detailCategory || '',
+        });
+      }
+    }
+  }, [id, isEdit]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -532,11 +570,17 @@ const WantedWrite = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
-    // 실제로는 API 호출
-    alert('구해요 글이 등록되었습니다!');
-    stopWriting(); // 글쓰기 종료
-    navigate('/wanted');
+    if (isEdit) {
+      // 실제로는 API 호출
+      alert('구해요 글이 수정되었습니다!');
+      stopWriting();
+      navigate('/mybookstore');
+    } else {
+      // 실제로는 API 호출
+      alert('구해요 글이 등록되었습니다!');
+      stopWriting();
+      navigate('/wanted');
+    }
   };
 
   // 안전한 네비게이션 함수
@@ -780,7 +824,7 @@ const WantedWrite = () => {
           </FormSection>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
             <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
-            <SubmitButton type="submit">등록</SubmitButton>
+            <SubmitButton type="submit">{isEdit ? '수정' : '등록'}</SubmitButton>
           </div>
         </WriteForm>
       </WriteContainer>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle } from 'react-icons/fa';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle, FaHeart, FaClock, FaUser } from 'react-icons/fa';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
@@ -739,6 +739,12 @@ const InfoNote = styled.div`
   text-align: left;
 `;
 
+const CircleIconButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 // 카테고리 데이터
 const CATEGORIES = {
   '전공': {
@@ -770,8 +776,47 @@ const BookWrite = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const { startWriting, stopWriting } = useWriting();
   
+  // mock 데이터 (실제로는 API 호출)
+  const mockMyBooks = [
+    {
+      id: '1',
+      bookType: 'official',
+      title: '자바의 정석',
+      isbn: '9788966262472',
+      author: '남궁성',
+      mainCategory: '전공',
+      subCategory: '공과대학',
+      detailCategory: '컴퓨터공학과',
+      writingCondition: '상',
+      tearCondition: '상',
+      waterCondition: '상',
+      originalPrice: '30000',
+      price: '15000',
+      description: '자바 프로그래밍 기초부터 고급까지 다루는 책입니다.'
+    },
+    {
+      id: '2',
+      bookType: 'official',
+      title: '스프링 부트 실전 활용',
+      isbn: '9788966262489',
+      author: '김영한',
+      mainCategory: '전공',
+      subCategory: '공과대학',
+      detailCategory: '컴퓨터공학과',
+      writingCondition: '중',
+      tearCondition: '상',
+      waterCondition: '상',
+      originalPrice: '35000',
+      price: '20000',
+      description: '스프링 부트를 활용한 웹 개발 실전 가이드'
+    },
+    // ... 필요한 만큼 추가 ...
+  ];
+
   const [formData, setFormData] = useState({
     bookType: 'official',
     title: '',
@@ -832,6 +877,31 @@ const BookWrite = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // 수정 모드일 때 기존 데이터 불러오기
+  useEffect(() => {
+    if (isEdit) {
+      // id 타입을 문자열로 변환해서 비교
+      const found = mockMyBooks.find(book => String(book.id) === String(id));
+      if (found) {
+        setFormData({
+          bookType: found.bookType || 'official',
+          title: found.title || '',
+          isbn: found.isbn || '',
+          author: found.author || '',
+          mainCategory: found.mainCategory || '',
+          subCategory: found.subCategory || '',
+          detailCategory: found.detailCategory || '',
+          writingCondition: found.writingCondition || '',
+          tearCondition: found.tearCondition || '',
+          waterCondition: found.waterCondition || '',
+          originalPrice: found.originalPrice || '',
+          price: found.price || '',
+          description: found.description || ''
+        });
+      }
+    }
+  }, [id, isEdit]);
 
   // 할인율 계산 함수
   const calculateDiscountRate = () => {
@@ -975,12 +1045,18 @@ const BookWrite = () => {
     try {
       // 실제로는 API 호출
       await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('책이 성공적으로 등록되었습니다!');
-      stopWriting(); // 글쓰기 종료
-      navigate('/marketplace');
+      if (isEdit) {
+        alert('책이 성공적으로 수정되었습니다!');
+        stopWriting();
+        navigate('/mybookstore');
+      } else {
+        alert('책이 성공적으로 등록되었습니다!');
+        stopWriting();
+        navigate('/marketplace');
+      }
     } catch (error) {
-      console.error('등록 실패:', error);
-      alert('등록에 실패했습니다. 다시 시도해주세요.');
+      console.error(isEdit ? '수정 실패:' : '등록 실패:', error);
+      alert(isEdit ? '수정에 실패했습니다. 다시 시도해주세요.' : '등록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
@@ -1117,7 +1193,7 @@ const BookWrite = () => {
           <BackButton onClick={handleCancel}>
             <FaArrowLeft /> 뒤로가기
           </BackButton>
-          <WriteTitle>책 판매 등록</WriteTitle>
+          <WriteTitle>{isEdit ? '책 판매 수정' : '책 판매 등록'}</WriteTitle>
         </WriteHeader>
 
         <WriteForm onSubmit={handleSubmit}>
@@ -1554,7 +1630,7 @@ const BookWrite = () => {
                 <FaSave /> 임시저장
               </SaveDraftButton>
               <SubmitButton type="submit" disabled={loading}>
-                {loading ? '등록 중...' : '등록하기'}
+                {loading ? (isEdit ? '수정 중...' : '등록 중...') : (isEdit ? '수정하기' : '등록하기')}
               </SubmitButton>
             </ButtonGroup>
           </ButtonSection>

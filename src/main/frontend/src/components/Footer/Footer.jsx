@@ -117,7 +117,7 @@ const FooterContent = styled.div`
 `;
 
 const FooterSection = styled.div`
-  animation: ${fadeInUp} 0.6s ease-out ${props => props.delay || '0s'} backwards;
+  animation: ${fadeInUp} 0.6s ease-out $delay backwards;
 
   h3 {
     font-size: 1.75rem;
@@ -344,7 +344,7 @@ const Footer = () => {
       <FloatingElement />
       
       <FooterContent>
-        <FooterSection delay="0s">
+        <FooterSection $delay="0s">
           <h3>빠른 링크</h3>
           <ul>
             <li><FooterLink to="/marketplace">책거래게시판</FooterLink></li>
@@ -356,7 +356,7 @@ const Footer = () => {
           </ul>
         </FooterSection>
         
-        <FooterSection delay="0.2s">
+        <FooterSection $delay="0.2s">
           <h3>고객 지원</h3>
           <ul>
             <li><FooterLink to="/faq">자주 묻는 질문</FooterLink></li>
@@ -366,7 +366,7 @@ const Footer = () => {
           </ul>
         </FooterSection>
         
-        <FooterSection delay="0.4s">
+        <FooterSection $delay="0.4s">
           <h3>연락처</h3>
           <ContactInfo>
             <ContactItem type="email">support@hongbookstore.com</ContactItem>
@@ -384,7 +384,7 @@ const Footer = () => {
           </NewsletterSection>
         </FooterSection>
         
-        <FooterSection delay="0.6s">
+        <FooterSection $delay="0.6s">
           <h3>소셜 미디어</h3>
           <SocialLinks>
             <SocialLink href="#facebook" aria-label="Facebook" />
