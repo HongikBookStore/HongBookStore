@@ -23,6 +23,13 @@ export const login = async (username, password) => {
       `/api/users/login?username=${username}&password=${password}`,
       { method: 'POST' }
   );
-  localStorage.setItem('jwt', res.data);        // 저장
-  return res.data;
+
+  const token = res.data; // 문자열
+  localStorage.setItem('jwt', token);  // ✅ 저장
+  console.log("✅ JWT 저장됨:", token);
+
+  return {
+    token,
+    user: { userId: username } // 최소한의 유저 정보
+  };
 };

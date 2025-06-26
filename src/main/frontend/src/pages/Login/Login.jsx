@@ -162,6 +162,12 @@ function Login() {
     try {
       const {token, user} = await login(form.userId.trim(), form.password); // ③ 백엔드 호출
       save(token, user);                     // ④ JWT·User 전역 저장
+      if (user.verified) {
+        localStorage.setItem('isVerified', 'true');
+        localStorage.setItem('verifiedEmail', user.email); // or user.schoolEmail
+      }
+      localStorage.setItem('jwt', token);     // ✅ 반드시 추가해줘야 MyPage 등에서 사용 가능
+      console.log("✅ JWT 저장됨:", token);
       setMsg(t('loginSuccess'));
       setMsgColor('green');
       setTimeout(() => navigate('/'), 500);  // 홈으로

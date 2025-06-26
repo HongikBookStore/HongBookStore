@@ -1,12 +1,18 @@
 package com.hongik.books.user.controller;
 
+import com.hongik.books.user.domain.User;
 import com.hongik.books.user.dto.ApiResponse;
 import com.hongik.books.user.dto.SignUpRequest;
+import com.hongik.books.user.dto.UserDto;
 import com.hongik.books.user.repository.UserRepository;
 import com.hongik.books.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,4 +56,16 @@ public class UserController {
         return userService.findUsernameByEmail(email);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserDto>> getMyInfo(@AuthenticationPrincipal User user) {
+        UserDto dto = UserDto.from(user); // ← 여기서 인증 상태 포함 확인
+        return ResponseEntity.ok(new ApiResponse<>(true, "성공", dto));
+    }
+
+    @PostMapping("/verify-student")
+    public ResponseEntity<ApiResponse<String>> verifyStudent(@AuthenticationPrincipal Jwt jwt) {
+        Long userId = Long.parseLong(jwt.getSubject()); // sub = userId일 경우
+        userService.verifyStudent(userId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "성공", null));
+    }
 }

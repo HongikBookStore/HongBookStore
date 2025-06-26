@@ -71,10 +71,15 @@ public class UserService {
     }
 
     @Transactional
-    public void verifyStudent(Long userId) {
-        userRepository.findById(userId).ifPresent(u -> u.setStudentVerified(true));
-    }
+    public ApiResponse<Long> verifyStudent(Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) return new ApiResponse<>(false, "User not found", null);
 
+        User user = userOpt.get();
+        user.setStudentVerified(true); // 👈 중요
+        userRepository.save(user);     // ✅ DB에 반영해야 함
+        return new ApiResponse<>(true, "인증 완료", user.getId());
+    }
     /**
      * 사용자의 역할을 결정하는 메서드
      * User 엔티티의 속성에 따라 적절한 역할을 반환

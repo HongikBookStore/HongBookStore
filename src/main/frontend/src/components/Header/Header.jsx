@@ -214,6 +214,8 @@ const Header = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('jwt');
+    //localStorage.removeItem('isVerified');
+    //localStorage.removeItem('verifiedEmail');
     localStorage.removeItem('user');
     navigate('/');
     window.location.reload();

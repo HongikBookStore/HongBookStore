@@ -21,6 +21,7 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven {url 'https://jitpack.io'}
 }
 
 dependencies {
@@ -60,6 +61,8 @@ dependencies {
     // 테스트에서 lombok 사용
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
+
+    implementation 'com.github.in-seo:univcert:master-SNAPSHOT'
 }
 
 tasks.named('test') {

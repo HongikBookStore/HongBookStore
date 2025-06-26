@@ -3,6 +3,14 @@ import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const UNIVCERT_API_KEY = '77ddffda-a3e8-4363-a31d-96e507f9b19c';
+const UNIVCERT_ENDPOINT = 'https://univcert.com/api/v1/certify';
+// (만약 인증 코드 검증용 별도 엔드포인트가 있다면 추가 정의)
+const VERIFY_ENDPOINT = "https://univcert.com/api/v1/certifycode"; // ✅ 이걸로 수정
+
+
 
 const MyPageContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -498,6 +506,7 @@ const MyPage = () => {
   const [resendTimer, setResendTimer] = useState(0);
   const [schoolEmail, setSchoolEmail] = useState('');
   const [verificationStep, setVerificationStep] = useState('email');
+  const [verificationResult, setVerificationResult] = useState(null);  // 'success' | 'fail' | null
   const [profileImage, setProfileImage] = useState(null);
   const [isDefaultImage, setIsDefaultImage] = useState(true);
   const [locations, setLocations] = useState([
@@ -513,15 +522,15 @@ const MyPage = () => {
   // jwt 체크
   const token = localStorage.getItem('jwt');
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
-    }
-  }, [navigate, token]);
+    const isVerified = localStorage.getItem('isVerified') === 'true';
+    const verifiedEmail = localStorage.getItem('verifiedEmail');
 
-  if (!token) {
-    // jwt 없으면 아무것도 렌더하지 않음(혹은 로딩 스피너 등)
-    return null;
-  }
+    if (isVerified && verifiedEmail) {
+      setIsVerified(true);
+      setVerificationStatus('success');
+      setSchoolEmail(verifiedEmail); // email input에도 자동 반영
+    }
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -591,39 +600,87 @@ const MyPage = () => {
     }
   };
 
-  const handleSendVerification = () => {
-    // Validate school email format
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const handleSendVerification = async () => {
+    console.log('🧪 함수 시작됨');
+    console.log('🧪 schoolEmail 값:', schoolEmail);
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@g\.hongik\.ac\.kr$/;
     if (!emailRegex.test(schoolEmail)) {
       setVerificationStatus('error');
       return;
     }
 
-    // TODO: Implement API call to send verification code
-    setVerificationStep('code');
-    setResendTimer(60);
-    const timer = setInterval(() => {
-      setResendTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
+    try {
+      const res = await axios.post(UNIVCERT_ENDPOINT, {
+        key: UNIVCERT_API_KEY,
+        email: schoolEmail,
+        univName: '홍익대학교',
+        univ_check: true
       });
-    }, 1000);
-  };
 
-  const handleVerifyCode = () => {
-    // TODO: Implement API call to verify code
-    if (verificationCode.length === 6) {
-      // Simulate verification success
-      setIsVerified(true);
-      setVerificationStatus('success');
-      setShowVerificationForm(false);
-    } else {
+      if (res.data.success) {
+        setVerificationStep('code');
+        setVerificationStatus(null);
+        setResendTimer(60);
+
+        const timer = setInterval(() => {
+          setResendTimer(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setVerificationStatus('error');
+      }
+    } catch (err) {
+      console.error(err);
       setVerificationStatus('error');
     }
   };
+
+
+  const handleVerifyCode = async () => {
+    console.log('🔍 handleVerifyCode 실행됨');
+    console.log('📧 이메일:', schoolEmail);
+    console.log('🔐 코드:', verificationCode);
+
+    try {
+      const res = await axios.post(VERIFY_ENDPOINT, {
+        key: UNIVCERT_API_KEY,
+        email: schoolEmail,
+        univName: '홍익대학교',
+        code: verificationCode
+      });
+
+      console.log('✅ 응답:', res.data);
+
+      if (res.data.success) {
+        setIsVerified(true);
+        setVerificationStatus('success');
+
+        localStorage.setItem('isVerified', 'true');
+        localStorage.setItem('verifiedEmail', schoolEmail);
+
+        console.log("📦 JWT 토큰:", localStorage.getItem("jwt"));
+        // ⬇️ 인증 성공 시 서버에도 반영
+        const token = localStorage.getItem('jwt');
+        axios.post('/api/users/verify-student', null, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } else {
+        setVerificationStatus('error');
+      }
+    } catch (err) {
+      console.error('❌ 인증 오류:', err);
+      setVerificationStatus('error');
+    }
+  };
+
 
   const handleResendCode = () => {
     if (resendTimer === 0) {
@@ -724,7 +781,7 @@ const MyPage = () => {
             </span>
           </h3>
           <p>{t('verifySchoolEmailDesc')}</p>
-          
+
           {!isVerified && !showVerificationForm && (
             <Button onClick={() => setShowVerificationForm(true)}>{t('verifySchoolEmail')}</Button>
           )}
@@ -764,18 +821,19 @@ const MyPage = () => {
                   <>
                     <InputGroup>
                       <VerificationInput
-                        type="text"
-                        placeholder={t('enterVerificationCode')}
-                        maxLength={6}
-                        value={verificationCode}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, '');
-                          setVerificationCode(value);
-                          if (value.length === 6) {
-                            handleVerifyCode();
-                          }
-                        }}
+                          type="text"
+                          placeholder={t('enterVerificationCode')}
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            setVerificationCode(value);
+                          }}
                       />
+
+                      <Button onClick={handleVerifyCode}>
+                        인증번호 확인
+                      </Button>
                     </InputGroup>
 
                     {verificationStatus === 'error' && (
@@ -790,12 +848,12 @@ const MyPage = () => {
                       {t('sendVerificationCode')} {schoolEmail}
                     </VerificationMessage>
 
-                    <ResendButton 
+                    <ResendButton
                       onClick={handleResendCode}
                       disabled={resendTimer > 0}
                     >
                       <i className="fas fa-redo"></i>
-                      {resendTimer > 0 
+                      {resendTimer > 0
                         ? t('resendCodeIn', { sec: resendTimer })
                         : t('resendCode')}
                     </ResendButton>
@@ -816,7 +874,7 @@ const MyPage = () => {
         <LocationSection>
           <h3>{t('locationManagement')}</h3>
           <p>{t('manageLocations')}</p>
-          
+
           <div className="location-list">
             {locations.map(location => (
               <div key={location.id} className="location-item">
@@ -825,13 +883,13 @@ const MyPage = () => {
                   <span className="location-address">{location.address}</span>
                 </div>
                 <div className="location-actions">
-                  <IconButton 
+                  <IconButton
                     onClick={() => handleSetDefault(location.id)}
                     title={location.isDefault ? t('defaultLocation') : t('setDefault')}
                   >
                     <i className={`fas fa-star`} style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
                   </IconButton>
-                  <IconButton 
+                  <IconButton
                     onClick={() => handleDeleteLocation(location.id)}
                     className="danger"
                     title={t('deleteLocation')}
