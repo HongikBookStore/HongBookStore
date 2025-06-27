@@ -589,6 +589,20 @@ const Header = () => {
                   </NavLink>
                 </li>
                 <li>
+                  <NavLink
+                    to="/my-transactions"
+                    onClick={(e) => {
+                      if (isWriting) {
+                        e.preventDefault();
+                        safeNavigate('/my-transactions');
+                      }
+                      setIsOpen(false);
+                    }}
+                  >
+                    나의 거래
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink 
                     to="/map" 
                     onClick={(e) => {
@@ -698,6 +712,18 @@ const Header = () => {
                       }}
                     >
                       마이페이지
+                    </NavLink>
+                    <NavLink
+                      to="/my-transactions"
+                      onClick={(e) => {
+                        if (isWriting) {
+                          e.preventDefault();
+                          safeNavigate('/my-transactions');
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      나의 거래
                     </NavLink>
                     <LogoutButton onClick={handleLogout}>
                       로그아웃
