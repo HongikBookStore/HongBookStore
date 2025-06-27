@@ -16,6 +16,7 @@ import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
 import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
+import MyTransactions from './pages/MyTransactions/MyTransactions.jsx';
 import BookWrite from './pages/BookWrite/BookWrite.jsx';
 import BookDetail from './pages/BookDetail/BookDetail';
 import ChatList from './pages/Chat/ChatList.jsx';
@@ -70,6 +71,8 @@ function App() {
                         <Route path="/wanted" element={<Wanted />} />
                         <Route path="/wanted/write" element={<WantedWrite />} />
                         <Route path="/bookstore" element={<MyBookstore />} />
+                        <Route path="/my-bookstore" element={<MyBookstore />} />
+                        <Route path="/my-transactions" element={<MyTransactions />} />
                         <Route path="/bookstore/add" element={<BookWrite />} />
                         <Route path="/book/:id" element={<BookDetail />} />
                         <Route path="/chat" element={<ChatList />} />
@@ -84,6 +87,7 @@ function App() {
                         <Route path="/ai-chat" element={<AIChatbot />} />
                         <Route path="/marketplace/:id" element={<BookDetail />} />
                         <Route path="/bookwrite/:id" element={<BookWrite />} />
+                        <Route path="/book-write" element={<BookWrite />} />
                         <Route path="/wanted/:id" element={<WantedWrite />} />
                         <Route path="/wantedwrite/:id" element={<WantedWrite />} />
                     </Routes>

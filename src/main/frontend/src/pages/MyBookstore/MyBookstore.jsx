@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaEdit, FaTrash, FaEye, FaBook, FaUser, FaClock, FaMoneyBillWave, FaChartLine, FaHeart, FaSearch, FaHandPaper, FaArrowRight, FaRegEye } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaEye, FaBook, FaUser, FaClock, FaMoneyBillWave, FaChartLine, FaHeart, FaSearch, FaHandPaper, FaArrowRight, FaRegEye, FaExchangeAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 
 const BookstoreContainer = styled.div`
   max-width: 1600px;
@@ -27,6 +28,12 @@ const BookstoreHeader = styled.div`
   margin-bottom: 30px;
 `;
 
+const HeaderButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+`;
+
 const BookstoreTitle = styled.h1`
   font-size: 2.5rem;
   color: #333;
@@ -47,6 +54,24 @@ const AddBookButton = styled.button`
 
   &:hover {
     background: #218838;
+  }
+`;
+
+const MyTransactionsButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #6f42c1;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+
+  &:hover {
+    background: #5a32a3;
   }
 `;
 
@@ -690,7 +715,11 @@ const MyBookstore = () => {
   };
 
   const handleAddBook = () => {
-    navigate('/bookstore/add');
+    navigate('/book-write');
+  };
+
+  const handleMyTransactions = () => {
+    navigate('/my-transactions');
   };
 
   const handleRemoveFromWishlist = (bookId) => {
@@ -723,9 +752,14 @@ const MyBookstore = () => {
       <BookstoreContainer>
         <BookstoreHeader>
           <BookstoreTitle>나의 책방</BookstoreTitle>
-          <AddBookButton onClick={handleAddBook}>
-            <FaPlus /> 책 등록하기
-          </AddBookButton>
+          <HeaderButtons>
+            <MyTransactionsButton onClick={handleMyTransactions}>
+              <FaExchangeAlt /> 나의 거래
+            </MyTransactionsButton>
+            <AddBookButton onClick={handleAddBook}>
+              <FaPlus /> 책 등록하기
+            </AddBookButton>
+          </HeaderButtons>
         </BookstoreHeader>
 
         {/* 1. 내가 등록한 책 */}
