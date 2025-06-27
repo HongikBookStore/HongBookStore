@@ -5,6 +5,9 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
+import naverLogo from '../../assets/naver.png';
+import kakaoLogo from '../../assets/kakao.png';
+import googleLogo from '../../assets/google.png';
 
 import { login } from '../../api/user';      // ① 로그인 API
 import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
@@ -23,10 +26,13 @@ const LoginContainer = styled.div`
 `;
 
 const Title = styled.h2`
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 2.5rem;
+  font-weight: 800;
   color: var(--primary);
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
+  border-radius: 1rem;
+  letter-spacing: -1px;
 `;
 
 const StyledForm = styled.form`
@@ -44,12 +50,14 @@ const InputGroup = styled.div`
 
 const Input = styled.input`
   flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  border: 1.5px solid var(--border);
+  border-radius: 1.2rem;
   background: var(--surface);
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.15rem;
+  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 600;
   transition: var(--transition);
   &:focus {
     outline: none;
@@ -59,18 +67,21 @@ const Input = styled.input`
 `;
 
 const SubmitButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 0.9rem 1.7rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
   color: white;
   background: var(--primary);
   border: none;
-  border-radius: var(--radius);
+  border-radius: 1.5rem;
   cursor: pointer;
   transition: var(--transition);
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 8px rgba(35,81,233,0.07);
   &:hover {
     background: var(--primary-dark);
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.03);
   }
 `;
 
@@ -81,25 +92,21 @@ const SocialSection = styled.div`
 
 const SocialBtn = styled.button`
   margin: 0 0.5rem;
-  padding: 0.5rem 1.2rem;
-  border: none;
-  border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 1rem;
-  color: ${({ type }) => (type === 'kakao' ? '#222' : 'white')};
-  background: ${({ type }) =>
-    type === 'naver' ? '#03c75a' :
-    type === 'kakao' ? '#fee500' :
-    type === 'google' ? '#4285F4' :
-    'var(--primary)'};
-  margin-bottom: 0.5rem;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   cursor: pointer;
   transition: var(--transition);
-  min-width: 80px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   &:hover {
-    opacity: 0.85;
-    filter: brightness(0.97);
+    box-shadow: 0 4px 16px rgba(35,81,233,0.10);
+    border-color: #2351e9;
+    opacity: 0.95;
   }
 `;
 
@@ -220,9 +227,17 @@ function Login() {
         </LinkGroup>
         <SocialSection>
           <p>{t('socialLogin')}</p>
-          <SocialBtn type="naver" aria-label="Naver Login" onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
-          <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
-          <SocialBtn type="google" aria-label="Google Login" onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
+          <div style={{display:'flex', justifyContent:'center', gap:'1.5rem', marginTop:'1rem'}}>
+            <SocialBtn type="naver" aria-label="Naver Login" onClick={() => window.location.href = '/oauth2/authorization/naver'}>
+              <img src={naverLogo} alt="Naver" style={{width:40, height:40}} />
+            </SocialBtn>
+            <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => window.location.href = '/oauth2/authorization/kakao'}>
+              <img src={kakaoLogo} alt="Kakao" style={{width:40, height:40}} />
+            </SocialBtn>
+            <SocialBtn type="google" aria-label="Google Login" onClick={() => window.location.href = '/oauth2/authorization/google'}>
+              <img src={googleLogo} alt="Google" style={{width:40, height:40}} />
+            </SocialBtn>
+          </div>
         </SocialSection>
       </LoginContainer>
     </>

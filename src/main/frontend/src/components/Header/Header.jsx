@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n.js';
@@ -462,6 +462,8 @@ const Header = () => {
   const { user, token } = useContext(AuthCtx);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { isWriting, writingType } = useWriting();
+  const location = useLocation();
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
     // AuthContext의 token과 localStorage의 jwt를 모두 확인
@@ -570,50 +572,52 @@ const Header = () => {
               </Logo>
             </LeftBox>
 
-            <NavLinks $isOpen={isOpen}>
-              <li>
-                <NavLink 
-                  to="/marketplace" 
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/marketplace');
-                    }
-                    setIsOpen(false);
-                  }}
-                >
-                  책거래게시판
-                </NavLink>
-              </li>
-              <li>
-                <NavLink 
-                  to="/map" 
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/map');
-                    }
-                    setIsOpen(false);
-                  }}
-                >
-                  지도
-                </NavLink>
-              </li>
-              <li>
-                <NavLink 
-                  to="/ai-chat" 
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/ai-chat');
-                    }
-                    setIsOpen(false);
-                  }}
-                >
-                  AI 챗봇
-                </NavLink>
-              </li>
-            </NavLinks>
+            {!isHome && (
+              <NavLinks $isOpen={isOpen}>
+                <li>
+                  <NavLink 
+                    to="/marketplace" 
+                    onClick={(e) => {
+                      if (isWriting) {
+                        e.preventDefault();
+                        safeNavigate('/marketplace');
+                      }
+                      setIsOpen(false);
+                    }}
+                  >
+                    책거래게시판
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink 
+                    to="/map" 
+                    onClick={(e) => {
+                      if (isWriting) {
+                        e.preventDefault();
+                        safeNavigate('/map');
+                      }
+                      setIsOpen(false);
+                    }}
+                  >
+                    지도
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink 
+                    to="/ai-chat" 
+                    onClick={(e) => {
+                      if (isWriting) {
+                        e.preventDefault();
+                        safeNavigate('/ai-chat');
+                      }
+                      setIsOpen(false);
+                    }}
+                  >
+                    AI 챗봇
+                  </NavLink>
+                </li>
+              </NavLinks>
+            )}
 
             <MenuBox>
               {isLoggedIn ? (

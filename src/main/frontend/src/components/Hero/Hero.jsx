@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import { FaBookOpen, FaExchangeAlt, FaMapMarkedAlt, FaRobot } from 'react-icons/fa';
 
 const float = keyframes`
   0%, 100% { transform: translateY(0px); }
@@ -166,17 +167,81 @@ const Description = styled.p`
   }
 `;
 
+const MainGrid = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4rem;
+  margin-top: 6rem;
+  flex-wrap: wrap;
+
+  @media (max-width: 900px) {
+    gap: 2rem;
+    flex-direction: column;
+    margin-top: 2rem;
+  }
+`;
+
+const MainCard = styled(Link)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  background: white;
+  border: 2px solid var(--primary);
+  border-radius: 1.5rem;
+  padding: 2.5rem 2.5rem 1.5rem 2.5rem;
+  min-width: 200px;
+  min-height: 260px;
+  box-shadow: 0 4px 24px 0 rgba(35,81,233,0.07);
+  transition: box-shadow 0.2s, transform 0.2s, color 0.2s, border-color 0.2s;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 1.2rem;
+  &:hover {
+    box-shadow: 0 8px 32px 0 rgba(35,81,233,0.15);
+    transform: translateY(-6px) scale(1.03);
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
+  }
+`;
+
+const MainIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  color: var(--primary);
+`;
+
+const MainLabel = styled.div`
+  margin-top: 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--primary);
+`;
+
 const Hero = () => {
-  const { t } = useTranslation();
   return (
-    <HeroSection>
-      <FloatingElement />
-      <FloatingElement />
-      <FloatingElement />
-      
-      <HeroContent>
-        <Title dangerouslySetInnerHTML={{ __html: t('welcomeTitle') }} />
-        <Description dangerouslySetInnerHTML={{ __html: t('welcomeDesc') }} />
+    <HeroSection style={{background: '#f5f8ff', minHeight: '100vh'}}>
+      <HeroContent style={{color: '#2351e9', background: 'none', maxWidth: '1200px'}}>
+        <MainGrid>
+          <MainCard to="/marketplace">
+            <MainIcon><FaBookOpen /></MainIcon>
+            <MainLabel>책 거래 게시판</MainLabel>
+          </MainCard>
+          <MainCard to="/my-transactions">
+            <MainIcon><FaExchangeAlt /></MainIcon>
+            <MainLabel>나의 거래</MainLabel>
+          </MainCard>
+          <MainCard to="/hongikmap">
+            <MainIcon><FaMapMarkedAlt /></MainIcon>
+            <MainLabel>지도</MainLabel>
+          </MainCard>
+          <MainCard to="/chatbot">
+            <MainIcon><FaRobot /></MainIcon>
+            <MainLabel>AI 챗봇</MainLabel>
+          </MainCard>
+        </MainGrid>
       </HeroContent>
     </HeroSection>
   );
