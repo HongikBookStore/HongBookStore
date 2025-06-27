@@ -374,6 +374,44 @@ const WowLabel = styled.div`
   margin-top: 6px; font-size: 1.08rem; color: #333; font-weight: 500;
 `;
 
+// 거래별 예약 정보 폼
+const TransactionReservationForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-bottom: 1.2rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 14px 16px;
+`;
+const TransactionReservationLabel = styled.label`
+  font-weight: 600;
+  color: #2351e9;
+  margin-bottom: 0.1rem;
+  font-size: 0.98rem;
+`;
+const TransactionReservationInput = styled.input`
+  padding: 0.5rem 0.8rem;
+  border: 1.2px solid #e0e0e0;
+  border-radius: 0.7rem;
+  font-size: 1rem;
+  font-family: 'Pretendard', 'Noto Sans', sans-serif;
+  font-weight: 500;
+`;
+const TransactionReservationSaveBtn = styled.button`
+  margin-top: 0.3rem;
+  padding: 0.5rem 1.1rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 0.8rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  &:hover { background: var(--primary-dark); }
+`;
+
 const MyTransactions = () => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
@@ -383,6 +421,9 @@ const MyTransactions = () => {
   const [selectedRating, setSelectedRating] = useState(null);
   const [selectedKeywords, setSelectedKeywords] = useState([]);
   const [reviewModal, setReviewModal] = useState({ open: false, review: null });
+  const [reservation, setReservation] = useState({ place: '', date: '', time: '' });
+  const [editReservationId, setEditReservationId] = useState(null);
+  const [editReservation, setEditReservation] = useState({ place: '', date: '', time: '' });
 
   // 임시 데이터 - 예약된 거래
   const mockTransactions = [
@@ -482,6 +523,15 @@ const MyTransactions = () => {
     setTransactions(mockTransactions);
   }, []);
 
+  // 예약 정보 불러오기 (채팅방에서 저장된 정보)
+  useEffect(() => {
+    const saved = localStorage.getItem('lastReservation');
+    if (saved) {
+      const { place, date } = JSON.parse(saved);
+      setReservation(prev => ({ ...prev, place, date }));
+    }
+  }, []);
+
   const handleBack = () => {
     navigate('/my-bookstore');
   };
@@ -568,6 +618,70 @@ const MyTransactions = () => {
   // 거래 후기 버튼 클릭 시 theirReview 모달 표시
   const openReviewModal = (review) => setReviewModal({ open: true, review });
   const closeReviewModal = () => setReviewModal({ open: false, review: null });
+
+  // 거래별 예약 정보 저장
+  const handleTransactionReservationChange = (id, e) => {
+    const { name, value } = e.target;
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, [name]: value } : t));
+  };
+  const handleTransactionReservationSave = (id, e) => {
+    e.preventDefault();
+    const tx = transactions.find(t => t.id === id);
+    if (tx) {
+      // 거래별 예약 정보 localStorage에 저장 (key: transaction_{id}_reservation)
+      localStorage.setItem(`transaction_${id}_reservation`, JSON.stringify({
+        place: tx.location?.name || '',
+        date: tx.reservationDate || '',
+        time: tx.reservationTime || ''
+      }));
+      alert('예약 정보가 저장되었습니다!');
+    }
+  };
+
+  // 거래별 예약 정보 불러오기
+  useEffect(() => {
+    setTransactions(prev => prev.map(t => {
+      const saved = localStorage.getItem(`transaction_${t.id}_reservation`);
+      if (saved) {
+        const { place, date, time } = JSON.parse(saved);
+        return {
+          ...t,
+          location: { ...t.location, name: place },
+          reservationDate: date,
+          reservationTime: time
+        };
+      }
+      return t;
+    }));
+  }, []);
+
+  const handleEditReservationClick = (transaction) => {
+    setEditReservationId(transaction.id);
+    setEditReservation({
+      place: transaction.location?.name || '',
+      date: transaction.reservationDate || '',
+      time: transaction.reservationTime || ''
+    });
+  };
+  const handleEditReservationChange = e => {
+    const { name, value } = e.target;
+    setEditReservation(prev => ({ ...prev, [name]: value }));
+  };
+  const handleEditReservationSave = (id, e) => {
+    e.preventDefault();
+    setTransactions(prev => prev.map(t => t.id === id ? {
+      ...t,
+      location: { ...t.location, name: editReservation.place },
+      reservationDate: editReservation.date,
+      reservationTime: editReservation.time
+    } : t));
+    localStorage.setItem(`transaction_${id}_reservation`, JSON.stringify(editReservation));
+    setEditReservationId(null);
+    alert('예약 정보가 저장되었습니다!');
+  };
+  const handleEditReservationCancel = () => {
+    setEditReservationId(null);
+  };
 
   return (
     <>
@@ -681,6 +795,32 @@ const MyTransactions = () => {
                       <b>키워드:</b> {transaction.ratingKeywords.join(', ')}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 예약 정보 표시 및 수정 */}
+              {editReservationId === transaction.id ? (
+                <TransactionReservationForm onSubmit={e => handleEditReservationSave(transaction.id, e)}>
+                  <TransactionReservationLabel>거래 장소</TransactionReservationLabel>
+                  <TransactionReservationInput name="place" value={editReservation.place} onChange={handleEditReservationChange} placeholder="거래 장소를 입력하세요" />
+                  <TransactionReservationLabel>예약 일자</TransactionReservationLabel>
+                  <TransactionReservationInput name="date" value={editReservation.date} onChange={handleEditReservationChange} placeholder="예: 2024-07-01" type="date" />
+                  <TransactionReservationLabel>예약 시간</TransactionReservationLabel>
+                  <TransactionReservationInput name="time" value={editReservation.time} onChange={handleEditReservationChange} placeholder="예: 14:00" type="time" />
+                  <div style={{display:'flex', gap:'0.5rem', marginTop:'0.5rem'}}>
+                    <TransactionReservationSaveBtn type="submit">저장</TransactionReservationSaveBtn>
+                    <TransactionReservationSaveBtn type="button" style={{background:'#ccc', color:'#333'}} onClick={handleEditReservationCancel}>취소</TransactionReservationSaveBtn>
+                  </div>
+                </TransactionReservationForm>
+              ) : (
+                <div style={{margin:'0.7rem 0 1.2rem 0', background:'#f8f9fa', borderRadius:'10px', padding:'14px 16px'}}>
+                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>거래 장소</div>
+                  <div style={{marginBottom:'0.3rem'}}>{transaction.location?.name || '-'}</div>
+                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 일자</div>
+                  <div style={{marginBottom:'0.3rem'}}>{transaction.reservationDate || '-'}</div>
+                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 시간</div>
+                  <div style={{marginBottom:'0.3rem'}}>{transaction.reservationTime || '-'}</div>
+                  <TransactionReservationSaveBtn type="button" onClick={() => handleEditReservationClick(transaction)} style={{marginTop:'0.7rem'}}>예약 정보 수정</TransactionReservationSaveBtn>
                 </div>
               )}
             </TransactionCard>

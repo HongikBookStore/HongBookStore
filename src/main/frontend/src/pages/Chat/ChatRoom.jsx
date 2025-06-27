@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle, FaMapMarkerAlt, FaRoute, FaQrcode, FaCloudSun } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const ChatContainer = styled.div`
@@ -526,6 +526,65 @@ const RetryModalButton = styled.button`
   }
 `;
 
+const ReserveModalBox = styled(ModalBox)`
+  min-width: 380px;
+  max-width: 95vw;
+`;
+
+const PlaceList = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+`;
+
+const PlaceItem = styled.button`
+  background: #f5f8ff;
+  border: 2px solid ${({ selected }) => selected ? 'var(--primary)' : '#e0e0e0'};
+  color: ${({ selected }) => selected ? 'var(--primary)' : '#333'};
+  border-radius: 1rem;
+  padding: 1rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  &:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: #eaf0ff;
+  }
+`;
+
+const DateList = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+`;
+
+const DateItem = styled.button`
+  background: #f5f8ff;
+  border: 2px solid ${({ selected }) => selected ? 'var(--primary)' : '#e0e0e0'};
+  color: ${({ selected }) => selected ? 'var(--primary)' : '#333'};
+  border-radius: 1rem;
+  padding: 1rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  &:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: #eaf0ff;
+  }
+`;
+
 // 반응형 width 감지 훅
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -597,6 +656,11 @@ const ChatRoom = () => {
   const [profanityWarning, setProfanityWarning] = useState('');
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showRoute, setShowRoute] = useState(false);
+  const [reserveConfirmed, setReserveConfirmed] = useState(false);
   const width = useWindowWidth();
 
   // 버튼 텍스트 반응형
@@ -774,11 +838,18 @@ const ChatRoom = () => {
   };
 
   const handleReserve = () => {
+    setShowReserveModal(true);
+  };
+
+  const handleReserveConfirm = () => {
     setIsReserved(true);
+    setReserveConfirmed(true);
+    setShowReserveModal(false);
     setMessages(prev => [
       ...prev,
-      { id: Date.now(), type: 'system', content: '상대방이 예약을 요청했습니다.', timestamp: new Date().toLocaleString('ko-KR') }
+      { id: Date.now(), type: 'system', content: `예약이 확정되었습니다!\n장소: ${selectedPlace}, 날짜: ${selectedDate?.date} (${selectedDate?.weather})`, timestamp: new Date().toLocaleString('ko-KR') }
     ]);
+    // TODO: 나의 거래 페이지에 예약 정보 자동 입력(모킹)
   };
 
   const handleCancelReserve = () => {
@@ -894,6 +965,26 @@ const ChatRoom = () => {
       </MessageStatus>
     );
   };
+
+  // 임시 장소 추천 (교내/교외)
+  const userLocationType = '교내'; // TODO: 실제 사용자/상대방 정보로 대체
+  const placeOptions = userLocationType === '교내'
+    ? ['홍문관 앞', '학생회관', '중앙도서관', '제2공학관']
+    : ['정문 앞 카페', '홍대입구역', '신촌역', '합정역'];
+
+  // 임시 날씨/날짜 추천 (실제 API 연동 전 모킹)
+  const today = new Date();
+  const dateOptions = Array.from({length: 7}, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    // 임시 날씨: 2, 5일 뒤가 맑음, 나머지는 흐림
+    const weather = (i === 2 || i === 5) ? '맑음' : '흐림';
+    return {
+      date: d.toLocaleDateString('ko-KR', {month:'2-digit', day:'2-digit', weekday:'short'}),
+      weather
+    };
+  });
+  const bestDate = dateOptions.find(d => d.weather === '맑음') || dateOptions[0];
 
   return (
     <>
@@ -1023,6 +1114,47 @@ const ChatRoom = () => {
             </ModalBox>
           </ModalOverlay>
         )}
+        {showReserveModal && (
+          <ModalOverlay>
+            <ReserveModalBox>
+              <ModalTitle>스마트 예약</ModalTitle>
+              <div style={{marginBottom:'1.2rem', fontWeight:500, color:'#333'}}>추천 거래 장소</div>
+              <PlaceList>
+                {placeOptions.map(place => (
+                  <PlaceItem key={place} selected={selectedPlace===place} onClick={()=>setSelectedPlace(place)}>
+                    <FaMapMarkerAlt style={{opacity:0.7}} /> {place}
+                  </PlaceItem>
+                ))}
+              </PlaceList>
+              <div style={{marginBottom:'1.2rem', fontWeight:500, color:'#333'}}>추천 날짜 (날씨 기반)</div>
+              <DateList>
+                {dateOptions.map(opt => (
+                  <DateItem key={opt.date} selected={selectedDate===opt} onClick={()=>setSelectedDate(opt)}>
+                    <FaCloudSun style={{opacity:0.7}} /> {opt.date} <span style={{fontSize:'0.95em', color:opt.weather==='맑음'?'#1976d2':'#888'}}>{opt.weather}</span>
+                  </DateItem>
+                ))}
+              </DateList>
+              <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
+                <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
+                <ModalButton onClick={handleReserveConfirm} disabled={!selectedPlace||!selectedDate}><FaCheckCircle /> 예약 확정</ModalButton>
+                <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
+              </div>
+              {showRoute && (
+                <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
+                  <b>예상 이동 경로/시간 안내</b><br/>
+                  (카카오맵/네이버지도 API 연동 예정, 현재는 임시 안내)<br/>
+                  <span style={{fontSize:'0.95em'}}>내 위치 → {selectedPlace} (예상 15분)</span>
+                </div>
+              )}
+              {reserveConfirmed && (
+                <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
+                  예약이 확정되었습니다!<br/>
+                  <FaQrcode style={{marginRight:6}}/> QR 코드가 생성되며, 나의 거래 페이지에서도 확인할 수 있습니다.
+                </div>
+              )}
+            </ReserveModalBox>
+          </ModalOverlay>
+        )}
         <ChatMessages>
           {messages.length > 0 ? (
             messages.map(message => (
@@ -1086,12 +1218,6 @@ const ChatRoom = () => {
             </QuickActionButton>
             <QuickActionButton onClick={() => handleQuickAction('책 상태 확인')}>
               책 상태 확인
-            </QuickActionButton>
-            <QuickActionButton onClick={() => handleQuickAction('거래 방법')}>
-              거래 방법
-            </QuickActionButton>
-            <QuickActionButton onClick={() => handleQuickAction('배송 가능')}>
-              배송 가능
             </QuickActionButton>
           </QuickActions>
         </ChatInput>
