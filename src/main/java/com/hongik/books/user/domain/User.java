@@ -2,9 +2,6 @@ package com.hongik.books.user.domain;
 
 import com.hongik.books.user.dto.UserRequestDTO;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -23,13 +20,10 @@ public class User {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Email @NotBlank
     private String email;
 
-    @Size(min=4,max=20) @NotBlank
     private String username;
 
-    @NotBlank
     private String password;
 
     private String profileImagePath;

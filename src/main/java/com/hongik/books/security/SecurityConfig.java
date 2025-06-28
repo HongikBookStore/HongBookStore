@@ -65,22 +65,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/users/signup",
-                                "/api/users/login",
                                 "/api/users/id-check",
                                 "/api/users/email-check",
                                 "/api/users/find-id",
                                 "/api/users/verify/**",
                                 "/actuator/health",
-                                "/api/auth/login/",
-                                "/api/auth/reissue",
-                                "/api/auth/logout",
-                                "api/auth/login/oauth2/**"
+                                // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
+                                "/", "/login", "/oauth2/**", "/error"
                         ).permitAll()
                         .anyRequest().authenticated()) // 그 외 요청은 인증 필요
                 .formLogin(AbstractAuthenticationFilterConfigurer::permitAll) // 폼 로그인 페이지는 누구나 접근 가능
                 // OAuth 로그인 설정
                 .oauth2Login(o -> o
-                        .loginPage("/api/auth/login")
+                        .loginPage("/login")
                         .failureHandler(oAuth2LoginFailureHandler)
                         .successHandler(oAuth2LoginSuccessHandler)
                         .userInfoEndpoint(u -> u

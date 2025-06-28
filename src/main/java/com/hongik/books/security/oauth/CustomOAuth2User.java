@@ -38,7 +38,7 @@ public class CustomOAuth2User implements OAuth2User {
                     return oAuth2User.getAttribute("sub");
                 case "kakao":
                     Object id = oAuth2User.getAttribute("id");
-                    return id != null ? id.toString() : null;
+                    return id != null ? id.toString() : null; // Long 타입을 String으로 변환
                 case "naver":
                     return extractFromNaverResponse("id", oAuth2User);
                 default:

@@ -52,8 +52,4 @@ public class AuthService {
     public boolean logout(String token) {
         return jwtTokenProvider.blacklistRefreshToken(token);
     }
-
-    public int getRemainingLoginAttempts(String email) {
-        return userDetailsService.getRemainingLoginAttempts(email);
-    }
 }
