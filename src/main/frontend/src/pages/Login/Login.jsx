@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 
-import { login } from '../../api/user';      // ① 로그인 API
+import { login } from '../../api/auth';      // ① 로그인 API
 import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
 
 const LoginContainer = styled.div`

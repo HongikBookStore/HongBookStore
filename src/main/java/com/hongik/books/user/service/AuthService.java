@@ -18,12 +18,12 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService userDetailsService;
 
-    public ApiResponse<LoginResponseDTO> login(String email, String password) {
+    public ApiResponse<LoginResponseDTO> login(String username, String password) {
         try {
             // 인증 수행
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, password));
-            userDetailsService.processSuccessfulLogin(email);
+                    new UsernamePasswordAuthenticationToken(username, password));
+            userDetailsService.processSuccessfulLogin(username);
 
             // 토큰 생성
             String accessToken = jwtTokenProvider.createAccessToken(authentication);
@@ -35,11 +35,11 @@ public class AuthService {
             return new ApiResponse<>(true, "로그인이 성공적으로 완료되었습니다.", loginResponse);
         } catch (AuthenticationException e) {
             // 로그인 실패 처리
-            userDetailsService.handleAccountStatus(email);
-            userDetailsService.processFailedLogin(email);
+            userDetailsService.handleAccountStatus(username);
+            userDetailsService.processFailedLogin(username);
 
             // 남은 로그인 시도 횟수 확인
-            int remainingAttempts = userDetailsService.getRemainingLoginAttempts(email);
+            int remainingAttempts = userDetailsService.getRemainingLoginAttempts(username);
             String errorMessage = remainingAttempts > 0
                     ? String.format("로그인에 실패했습니다. 남은 시도 횟수: %d회", remainingAttempts)
                     : "계정이 잠겼습니다. 관리자에게 문의하세요.";

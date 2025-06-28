@@ -15,7 +15,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -57,6 +56,7 @@ public class SecurityConfig {
                 // REST API에서는 불필요한 CSRF 보안 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
+                .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 // JWT 토큰 인증 시스템을 사용할 것이기에 서버가 세션을 생성하지 않도록 한다.
                 .sessionManagement(session -> session
@@ -71,10 +71,9 @@ public class SecurityConfig {
                                 "/api/users/verify/**",
                                 "/actuator/health",
                                 // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
-                                "/", "/login", "/oauth2/**", "/error"
+                                "/api/auth/login", "/", "/login", "/oauth2/**", "/error"
                         ).permitAll()
                         .anyRequest().authenticated()) // 그 외 요청은 인증 필요
-                .formLogin(AbstractAuthenticationFilterConfigurer::permitAll) // 폼 로그인 페이지는 누구나 접근 가능
                 // OAuth 로그인 설정
                 .oauth2Login(o -> o
                         .loginPage("/login")

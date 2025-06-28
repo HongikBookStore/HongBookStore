@@ -20,7 +20,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponseDTO>> login(@RequestBody AuthRequest authRequest) {
         try {
             // Service에서 로그인 처리 및 토큰 정보 반환
-            ApiResponse<LoginResponseDTO> response = authService.login(authRequest.getEmail(), authRequest.getPassword());
+            ApiResponse<LoginResponseDTO> response = authService.login(authRequest.getUsername(), authRequest.getPassword());
 
             if (response.success()) {
                 // 성공 시 헤더에 토큰 정보 추가
@@ -73,7 +73,7 @@ public class AuthController {
 
     @Getter
     public static class AuthRequest {
-        private String email;
+        private String username;
         private String password;
     }
 }

@@ -20,8 +20,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     private static final int LOCKOUT_MINUTES = 1;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = findUserByEmail(email);
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = findUserByUsername(username);
 
         // 잠금 해제 처리
         if (!user.isAccountNonLocked() && user.isLockTimeExpired(LOCKOUT_MINUTES)) {
@@ -34,14 +34,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new CustomUserDetails(user);
     }
 
-    private User findUserByEmail(String email) {
+    private User findUserByUsername(String username) {
         // 이메일로 사용자 조회
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("해당 이메일을 가진 사용자를 찾을 수 없습니다: " + email));
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("해당 아이디를 가진 사용자를 찾을 수 없습니다: " + username));
     }
 
-    public void handleAccountStatus(String email) {
-        User user = findUserByEmail(email);
+    public void handleAccountStatus(String username) {
+        User user = findUserByUsername(username);
 
         // 계정이 활성화되지 않은 경우 예외 발생
         if (!user.isEnabled()) {
@@ -54,8 +54,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
     }
 
-    public void processFailedLogin(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+    public void processFailedLogin(String username) {
+        userRepository.findByUsername(username).ifPresent(user -> {
             user.incrementFailedLoginAttempts();
             if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
                 user.lockAccount();
@@ -64,15 +64,15 @@ public class CustomUserDetailsService implements UserDetailsService {
         });
     }
 
-    public void processSuccessfulLogin(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+    public void processSuccessfulLogin(String username) {
+        userRepository.findByUsername(username).ifPresent(user -> {
             user.resetFailedLoginAttempts();
             userRepository.save(user);
         });
     }
 
-    public int getRemainingLoginAttempts(String email) {
-        return userRepository.findByEmail(email)
+    public int getRemainingLoginAttempts(String username) {
+        return userRepository.findByUsername(username)
                 .map(User::getFailedLoginAttempts)
                 .filter(attempts -> attempts < MAX_FAILED_ATTEMPTS) // 잠금 전까지만 표시
                 .map(attempts -> MAX_FAILED_ATTEMPTS - attempts + 1)

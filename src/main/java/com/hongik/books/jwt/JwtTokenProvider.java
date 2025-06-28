@@ -91,7 +91,7 @@ public class JwtTokenProvider {
     }
 
     // JWT 토큰에서 사용자 이름을 추출
-    public String getEmail(String token) {
+    public String getUsername(String token) {
         if (token == null || token.trim().isEmpty()) {
             throw new IllegalArgumentException("토큰이 null이거나 비어있습니다.");
         }
@@ -104,7 +104,7 @@ public class JwtTokenProvider {
                     .getPayload()
                     .getSubject();
         } catch (Exception e) {
-            log.error("토큰에서 이메일 추출 실패: {}", e.getMessage());
+            log.error("토큰에서 아이디 추출 실패: {}", e.getMessage());
             throw new IllegalArgumentException("유효하지 않은 토큰입니다.", e);
         }
     }
@@ -192,8 +192,8 @@ public class JwtTokenProvider {
         }
 
         try {
-            String email = getEmail(refreshToken);
-            CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(email);
+            String username = getUsername(refreshToken);
+            CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(username);
 
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userDetails,

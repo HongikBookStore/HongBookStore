@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 
-import { signUp, checkUsername, checkEmail } from '../../api/user';
+import { signUp, checkUsername, checkEmail } from '../../api/auth';
 
 const EMAIL_DOMAINS = [
   'naver.com',

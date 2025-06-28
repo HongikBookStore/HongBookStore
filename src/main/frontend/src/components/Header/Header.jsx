@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
-import i18n from '../../i18n.js';
+import { logout } from '../../api/auth';
 
 const HeaderContainer = styled.header`
   background: rgba(255, 255, 255, 0.8);
@@ -212,12 +212,19 @@ const Header = () => {
     i18n.changeLanguage(newLang);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('user');
-    navigate('/');
-    window.location.reload();
-  };
+  const handleLogout = async () => {
+  // 모바일 메뉴가 열려있을 경우를 대비해 먼저 닫아줍니다.
+  setIsOpen(false);
+
+  // 1. 서버 API 호출 및 로컬 스토리지 정리를 담당하는 logout 함수를 기다립니다.
+  await logout(); 
+
+  // 2. 로그아웃 후 홈으로 이동합니다.
+  navigate('/');
+
+  // 3. 상태를 완전히 초기화하고 싶을 때 페이지를 새로고침합니다.
+  window.location.reload(); 
+};
 
   return (
     <HeaderContainer>
@@ -252,7 +259,7 @@ const Header = () => {
                     <NavLink to="/register" onClick={() => setIsOpen(false)}>{t('signup')}</NavLink>
                   </>
                 ) : (
-                  <button onClick={() => { setIsOpen(false); handleLogout(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '1.125rem', color: 'var(--text)' }}>
+                  <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '1.125rem', color: 'var(--text)' }}>
                     {t('logout')}
                   </button>
                 )}
