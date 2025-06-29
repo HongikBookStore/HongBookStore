@@ -19,10 +19,11 @@ a:hover {
   color: #535bf2;
 }
 
-body {
+body, html, #root {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: #f8f9fa !important;
 }
 
 h1 {
@@ -47,4 +48,13 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+.header-spacer {
+  height: 56px;
+}
+@media (max-width: 900px) {
+  .header-spacer {
+    height: 46px;
+  }
 }

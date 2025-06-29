@@ -5,43 +5,102 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 const MyPageContainer = styled.div`
-  padding: 8rem 2rem 4rem;
-  max-width: 1200px;
+  padding: 6rem 2vw 4rem;
+  max-width: 1600px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   background: var(--background);
   min-height: 100vh;
 `;
 
-const ProfileSection = styled.div`
+const ProfileCard = styled.div`
   background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  margin-bottom: 3rem;
-  box-shadow: var(--shadow);
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 16px 0 rgba(124,58,237,0.07);
+  padding: 2.2rem 2.5rem 1.5rem 2.5rem;
   display: flex;
-  gap: 2rem;
   align-items: center;
-  width: 100%;
-
-  @media (max-width: 768px) {
+  gap: 2.2rem;
+  margin-bottom: 2.2rem;
+  @media (max-width: 900px) {
     flex-direction: column;
-    text-align: center;
+    padding: 1.2rem 0.7rem 1.2rem 0.7rem;
+    gap: 1.2rem;
   }
 `;
 
-const ProfileImage = styled.div`
-  width: 150px;
-  height: 150px;
+const ProfileInfoBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const ProfileNameRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2.5rem;
+  width: auto;
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+`;
+
+const ProfileNameLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+`;
+
+const ProfileNameRightCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+`;
+
+const ProfileNameRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+`;
+
+const ProfileEmail = styled.div`
+  color: var(--text-light);
+  font-size: 1.02rem;
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+`;
+
+const ProfileRating = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.05rem;
+  color: var(--primary);
+  font-weight: 600;
+`;
+
+const ProfileImageBig = styled.div`
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   overflow: visible;
-  position: relative;
-  background: var(--background);
   border: 3px solid var(--primary);
-  box-shadow: var(--shadow-lg);
-
+  background: var(--background);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px 0 rgba(124,58,237,0.08);
+  position: relative;
   img {
     width: 100%;
     height: 100%;
@@ -50,28 +109,32 @@ const ProfileImage = styled.div`
   }
 `;
 
-const PhotoChangeButton = styled.button`
+const StyledPhotoChangeButton = styled.button`
   position: absolute;
-  bottom: -4px;
-  right: -4px;
+  right: -12px;
+  bottom: -12px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   background: var(--primary);
-  color: white;
-  border: none;
-  cursor: pointer;
+  color: #fff;
+  border: 2.5px solid #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
-  box-shadow: var(--shadow);
-  z-index: 2;
-  transition: var(--transition);
-
+  font-size: 1.15rem;
+  box-shadow: 0 2px 10px 0 rgba(124,58,237,0.13);
+  z-index: 10;
+  transition: background 0.2s;
   &:hover {
-    transform: scale(1.1);
     background: var(--primary-dark);
+  }
+  @media (max-width: 600px) {
+    right: -7px;
+    bottom: -7px;
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
   }
 `;
 
@@ -86,24 +149,24 @@ const ProfileInfo = styled.div`
 const ProfileName = styled.div`
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-
+  gap: 0.7rem;
+  margin-bottom: 0.5rem;
   h2 {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 1.15rem;
+    font-weight: 600;
     color: var(--text);
+    margin: 0;
   }
 `;
 
 const RatingSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: white;
-  padding: 0.5rem 1rem;
+  gap: 0.3rem;
+  background: var(--background);
+  padding: 0.2rem 0.6rem;
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
   z-index: 1;
 `;
 
@@ -179,58 +242,61 @@ const TabButton = styled.button`
 
 const SettingsContainer = styled.div`
   width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 `;
 
 const SettingsSection = styled.div`
   background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem;
+  box-shadow: none;
   width: 100%;
-
+  min-width: 0;
+  margin-bottom: 0.3rem;
   h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
     color: var(--text);
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
   }
-
   .verification-status {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    gap: 0.2rem;
+    padding: 0.18rem 0.5rem;
     border-radius: var(--radius);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 500;
     background: var(--background);
     border: 1px solid var(--border);
     transition: var(--transition);
-
     &.verified {
       color: var(--primary);
-      background: rgba(124, 58, 237, 0.1);
-      border-color: rgba(124, 58, 237, 0.2);
+      background: rgba(124, 58, 237, 0.07);
+      border-color: rgba(124, 58, 237, 0.12);
     }
-
     &.not-verified {
       color: var(--accent);
-      background: rgba(249, 115, 22, 0.1);
-      border-color: rgba(249, 115, 22, 0.2);
+      background: rgba(249, 115, 22, 0.07);
+      border-color: rgba(249, 115, 22, 0.12);
     }
-
     i {
-      font-size: 1rem;
+      font-size: 0.8rem;
     }
   }
-
   p {
     color: var(--text-light);
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.88rem;
   }
 `;
 
@@ -488,6 +554,61 @@ const StepIndicator = styled.div`
   }
 `;
 
+const SettingsList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+`;
+
+const SettingsItem = styled.li`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.98rem;
+  &:last-child { border-bottom: none; }
+`;
+
+const SmallButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.32em 1.1em;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--primary);
+  background: #fff;
+  border: 1.5px solid var(--primary);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border 0.15s;
+  box-shadow: none;
+  outline: none;
+  &:hover {
+    background: rgba(124,58,237,0.07);
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
+  }
+  &.danger {
+    color: var(--accent);
+    border-color: var(--accent);
+    &:hover { background: rgba(249,115,22,0.07); color: #ea580c; border-color: #ea580c; }
+  }
+`;
+
+const EmailRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+`;
+
+const SchoolRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+`;
+
 const MyPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -509,6 +630,9 @@ const MyPage = () => {
   const fileInputRef = useRef();
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const photoMenuRef = useRef();
+  const [editingName, setEditingName] = useState(false);
+  const [profileName, setProfileName] = useState(t('profileName', 'John Doe'));
+  const nameInputRef = useRef();
 
   // jwt 체크
   const token = localStorage.getItem('jwt');
@@ -633,16 +757,16 @@ const MyPage = () => {
 
   return (
     <MyPageContainer>
-      <ProfileSection>
-        <ProfileImage>
+      <ProfileCard>
+        <ProfileImageBig>
           {profileImage ? (
             <img src={profileImage} alt="Profile" />
           ) : (
-            <i className="fas fa-user" style={{ fontSize: '80px', color: 'var(--primary)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}></i>
+            <i className="fas fa-user" style={{ fontSize: '48px', color: 'var(--primary)' }}></i>
           )}
-          <PhotoChangeButton type="button" onClick={handlePhotoMenuClick}>
+          <StyledPhotoChangeButton type="button" onClick={handlePhotoMenuClick}>
             <i className="fas fa-camera"></i>
-          </PhotoChangeButton>
+          </StyledPhotoChangeButton>
           {showPhotoMenu && (
             <div ref={photoMenuRef} style={{
               position: 'absolute',
@@ -694,43 +818,78 @@ const MyPage = () => {
             accept="image/*"
             onChange={handlePhotoChange}
           />
-        </ProfileImage>
-        <ProfileInfo>
-          <ProfileName>
-            <h2>{t('profileName', 'John Doe')}</h2>
-            <RatingSection>
-              <AverageRating rating={8.5}>8.5</AverageRating>
-              <RatingCount>(24)</RatingCount>
-            </RatingSection>
-          </ProfileName>
-        </ProfileInfo>
-      </ProfileSection>
+        </ProfileImageBig>
+        <ProfileInfoBox>
+          <ProfileNameRow>
+            <ProfileNameLeft>
+              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                {editingName ? (
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    onBlur={() => setEditingName(false)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') setEditingName(false);
+                    }}
+                    style={{
+                      fontSize: '1.15rem',
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      border: '1.5px solid var(--primary)',
+                      borderRadius: 6,
+                      padding: '0.2rem 0.5rem',
+                      outline: 'none',
+                      minWidth: 80,
+                      marginRight: 2,
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <h2 style={{margin:0}}>{profileName}</h2>
+                    <SmallButton style={{marginLeft:2}} onClick={() => setEditingName(true)}>
+                      <i className="fas fa-pen"></i>
+                    </SmallButton>
+                  </>
+                )}
+              </div>
+              <ProfileRating>
+                <i className="fas fa-star"></i>
+                <span>8.5</span>
+                <span style={{color:'var(--text-light)',fontWeight:400,fontSize:'0.98rem'}}>(24)</span>
+              </ProfileRating>
+            </ProfileNameLeft>
+          </ProfileNameRow>
+        </ProfileInfoBox>
+      </ProfileCard>
 
       <SettingsContainer>
         <SettingsSection>
-          <h3>{t('emailAddress')}</h3>
-          <div className="email-display">
-            <i className="fas fa-envelope"></i>
-            <span>{t('profileEmail', 'john.doe@example.com')}</span>
-          </div>
+          <SettingsList>
+            <SettingsItem>
+              <span><i className="fas fa-envelope" style={{marginRight:6}}></i>{t('profileEmail', 'john.doe@example.com')}</span>
+              <SmallButton>{t('change', '수정')}</SmallButton>
+            </SettingsItem>
+          </SettingsList>
         </SettingsSection>
 
         <SettingsSection>
-          <h3>
-            {t('schoolVerification')}
-            <span className={`verification-status ${isVerified ? 'verified' : 'not-verified'}`}>
-              <i className={`fas fa-${isVerified ? 'check-circle' : 'exclamation-circle'}`}></i>
-              {isVerified ? t('verified') : t('notVerified')}
-            </span>
-          </h3>
-          <p>{t('verifySchoolEmailDesc')}</p>
-          
-          {!isVerified && !showVerificationForm && (
-            <Button onClick={() => setShowVerificationForm(true)}>{t('verifySchoolEmail')}</Button>
-          )}
-
+          <SettingsList>
+            <SettingsItem>
+              <span><i className="fas fa-university" style={{marginRight:6}}></i>{t('schoolVerification')}</span>
+              <span className={`verification-status ${isVerified ? 'verified' : 'not-verified'}`} style={{marginRight:8}}>
+                <i className={`fas fa-${isVerified ? 'check-circle' : 'exclamation-circle'}`}></i>
+                {isVerified ? t('verified') : t('notVerified')}
+              </span>
+              {!isVerified && !showVerificationForm && (
+                <SmallButton onClick={() => setShowVerificationForm(true)}>{t('verifySchoolEmail')}</SmallButton>
+              )}
+            </SettingsItem>
+          </SettingsList>
           {showVerificationForm && !isVerified && (
-            <VerificationForm>
+            <VerificationForm style={{padding:'1rem 0.5rem', marginTop:'0.5rem'}}>
               <VerificationSteps>
                 <StepIndicator>
                   <div className={`step ${verificationStep === 'email' ? 'active' : 'completed'}`}>
@@ -743,7 +902,6 @@ const MyPage = () => {
                     {t('enterVerificationCode')}
                   </div>
                 </StepIndicator>
-
                 {verificationStep === 'email' ? (
                   <>
                     <EmailInput
@@ -752,7 +910,7 @@ const MyPage = () => {
                       value={schoolEmail}
                       onChange={(e) => setSchoolEmail(e.target.value)}
                     />
-                    <Button onClick={handleSendVerification}>{t('sendVerificationCode')}</Button>
+                    <SmallButton onClick={handleSendVerification}>{t('sendVerificationCode')}</SmallButton>
                     {verificationStatus === 'error' && (
                       <VerificationMessage className="error">
                         <i className="fas fa-exclamation-circle"></i>
@@ -777,19 +935,16 @@ const MyPage = () => {
                         }}
                       />
                     </InputGroup>
-
                     {verificationStatus === 'error' && (
                       <VerificationMessage className="error">
                         <i className="fas fa-exclamation-circle"></i>
                         {t('invalidVerificationCode')}
                       </VerificationMessage>
                     )}
-
                     <VerificationMessage className="info">
                       <i className="fas fa-info-circle"></i>
                       {t('sendVerificationCode')} {schoolEmail}
                     </VerificationMessage>
-
                     <ResendButton 
                       onClick={handleResendCode}
                       disabled={resendTimer > 0}
@@ -804,7 +959,6 @@ const MyPage = () => {
               </VerificationSteps>
             </VerificationForm>
           )}
-
           {isVerified && (
             <VerificationMessage className="success">
               <i className="fas fa-check-circle"></i>
@@ -814,9 +968,7 @@ const MyPage = () => {
         </SettingsSection>
 
         <LocationSection>
-          <h3>{t('locationManagement')}</h3>
-          <p>{t('manageLocations')}</p>
-          
+          <h3>{t('myLocation', '나의 위치')}</h3>
           <div className="location-list">
             {locations.map(location => (
               <div key={location.id} className="location-item">
@@ -872,15 +1024,21 @@ const MyPage = () => {
         </LocationSection>
 
         <SettingsSection>
-          <h3>{t('changePassword')}</h3>
-          <p>{t('changePasswordDesc')}</p>
-          <Button>{t('changePassword')}</Button>
+          <SettingsList>
+            <SettingsItem>
+              <span><i className="fas fa-lock" style={{marginRight:6}}></i>{t('changePassword')}</span>
+              <SmallButton>{t('changePassword')}</SmallButton>
+            </SettingsItem>
+          </SettingsList>
         </SettingsSection>
 
         <SettingsSection>
-          <h3>{t('deleteAccount')}</h3>
-          <p>{t('deleteAccountDesc')}</p>
-          <Button className="danger">{t('deleteAccount')}</Button>
+          <SettingsList>
+            <SettingsItem>
+              <span><i className="fas fa-user-slash" style={{marginRight:6}}></i>{t('deleteAccount')}</span>
+              <SmallButton className="danger">{t('deleteAccount')}</SmallButton>
+            </SettingsItem>
+          </SettingsList>
         </SettingsSection>
       </SettingsContainer>
     </MyPageContainer>
