@@ -1,5 +1,7 @@
 package com.hongik.books.user.controller;
 
+import com.hongik.books.user.domain.CustomUserDetails;
+import com.hongik.books.user.domain.User;
 import com.hongik.books.user.dto.ApiResponse;
 import com.hongik.books.user.dto.UserResponseDTO;
 import com.hongik.books.user.dto.UserRequestDTO;
@@ -9,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -127,6 +130,37 @@ public class UserController {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
+    }
+
+    /**
+     * 현재 로그인한 사용자의 정보를 조회하는 API
+     * @param userDetails JWT 토큰을 통해 인증된 사용자의 상세 정보
+     * @return ApiResponse<UserResponseDTO> 형태의 사용자 정보
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> getMyInfo(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        // 1. @AuthenticationPrincipal을 통해 JWT 토큰에 담긴 사용자 정보를 바로 주입받습니다.
+        if (userDetails == null) {
+            // 이 경우는 보통 JWT 필터에서 먼저 처리되지만, 만약을 위한 방어 코드입니다.
+            ApiResponse<UserResponseDTO> response = new ApiResponse<>(false, "인증된 사용자를 찾을 수 없습니다.", null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        // 2. CustomUserDetails 객체에서 우리 서비스의 User 엔티티를 가져옵니다.
+        User loggedInUser = userDetails.getUser();
+
+        // 3. User 엔티티를 프론트엔드로 보낼 UserResponseDTO로 변환합니다.
+        UserResponseDTO userResponse = new UserResponseDTO(
+                loggedInUser.getUsername(),
+                loggedInUser.getEmail()
+                // 필요하다면 다른 정보(프로필 이미지 경로 등)도 추가할 수 있습니다.
+        );
+
+        // 4. 최종적으로 ApiResponse로 감싸서 성공 응답을 반환합니다.
+        ApiResponse<UserResponseDTO> response = new ApiResponse<>(true, "내 정보 조회 성공", userResponse);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/id-check")

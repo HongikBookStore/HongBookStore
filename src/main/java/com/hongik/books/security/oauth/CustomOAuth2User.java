@@ -1,153 +1,36 @@
 package com.hongik.books.security.oauth;
 
+import com.hongik.books.user.domain.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 
 @Getter
-public class CustomOAuth2User implements OAuth2User {
-    private final OAuth2User oAuth2User;
-    private final String socialType;
-    private final String id;
-    private final String name;
-    private final String email;
+public class CustomOAuth2User extends DefaultOAuth2User {
+    // 우리 서비스의 User 엔티티를 필드로 가집니다.
+    private final User user;
 
-    public CustomOAuth2User(OAuth2User oAuth2User, String socialType) {
-        if (oAuth2User == null) {
-            throw new IllegalArgumentException("OAuth2User cannot be null");
-        }
-        if (socialType == null || socialType.trim().isEmpty()) {
-            throw new IllegalArgumentException("Social type cannot be null or empty");
-        }
-
-        this.oAuth2User = oAuth2User;
-        this.socialType = socialType.toLowerCase(); // 대소문자 통일
-        this.id = extractId(oAuth2User, this.socialType);
-        this.name = extractName(oAuth2User, this.socialType);
-        this.email = extractEmail(oAuth2User, this.socialType);
+    /**
+     * Constructs a new {@code CustomOAuth2User}.
+     *
+     * @param authorities      the authorities granted to the user
+     * @param attributes       the attributes about the user
+     * @param nameAttributeKey the key used to access the user's &quot;name&quot; from
+     * the attributes map
+     * @param user             우리 애플리케이션의 User 엔티티
+     */
+    public CustomOAuth2User(Collection<? extends GrantedAuthority> authorities,
+                            Map<String, Object> attributes, String nameAttributeKey,
+                            User user) {
+        super(authorities, attributes, nameAttributeKey);
+        this.user = user;
     }
 
-    private String extractId(OAuth2User oAuth2User, String socialType) {
-        try {
-            switch (socialType) {
-                case "google":
-                    return oAuth2User.getAttribute("sub");
-                case "kakao":
-                    Object id = oAuth2User.getAttribute("id");
-                    return id != null ? id.toString() : null; // Long 타입을 String으로 변환
-                case "naver":
-                    return extractFromNaverResponse("id", oAuth2User);
-                default:
-                    throw new IllegalArgumentException("Unsupported social type: " + socialType);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to extract ID for social type: " + socialType, e);
-        }
-    }
-
-
-    private String extractName(OAuth2User oAuth2User, String socialType) {
-        try {
-            switch (socialType) {
-                case "google":
-                    return oAuth2User.getAttribute("name");
-                case "kakao":
-                    return extractFromKakaoProfile("nickname", oAuth2User);
-                case "naver":
-                    return extractFromNaverResponse("name", oAuth2User);
-                default:
-                    throw new IllegalArgumentException("Unsupported social type: " + socialType);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to extract name for social type: " + socialType, e);
-        }
-    }
-
-    private String extractEmail(OAuth2User oAuth2User, String socialType) {
-        try {
-            switch (socialType) {
-                case "google":
-                    return oAuth2User.getAttribute("email");
-                case "kakao":
-                    return extractFromKakaoAccount("email", oAuth2User);
-                case "naver":
-                    return extractFromNaverResponse("email", oAuth2User);
-                default:
-                    throw new IllegalArgumentException("Unsupported social type: " + socialType);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to extract email for social type: " + socialType, e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractFromKakaoProfile(String key, OAuth2User oAuth2User) {
-        Map<String, Object> account = oAuth2User.getAttribute("kakao_account");
-        if (account == null) {
-            return null;
-        }
-
-        Map<String, Object> profile = (Map<String, Object>) account.get("profile");
-        if (profile == null) {
-            return null;
-        }
-
-        return (String) profile.get(key);
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractFromKakaoAccount(String key, OAuth2User oAuth2User) {
-        Map<String, Object> account = oAuth2User.getAttribute("kakao_account");
-        if (account == null) {
-            return null;
-        }
-
-        return (String) account.get(key);
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractFromNaverResponse(String key, OAuth2User oAuth2User) {
-        Map<String, Object> response = oAuth2User.getAttribute("response");
-        if (response == null) {
-            return null;
-        }
-
-        return (String) response.get(key);
-    }
-
-    @Override
-    public Map<String, Object> getAttributes() {
-        return oAuth2User.getAttributes();
-    }
-
-    @Override
-    public <T> T getAttribute(String name) {
-        return oAuth2User.getAttribute(name);
-    }
-
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 불변 빈 컬렉션 반환
-        return Collections.emptySet();
-    }
-
-    // toString, equals, hashCode 메서드 추가 (디버깅 및 테스트에 유용)
-    @Override
-    public String toString() {
-        return "CustomOAuth2User{" +
-                "socialType='" + socialType + '\'' +
-                ", id='" + id + '\'' +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
-                '}';
+    // 편의를 위해 User의 이메일을 바로 가져오는 getter를 추가할 수 있습니다.
+    public String getEmail() {
+        return user.getEmail();
     }
 }

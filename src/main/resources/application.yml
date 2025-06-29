@@ -55,6 +55,8 @@ spring:
             user-info-authentication-method: header
             user-name-attribute: id # Kakao 응답 값 id, connected_at, properties, kakao_account 중 id 지정
 
+
+
   ### JavaMailSender ###
   mail: # 이메일을 전송할 SMTP 서버 설정
     default-encoding: UTF-8

@@ -76,12 +76,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated()) // 그 외 요청은 인증 필요
                 // OAuth 로그인 설정
                 .oauth2Login(o -> o
-                        .loginPage("/login")
-                        .failureHandler(oAuth2LoginFailureHandler)
                         .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler)
                         .userInfoEndpoint(u -> u
-                                .userService(customOAuth2UserService)
-                        )
+                                .userService(customOAuth2UserService))
+                        .loginPage("/login")
                 )
                 // JWT 인증 필터 추가
                 .addFilterBefore(new JwtAuthFilter(jwt, uds), UsernamePasswordAuthenticationFilter.class);

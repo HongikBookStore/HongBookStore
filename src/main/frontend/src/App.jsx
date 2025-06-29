@@ -13,6 +13,8 @@ import Register from './pages/Register/Register.jsx';
 import FindId from './pages/FindId/FindId.jsx';
 import FindPw from './pages/FindPw/FindPw.jsx';
 
+import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
 const Map = () => <div>Map Page</div>;
@@ -21,7 +23,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('jwt'); // key 이름 변경
+        const token = localStorage.getItem('accessToken'); // key 이름 변경
 
         if (token) {
             try {
@@ -29,12 +31,14 @@ function App() {
                 const now = Math.floor(Date.now() / 1000);
 
                 if (payload.exp && payload.exp < now) {
-                    localStorage.removeItem('jwt');
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken'); // refreshToken도 함께 삭제
                     window.location.href = '/login';
                 }
             } catch (e) {
                 console.error('토큰 파싱 에러:', e);
-                localStorage.removeItem('jwt');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 window.location.href = '/login';
             }
         }
@@ -60,6 +64,10 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/find-id" element={<FindId />} />
                 <Route path="/find-pw" element={<FindPw />} />
+                <Route 
+                    path="/oauth/callback" 
+                    element={<OAuth2RedirectHandler />} 
+                />
             </Routes>
             <Footer />
         </Router>

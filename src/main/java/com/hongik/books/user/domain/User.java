@@ -50,6 +50,11 @@ public class User {
     private String socialType; // 소셜 타입 (자체 로그인의 경우 Null)
     private String socialId; // 소셜 ID  (자체 로그인의 경우 Null)
 
+    // 역할(Role) 필드
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
     public void updateUser(UserRequestDTO requestDTO, PasswordEncoder passwordEncoder, String mailVerificationToken) {
         this.username = requestDTO.username();
         this.email = requestDTO.email();
@@ -100,13 +105,18 @@ public class User {
         return expiryTime.isBefore(LocalDateTime.now()); // 현재 시간이 잠금 만료 시간 이전이면 해제 가능
     }
 
-    public void updateOAuthUser(String username, String email, String socialType, String socialId) {
-        this.username = username;
-        if (email != null) {
-            this.email = email;
-        }
-        this.socialType = socialType;
-        this.socialId = socialId;
-        this.enabled = true; // OAuth 로그인 후 사용자는 활성화 상태
+    /**
+     * 소셜 로그인 사용자의 정보(이름)가 변경되었을 경우 업데이트합니다.
+     * @param name 소셜 서비스에서 제공하는 최신 이름
+     * @return 업데이트된 User 엔티티 (메서드 체이닝을 위함)
+     */
+    public User updateOAuthUser(String name) {
+        this.username = name;
+        return this;
+    }
+
+    // Spring Security에서 사용자의 권한 키를 가져갈 수 있도록 getter를 제공합니다.
+    public String getRoleKey() {
+        return this.role.getKey();
     }
 }

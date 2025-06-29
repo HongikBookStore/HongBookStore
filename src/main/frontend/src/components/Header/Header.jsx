@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
-import { logout } from '../../api/auth';
+import { AuthCtx } from '../../contexts/AuthContext';
+import { logout as apiLogout } from '../../api/auth';
 
 const HeaderContainer = styled.header`
   background: rgba(255, 255, 255, 0.8);
@@ -199,7 +200,8 @@ const Header = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [lang, setLang] = useState(i18n.language);
-  const isLoggedIn = !!localStorage.getItem('jwt');
+  // [수정] Context API를 사용하여 로그인 상태와 로그아웃 함수를 가져옵니다.
+  const { isLoggedIn, logout } = useContext(AuthCtx);
 
   useEffect(() => {
     setLang(i18n.language);
@@ -216,14 +218,15 @@ const Header = () => {
   // 모바일 메뉴가 열려있을 경우를 대비해 먼저 닫아줍니다.
   setIsOpen(false);
 
-  // 1. 서버 API 호출 및 로컬 스토리지 정리를 담당하는 logout 함수를 기다립니다.
-  await logout(); 
-
-  // 2. 로그아웃 후 홈으로 이동합니다.
-  navigate('/');
-
-  // 3. 상태를 완전히 초기화하고 싶을 때 페이지를 새로고침합니다.
-  window.location.reload(); 
+  try {
+        // [수정] Context에서 가져온 logout 함수를 호출합니다.
+        // 이 함수는 api 호출, 로컬 스토리지 정리, 상태 업데이트를 모두 책임집니다.
+        await logout();
+        navigate('/');
+    } catch (error) {
+        console.error("로그아웃 처리 중 에러 발생", error);
+        alert("로그아웃 중 문제가 발생했습니다.");
+    }
 };
 
   return (
@@ -266,6 +269,7 @@ const Header = () => {
               </MobileMenuActions>
             </NavLinks>
             <MenuBox>
+              {/* [수정] Context에서 가져온 isLoggedIn 상태를 사용합니다. */}
               {!isLoggedIn ? (
                 <>
                   <NavLink to="/login">{t('login')}</NavLink>

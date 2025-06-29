@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 
@@ -129,7 +129,7 @@ function Login() {
   const { t, i18n } = useTranslation();
   const { save } = useContext(AuthCtx);
   const [form, setForm] = useState({
-    userId: '',
+    username: '',
     password: '',
   });
   const [msg, setMsg] = useState('');
@@ -140,6 +140,15 @@ function Login() {
     setLang(i18n.language);
   }, [i18n.language]);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // URL 파라미터 읽기
+  // 소셜 로그인 실패 시 메시지를 보여주기 위한 useEffect
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      setMsg('소셜 로그인에 실패했습니다. 다시 시도해주세요.');
+      setMsgColor('red');
+    }
+  }, [searchParams]);
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -153,14 +162,14 @@ function Login() {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.userId.trim() || !form.password) {
+    if (!form.username.trim() || !form.password) {
       setMsg(t('loginRequired'));
       setMsgColor('red');
       return;
     }
 
     try {
-      const {token, user} = await login(form.userId.trim(), form.password); // ③ 백엔드 호출
+      const {token, user} = await login(form.username.trim(), form.password); // ③ 백엔드 호출
       save(token, user);                     // ④ JWT·User 전역 저장
       setMsg(t('loginSuccess'));
       setMsgColor('green');
@@ -173,7 +182,7 @@ function Login() {
 
   // 소셜 로그인 리다이렉트
   const handleSocialLogin = provider => {
-    window.location.href = `/oauth2/authorization/${provider}`;
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
 
   return (
@@ -184,9 +193,9 @@ function Login() {
         <StyledForm onSubmit={handleSubmit}>
           <InputGroup>
             <Input
-              name="userId"
+              name="username"
               placeholder={t('idPlaceholder')}
-              value={form.userId}
+              value={form.username}
               onChange={handleChange}
             />
           </InputGroup>
@@ -220,9 +229,9 @@ function Login() {
         </LinkGroup>
         <SocialSection>
           <p>{t('socialLogin')}</p>
-          <SocialBtn type="naver" aria-label="Naver Login" onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
-          <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
-          <SocialBtn type="google" aria-label="Google Login" onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
+          <SocialBtn type="naver" aria-label="Naver Login" onClick={() => handleSocialLogin('naver')}>{t('naver')}</SocialBtn>
+          <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => handleSocialLogin('kakao')}>{t('kakao')}</SocialBtn>
+          <SocialBtn type="google" aria-label="Google Login" onClick={() => handleSocialLogin('google')}>{t('google')}</SocialBtn>
         </SocialSection>
       </LoginContainer>
     </>

@@ -3,11 +3,11 @@ import api from '../lib/api'; // axios 인스턴스를 import 합니다.
 // 회원가입
 export const signUp = (body) => api.post('/users/signup', body);
 
-/* 1-1 아이디 중복 */
+// 아이디 중복 확인
 export const checkUsername = (username) =>
   api.get(`/users/id-check?username=${encodeURIComponent(username)}`);
 
-/* 1-2 이메일 중복 */
+// 이메일 중복 확인
 export const checkEmail = (email) =>
   api.get(`/users/email-check?email=${encodeURIComponent(email)}`);
 
@@ -15,36 +15,54 @@ export const checkEmail = (email) =>
 export const findIdByEmail = (email) =>
   api.get(`/users/find-id?email=${encodeURIComponent(email)}`);
 
-// 로그인
+// 일반 로그인
+// 이 함수는 이제 로컬 스토리지를 직접 건드리는 대신,
+// 성공 시 토큰 객체를 반환하여 Context가 상태를 관리하도록 합니다.
 export const login = async (username, password) => {
   try {
-    // 서버로부터 받은 전체 응답.
-    // 이 응답의 구조는 { success: true, message: "...", data: { ... } } 입니다.
     const response = await api.post('/auth/login', { username, password });
 
-    // 1. 실제 토큰이 들어있는 'data' 객체를 먼저 확인하고 추출합니다.
-    if (response && response.data) {
-      // 2. data 객체에서 accessToken과 refreshToken을 추출합니다.
-      // 이 부분이 핵심적인 수정사항입니다!
-      const { accessToken, refreshToken } = response.data;
-
-      if (accessToken && refreshToken) {
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        console.log('로그인 성공! 토큰을 로컬 스토리지에 저장했습니다.');
-      } else {
-        console.error('응답의 data 객체 안에 토큰이 없습니다:', response.data);
-      }
+    // 백엔드 응답이 { success: true, data: { accessToken, ... } } 구조로 옵니다.
+    // axios는 실제 응답 데이터를 response.data에 담아줍니다.
+    if (response && response.success) {
+      // 성공 시, 토큰이 담긴 data 객체를 반환합니다.
+      return response.data; // { accessToken, refreshToken }
     } else {
-      // 서버가 성공(200 OK)은 했지만, data 필드가 없는 비정상적인 경우
-      console.error('로그인 응답에 data 필드가 없습니다:', response);
+      // API 호출은 성공했지만, 백엔드에서 실패 응답을 보낸 경우
+      throw new Error(response.message || '아이디 또는 비밀번호가 일치하지 않습니다.');
     }
-    
-    return response; 
-
   } catch (error) {
     console.error('로그인 API 호출 중 에러 발생:', error);
-    // 에러 발생 시 상위로 전파하여, 호출한 컴포넌트에서 후속 처리를 할 수 있게 합니다.
+    // 컴포넌트에서 에러 메시지를 표시할 수 있도록 에러를 다시 던집니다.
+    throw error;
+  }
+};
+
+// 내 정보 조회 (토큰 기반)
+// 소셜 로그인 성공 후, 또는 페이지 새로고침 시 사용자 정보를 가져올 때 사용됩니다.
+export const getMyInfo = async () => {
+  const accessToken = localStorage.getItem('accessToken');
+  if (!accessToken) {
+    return Promise.reject(new Error('인증 토큰이 없습니다.'));
+  }
+
+  try {
+    // api 인스턴스에 이미 헤더 설정이 되어있다면, 아래 headers 부분은 생략 가능합니다.
+    // 하지만 명시적으로 적어주는 것이 안전합니다.
+    const response = await api.get('/users/me', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    // 백엔드 응답이 { success: true, data: { username, email } } 구조로 옵니다.
+    if (response && response.success) {
+      return response.data; // 성공 시 사용자 정보 객체 반환
+    } else {
+      throw new Error(response.message || '내 정보 조회에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('내 정보 조회 API 호출 실패:', error);
     throw error;
   }
 };
@@ -52,27 +70,24 @@ export const login = async (username, password) => {
 // 로그아웃
 export const logout = async () => {
   const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    return;
-  }
 
   try {
-    // 1. 메서드를 api.post에서 api.delete로 변경합니다.
-    // 2. DELETE 요청 시에는 본문(body)이 없으므로, 두 번째 인자에 바로 config 객체를 전달합니다.
-    await api.delete('/auth/logout', {
-      headers: {
-        'Refresh-Token': refreshToken
-      }
-    });
-
-    console.log('서버에 DELETE 로그아웃 요청 성공 (헤더 방식)');
-
+    if (refreshToken) {
+      await api.delete('/auth/logout', {
+        headers: {
+          'Refresh-Token': refreshToken
+        }
+      });
+      console.log('서버에 로그아웃 요청을 성공적으로 보냈습니다.');
+    }
   } catch (error) {
     console.error('서버 로그아웃 요청 실패:', error);
   } finally {
+    // [가장 중요!] 서버 요청의 성공/실패 여부와 관계없이
+    // 로컬 스토리지의 토큰들은 반드시 삭제합니다.
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user'); // 사용자 정보도 함께 삭제
+    console.log('로컬 스토리지의 토큰과 사용자 정보를 모두 삭제했습니다.');
   }
 };

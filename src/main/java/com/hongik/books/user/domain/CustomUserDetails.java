@@ -2,6 +2,7 @@ package com.hongik.books.user.domain;
 
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
@@ -17,7 +18,8 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        // 사용자의 역할을 Spring Security가 이해할 수 있는 형태로 변환합니다.
+        return Collections.singleton(new SimpleGrantedAuthority(user.getRoleKey()));
     }
 
     @Override

@@ -1,11 +1,14 @@
 package com.hongik.books.jwt;
 
 import com.hongik.books.user.domain.CustomUserDetails;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -16,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -28,8 +32,8 @@ import java.util.UUID;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final JwtTokenRedisRepository jwtTokenRedisRepository;
     private final UserDetailsService userDetailsService;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Value("${jwt.token-validity-in-seconds}")
     private long accessTokenValiditySeconds;
@@ -39,11 +43,11 @@ public class JwtTokenProvider {
 
     // 생성자에서 비밀키 초기화 - 의존성 주입
     public JwtTokenProvider(@Value("${jwt.secret}") String secret,
-                            JwtTokenRedisRepository jwtTokenRedisRepository,
-                            UserDetailsService userDetailsService) {
+                            UserDetailsService userDetailsService,
+                            StringRedisTemplate stringRedisTemplate) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.jwtTokenRedisRepository = jwtTokenRedisRepository;
         this.userDetailsService = userDetailsService;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     // 주어진 Authentication 객체를 기반으로 Access JWT 토큰을 생성한다.
@@ -83,7 +87,7 @@ public class JwtTokenProvider {
 
         try {
             // 블랙리스트에 있는지 확인
-            return !isRefreshTokenBlacklisted(refreshToken);
+            return !isTokenIssuedBeforeLogout(refreshToken);
         } catch (Exception e) {
             log.debug("리프레시 토큰 블랙리스트 확인 실패: {}", e.getMessage());
             return false;
@@ -128,60 +132,57 @@ public class JwtTokenProvider {
     }
 
 
-    // Refresh 토큰을 블랙리스트에 추가하고, 성공적으로 추가되면 true를 반환한다.
-    public boolean blacklistRefreshToken(String refreshToken) {
+    /**
+     * [새로운 전략] 사용자의 최종 로그아웃 시간을 Redis에 기록합니다.
+     * @param refreshToken 로그아웃 요청에 사용된 리프레시 토큰
+     * @return 성공적으로 기록되면 true
+     */
+    public boolean recordLogoutTime(String refreshToken) {
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
-            log.warn("블랙리스트에 추가할 토큰이 null이거나 비어있습니다.");
             return false;
         }
-
         try {
-            String tokenId = Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(refreshToken)
-                    .getPayload()
-                    .getId();
-
-            if (tokenId == null || tokenId.trim().isEmpty()) {
-                log.error("토큰에 jti 클레임이 포함되어 있지 않습니다.");
-                return false;
-            }
-
-            boolean result = jwtTokenRedisRepository.addTokenToBlacklist(tokenId, refreshTokenValiditySeconds);
-            if (result) {
-                log.info("리프레시 토큰이 블랙리스트에 추가되었습니다. tokenId: {}", tokenId);
-            }
-            return result;
+            String username = getUsername(refreshToken);
+            // "logout:{username}" 이라는 키로 현재 시간을 저장합니다.
+            // 리프레시 토큰의 유효기간만큼만 이 기록을 유지합니다.
+            stringRedisTemplate.opsForValue().set(
+                    "logout:" + username,
+                    String.valueOf(System.currentTimeMillis()),
+                    refreshTokenValiditySeconds,
+                    TimeUnit.SECONDS
+            );
+            log.info("{} 사용자가 로그아웃을 요청했습니다. 최종 로그아웃 시간을 기록합니다.", username);
+            return true;
         } catch (Exception e) {
-            log.error("리프레시 토큰 블랙리스트 추가 실패: {}", e.getMessage());
+            log.error("로그아웃 시간 기록 중 오류 발생", e);
             return false;
         }
     }
 
 
-    // 블랙리스트에 있는지 확인 (Refresh Token)
-    public boolean isRefreshTokenBlacklisted(String refreshToken) {
-        if (refreshToken == null || refreshToken.trim().isEmpty()) {
-            return true; // null이나 빈 토큰은 블랙리스트로 간주
-        }
-
+    /**
+     * [새로운 전략] 토큰이 최종 로그아웃 시간 이전에 발급되었는지 확인합니다.
+     * @param accessToken 검증할 액세스 토큰
+     * @return 로그아웃 이전에 발급된 토큰이면 true, 아니면 false
+     */
+    public boolean isTokenIssuedBeforeLogout(String accessToken) {
         try {
-            String tokenId = Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(refreshToken)
-                    .getPayload()
-                    .getId();
+            Claims claims = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(accessToken).getPayload();
+            String username = claims.getSubject();
+            Date issuedAt = claims.getIssuedAt();
 
-            if (tokenId == null || tokenId.trim().isEmpty()) {
-                return true; // jti가 없는 토큰은 블랙리스트로 간주
+            String logoutTimestampStr = stringRedisTemplate.opsForValue().get("logout:" + username);
+            if (logoutTimestampStr == null) {
+                return false; // 로그아웃 기록이 없으면 유효함
             }
 
-            return jwtTokenRedisRepository.isTokenBlacklisted(tokenId);
+            long logoutTimestamp = Long.parseLong(logoutTimestampStr);
+            // 토큰 발급시간이 로그아웃 시간보다 이전이면, 이 토큰은 무효합니다.
+            return issuedAt.getTime() < logoutTimestamp;
         } catch (Exception e) {
-            log.debug("블랙리스트 확인 중 오류 발생: {}", e.getMessage());
-            return true; // 오류가 발생한 토큰은 블랙리스트로 간주
+            log.debug("로그아웃 시간 확인 중 오류 발생", e);
+            // 확인 중 오류가 발생하면 안전하게 무효 처리합니다.
+            return true;
         }
     }
 

@@ -1,6 +1,7 @@
 package com.hongik.books.user.service;
 
 import com.hongik.books.user.domain.User;
+import com.hongik.books.user.domain.UserRole;
 import com.hongik.books.user.dto.ApiResponse;
 import com.hongik.books.user.dto.UserResponseDTO;
 import com.hongik.books.user.dto.UserRequestDTO;
@@ -39,10 +40,12 @@ public class UserService {
                 .email(request.email())
                 .username(request.username())
                 .password(encodedPassword)
+                .role(UserRole.USER) // 일반 가입자는 기본적으로 'USER' 역할을 가집니다.
+                .socialUser(false)   // 일반 가입자이므로 socialUser는 false 입니다.
                 .accountNonExpired(true)
                 .accountNonLocked(true)
                 .credentialsNonExpired(true)
-                .enabled(false)
+                .enabled(false) // 이메일 인증 전까지는 비활성화 상태
                 .mailVerificationToken(verificationToken)
                 .build();
 

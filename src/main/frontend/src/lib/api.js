@@ -35,7 +35,8 @@ api.interceptors.response.use(
     // 401 Unauthorized 에러 처리: 자동 로그아웃
     if (response && response.status === 401) {
       console.error('인증되지 않은 요청입니다. 자동 로그아웃됩니다.');
-      localStorage.removeItem('jwt');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       // 페이지를 새로고침하며 이동하여 모든 상태를 초기화합니다.
       window.location.href = '/login'; 
       // 추가적인 에러 처리를 막기 위해 여기서 Promise를 reject 합니다.
