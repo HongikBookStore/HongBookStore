@@ -6,7 +6,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 
-import { login } from '../../api/auth';      // ① 로그인 API
+import { login, getMyInfo } from '../../api/auth';      // ① 로그인 API
 import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
 
 const LoginContainer = styled.div`
@@ -169,11 +169,25 @@ function Login() {
     }
 
     try {
-      const {token, user} = await login(form.username.trim(), form.password); // ③ 백엔드 호출
-      save(token, user);                     // ④ JWT·User 전역 저장
+      // 1. 일반 로그인 API를 호출하여 토큰들을 받습니다.
+      const { accessToken, refreshToken } = await login(form.username.trim(), form.password);
+      
+      // 2. 받아온 토큰들을 즉시 로컬 스토리지에 저장합니다.
+      //    (getMyInfo가 이 토큰을 사용해서 요청을 보내야 하니까요!)
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+
+      // 3. 새로 받은 accessToken으로 '내 정보'를 조회합니다.
+      const userInfo = await getMyInfo();
+
+      // 4. "관리인(AuthContext)"에게 토큰과 사용자 정보를 전달하여 최종 로그인 처리를 합니다.
+      save(accessToken, userInfo);
+
+      // 5. 사용자에게 성공 메시지를 보여주고 홈페이지로 이동합니다.
       setMsg(t('loginSuccess'));
       setMsgColor('green');
-      setTimeout(() => navigate('/'), 500);  // 홈으로
+      setTimeout(() => navigate('/'), 500);
+
     } catch (err) {
       setMsg(err.message || t('loginFail'));
       setMsgColor('red');

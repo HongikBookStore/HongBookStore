@@ -75,13 +75,13 @@ spring:
   ### MySQL DB ###
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://hongbookstore-db.cl0asg8wa0o0.ap-northeast-2.rds.amazonaws.com:3306/hongBookstore?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://104.198.2.213:3306/hongBookstore?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
   ### Redis DB ###
   data:
     redis:
-      host: localhost
+      host: 104.198.2.213
       port: 6379
 
   ### JPA ###
