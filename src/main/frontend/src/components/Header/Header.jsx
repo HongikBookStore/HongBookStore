@@ -7,6 +7,7 @@ import bookIcon from '../../assets/book.svg';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { useWriting } from '../../contexts/WritingContext';
 import WarningModal from '../WarningModal/WarningModal';
+import { logout as apiLogout } from '../../api/auth';
 
 const slideDown = keyframes`
   from {
@@ -459,31 +460,32 @@ const Header = () => {
   
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { user, token } = useContext(AuthCtx);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  // Context API를 사용하여 로그인 상태와 로그아웃 함수를 가져옵니다.
+  const { isLoggedIn, logout } = useContext(AuthCtx);
   const { isWriting, writingType } = useWriting();
   const location = useLocation();
   const isHome = location.pathname === '/';
 
-  useEffect(() => {
-    // AuthContext의 token과 localStorage의 jwt를 모두 확인
-    const localToken = localStorage.getItem('jwt');
-    const isAuthenticated = !!(token || localToken);
-    setIsLoggedIn(isAuthenticated);
-  }, [token]);
 
   const handleLangChange = (e) => {
     i18n.changeLanguage(e.target.value);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('user');
-    setIsLoggedIn(false);
-    navigate('/');
-    // 페이지 새로고침으로 AuthContext 상태 초기화
-    window.location.reload();
-  };
+  const handleLogout = async () => {
+  // 모바일 메뉴가 열려있을 경우를 대비해 먼저 닫아줍니다.
+  setIsOpen(false);
+
+  try {
+        // Context에서 가져온 logout 함수를 호출
+        // 이 함수는 api 호출, 로컬 스토리지 정리, 상태 업데이트를 모두 책임
+        await logout();
+        navigate('/');
+    } catch (error) {
+        console.error("로그아웃 처리 중 에러 발생", error);
+        alert("로그아웃 중 문제가 발생했습니다.");
+    }
+};
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);

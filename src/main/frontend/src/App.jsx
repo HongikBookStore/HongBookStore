@@ -24,6 +24,8 @@ import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
 
+import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
 const Map = () => <div>Map Page</div>;
@@ -33,7 +35,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('jwt'); // key 이름 변경
+        const token = localStorage.getItem('accessToken'); // key 이름 변경
 
         if (token) {
             try {
@@ -41,12 +43,14 @@ function App() {
                 const now = Math.floor(Date.now() / 1000);
 
                 if (payload.exp && payload.exp < now) {
-                    localStorage.removeItem('jwt');
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken'); // refreshToken도 함께 삭제
                     window.location.href = '/login';
                 }
             } catch (e) {
                 console.error('토큰 파싱 에러:', e);
-                localStorage.removeItem('jwt');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 window.location.href = '/login';
             }
         }
@@ -59,6 +63,23 @@ function App() {
     }
 
     return (
+        <Router>
+            <GlobalStyles />
+            <Header />
+            <Routes>
+                <Route path="/" element={<Hero />} />
+                <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/map" element={<Map />} />
+                <Route path="/mypage" element={<MyPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/find-id" element={<FindId />} />
+                <Route path="/find-pw" element={<FindPw />} />
+                
+            </Routes>
+            <Footer />
+        </Router>
         <AuthProvider>
             <WritingProvider>
                 <Router>
@@ -90,6 +111,8 @@ function App() {
                         <Route path="/book-write" element={<BookWrite />} />
                         <Route path="/wanted/:id" element={<WantedWrite />} />
                         <Route path="/wantedwrite/:id" element={<WantedWrite />} />
+                        <Route path="/oauth/callback" 
+                               element={<OAuth2RedirectHandler />} />
                     </Routes>
                     <Footer />
                 </Router>

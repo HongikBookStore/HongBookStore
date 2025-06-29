@@ -2,14 +2,14 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
 import naverLogo from '../../assets/naver.png';
 import kakaoLogo from '../../assets/kakao.png';
 import googleLogo from '../../assets/google.png';
 
-import { login } from '../../api/user';      // ① 로그인 API
+import { login, getMyInfo } from '../../api/auth';      // ① 로그인 API
 import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
 
 const LoginContainer = styled.div`
@@ -136,7 +136,7 @@ function Login() {
   const { t, i18n } = useTranslation();
   const { save } = useContext(AuthCtx);
   const [form, setForm] = useState({
-    userId: '',
+    username: '',
     password: '',
   });
   const [msg, setMsg] = useState('');
@@ -147,6 +147,15 @@ function Login() {
     setLang(i18n.language);
   }, [i18n.language]);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // URL 파라미터 읽기
+  // 소셜 로그인 실패 시 메시지를 보여주기 위한 useEffect
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      setMsg('소셜 로그인에 실패했습니다. 다시 시도해주세요.');
+      setMsgColor('red');
+    }
+  }, [searchParams]);
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -160,18 +169,32 @@ function Login() {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.userId.trim() || !form.password) {
+    if (!form.username.trim() || !form.password) {
       setMsg(t('loginRequired'));
       setMsgColor('red');
       return;
     }
 
     try {
-      const {token, user} = await login(form.userId.trim(), form.password); // ③ 백엔드 호출
-      save(token, user);                     // ④ JWT·User 전역 저장
+      // 1. 일반 로그인 API를 호출하여 토큰들을 받습니다.
+      const { accessToken, refreshToken } = await login(form.username.trim(), form.password);
+      
+      // 2. 받아온 토큰들을 즉시 로컬 스토리지에 저장합니다.
+      //    (getMyInfo가 이 토큰을 사용해서 요청을 보내야 하니까요!)
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+
+      // 3. 새로 받은 accessToken으로 '내 정보'를 조회합니다.
+      const userInfo = await getMyInfo();
+
+      // 4. "관리인(AuthContext)"에게 토큰과 사용자 정보를 전달하여 최종 로그인 처리를 합니다.
+      save(accessToken, userInfo);
+
+      // 5. 사용자에게 성공 메시지를 보여주고 홈페이지로 이동합니다.
       setMsg(t('loginSuccess'));
       setMsgColor('green');
-      setTimeout(() => navigate('/'), 500);  // 홈으로
+      setTimeout(() => navigate('/'), 500);
+
     } catch (err) {
       setMsg(err.message || t('loginFail'));
       setMsgColor('red');
@@ -180,7 +203,7 @@ function Login() {
 
   // 소셜 로그인 리다이렉트
   const handleSocialLogin = provider => {
-    window.location.href = `/oauth2/authorization/${provider}`;
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
 
   return (
@@ -191,9 +214,9 @@ function Login() {
         <StyledForm onSubmit={handleSubmit}>
           <InputGroup>
             <Input
-              name="userId"
+              name="username"
               placeholder={t('idPlaceholder')}
-              value={form.userId}
+              value={form.username}
               onChange={handleChange}
             />
           </InputGroup>
@@ -228,13 +251,13 @@ function Login() {
         <SocialSection>
           <p>{t('socialLogin')}</p>
           <div style={{display:'flex', justifyContent:'center', gap:'1.5rem', marginTop:'1rem'}}>
-            <SocialBtn type="naver" aria-label="Naver Login" onClick={() => window.location.href = '/oauth2/authorization/naver'}>
+            <SocialBtn type="naver" aria-label="Naver Login" onClick={() => handleSocialLogin('naver')}>
               <img src={naverLogo} alt="Naver" style={{width:40, height:40}} />
             </SocialBtn>
-            <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => window.location.href = '/oauth2/authorization/kakao'}>
+            <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => handleSocialLogin('kakao')}>
               <img src={kakaoLogo} alt="Kakao" style={{width:40, height:40}} />
             </SocialBtn>
-            <SocialBtn type="google" aria-label="Google Login" onClick={() => window.location.href = '/oauth2/authorization/google'}>
+            <SocialBtn type="google" aria-label="Google Login" onClick={() => handleSocialLogin('google')}>
               <img src={googleLogo} alt="Google" style={{width:40, height:40}} />
             </SocialBtn>
           </div>
