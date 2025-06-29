@@ -462,7 +462,7 @@ const Header = () => {
   const { t, i18n } = useTranslation();
   
   // Context API를 사용하여 로그인 상태와 로그아웃 함수를 가져옵니다.
-  const { isLoggedIn, logout } = useContext(AuthCtx);
+  const { isLoggedIn, user, logout } = useContext(AuthCtx);
   const { isWriting, writingType } = useWriting();
   const location = useLocation();
   const isHome = location.pathname === '/';

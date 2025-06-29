@@ -5,8 +5,12 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../../components/Header/Header.jsx';
+import naverLogo from '../../assets/naver.png';
+import kakaoLogo from '../../assets/kakao.png';
+import googleLogo from '../../assets/google.png';
 
 import { signUp, checkUsername, checkEmail } from '../../api/auth';
+import { AuthCtx } from '../../contexts/AuthContext';
 
 const EMAIL_DOMAINS = [
   'naver.com',
@@ -382,7 +386,7 @@ function Register() {
   };
 
   const handleSocialLogin = provider => {
-    window.location.href = `/oauth2/authorization/${provider}`;
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
 
   return (
@@ -495,13 +499,18 @@ function Register() {
         </StyledForm>
         {submitMsgKey && <Message color={submitMsgColor}>{t(submitMsgKey)}</Message>}
         <SocialSection>
-          <p>{t('socialLogin')}</p>
-          <SocialBtn type="naver" aria-label="Naver Login"
-                     onClick={() => window.location.href = '/oauth2/authorization/naver'}>{t('naver')}</SocialBtn>
-          <SocialBtn type="kakao" aria-label="Kakao Login"
-                     onClick={() => window.location.href = '/oauth2/authorization/kakao'}>{t('kakao')}</SocialBtn>
-          <SocialBtn type="google" aria-label="Google Login"
-                     onClick={() => window.location.href = '/oauth2/authorization/google'}>{t('google')}</SocialBtn>
+                  <p>{t('socialLogin')}</p>
+                  <div style={{display:'flex', justifyContent:'center', gap:'1.5rem', marginTop:'1rem'}}>
+                    <SocialBtn type="naver" aria-label="Naver Login" onClick={() => handleSocialLogin('naver')}>
+                      <img src={naverLogo} alt="Naver" style={{width:40, height:40}} />
+                    </SocialBtn>
+                    <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => handleSocialLogin('kakao')}>
+                      <img src={kakaoLogo} alt="Kakao" style={{width:40, height:40}} />
+                    </SocialBtn>
+                    <SocialBtn type="google" aria-label="Google Login" onClick={() => handleSocialLogin('google')}>
+                      <img src={googleLogo} alt="Google" style={{width:40, height:40}} />
+                    </SocialBtn>
+                  </div>
         </SocialSection>
       </RegisterContainer>
     </>
