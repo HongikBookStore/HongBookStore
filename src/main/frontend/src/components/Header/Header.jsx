@@ -485,6 +485,9 @@ const Header = () => {
         console.error("로그아웃 처리 중 에러 발생", error);
         alert("로그아웃 중 문제가 발생했습니다.");
     }
+    //localStorage.removeItem('isVerified');
+    //localStorage.removeItem('verifiedEmail');
+
 };
 
   const toggleMenu = () => {
