@@ -3,6 +3,12 @@ import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const UNIVCERT_API_KEY = '77ddffda-a3e8-4363-a31d-96e507f9b19c';
+const UNIVCERT_ENDPOINT = 'https://univcert.com/api/v1/certify';
+// (만약 인증 코드 검증용 별도 엔드포인트가 있다면 추가 정의)
+const VERIFY_ENDPOINT = "https://univcert.com/api/v1/certifycode";
 
 const MyPageContainer = styled.div`
   padding: 6rem 2vw 4rem;
@@ -637,10 +643,15 @@ const MyPage = () => {
   // jwt 체크
   const token = localStorage.getItem('jwt');
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
+    const isVerified = localStorage.getItem('isVerified') === 'true';
+    const verifiedEmail = localStorage.getItem('verifiedEmail');
+
+    if (isVerified && verifiedEmail) {
+      setIsVerified(true);
+      setVerificationStatus('success');
+      setSchoolEmail(verifiedEmail); // email input에도 자동 반영
     }
-  }, [navigate, token]);
+  }, []);
 
   if (!token) {
     // jwt 없으면 아무것도 렌더하지 않음(혹은 로딩 스피너 등)
@@ -715,36 +726,82 @@ const MyPage = () => {
     }
   };
 
-  const handleSendVerification = () => {
-    // Validate school email format
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const handleSendVerification = async () => {
+    console.log('🧪 함수 시작됨');
+    console.log('🧪 schoolEmail 값:', schoolEmail);
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@g\.hongik\.ac\.kr$/;
     if (!emailRegex.test(schoolEmail)) {
       setVerificationStatus('error');
       return;
     }
 
-    // TODO: Implement API call to send verification code
-    setVerificationStep('code');
-    setResendTimer(60);
-    const timer = setInterval(() => {
-      setResendTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
+    try {
+      const res = await axios.post(UNIVCERT_ENDPOINT, {
+        key: UNIVCERT_API_KEY,
+        email: schoolEmail,
+        univName: '홍익대학교',
+        univ_check: true
       });
-    }, 1000);
+
+      if (res.data.success) {
+        setVerificationStep('code');
+        setVerificationStatus(null);
+        setResendTimer(60);
+
+        const timer = setInterval(() => {
+          setResendTimer(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setVerificationStatus('error');
+      }
+    } catch (err) {
+      console.error(err);
+      setVerificationStatus('error');
+    }
   };
 
-  const handleVerifyCode = () => {
-    // TODO: Implement API call to verify code
-    if (verificationCode.length === 6) {
-      // Simulate verification success
-      setIsVerified(true);
-      setVerificationStatus('success');
-      setShowVerificationForm(false);
-    } else {
+  const handleVerifyCode = async () => {
+    console.log('🔍 handleVerifyCode 실행됨');
+    console.log('📧 이메일:', schoolEmail);
+    console.log('🔐 코드:', verificationCode);
+
+    try {
+      const res = await axios.post(VERIFY_ENDPOINT, {
+        key: UNIVCERT_API_KEY,
+        email: schoolEmail,
+        univName: '홍익대학교',
+        code: verificationCode
+      });
+
+      console.log('✅ 응답:', res.data);
+
+      if (res.data.success) {
+        setIsVerified(true);
+        setVerificationStatus('success');
+
+        localStorage.setItem('isVerified', 'true');
+        localStorage.setItem('verifiedEmail', schoolEmail);
+
+        console.log("📦 JWT 토큰:", localStorage.getItem("jwt"));
+        // ⬇️ 인증 성공 시 서버에도 반영
+        const token = localStorage.getItem('jwt');
+        axios.post('/api/users/verify-student', null, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } else {
+        setVerificationStatus('error');
+      }
+    } catch (err) {
+      console.error('❌ 인증 오류:', err);
       setVerificationStatus('error');
     }
   };
@@ -934,7 +991,12 @@ const MyPage = () => {
                           }
                         }}
                       />
+
+                      <Button onClick={handleVerifyCode}>
+                        인증번호 확인
+                      </Button>
                     </InputGroup>
+
                     {verificationStatus === 'error' && (
                       <VerificationMessage className="error">
                         <i className="fas fa-exclamation-circle"></i>
