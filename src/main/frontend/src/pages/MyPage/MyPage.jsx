@@ -640,8 +640,8 @@ const MyPage = () => {
   const [profileName, setProfileName] = useState(t('profileName', 'John Doe'));
   const nameInputRef = useRef();
 
-  // jwt 체크
-  const token = localStorage.getItem('jwt');
+  // accessToken 체크
+  const token = localStorage.getItem('accessToken');
   useEffect(() => {
     const isVerified = localStorage.getItem('isVerified') === 'true';
     const verifiedEmail = localStorage.getItem('verifiedEmail');
