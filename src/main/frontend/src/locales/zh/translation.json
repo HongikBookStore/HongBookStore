@@ -36,7 +36,7 @@
   "showPw": "显示密码",
   "hidePw": "隐藏密码",
   "findIdResult": "与该电子邮箱关联的用户名是 {{id}}",
-  "findPwResult": "临时密码已发送到您的电子邮箱，请查收",
+  "findPwResult": "您提供的电子邮箱已发送密码重置链接。请检查您的收件箱。",
   "emailNotFound": "该电子邮箱不存在，请重新确认",
   "quickLinks": "快速链接",
   "marketplace": "书籍市场",
@@ -92,5 +92,15 @@
   "cancel": "取消",
   "profileName": "姓名",
   "profileEmail": "电子邮箱",
-  "logout": "退出登录"
-} 
+  "logout": "退出登录",
+  "processing": "正在處理...",
+  "requestFailed": "請求失敗了。請稍後再試。",
+  "resetPasswordTitle": "重設密碼",
+  "newPassword": "新密碼",
+  "confirmPassword": "確認新密碼",
+  "passwordRequired": "請輸入密碼。",
+  "passwordMismatch": "密碼不一致。",
+  "passwordResetSuccess": "密碼已成功更改。即將跳轉到登入頁面。",
+  "invalidToken": "無效的存取。",
+  "ok": "確認"
+}

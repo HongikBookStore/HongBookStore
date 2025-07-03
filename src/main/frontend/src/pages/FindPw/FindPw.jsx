@@ -87,29 +87,48 @@ function FindPw() {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [lang, setLang] = useState(i18n.language || 'ko');
-  const [msgKey, setMsgKey] = useState('');
-  const [msgColor, setMsgColor] = useState('');
+  const [message, setMessage] = useState({ textKey: '', color: '' });
+  const [loading, setLoading] = useState(false);
 
   const handleLangChange = e => {
     setLang(e.target.value);
     i18n.changeLanguage(e.target.value);
   };
 
-  const handleSubmit = e => {
+  // 실제 API를 호출하는 비동기 함수로 변경
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
-      setMsgKey('emailRequired');
-      setMsgColor('red');
+      setMessage({ textKey: 'emailRequired', color: 'red' });
       return;
     }
-    // 임시: test@test.com만 성공, 그 외는 에러
-    if (email.trim() !== 'test@test.com') {
-      setMsgKey('emailNotFound');
-      setMsgColor('red');
-      return;
+    
+    setLoading(true); // 로딩 시작
+    setMessage({ textKey: '', color: '' });
+
+    try {
+      const response = await fetch('/api/auth/password/reset-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      // 백엔드는 이메일 존재 여부와 상관없이 항상 성공 응답을 주기로 했으므로,
+      // fetch 요청 자체가 성공하면 사용자에게 안내 메시지를 보여줍니다.
+      if (response.ok) {
+        setMessage({ textKey: 'findPwResult', color: 'green' });
+      } else {
+        // 서버에서 5xx 에러 등 예외적인 상황 처리
+        setMessage({ textKey: 'requestFailed', color: 'red' });
+      }
+    } catch (error) {
+      console.error('Password reset request failed:', error);
+      setMessage({ textKey: 'requestFailed', color: 'red' });
+    } finally {
+      setLoading(false); // 로딩 종료
     }
-    setMsgKey('findPwResult');
-    setMsgColor('green');
   };
 
   return (
@@ -120,15 +139,20 @@ function FindPw() {
         <StyledForm onSubmit={handleSubmit}>
           <InputGroup>
             <Input
+              type="email"
               name="email"
               placeholder={t('emailPlaceholder')}
               value={email}
-              onChange={e => { setEmail(e.target.value); setMsgKey(''); }}
+              onChange={e => setEmail(e.target.value)}
+              disabled={loading} // 로딩 중 입력 비활성화
             />
           </InputGroup>
-          <SubmitButton type="submit">{t('findPw')}</SubmitButton>
+          {/* 로딩 상태에 따라 버튼 비활성화 및 텍스트 변경 */}
+          <SubmitButton type="submit" disabled={loading}>
+            {loading ? t('processing') : t('findPw')}
+          </SubmitButton>
         </StyledForm>
-        {msgKey && <Message color={msgColor}>{t(msgKey)}</Message>}
+        {message.textKey && <Message color={message.color}>{t(message.textKey)}</Message>}
       </FindContainer>
     </>
   );

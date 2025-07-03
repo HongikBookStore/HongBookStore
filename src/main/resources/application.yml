@@ -55,8 +55,6 @@ spring:
             user-info-authentication-method: header
             user-name-attribute: id # Kakao 응답 값 id, connected_at, properties, kakao_account 중 id 지정
 
-
-
   ### JavaMailSender ###
   mail: # 이메일을 전송할 SMTP 서버 설정
     default-encoding: UTF-8
@@ -113,6 +111,10 @@ logging:
     type:
         descriptor:
         sql: trace
+
+### 프론트엔드 설정 ###
+frontend:
+  base-url: http://localhost:5173 # 로컬 개발 환경용 프론트엔드 주소
 
 ### Swagger ###
 springdoc:
