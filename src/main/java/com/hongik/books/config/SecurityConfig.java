@@ -70,6 +70,7 @@ public class SecurityConfig {
                                 "/api/users/email-check",
                                 "/api/users/find-id",
                                 "/api/users/verify/**",
+                                "api/images/**",
                                 "/actuator/health",
                                 // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
                                 "/", "/login", "/oauth2/**", "/error"

@@ -9,33 +9,37 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 
-@Entity
+@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder @AllArgsConstructor @Entity
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(name = "uk_users_email",    columnNames = "email"),
         @UniqueConstraint(name = "uk_users_username", columnNames = "username")
 })
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Builder @AllArgsConstructor
 public class User {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
     private String password;
 
     private String profileImagePath;
 
-    private boolean studentVerified;
+    // 역할(Role) 필드
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    private String socialType; // 소셜 타입 (자체 로그인의 경우 Null)
+    private String socialId; // 소셜 ID  (자체 로그인의 경우 Null)
     private boolean socialUser;
 
-    @CreationTimestamp                 // INSERT 시 자동 세팅
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp // UPDATE 쿼리가 발생할 때, 현재 시간을 자동으로 저장
-    private LocalDateTime updatedAt; // 마지막으로 수정한 시간
+    @Column(nullable = false)
+    private boolean studentVerified = false;
 
     private boolean accountNonExpired; // 계정 만료 여부
     private boolean accountNonLocked; // 계정 잠김 여부
@@ -47,13 +51,12 @@ public class User {
     private int failedLoginAttempts; // 로그인 시도 횟수
     private LocalDateTime lockTime; // 계정 잠금 해제 시간
 
-    private String socialType; // 소셜 타입 (자체 로그인의 경우 Null)
-    private String socialId; // 소셜 ID  (자체 로그인의 경우 Null)
+    @CreationTimestamp                 // INSERT 시 자동 세팅
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    // 역할(Role) 필드
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
+    @UpdateTimestamp // UPDATE 쿼리가 발생할 때, 현재 시간을 자동으로 저장
+    private LocalDateTime updatedAt; // 마지막으로 수정한 시간
 
     public void updateUser(UserRequestDTO requestDTO, PasswordEncoder passwordEncoder, String mailVerificationToken) {
         this.username = requestDTO.username();
