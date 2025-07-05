@@ -4,8 +4,6 @@ import com.hongik.books.auth.jwt.JwtAuthFilter;
 import com.hongik.books.security.oauth.CustomOAuth2UserService;
 import com.hongik.books.security.oauth.handler.OAuth2LoginFailureHandler;
 import com.hongik.books.security.oauth.handler.OAuth2LoginSuccessHandler;
-import com.hongik.books.auth.jwt.JwtTokenProvider;
-import com.hongik.books.domain.user.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -70,7 +68,8 @@ public class SecurityConfig {
                                 "/api/users/email-check",
                                 "/api/users/find-id",
                                 "/api/users/verify/**",
-                                "api/images/**",
+                                "/api/images/**",
+                                "/api/posts/**",
                                 "/actuator/health",
                                 // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
                                 "/", "/login", "/oauth2/**", "/error"

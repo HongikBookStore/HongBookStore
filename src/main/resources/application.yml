@@ -91,7 +91,6 @@ spring:
     properties:
       hibernate:
         format_sql: true # SQL 로그를 예쁘게 포맷팅
-        dialect: org.hibernate.dialect.MySQLDialect
       show-sql: true # 실행되는 SQL 쿼리를 로그로 보여줌
 
   ### GCP Cloud Storage ###

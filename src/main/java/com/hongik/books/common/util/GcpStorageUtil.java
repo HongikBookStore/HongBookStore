@@ -18,12 +18,12 @@ import java.util.UUID;
 public class GcpStorageUtil {
     private final Storage storage; // GCP Storage에 대한 의존성 주입
 
-    // application.yml의 spring.cloud.gcp.storage.bucket-name 값을 주입받습니다.
+    // application.yml의 spring.cloud.gcp.storage.bucket-name 값을 주입
     @Value("${spring.cloud.gcp.storage.bucket-name}")
     private String bucketName;
 
     /**
-     * MultipartFile을 GCP Cloud Storage에 업로드하고, 공개 URL을 반환합니다.
+     * MultipartFile을 GCP Cloud Storage에 업로드하고, 공개 URL을 반환
      *
      * @param file 업로드할 이미지 파일
      * @param directory 업로드할 디렉토리 (e.g., "profile-images", "book-covers")
@@ -49,6 +49,6 @@ public class GcpStorageUtil {
         storage.createFrom(blobInfo, file.getInputStream());
 
         // 4. 업로드된 파일의 공개 URL 반환
-        return "[https://storage.googleapis.com/](https://storage.googleapis.com/)" + bucketName + "/" + objectName;
+        return "https://storage.googleapis.com/" + bucketName + "/" + objectName;
     }
 }
