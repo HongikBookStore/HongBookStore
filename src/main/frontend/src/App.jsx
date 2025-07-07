@@ -21,6 +21,7 @@ import ChatList from './pages/Chat/ChatList.jsx';
 import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
+import MapPage from './pages/MapPage/MapPage.jsx';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 
@@ -80,7 +81,7 @@ function App() {
                             <Route path="/chat" element={<ChatList />} />
                             <Route path="/chat/:id" element={<ChatRoom />} />
                             <Route path="/community" element={<Community />} />
-                            <Route path="/map" element={<Map />} />
+                            <Route path="/hongikmap" element={<MapPage />} />
                             <Route path="/mypage" element={<MyPage />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
