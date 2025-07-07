@@ -352,7 +352,7 @@ const LikeButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: ${props => props.liked ? '#ff4757' : '#666'};
+  color: ${props => props.$liked ? '#ff4757' : '#666'};
   box-shadow: var(--shadow);
   z-index: 2;
 
@@ -363,7 +363,7 @@ const LikeButton = styled.button`
   }
 
   &::before {
-    content: ${props => props.liked ? '"❤️"' : '"🤍"'};
+    content: ${props => props.$liked ? '"❤️"' : '"🤍"'};
     font-size: 1.2rem;
   }
 `;
@@ -433,13 +433,13 @@ const BookMeta = styled.div`
 `;
 
 const Condition = styled.span`
-  background: ${props => props.bgColor};
-  color: ${props => props.color};
+  background: ${props => props.$bgColor};
+  color: ${props => props.$color};
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
-  border: 1px solid ${props => props.color}20;
+  border: 1px solid ${props => props.$color}20;
 `;
 
 const Location = styled.span`
@@ -528,16 +528,16 @@ const SubMenuContainer = styled.div`
 `;
 
 const SubMenuButton = styled.button`
-  background: ${props => props.active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'transparent'};
-  color: ${props => props.active ? 'white' : 'var(--text)'};
-  border: 2px solid ${props => props.active ? 'transparent' : 'var(--border)'};
+  background: ${props => props.$active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'transparent'};
+  color: ${props => props.$active ? 'white' : 'var(--text)'};
+  border: 2px solid ${props => props.$active ? 'transparent' : 'var(--border)'};
   border-radius: var(--radius-lg);
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: ${props => props.active ? 'var(--shadow-lg)' : 'none'};
+  box-shadow: ${props => props.$active ? 'var(--shadow-lg)' : 'none'};
   min-width: 140px;
   text-align: center;
   position: relative;
@@ -562,7 +562,7 @@ const SubMenuButton = styled.button`
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
-    ${props => !props.active && `
+    ${props => !props.$active && `
       border-color: var(--primary);
       color: var(--primary);
       background: rgba(124, 58, 237, 0.05);
@@ -867,11 +867,11 @@ const Marketplace = () => {
         {book.title}
       </BookImage>
       <LikeButton
-        liked={likedBooks.has(book.id)}
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleLike(book.id);
-        }}
+          $liked={likedBooks.has(book.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleLike(book.id);
+          }}
       />
       <BookInfo>
         <BookTitle>{book.title}</BookTitle>
@@ -886,7 +886,10 @@ const Marketplace = () => {
           )}
         </BookPrice>
         <BookMeta>
-          <Condition bgColor={getBookCondition(book.discountRate).bgColor} color={getBookCondition(book.discountRate).color}>
+          <Condition
+              $bgColor={getBookCondition(book.discountRate).bgColor}
+              $color={getBookCondition(book.discountRate).color}
+          >
             {getBookCondition(book.discountRate).text}
           </Condition>
           <Location>{book.location}</Location>
@@ -932,26 +935,27 @@ const Marketplace = () => {
 
       <SubMenuContainer>
         <SubMenuButton
-          active={activeSubMenu === 'booksale'}
-          onClick={() => handleSubMenuClick('booksale')}
+            $active={activeSubMenu === 'booksale'}
+            onClick={() => handleSubMenuClick('booksale')}
         >
           책 판매 글쓰기
         </SubMenuButton>
         <SubMenuButton
-          active={activeSubMenu === 'wanted'}
-          onClick={() => handleSubMenuClick('wanted')}
+            $active={activeSubMenu === 'wanted'}
+            onClick={() => handleSubMenuClick('wanted')}
         >
           구하기 게시판
         </SubMenuButton>
         <SubMenuButton
-          active={activeSubMenu === 'mybookstore'}
-          onClick={() => handleSubMenuClick('mybookstore')}
+            $active={activeSubMenu === 'mybookstore'}
+            onClick={() => handleSubMenuClick('mybookstore')}
         >
           나의 책방
         </SubMenuButton>
+
         <SubMenuButton
-          active={activeSubMenu === 'chat'}
-          onClick={() => handleSubMenuClick('chat')}
+            $active={activeSubMenu === 'chat'}
+            onClick={() => handleSubMenuClick('chat')}
         >
           거래 채팅
         </SubMenuButton>

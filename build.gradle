@@ -72,6 +72,12 @@ dependencies {
     //Univcert
     implementation 'com.github.in-seo:univcert:master-SNAPSHOT'
 
+    // WebSocket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // Hibernate timestamp 어노테이션 지원
+    implementation 'org.hibernate:hibernate-core:6.4.4.Final'
+
 }
 
 tasks.named('test') {
