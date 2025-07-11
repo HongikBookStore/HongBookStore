@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaSearch, FaUser, FaClock, FaBook, FaGraduationCap, FaEye } from 'react-icons/fa';
+import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
 
 const WantedContainer = styled.div`
-  max-width: 1600px;
-  width: 100vw;
+  width: 100%;
   margin: 0 auto;
   padding: 32px;
   box-sizing: border-box;
-  padding-top: 24px;
+  padding-top: 0;
   @media (max-width: 900px) {
     padding: 16px 8px;
-    padding-top: 16px;
+    padding-top: 0;
   }
   @media (max-width: 600px) {
     padding: 8px 2px;
-    padding-top: 12px;
+    padding-top: 0;
   }
 `;
 
@@ -25,6 +25,8 @@ const WantedHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  position: relative;
+  z-index: 1;
 `;
 
 const WantedTitle = styled.h1`
@@ -33,20 +35,27 @@ const WantedTitle = styled.h1`
 `;
 
 const WriteButton = styled.button`
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: #28a745;
-  color: white;
+  background: #007bff !important;
+  color: white !important;
   border: none;
   border-radius: 25px;
   cursor: pointer;
   font-size: 1rem;
-  transition: background 0.3s;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 10;
+  min-width: 120px;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
 
   &:hover {
-    background: #218838;
+    background: #0056b3 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
   }
 `;
 
@@ -239,6 +248,13 @@ const NoWanted = styled.div`
   color: #666;
 `;
 
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+`;
+
 const Wanted = () => {
   const [wantedPosts, setWantedPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -307,98 +323,114 @@ const Wanted = () => {
     navigate('/wanted/write');
   };
 
+  const handleSidebarMenu = (menu) => {
+    switch(menu) {
+      case 'booksale':
+        navigate('/bookstore/add'); break;
+      case 'wanted':
+        navigate('/wanted'); break;
+      case 'mybookstore':
+        navigate('/bookstore'); break;
+      case 'chat':
+        navigate('/chat'); break;
+      default: break;
+    }
+  };
+
   return (
-    <>
-      <div className="header-spacer" />
-      <WantedContainer>
-        <WantedHeader>
-          <WantedTitle>구해요 게시판</WantedTitle>
-          <WriteButton onClick={handleWriteClick}>
-            <FaPlus /> 글쓰기
-          </WriteButton>
-        </WantedHeader>
+    <PageWrapper>
+      <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
+      <MainContent>
+        <WantedContainer>
+          <WantedHeader>
+            <WantedTitle>구해요 게시판</WantedTitle>
+            <WriteButton onClick={handleWriteClick}>
+              <FaPlus /> 글쓰기
+            </WriteButton>
+          </WantedHeader>
 
-        <SearchSection>
-          <SearchForm onSubmit={handleSearch}>
-            <SearchInput
-              type="text"
-              placeholder="원하는 책을 검색해보세요..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <SearchButton type="submit">
-              <FaSearch />
-            </SearchButton>
-          </SearchForm>
-        </SearchSection>
+          <SearchSection>
+            <SearchForm onSubmit={handleSearch}>
+              <SearchInput
+                type="text"
+                placeholder="원하는 책을 검색해보세요..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <SearchButton type="submit">
+                <FaSearch />
+              </SearchButton>
+            </SearchForm>
+          </SearchSection>
 
-        <FilterSection>
-          <FilterButton 
-            active={activeFilter === 'all'} 
-            onClick={() => handleFilter('all')}
-          >
-            전체
-          </FilterButton>
-          <FilterButton 
-            active={activeFilter === 'programming'} 
-            onClick={() => handleFilter('programming')}
-          >
-            프로그래밍
-          </FilterButton>
-          <FilterButton 
-            active={activeFilter === 'algorithm'} 
-            onClick={() => handleFilter('algorithm')}
-          >
-            알고리즘
-          </FilterButton>
-          <FilterButton 
-            active={activeFilter === 'math'} 
-            onClick={() => handleFilter('math')}
-          >
-            수학
-          </FilterButton>
-          <FilterButton 
-            active={activeFilter === 'english'} 
-            onClick={() => handleFilter('english')}
-          >
-            영어
-          </FilterButton>
-        </FilterSection>
+          <FilterSection>
+            <FilterButton 
+              active={activeFilter === 'all'} 
+              onClick={() => handleFilter('all')}
+            >
+              전체
+            </FilterButton>
+            <FilterButton 
+              active={activeFilter === 'programming'} 
+              onClick={() => handleFilter('programming')}
+            >
+              프로그래밍
+            </FilterButton>
+            <FilterButton 
+              active={activeFilter === 'algorithm'} 
+              onClick={() => handleFilter('algorithm')}
+            >
+              알고리즘
+            </FilterButton>
+            <FilterButton 
+              active={activeFilter === 'math'} 
+              onClick={() => handleFilter('math')}
+            >
+              수학
+            </FilterButton>
+            <FilterButton 
+              active={activeFilter === 'english'} 
+              onClick={() => handleFilter('english')}
+            >
+              영어
+            </FilterButton>
+          </FilterSection>
 
-        {loading ? (
-          <NoWanted>검색 중...</NoWanted>
-        ) : wantedPosts.length > 0 ? (
-          <WantedList>
-            {wantedPosts.map(post => (
-              <WantedCard key={post.id}>
-                <WantedHeaderRow>
-                  <div style={{flex: 1}}>
-                    <WantedTitleText>{post.title}</WantedTitleText>
-                    <MetaRow>
-                      <MetaLabel>저자</MetaLabel>
-                      <MetaValue>{post.author}</MetaValue>
-                    </MetaRow>
-                    <MetaRow>
-                      <MetaLabel>상태</MetaLabel>
-                      <MetaValue>{post.condition}</MetaValue>
-                    </MetaRow>
-                    <MetaRow>
-                      <MetaLabel>희망 가격</MetaLabel>
-                      <MetaValue>{post.price.toLocaleString()}원</MetaValue>
-                    </MetaRow>
-                    <CategoryRow>
-                      <MetaLabel>카테고리</MetaLabel> <MetaValue>{post.category.split('>').pop().trim()}</MetaValue>
-                    </CategoryRow>
-                  </div>
-                </WantedHeaderRow>
-              </WantedCard>
-            ))}
-          </WantedList>
-        ) : (
-          <NoWanted>등록된 글이 없습니다.</NoWanted>
-        )}
-      </WantedContainer>
-    </>
+          {loading ? (
+            <NoWanted>검색 중...</NoWanted>
+          ) : wantedPosts.length > 0 ? (
+            <WantedList>
+              {wantedPosts.map(post => (
+                <WantedCard key={post.id}>
+                  <WantedHeaderRow>
+                    <div style={{flex: 1}}>
+                      <WantedTitleText>{post.title}</WantedTitleText>
+                      <MetaRow>
+                        <MetaLabel>저자</MetaLabel>
+                        <MetaValue>{post.author}</MetaValue>
+                      </MetaRow>
+                      <MetaRow>
+                        <MetaLabel>상태</MetaLabel>
+                        <MetaValue>{post.condition}</MetaValue>
+                      </MetaRow>
+                      <MetaRow>
+                        <MetaLabel>희망 가격</MetaLabel>
+                        <MetaValue>{post.price.toLocaleString()}원</MetaValue>
+                      </MetaRow>
+                      <CategoryRow>
+                        <MetaLabel>카테고리</MetaLabel> <MetaValue>{post.category.split('>').pop().trim()}</MetaValue>
+                      </CategoryRow>
+                    </div>
+                  </WantedHeaderRow>
+                </WantedCard>
+              ))}
+            </WantedList>
+          ) : (
+            <NoWanted>등록된 글이 없습니다.</NoWanted>
+          )}
+        </WantedContainer>
+      </MainContent>
+    </PageWrapper>
   );
 };
 

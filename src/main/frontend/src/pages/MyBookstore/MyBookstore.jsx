@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaBook, FaUser, FaClock, FaMoneyBillWave, FaChartLine, FaHeart, FaSearch, FaHandPaper, FaArrowRight, FaRegEye, FaExchangeAlt } from 'react-icons/fa';
+import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+`;
+
 const BookstoreContainer = styled.div`
-  max-width: 1600px;
-  width: 100vw;
+  width: 100%;
   margin: 0 auto;
   padding: 32px;
   box-sizing: border-box;
-  padding-top: 24px;
+  padding-top: 0;
   @media (max-width: 900px) {
     padding: 16px 8px;
-    padding-top: 16px;
+    padding-top: 0;
   }
   @media (max-width: 600px) {
     padding: 8px 2px;
-    padding-top: 12px;
+    padding-top: 0;
   }
 `;
 
@@ -26,6 +33,8 @@ const BookstoreHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  position: relative;
+  z-index: 1;
 `;
 
 const HeaderButtons = styled.div`
@@ -40,20 +49,27 @@ const BookstoreTitle = styled.h1`
 `;
 
 const AddBookButton = styled.button`
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: #28a745;
-  color: white;
+  background: #007bff !important;
+  color: white !important;
   border: none;
   border-radius: 25px;
   cursor: pointer;
   font-size: 1rem;
-  transition: background 0.3s;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 10;
+  min-width: 120px;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
 
   &:hover {
-    background: #218838;
+    background: #0056b3 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
   }
 `;
 
@@ -62,16 +78,21 @@ const MyTransactionsButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: #6f42c1;
+  background: #17a2b8;
   color: white;
   border: none;
   border-radius: 25px;
   cursor: pointer;
   font-size: 1rem;
-  transition: background 0.3s;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.2);
 
   &:hover {
-    background: #5a32a3;
+    background: #138496;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
   }
 `;
 
@@ -746,297 +767,313 @@ const MyBookstore = () => {
 
   const filteredBooks = getFilteredBooks();
 
+  const handleSidebarMenu = (menu) => {
+    switch(menu) {
+      case 'booksale':
+        navigate('/bookstore/add'); break;
+      case 'wanted':
+        navigate('/wanted'); break;
+      case 'mybookstore':
+        navigate('/bookstore'); break;
+      case 'chat':
+        navigate('/chat'); break;
+      default: break;
+    }
+  };
+
   return (
-    <>
-      <div className="header-spacer" />
-      <BookstoreContainer>
-        <BookstoreHeader>
-          <BookstoreTitle>나의 책방</BookstoreTitle>
-          <HeaderButtons>
-            <MyTransactionsButton onClick={handleMyTransactions}>
-              <FaExchangeAlt /> 나의 거래
-            </MyTransactionsButton>
-            <AddBookButton onClick={handleAddBook}>
-              <FaPlus /> 책 등록하기
-            </AddBookButton>
-          </HeaderButtons>
-        </BookstoreHeader>
+    <PageWrapper>
+      <SidebarMenu active="mybookstore" onMenuClick={handleSidebarMenu} />
+      <MainContent>
+        <BookstoreContainer>
+          <BookstoreHeader>
+            <BookstoreTitle>나의 책방</BookstoreTitle>
+            <HeaderButtons>
+              <MyTransactionsButton onClick={handleMyTransactions}>
+                <FaExchangeAlt /> 나의 거래
+              </MyTransactionsButton>
+              <AddBookButton onClick={handleAddBook}>
+                <FaPlus /> 책 등록하기
+              </AddBookButton>
+            </HeaderButtons>
+          </BookstoreHeader>
 
-        {/* 1. 내가 등록한 책 */}
-        <SectionContainer>
-          <SectionHeader>
-            <SectionTitle>
-              <FaBook />
-              내가 등록한 책 ({mockMyBooks.length})
-            </SectionTitle>
-            <ViewMoreButton onClick={() => setShowAllMyBooks(!showAllMyBooks)}>
-              {showAllMyBooks ? '접기' : '더보기'}
-              <FaArrowRight style={{ transform: showAllMyBooks ? 'rotate(90deg)' : 'none' }} />
-            </ViewMoreButton>
-          </SectionHeader>
+          {/* 1. 내가 등록한 책 */}
+          <SectionContainer>
+            <SectionHeader>
+              <SectionTitle>
+                <FaBook />
+                내가 등록한 책 ({mockMyBooks.length})
+              </SectionTitle>
+              <ViewMoreButton onClick={() => setShowAllMyBooks(!showAllMyBooks)}>
+                {showAllMyBooks ? '접기' : '더보기'}
+                <FaArrowRight style={{ transform: showAllMyBooks ? 'rotate(90deg)' : 'none' }} />
+              </ViewMoreButton>
+            </SectionHeader>
 
-          <TabSection>
-            <TabList>
-              <Tab 
-                $active={activeTab === 'selling'} 
-                onClick={() => setActiveTab('selling')}
-              >
-                판매중 ({books.filter(book => book.status === 'SALE').length})
-              </Tab>
-              <Tab 
-                $active={activeTab === 'reserved'} 
-                onClick={() => setActiveTab('reserved')}
-              >
-                예약중 ({books.filter(book => book.status === 'RESERVED').length})
-              </Tab>
-              <Tab 
-                $active={activeTab === 'sold'} 
-                onClick={() => setActiveTab('sold')}
-              >
-                판매완료 ({books.filter(book => book.status === 'SOLD').length})
-              </Tab>
-              <Tab 
-                $active={activeTab === 'all'} 
-                onClick={() => setActiveTab('all')}
-              >
-                전체 ({books.length})
-              </Tab>
-            </TabList>
+            <TabSection>
+              <TabList>
+                <Tab 
+                  $active={activeTab === 'selling'} 
+                  onClick={() => setActiveTab('selling')}
+                >
+                  판매중 ({books.filter(book => book.status === 'SALE').length})
+                </Tab>
+                <Tab 
+                  $active={activeTab === 'reserved'} 
+                  onClick={() => setActiveTab('reserved')}
+                >
+                  예약중 ({books.filter(book => book.status === 'RESERVED').length})
+                </Tab>
+                <Tab 
+                  $active={activeTab === 'sold'} 
+                  onClick={() => setActiveTab('sold')}
+                >
+                  판매완료 ({books.filter(book => book.status === 'SOLD').length})
+                </Tab>
+                <Tab 
+                  $active={activeTab === 'all'} 
+                  onClick={() => setActiveTab('all')}
+                >
+                  전체 ({books.length})
+                </Tab>
+              </TabList>
 
-            {filteredBooks.length > 0 ? (
-              <BookGrid>
-                {(showAllMyBooks ? filteredBooks : filteredBooks.slice(0, 3)).map(book => (
-                  <BookCard key={book.id}>
-                    <BookImage>
+              {filteredBooks.length > 0 ? (
+                <BookGrid>
+                  {(showAllMyBooks ? filteredBooks : filteredBooks.slice(0, 3)).map(book => (
+                    <BookCard key={book.id}>
+                      <BookImage>
+                        {book.image ? (
+                          <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        ) : (
+                          <FaBook size={40} />
+                        )}
+                      </BookImage>
+                      
+                      <BookTitle>{book.title}</BookTitle>
+                      
+                      <BookMeta>
+                        <span>
+                          <FaUser size={12} /> {book.author}
+                        </span>
+                        <span>
+                          <FaClock size={12} /> {book.createdAt}
+                        </span>
+                        <span>
+                          <FaEye size={12} /> {book.views}
+                        </span>
+                      </BookMeta>
+                      
+                      <BookPrice>{book.price.toLocaleString()}원</BookPrice>
+                      
+                      <BookStatus $status={book.status}>
+                        {book.status === 'SALE' ? '판매중' : 
+                         book.status === 'RESERVED' ? '예약중' : '판매완료'}
+                      </BookStatus>
+                      
+                      <BookActions>
+                        <ActionButton 
+                          onClick={() => handleViewBook(book.id)}
+                        >
+                          <FaSearch /> 보기
+                        </ActionButton>
+                        {book.status === 'SALE' && (
+                          <ActionButton 
+                            onClick={() => handleEditBook(book.id)}
+                          >
+                            <FaEdit /> 수정
+                          </ActionButton>
+                        )}
+                        <ActionButton 
+                          className="delete" 
+                          onClick={() => {
+                            if (window.confirm('삭제하시겠습니까?')) handleDeleteBook(book.id);
+                          }}
+                        >
+                          <FaTrash /> 삭제
+                        </ActionButton>
+                      </BookActions>
+                    </BookCard>
+                  ))}
+                </BookGrid>
+              ) : (
+                <NoBooks>
+                  <EmptyIcon>
+                    <FaBook />
+                  </EmptyIcon>
+                  <h3>등록된 책이 없습니다</h3>
+                  <p>첫 번째 책을 등록해보세요!</p>
+                </NoBooks>
+              )}
+            </TabSection>
+          </SectionContainer>
+
+          {/* 2. 찜한 책 */}
+          <SectionContainer>
+            <SectionHeader>
+              <SectionTitle>
+                <FaHeart />
+                찜한 책 ({mockWishlist.length})
+              </SectionTitle>
+              <ViewMoreButton onClick={() => setShowAllWishlist(!showAllWishlist)}>
+                {showAllWishlist ? '접기' : '더보기'}
+                <FaArrowRight style={{ transform: showAllWishlist ? 'rotate(90deg)' : 'none' }} />
+              </ViewMoreButton>
+            </SectionHeader>
+
+            {mockWishlist.length > 0 ? (
+              <CompactList>
+                {(showAllWishlist ? mockWishlist : mockWishlist.slice(0, 3)).map(book => (
+                  <CompactBookCard key={book.id}>
+                    <CompactBookImage>
                       {book.image ? (
                         <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                       ) : (
-                        <FaBook size={40} />
+                        <FaBook size={20} />
                       )}
-                    </BookImage>
-                    
-                    <BookTitle>{book.title}</BookTitle>
-                    
-                    <BookMeta>
-                      <span>
-                        <FaUser size={12} /> {book.author}
-                      </span>
-                      <span>
-                        <FaClock size={12} /> {book.createdAt}
-                      </span>
-                      <span>
-                        <FaEye size={12} /> {book.views}
-                      </span>
-                    </BookMeta>
-                    
-                    <BookPrice>{book.price.toLocaleString()}원</BookPrice>
-                    
-                    <BookStatus $status={book.status}>
-                      {book.status === 'SALE' ? '판매중' : 
-                       book.status === 'RESERVED' ? '예약중' : '판매완료'}
-                    </BookStatus>
-                    
-                    <BookActions>
-                      <ActionButton 
-                        onClick={() => handleViewBook(book.id)}
-                      >
+                    </CompactBookImage>
+                    <CompactBookInfo>
+                      <CompactBookTitle>{book.title}</CompactBookTitle>
+                      <CompactBookMeta>
+                        <span><FaUser size={10} /> {book.author}</span>
+                        <span><FaClock size={10} /> {book.createdAt}</span>
+                      </CompactBookMeta>
+                      <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
+                    </CompactBookInfo>
+                    <CompactBookStatus $status={book.status}>
+                      {book.status === 'SALE' ? '판매중' : '예약중'}
+                    </CompactBookStatus>
+                    <CompactBookActions>
+                      <ActionButton onClick={() => handleViewBook(book.id)}>
                         <FaSearch /> 보기
                       </ActionButton>
-                      {book.status === 'SALE' && (
-                        <ActionButton 
-                          onClick={() => handleEditBook(book.id)}
-                        >
-                          <FaEdit /> 수정
-                        </ActionButton>
+                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(book.id)}>
+                        <FaHeart /> 찜 해제
+                      </ActionButton>
+                    </CompactBookActions>
+                  </CompactBookCard>
+                ))}
+              </CompactList>
+            ) : (
+              <EmptyState>
+                <EmptyIcon>
+                  <FaHeart />
+                </EmptyIcon>
+                <h3>찜한 책이 없습니다</h3>
+                <p>마켓플레이스에서 책을 찜해보세요!</p>
+              </EmptyState>
+            )}
+          </SectionContainer>
+
+          {/* 3. 최근 본 책 */}
+          <SectionContainer>
+            <SectionHeader>
+              <SectionTitle>
+                <FaRegEye />
+                최근 본 책 ({mockRecentBooks.length})
+              </SectionTitle>
+              <ViewMoreButton onClick={() => setShowAllRecent(!showAllRecent)}>
+                {showAllRecent ? '접기' : '더보기'}
+                <FaArrowRight style={{ transform: showAllRecent ? 'rotate(90deg)' : 'none' }} />
+              </ViewMoreButton>
+            </SectionHeader>
+
+            {mockRecentBooks.length > 0 ? (
+              <CompactList>
+                {(showAllRecent ? mockRecentBooks : mockRecentBooks.slice(0, 3)).map(book => (
+                  <CompactBookCard key={book.id}>
+                    <CompactBookImage>
+                      {book.image ? (
+                        <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      ) : (
+                        <FaBook size={20} />
                       )}
-                      <ActionButton 
-                        className="delete" 
-                        onClick={() => {
-                          if (window.confirm('삭제하시겠습니까?')) handleDeleteBook(book.id);
-                        }}
-                      >
+                    </CompactBookImage>
+                    
+                    <CompactBookInfo>
+                      <CompactBookTitle>{book.title}</CompactBookTitle>
+                      <CompactBookMeta>
+                        <span><FaUser size={10} /> {book.author}</span>
+                        <span><FaClock size={10} /> {book.viewedAt}</span>
+                      </CompactBookMeta>
+                      <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
+                    </CompactBookInfo>
+                    
+                    <CompactBookActions>
+                      <ActionButton onClick={() => handleViewBook(book.id)}>
+                        <FaSearch /> 보기
+                      </ActionButton>
+                    </CompactBookActions>
+                  </CompactBookCard>
+                ))}
+              </CompactList>
+            ) : (
+              <EmptyState>
+                <EmptyIcon>
+                  <FaRegEye />
+                </EmptyIcon>
+                <h3>최근 본 책이 없습니다</h3>
+                <p>마켓플레이스에서 책을 둘러보세요!</p>
+              </EmptyState>
+            )}
+          </SectionContainer>
+
+          {/* 4. 구해요 글 */}
+          <SectionContainer>
+            <SectionHeader>
+              <SectionTitle>
+                <FaHandPaper />
+                내가 등록한 구해요 글 ({mockWantedPosts.length})
+              </SectionTitle>
+              <ViewMoreButton onClick={() => setShowAllWanted(!showAllWanted)}>
+                {showAllWanted ? '접기' : '더보기'}
+                <FaArrowRight style={{ transform: showAllWanted ? 'rotate(90deg)' : 'none' }} />
+              </ViewMoreButton>
+            </SectionHeader>
+
+            {mockWantedPosts.length > 0 ? (
+              <CompactList>
+                {(showAllWanted ? mockWantedPosts : mockWantedPosts.slice(0, 3)).map(wanted => (
+                  <WantedCard key={wanted.id}>
+                    <WantedIcon>
+                      <FaHandPaper />
+                    </WantedIcon>
+                    
+                    <WantedInfo>
+                      <WantedTitle>{wanted.title}</WantedTitle>
+                      <WantedMeta>
+                        <span><FaUser size={10} /> {wanted.author}</span>
+                        <span><FaClock size={10} /> {wanted.createdAt}</span>
+                      </WantedMeta>
+                    </WantedInfo>
+                    
+                    <WantedBudget>{wanted.budget}</WantedBudget>
+                    
+                    <CompactBookActions>
+                      <ActionButton onClick={() => handleEditWanted(wanted.id)}>
+                        <FaEdit /> 수정
+                      </ActionButton>
+                      <ActionButton className="delete" onClick={() => handleDeleteWanted(wanted.id)}>
                         <FaTrash /> 삭제
                       </ActionButton>
-                    </BookActions>
-                  </BookCard>
+                    </CompactBookActions>
+                  </WantedCard>
                 ))}
-              </BookGrid>
+              </CompactList>
             ) : (
-              <NoBooks>
+              <EmptyState>
                 <EmptyIcon>
-                  <FaBook />
+                  <FaHandPaper />
                 </EmptyIcon>
-                <h3>등록된 책이 없습니다</h3>
-                <p>첫 번째 책을 등록해보세요!</p>
-              </NoBooks>
+                <h3>등록한 구해요 글이 없습니다</h3>
+                <p>원하는 책을 구해요에 등록해보세요!</p>
+              </EmptyState>
             )}
-          </TabSection>
-        </SectionContainer>
-
-        {/* 2. 찜한 책 */}
-        <SectionContainer>
-          <SectionHeader>
-            <SectionTitle>
-              <FaHeart />
-              찜한 책 ({mockWishlist.length})
-            </SectionTitle>
-            <ViewMoreButton onClick={() => setShowAllWishlist(!showAllWishlist)}>
-              {showAllWishlist ? '접기' : '더보기'}
-              <FaArrowRight style={{ transform: showAllWishlist ? 'rotate(90deg)' : 'none' }} />
-            </ViewMoreButton>
-          </SectionHeader>
-
-          {mockWishlist.length > 0 ? (
-            <CompactList>
-              {(showAllWishlist ? mockWishlist : mockWishlist.slice(0, 3)).map(book => (
-                <CompactBookCard key={book.id}>
-                  <CompactBookImage>
-                    {book.image ? (
-                      <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                    ) : (
-                      <FaBook size={20} />
-                    )}
-                  </CompactBookImage>
-                  <CompactBookInfo>
-                    <CompactBookTitle>{book.title}</CompactBookTitle>
-                    <CompactBookMeta>
-                      <span><FaUser size={10} /> {book.author}</span>
-                      <span><FaClock size={10} /> {book.createdAt}</span>
-                    </CompactBookMeta>
-                    <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
-                  </CompactBookInfo>
-                  <CompactBookStatus $status={book.status}>
-                    {book.status === 'SALE' ? '판매중' : '예약중'}
-                  </CompactBookStatus>
-                  <CompactBookActions>
-                    <ActionButton onClick={() => handleViewBook(book.id)}>
-                      <FaSearch /> 보기
-                    </ActionButton>
-                    <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(book.id)}>
-                      <FaHeart /> 찜 해제
-                    </ActionButton>
-                  </CompactBookActions>
-                </CompactBookCard>
-              ))}
-            </CompactList>
-          ) : (
-            <EmptyState>
-              <EmptyIcon>
-                <FaHeart />
-              </EmptyIcon>
-              <h3>찜한 책이 없습니다</h3>
-              <p>마켓플레이스에서 책을 찜해보세요!</p>
-            </EmptyState>
-          )}
-        </SectionContainer>
-
-        {/* 3. 최근 본 책 */}
-        <SectionContainer>
-          <SectionHeader>
-            <SectionTitle>
-              <FaRegEye />
-              최근 본 책 ({mockRecentBooks.length})
-            </SectionTitle>
-            <ViewMoreButton onClick={() => setShowAllRecent(!showAllRecent)}>
-              {showAllRecent ? '접기' : '더보기'}
-              <FaArrowRight style={{ transform: showAllRecent ? 'rotate(90deg)' : 'none' }} />
-            </ViewMoreButton>
-          </SectionHeader>
-
-          {mockRecentBooks.length > 0 ? (
-            <CompactList>
-              {(showAllRecent ? mockRecentBooks : mockRecentBooks.slice(0, 3)).map(book => (
-                <CompactBookCard key={book.id}>
-                  <CompactBookImage>
-                    {book.image ? (
-                      <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                    ) : (
-                      <FaBook size={20} />
-                    )}
-                  </CompactBookImage>
-                  
-                  <CompactBookInfo>
-                    <CompactBookTitle>{book.title}</CompactBookTitle>
-                    <CompactBookMeta>
-                      <span><FaUser size={10} /> {book.author}</span>
-                      <span><FaClock size={10} /> {book.viewedAt}</span>
-                    </CompactBookMeta>
-                    <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
-                  </CompactBookInfo>
-                  
-                  <CompactBookActions>
-                    <ActionButton onClick={() => handleViewBook(book.id)}>
-                      <FaSearch /> 보기
-                    </ActionButton>
-                  </CompactBookActions>
-                </CompactBookCard>
-              ))}
-            </CompactList>
-          ) : (
-            <EmptyState>
-              <EmptyIcon>
-                <FaRegEye />
-              </EmptyIcon>
-              <h3>최근 본 책이 없습니다</h3>
-              <p>마켓플레이스에서 책을 둘러보세요!</p>
-            </EmptyState>
-          )}
-        </SectionContainer>
-
-        {/* 4. 구해요 글 */}
-        <SectionContainer>
-          <SectionHeader>
-            <SectionTitle>
-              <FaHandPaper />
-              내가 등록한 구해요 글 ({mockWantedPosts.length})
-            </SectionTitle>
-            <ViewMoreButton onClick={() => setShowAllWanted(!showAllWanted)}>
-              {showAllWanted ? '접기' : '더보기'}
-              <FaArrowRight style={{ transform: showAllWanted ? 'rotate(90deg)' : 'none' }} />
-            </ViewMoreButton>
-          </SectionHeader>
-
-          {mockWantedPosts.length > 0 ? (
-            <CompactList>
-              {(showAllWanted ? mockWantedPosts : mockWantedPosts.slice(0, 3)).map(wanted => (
-                <WantedCard key={wanted.id}>
-                  <WantedIcon>
-                    <FaHandPaper />
-                  </WantedIcon>
-                  
-                  <WantedInfo>
-                    <WantedTitle>{wanted.title}</WantedTitle>
-                    <WantedMeta>
-                      <span><FaUser size={10} /> {wanted.author}</span>
-                      <span><FaClock size={10} /> {wanted.createdAt}</span>
-                    </WantedMeta>
-                  </WantedInfo>
-                  
-                  <WantedBudget>{wanted.budget}</WantedBudget>
-                  
-                  <CompactBookActions>
-                    <ActionButton onClick={() => handleEditWanted(wanted.id)}>
-                      <FaEdit /> 수정
-                    </ActionButton>
-                    <ActionButton className="delete" onClick={() => handleDeleteWanted(wanted.id)}>
-                      <FaTrash /> 삭제
-                    </ActionButton>
-                  </CompactBookActions>
-                </WantedCard>
-              ))}
-            </CompactList>
-          ) : (
-            <EmptyState>
-              <EmptyIcon>
-                <FaHandPaper />
-              </EmptyIcon>
-              <h3>등록한 구해요 글이 없습니다</h3>
-              <p>원하는 책을 구해요에 등록해보세요!</p>
-            </EmptyState>
-          )}
-        </SectionContainer>
-      </BookstoreContainer>
-    </>
+          </SectionContainer>
+        </BookstoreContainer>
+      </MainContent>
+    </PageWrapper>
   );
 };
 

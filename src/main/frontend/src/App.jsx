@@ -4,6 +4,7 @@ import GlobalStyles from './styles/GlobalStyles.js';
 import Header from './components/Header/Header.jsx';
 import Hero from './components/Hero/Hero.jsx';
 import Footer from './components/Footer/Footer.jsx';
+import { Loading } from './components/ui';
 import Marketplace from './pages/Marketplace/Marketplace.jsx';
 import MyPage from './pages/MyPage/MyPage.jsx';
 import Login from './pages/Login/Login.jsx';
@@ -19,6 +20,7 @@ import BookWrite from './pages/BookWrite/BookWrite.jsx';
 import BookDetail from './pages/BookDetail/BookDetail';
 import ChatList from './pages/Chat/ChatList.jsx';
 import ChatRoom from './pages/Chat/ChatRoom.jsx';
+import MapPage from './pages/Map/Map.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
 
@@ -26,7 +28,6 @@ import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
-const Map = () => <div>Map Page</div>;
 const AIChatbot = () => <div style={{padding: '64px 0', textAlign: 'center', fontSize: '1.5rem'}}>AI 챗봇 준비중입니다.</div>;
 
 function App() {
@@ -57,7 +58,7 @@ function App() {
     }, []);
 
     if (isLoading) {
-        return <div style={{ textAlign: 'center', marginTop: '20%' }}>로딩 중...</div>;
+        return <Loading fullScreen text="로딩 중..." />;
     }
 
     return (
@@ -80,7 +81,7 @@ function App() {
                             <Route path="/chat" element={<ChatList />} />
                             <Route path="/chat/:id" element={<ChatRoom />} />
                             <Route path="/community" element={<Community />} />
-                            <Route path="/map" element={<Map />} />
+                            <Route path="/map" element={<MapPage />} />
                             <Route path="/mypage" element={<MyPage />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />

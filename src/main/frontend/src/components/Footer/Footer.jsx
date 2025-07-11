@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import { FaGithub, FaTwitter, FaInstagram, FaLinkedin, FaHeart } from 'react-icons/fa';
 
 const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
 `;
 
 const fadeInUp = keyframes`
@@ -23,54 +24,45 @@ const pulse = keyframes`
   50% { transform: scale(1.05); }
 `;
 
+const gradientShift = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
 const FooterContainer = styled.footer`
-  background: linear-gradient(135deg, var(--text) 0%, #1e293b 100%);
-  color: white;
-  padding: 8rem 0 3rem;
-  position: relative;
-  overflow: hidden;
+  width: 100%;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-fixed);
+  box-shadow: 0 -1px 8px 0 rgba(0,0,0,0.04);
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--primary), transparent);
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
 `;
 
 const FloatingElement = styled.div`
   position: absolute;
   width: 60px;
   height: 60px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   animation: ${float} 6s ease-in-out infinite;
-  
+
   &:nth-child(1) {
     top: 10%;
     left: 10%;
     animation-delay: 0s;
   }
-  
+
   &:nth-child(2) {
     top: 30%;
     right: 15%;
@@ -78,7 +70,7 @@ const FloatingElement = styled.div`
     width: 40px;
     height: 40px;
   }
-  
+
   &:nth-child(3) {
     bottom: 20%;
     left: 20%;
@@ -92,41 +84,43 @@ const FooterContent = styled.div`
   max-width: 1440px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 4rem;
+  padding: 0 var(--space-16);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 6rem;
-  margin-bottom: 4rem;
+  gap: var(--space-24);
+  margin-bottom: var(--space-16);
   position: relative;
   z-index: 1;
 
   @media (max-width: 1440px) {
-    padding: 0 3rem;
+    padding: 0 var(--space-12);
   }
 
   @media (max-width: 1024px) {
-    padding: 0 2rem;
-    gap: 4rem;
+    padding: 0 var(--space-8);
+    gap: var(--space-16);
   }
 
   @media (max-width: 768px) {
-    padding: 0 1.5rem;
+    padding: 0 var(--space-6);
     grid-template-columns: 1fr;
-    gap: 3rem;
+    gap: var(--space-12);
   }
 `;
 
 const FooterSection = styled.div`
-  animation: ${fadeInUp} 0.6s ease-out $delay backwards;
+  animation: ${fadeInUp} 0.6s ease-out ${props => props.$delay || '0s'} backwards;
 
   h3 {
-    font-size: 1.75rem;
+    font-size: clamp(1.5rem, 2.5vw, 1.75rem);
     font-weight: 700;
-    margin-bottom: 2.5rem;
+    margin-bottom: var(--space-10);
     background: linear-gradient(135deg, white, rgba(255, 255, 255, 0.8));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
     position: relative;
+    letter-spacing: -0.025em;
 
     &::after {
       content: '';
@@ -136,36 +130,40 @@ const FooterSection = styled.div`
       width: 50px;
       height: 3px;
       background: linear-gradient(90deg, var(--primary), var(--secondary));
-      border-radius: 2px;
+      border-radius: var(--radius-full);
     }
   }
 
   ul {
     list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
   li {
-    margin-bottom: 1.25rem;
+    margin-bottom: var(--space-5);
   }
 `;
 
 const FooterLink = styled(Link)`
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  transition: var(--transition);
+  transition: var(--transition-normal);
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   font-size: 1.125rem;
   position: relative;
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
+  font-weight: 500;
 
   &::before {
     content: '→';
     opacity: 0;
     transform: translateX(-10px);
-    transition: var(--transition);
+    transition: var(--transition-normal);
     color: var(--accent);
+    font-weight: bold;
   }
 
   &::after {
@@ -176,8 +174,8 @@ const FooterLink = styled(Link)`
     width: 0;
     height: 2px;
     background: linear-gradient(90deg, var(--primary), var(--secondary));
-    transition: var(--transition);
-    border-radius: 1px;
+    transition: var(--transition-normal);
+    border-radius: var(--radius-full);
   }
 
   &:hover {
@@ -197,209 +195,179 @@ const FooterLink = styled(Link)`
 
 const SocialLinks = styled.div`
   display: flex;
-  gap: 2rem;
-  margin-top: 1rem;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+
+  @media (max-width: 768px) {
+    gap: var(--space-4);
+  }
 `;
 
 const SocialLink = styled.a`
-  color: white;
-  font-size: 2rem;
-  transition: var(--transition);
-  opacity: 0.8;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
   background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xl);
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: var(--transition-normal);
   backdrop-filter: blur(10px);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transform: translateX(-100%);
-    transition: 0.6s;
-  }
 
   &:hover {
-    color: var(--accent);
-    transform: translateY(-4px) scale(1.1);
-    opacity: 1;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
   }
 
-  &:hover::before {
-    transform: translateX(100%);
+  svg {
+    font-size: 1.25rem;
   }
 `;
 
 const ContactInfo = styled.div`
-  margin-top: 1rem;
-`;
+  margin-top: var(--space-6);
 
-const ContactItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1rem;
+  p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  strong {
+    color: white;
+    font-weight: 600;
+  }
 `;
 
 const FooterBottom = styled.div`
-  text-align: center;
-  padding-top: 3rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.125rem;
+  padding-top: var(--space-8);
+  text-align: center;
   position: relative;
   z-index: 1;
+`;
 
-  p {
-    animation: ${fadeInUp} 0.6s ease-out 0.8s backwards;
+const Copyright = styled.p`
+  color: var(--gray-400);
+  font-size: 0.8rem;
+  margin: 0;
+  text-align: center;
+`;
+
+const FooterNav = styled.nav`
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.1rem;
+`;
+
+const FooterNavLink = styled(Link)`
+  color: var(--gray-500);
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--radius-lg);
+  transition: background 0.2s, color 0.2s;
+  &:hover {
+    color: var(--primary);
+    background: var(--primary-50);
   }
 `;
 
 const NewsletterSection = styled.div`
   background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  margin-bottom: 2rem;
-  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  animation: ${fadeInUp} 0.6s ease-out 0.4s backwards;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  backdrop-filter: blur(10px);
+  margin-top: var(--space-6);
 
   h4 {
     font-size: 1.25rem;
-    margin-bottom: 1rem;
+    font-weight: 600;
+    margin-bottom: var(--space-4);
     color: white;
   }
 
   p {
     color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-4);
+    line-height: 1.6;
   }
 `;
 
 const NewsletterForm = styled.form`
   display: flex;
-  gap: 1rem;
-  max-width: 400px;
+  gap: var(--space-3);
 
   @media (max-width: 768px) {
     flex-direction: column;
   }
+`;
 
-  input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 1rem;
+const NewsletterInput = styled.input`
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  transition: var(--transition-normal);
 
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.6);
-    }
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-    }
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
   }
 
-  button {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.15);
+  }
+`;
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
+const NewsletterButton = styled.button`
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+
+  &:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
 `;
 
 const Footer = () => {
   const { t } = useTranslation();
+
   return (
     <FooterContainer>
-      <FloatingElement />
-      <FloatingElement />
-      <FloatingElement />
-      
-      <FooterContent>
-        <FooterSection $delay="0s">
-          <h3>빠른 링크</h3>
-          <ul>
-            <li><FooterLink to="/marketplace">책거래게시판</FooterLink></li>
-            <li><FooterLink to="/wanted">구하기 게시판</FooterLink></li>
-            <li><FooterLink to="/bookstore">나의 책방</FooterLink></li>
-            <li><FooterLink to="/ai-chat">AI 챗봇</FooterLink></li>
-            <li><FooterLink to="/chat">거래 채팅</FooterLink></li>
-            <li><FooterLink to="/map">지도</FooterLink></li>
-          </ul>
-        </FooterSection>
-        
-        <FooterSection $delay="0.2s">
-          <h3>고객 지원</h3>
-          <ul>
-            <li><FooterLink to="/faq">자주 묻는 질문</FooterLink></li>
-            <li><FooterLink to="/contact">문의하기</FooterLink></li>
-            <li><FooterLink to="/privacy">개인정보처리방침</FooterLink></li>
-            <li><FooterLink to="/terms">이용약관</FooterLink></li>
-          </ul>
-        </FooterSection>
-        
-        <FooterSection $delay="0.4s">
-          <h3>연락처</h3>
-          <ContactInfo>
-            <ContactItem type="email">support@hongbookstore.com</ContactItem>
-            <ContactItem type="phone">02-1234-5678</ContactItem>
-            <ContactItem type="location">서울특별시 마포구 와우산로 94</ContactItem>
-          </ContactInfo>
-          
-          <NewsletterSection>
-            <h4>뉴스레터 구독</h4>
-            <p>새로운 책과 이벤트 소식을 받아보세요!</p>
-            <NewsletterForm>
-              <input type="email" placeholder="이메일 주소를 입력하세요" />
-              <button type="submit">구독하기</button>
-            </NewsletterForm>
-          </NewsletterSection>
-        </FooterSection>
-        
-        <FooterSection $delay="0.6s">
-          <h3>소셜 미디어</h3>
-          <SocialLinks>
-            <SocialLink href="#facebook" aria-label="Facebook" />
-            <SocialLink href="#twitter" aria-label="Twitter" />
-            <SocialLink href="#instagram" aria-label="Instagram" />
-            <SocialLink href="#youtube" aria-label="YouTube" />
-          </SocialLinks>
-        </FooterSection>
-      </FooterContent>
-      
-      <FooterBottom>
-        <p>&copy; {new Date().getFullYear()} 홍북스토어. 모든 권리 보유.</p>
-      </FooterBottom>
+      <FooterNav>
+        <FooterNavLink to="/terms">이용약관</FooterNavLink>
+        <FooterNavLink to="/privacy">개인정보처리방침</FooterNavLink>
+        <FooterNavLink to="/cookies">쿠키 정책</FooterNavLink>
+        <FooterNavLink to="/accessibility">접근성</FooterNavLink>
+      </FooterNav>
+      <Copyright>© 2024 홍북스토어. 모든 권리 보유.</Copyright>
     </FooterContainer>
   );
 };
 
-export default Footer; 
+export default Footer;

@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { FaBookOpen, FaExchangeAlt, FaMapMarkedAlt, FaRobot } from 'react-icons/fa';
 
 const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
 `;
 
 const pulse = keyframes`
@@ -28,46 +28,27 @@ const rotate = keyframes`
   to { transform: rotate(360deg); }
 `;
 
+const gradientShift = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
 const HeroSection = styled.section`
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: 8rem 0;
+  padding: var(--space-32) 0;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-    animation: gradientShift 15s ease infinite;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    animation: float 20s ease-in-out infinite;
-  }
+  background: #fff;
 `;
 
 const FloatingElement = styled.div`
   position: absolute;
   width: 100px;
   height: 100px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   animation: ${float} 6s ease-in-out infinite;
@@ -122,21 +103,20 @@ const HeroContent = styled.div`
   max-width: 900px;
   margin: 0 auto;
   text-align: center;
-  color: white;
+  color: var(--text-primary);
   animation: fadeInUp 1s ease-out;
 `;
 
 const Title = styled.h1`
-  font-size: 5rem;
+  font-size: clamp(3rem, 8vw, 5rem);
   font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 2rem;
-  padding-bottom: 0.3em;
-  background: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0.8));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-4);
+  color: var(--text-primary);
   animation: fadeInUp 1s ease-out;
   position: relative;
+  letter-spacing: -0.025em;
 
   &::after {
     content: '';
@@ -144,26 +124,31 @@ const Title = styled.h1`
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 100px;
+    width: 120px;
     height: 4px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    background: var(--primary-200);
     animation: ${pulse} 2s ease-in-out infinite;
+    border-radius: var(--radius-full);
   }
 
   @media (max-width: 768px) {
-    font-size: 3rem;
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    margin-bottom: var(--space-6);
   }
 `;
 
 const Description = styled.p`
-  font-size: 1.5rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 3rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-12);
   animation: fadeInUp 1s ease-out 0.2s backwards;
   position: relative;
+  line-height: 1.6;
+  font-weight: 400;
 
   @media (max-width: 768px) {
-    font-size: 1.25rem;
+    font-size: clamp(1.125rem, 3vw, 1.5rem);
+    margin-bottom: var(--space-8);
   }
 `;
 
@@ -171,15 +156,12 @@ const MainGrid = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 4rem;
-  margin-top: 6rem;
+  gap: 3rem;
+  margin-top: var(--space-16);
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
   flex-wrap: wrap;
-
-  @media (max-width: 900px) {
-    gap: 2rem;
-    flex-direction: column;
-    margin-top: 2rem;
-  }
 `;
 
 const MainCard = styled(Link)`
@@ -187,61 +169,179 @@ const MainCard = styled(Link)`
   flex-direction: column;
   align-items: center;
   text-decoration: none;
-  background: white;
-  border: 2px solid var(--primary);
-  border-radius: 1.5rem;
-  padding: 2.5rem 2.5rem 1.5rem 2.5rem;
-  min-width: 200px;
-  min-height: 260px;
-  box-shadow: 0 4px 24px 0 rgba(35,81,233,0.07);
-  transition: box-shadow 0.2s, transform 0.2s, color 0.2s, border-color 0.2s;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
   color: var(--primary);
   font-weight: 600;
-  font-size: 1.2rem;
-  &:hover {
-    box-shadow: 0 8px 32px 0 rgba(35,81,233,0.15);
-    transform: translateY(-6px) scale(1.03);
+  font-size: 1.1rem;
+  transition: none;
+  cursor: pointer;
+  &:hover, &:focus {
     color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background: none;
+    box-shadow: none;
+    border: none;
+    text-decoration: underline;
   }
 `;
 
-const MainIcon = styled.div`
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
-  color: var(--primary);
+const CardIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 0.7rem;
+  
+  & > svg {
+    font-size: 3rem;
+    color: var(--primary);
+  }
 `;
 
-const MainLabel = styled.div`
-  margin-top: 1rem;
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+const CardTitle = styled.div`
+  font-size: 1.08rem;
+  font-weight: 500;
   color: var(--primary);
+  margin-top: 0.1rem;
+`;
+
+const CardDescription = styled.p`
+  font-size: 1rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+  font-weight: 400;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
+`;
+
+const StatsSection = styled.div`
+  margin-top: var(--space-16);
+  display: flex;
+  justify-content: center;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    margin-top: var(--space-8);
+    gap: var(--space-6);
+  }
+`;
+
+const StatItem = styled.div`
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  animation: fadeInUp 1s ease-out 0.4s backwards;
+`;
+
+const StatNumber = styled.div`
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  color: white;
+  margin-bottom: var(--space-2);
+`;
+
+const StatLabel = styled.div`
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0.8;
+`;
+
+const CTAButton = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--primary);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-2xl);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.125rem;
+  transition: var(--transition-normal);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: var(--space-8);
+
+  &:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+    color: var(--primary-dark);
+  }
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    padding: var(--space-3) var(--space-6);
+    font-size: 1rem;
+    margin-top: var(--space-6);
+  }
 `;
 
 const Hero = () => {
+  const { t } = useTranslation();
+
   return (
-    <HeroSection style={{background: '#f5f8ff', minHeight: '100vh'}}>
-      <HeroContent style={{color: '#2351e9', background: 'none', maxWidth: '1200px'}}>
+    <HeroSection>
+      <FloatingElement />
+      <FloatingElement />
+      <FloatingElement />
+      <BookIcon>📚</BookIcon>
+      <BookIcon>📖</BookIcon>
+      
+      <HeroContent>
+        <Title>홍북스토어</Title>
+        <Description>
+          홍익대학교 학생들을 위한 중고책 거래 플랫폼
+        </Description>
+        
         <MainGrid>
           <MainCard to="/marketplace">
-            <MainIcon><FaBookOpen /></MainIcon>
-            <MainLabel>책 거래 게시판</MainLabel>
+            <CardIcon>
+              <FaBookOpen />
+            </CardIcon>
+            <CardTitle>책거래게시판</CardTitle>
           </MainCard>
-          <MainCard to="/my-transactions">
-            <MainIcon><FaExchangeAlt /></MainIcon>
-            <MainLabel>나의 거래</MainLabel>
+          
+          <MainCard to="/wanted">
+            <CardIcon>
+              <FaExchangeAlt />
+            </CardIcon>
+            <CardTitle>구해요</CardTitle>
           </MainCard>
-          <MainCard to="/hongikmap">
-            <MainIcon><FaMapMarkedAlt /></MainIcon>
-            <MainLabel>지도</MainLabel>
+          
+          <MainCard to="/map">
+            <CardIcon>
+              <FaMapMarkedAlt />
+            </CardIcon>
+            <CardTitle>지도</CardTitle>
           </MainCard>
-          <MainCard to="/chatbot">
-            <MainIcon><FaRobot /></MainIcon>
-            <MainLabel>AI 챗봇</MainLabel>
+          
+          <MainCard to="/ai-chat">
+            <CardIcon>
+              <FaRobot />
+            </CardIcon>
+            <CardTitle>AI 챗봇</CardTitle>
           </MainCard>
         </MainGrid>
+
+        {/* 통계(StatsSection) 삭제됨 */}
+
+        <CTAButton to="/marketplace" className="hero-cta">
+          지금 시작하기
+          <span>→</span>
+        </CTAButton>
       </HeroContent>
     </HeroSection>
   );
