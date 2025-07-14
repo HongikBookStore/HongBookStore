@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
 
 const shimmer = keyframes`
   0% { background-position: -200px 0; }
@@ -85,9 +86,12 @@ const SearchBar = styled.div`
   flex: 1;
   max-width: 500px;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
   input {
-    width: 100%;
+    flex: 1;
     padding: 1.25rem 1.5rem;
     padding-left: 4rem;
     border: 2px solid var(--border);
@@ -114,6 +118,39 @@ const SearchBar = styled.div`
       border-color: var(--primary);
       box-shadow: var(--shadow);
     }
+  }
+`;
+
+const SearchButton = styled.button`
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  min-width: 80px;
+  justify-content: center;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -248,6 +285,48 @@ const FilterSelect = styled.select`
   font-size: 1rem;
   background: var(--surface);
   color: var(--text);
+`;
+
+const CategoryContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    gap: 0.75rem;
+    width: 100%;
+    justify-content: flex-start;
+  }
+`;
+
+const CategorySelect = styled.select`
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: var(--transition);
+  min-width: 150px;
+  font-weight: 500;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  &:hover {
+    border-color: var(--primary);
+  }
+
+  @media (max-width: 768px) {
+    min-width: 120px;
+    font-size: 0.9rem;
+  }
 `;
 
 const BookGrid = styled.div`
@@ -506,121 +585,6 @@ const LoadingGrid = styled.div`
   }
 `;
 
-const SubMenuContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
-  animation: ${fadeIn} 0.6s ease-out 0.3s backwards;
-  background: var(--surface);
-  border-radius: var(--radius-xl);
-  padding: 1.5rem;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-
-  @media (max-width: 768px) {
-    gap: 0.75rem;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 1rem;
-  }
-`;
-
-const SubMenuButton = styled.button`
-  background: ${props => props.active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'transparent'};
-  color: ${props => props.active ? 'white' : 'var(--text)'};
-  border: 2px solid ${props => props.active ? 'transparent' : 'var(--border)'};
-  border-radius: var(--radius-lg);
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  box-shadow: ${props => props.active ? 'var(--shadow-lg)' : 'none'};
-  min-width: 140px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transform: translateX(-100%);
-    transition: 0.6s;
-  }
-
-  &:hover::before {
-    transform: translateX(100%);
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    ${props => !props.active && `
-      border-color: var(--primary);
-      color: var(--primary);
-      background: rgba(124, 58, 237, 0.05);
-    `}
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  @media (max-width: 768px) {
-    min-width: auto;
-    width: 100%;
-  }
-`;
-
-const CategorySelect = styled.select`
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-lg);
-  font-size: 1rem;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  transition: var(--transition);
-  min-width: 150px;
-  font-weight: 500;
-
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-  }
-
-  &:hover {
-    border-color: var(--primary);
-  }
-
-  @media (max-width: 768px) {
-    min-width: 120px;
-    font-size: 0.9rem;
-  }
-`;
-
-const CategoryContainer = styled.div`
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 2rem;
-
-  @media (max-width: 768px) {
-    gap: 0.75rem;
-    width: 100%;
-    justify-content: flex-start;
-  }
-`;
-
 const SectionContainer = styled.div`
   background: #f8f9fa;
   border-radius: 16px;
@@ -629,13 +593,11 @@ const SectionContainer = styled.div`
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 2rem;
-  font-weight: 800;
+  font-size: 1.8rem;
+  font-weight: 700;
   color: var(--text);
-  margin-bottom: 1rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+  text-align: center;
 `;
 
 // 할인율에 따른 책 상태 반환 함수
@@ -750,10 +712,18 @@ const MOCK_BOOKS = [
   }
 ];
 
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+`;
+
 const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // 실제 검색어 입력용
   const [sortBy, setSortBy] = useState('createdAt');
   const [selectedMainCategory, setSelectedMainCategory] = useState('전공');
   const [selectedSubCategory, setSelectedSubCategory] = useState('경영대학');
@@ -848,6 +818,16 @@ const Marketplace = () => {
     setSelectedDetailCategory(pendingDetailCategory);
   };
 
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const renderSkeletonCards = (count = 6) => (
     <LoadingGrid>
       {Array.from({ length: count }, (_, index) => (
@@ -924,121 +904,99 @@ const Marketplace = () => {
     <MarketplaceContainer>
       <Header>
         <Title>책거래게시판</Title>
-        <Description>
-          홍익대학교 학생들과 함께하는 중고책 거래 플랫폼입니다.
-          필요한 교재를 찾거나 사용하지 않는 책을 판매해보세요.
-        </Description>
       </Header>
+      <PageWrapper>
+        <SidebarMenu active={activeSubMenu} onMenuClick={handleSubMenuClick} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Controls>
+            <SearchBar>
+              <SearchIcon />
+              <input
+                type="text"
+                placeholder="책 제목이나 저자를 검색해보세요"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+              />
+              <SearchButton onClick={handleSearch}>
+                검색
+              </SearchButton>
+            </SearchBar>
+            <div style={{ position: 'relative' }}>
+              <FilterButton onClick={() => setFilterOpen(v => !v)}>
+                <FilterIcon />
+                필터
+              </FilterButton>
+              {filterOpen && (
+                <FilterPopover ref={filterRef}>
+                  <FilterSection>
+                    <FilterLabel>거래 지역</FilterLabel>
+                    <FilterRadioGroup>
+                      <FilterRadio>
+                        <input type="radio" name="location" value="전체" checked={locationFilter === '전체'} onChange={() => setLocationFilter('전체')} /> 전체
+                      </FilterRadio>
+                      <FilterRadio>
+                        <input type="radio" name="location" value="교내" checked={locationFilter === '교내'} onChange={() => setLocationFilter('교내')} /> 교내
+                      </FilterRadio>
+                      <FilterRadio>
+                        <input type="radio" name="location" value="교외" checked={locationFilter === '교외'} onChange={() => setLocationFilter('교외')} /> 교외
+                      </FilterRadio>
+                    </FilterRadioGroup>
+                  </FilterSection>
+                  <FilterSection>
+                    <FilterLabel>정렬 기준</FilterLabel>
+                    <FilterSelect value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                      <option value="createdAt">등록 순</option>
+                      <option value="likes">인기 순</option>
+                      <option value="price">낮은 가격 순</option>
+                    </FilterSelect>
+                  </FilterSection>
+                </FilterPopover>
+              )}
+            </div>
+          </Controls>
 
-      <SubMenuContainer>
-        <SubMenuButton
-          active={activeSubMenu === 'booksale'}
-          onClick={() => handleSubMenuClick('booksale')}
-        >
-          책 판매 글쓰기
-        </SubMenuButton>
-        <SubMenuButton
-          active={activeSubMenu === 'wanted'}
-          onClick={() => handleSubMenuClick('wanted')}
-        >
-          구하기 게시판
-        </SubMenuButton>
-        <SubMenuButton
-          active={activeSubMenu === 'mybookstore'}
-          onClick={() => handleSubMenuClick('mybookstore')}
-        >
-          나의 책방
-        </SubMenuButton>
-        <SubMenuButton
-          active={activeSubMenu === 'chat'}
-          onClick={() => handleSubMenuClick('chat')}
-        >
-          거래 채팅
-        </SubMenuButton>
-      </SubMenuContainer>
+          {/* 카테고리 선택 및 적용 영역 */}
+          <CategoryContainer>
+            <CategorySelect value={pendingMainCategory} onChange={handlePendingMajorChange}>
+              {Object.keys(CATEGORIES).map(mainCategory => (
+                <option key={mainCategory} value={mainCategory}>{mainCategory}</option>
+              ))}
+            </CategorySelect>
+            {pendingMainCategory && (
+              <CategorySelect value={pendingSubCategory} onChange={handlePendingSubChange}>
+                {Object.keys(CATEGORIES[pendingMainCategory]).map(subCategory => (
+                  <option key={subCategory} value={subCategory}>{subCategory}</option>
+                ))}
+              </CategorySelect>
+            )}
+            {pendingSubCategory && CATEGORIES[pendingMainCategory]?.[pendingSubCategory]?.length > 0 && (
+              <CategorySelect value={pendingDetailCategory} onChange={handlePendingDetailChange}>
+                {CATEGORIES[pendingMainCategory][pendingSubCategory].map(detailCategory => (
+                  <option key={detailCategory} value={detailCategory}>{detailCategory}</option>
+                ))}
+              </CategorySelect>
+            )}
+            <button style={{marginLeft: '1rem', padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: 'var(--primary)', color: 'white', fontWeight: 600, fontSize: '1rem', cursor: 'pointer'}} onClick={handleApplyCategory}>적용</button>
+          </CategoryContainer>
 
-      <Controls>
-        <SearchBar>
-          <SearchIcon />
-          <input
-            type="text"
-            placeholder="책 제목이나 저자를 검색해보세요"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </SearchBar>
-        <div style={{ position: 'relative' }}>
-          <FilterButton onClick={() => setFilterOpen(v => !v)}>
-            <FilterIcon />
-            필터
-          </FilterButton>
-          {filterOpen && (
-            <FilterPopover ref={filterRef}>
-              <FilterSection>
-                <FilterLabel>거래 지역</FilterLabel>
-                <FilterRadioGroup>
-                  <FilterRadio>
-                    <input type="radio" name="location" value="전체" checked={locationFilter === '전체'} onChange={() => setLocationFilter('전체')} /> 전체
-                  </FilterRadio>
-                  <FilterRadio>
-                    <input type="radio" name="location" value="교내" checked={locationFilter === '교내'} onChange={() => setLocationFilter('교내')} /> 교내
-                  </FilterRadio>
-                  <FilterRadio>
-                    <input type="radio" name="location" value="교외" checked={locationFilter === '교외'} onChange={() => setLocationFilter('교외')} /> 교외
-                  </FilterRadio>
-                </FilterRadioGroup>
-              </FilterSection>
-              <FilterSection>
-                <FilterLabel>정렬 기준</FilterLabel>
-                <FilterSelect value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                  <option value="createdAt">등록 순</option>
-                  <option value="likes">인기 순</option>
-                  <option value="price">낮은 가격 순</option>
-                </FilterSelect>
-              </FilterSection>
-            </FilterPopover>
+          {/* 최근 등록된 책 리스트 */}
+          <SectionContainer>
+            <SectionTitle>최근 등록된 책</SectionTitle>
+            <BookGrid>
+              {recentBooks.map(renderBookCard)}
+            </BookGrid>
+          </SectionContainer>
+
+          {isLoading ? (
+            renderSkeletonCards()
+          ) : (
+            <BookGrid>
+              {sortedBooks.map(renderBookCard)}
+            </BookGrid>
           )}
         </div>
-      </Controls>
-
-      <CategoryContainer>
-        <CategorySelect value={pendingMainCategory} onChange={handlePendingMajorChange}>
-          {Object.keys(CATEGORIES).map(mainCategory => (
-            <option key={mainCategory} value={mainCategory}>{mainCategory}</option>
-          ))}
-        </CategorySelect>
-        {pendingMainCategory && (
-          <CategorySelect value={pendingSubCategory} onChange={handlePendingSubChange}>
-            {Object.keys(CATEGORIES[pendingMainCategory]).map(subCategory => (
-              <option key={subCategory} value={subCategory}>{subCategory}</option>
-            ))}
-          </CategorySelect>
-        )}
-        {pendingSubCategory && CATEGORIES[pendingMainCategory]?.[pendingSubCategory]?.length > 0 && (
-          <CategorySelect value={pendingDetailCategory} onChange={handlePendingDetailChange}>
-            {CATEGORIES[pendingMainCategory][pendingSubCategory].map(detailCategory => (
-              <option key={detailCategory} value={detailCategory}>{detailCategory}</option>
-            ))}
-          </CategorySelect>
-        )}
-        <button style={{marginLeft: '1rem', padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: 'var(--primary)', color: 'white', fontWeight: 600, fontSize: '1rem', cursor: 'pointer'}} onClick={handleApplyCategory}>적용</button>
-      </CategoryContainer>
-
-      {/* 최근 등록된 책 리스트 */}
-      <SectionContainer>
-        <SectionTitle>최근 등록된 책</SectionTitle>
-        <BookGrid>
-          {recentBooks.map(renderBookCard)}
-        </BookGrid>
-      </SectionContainer>
-
-      {isLoading ? (
-        renderSkeletonCards()
-      ) : (
-        <BookGrid>
-          {sortedBooks.map(renderBookCard)}
-        </BookGrid>
-      )}
+      </PageWrapper>
     </MarketplaceContainer>
   );
 };

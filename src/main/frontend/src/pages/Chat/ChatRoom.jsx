@@ -4,8 +4,8 @@ import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, F
 import { useNavigate, useParams } from 'react-router-dom';
 
 const ChatContainer = styled.div`
+  width: 100%;
   max-width: 1600px;
-  width: 100vw;
   margin: 0 auto;
   height: calc(100vh - 120px);
   display: flex;
@@ -31,6 +31,8 @@ const ChatHeader = styled.div`
   padding: 15px 20px;
   background: #f8f9fa;
   border-bottom: 1px solid #e0e0e0;
+  min-width: 0;
+  overflow: hidden;
 `;
 
 const HeaderLeft = styled.div`
@@ -97,6 +99,13 @@ const HeaderRight = styled.div`
   display: flex;
   align-items: center;
   gap: 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+  padding-left: 10px;
+  
+  @media (max-width: 768px) {
+    gap: 5px;
+  }
 `;
 
 const ChatMenuButton = styled.button`
@@ -121,6 +130,7 @@ const ChatMenuButton = styled.button`
   margin-left: 10px;
   margin-right: 0;
   height: 44px;
+  flex-shrink: 0;
 
   &::before {
     content: '';
@@ -158,10 +168,17 @@ const ChatMenuButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    min-width: auto;
-    width: 100%;
-    font-size: 0.95rem;
-    padding: 0.7rem 1rem;
+    min-width: 100px;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+    margin-left: 5px;
+  }
+  
+  @media (max-width: 600px) {
+    min-width: 80px;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem;
+    margin-left: 3px;
   }
 `;
 

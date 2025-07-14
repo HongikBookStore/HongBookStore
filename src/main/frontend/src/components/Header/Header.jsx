@@ -40,38 +40,43 @@ const HeaderContainer = styled.header`
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid var(--border-light);
   position: fixed;
   width: 100%;
   top: 0;
-  z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  z-index: var(--z-fixed);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   align-items: center;
   animation: ${slideDown} 0.6s ease-out;
+  transition: var(--transition-normal);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
 `;
 
 const NavContainer = styled.nav`
   max-width: 1440px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 4rem;
+  padding: 0 var(--space-16);
   display: flex;
   flex-direction: column;
   align-items: stretch;
   position: relative;
 
   @media (max-width: 1440px) {
-    padding: 0 3rem;
+    padding: 0 var(--space-12);
   }
 
   @media (max-width: 1024px) {
-    padding: 0 2rem;
+    padding: 0 var(--space-8);
   }
 
   @media (max-width: 900px) {
-    padding: 0 0.5rem;
+    padding: 0 var(--space-2);
   }
 `;
 
@@ -81,50 +86,54 @@ const FlexRow = styled.div`
   justify-content: space-between;
   align-items: center;
   min-height: 48px;
-  padding: 0.25rem 0 0.15rem 0;
+  padding: var(--space-1) 0 var(--space-1) 0;
+  
   @media (max-width: 900px) {
     min-height: 40px;
-    padding: 0.1rem 0;
+    padding: var(--space-1) 0;
   }
 `;
 
 const LeftBox = styled.div`
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  gap: var(--space-5);
 `;
 
 const LangSelectBox = styled.div`
   display: flex;
   align-items: center;
-  margin-right: 1.2rem;
+  margin-right: var(--space-5);
   position: relative;
 `;
 
 const LangSelect = styled.select`
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.2);
-  border-radius: var(--radius);
-  padding: 0.5rem 1rem;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-4);
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--primary-700);
   cursor: pointer;
-  transition: var(--transition);
+  transition: var(--transition-normal);
   font-weight: 500;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right var(--space-2) center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: var(--space-8);
 
   &:hover {
-    background: rgba(124, 58, 237, 0.15);
-    border-color: rgba(124, 58, 237, 0.3);
+    background-color: var(--primary-100);
+    border-color: var(--primary-300);
+    transform: translateY(-1px);
   }
 
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-  }
-
-  &::before {
-    content: '🌍';
-    margin-right: 0.5rem;
+    box-shadow: 0 0 0 3px var(--primary-100);
+    border-color: var(--primary-500);
   }
 
   .lang-text {
@@ -132,7 +141,7 @@ const LangSelect = styled.select`
   }
 
   @media (max-width: 768px) {
-    padding: 0.5rem 0.75rem;
+    padding: var(--space-2) var(--space-3);
     font-size: 0.8rem;
     
     .lang-text {
@@ -145,7 +154,7 @@ const LangSelect = styled.select`
   }
 
   @media (max-width: 600px) {
-    padding: 0.5rem;
+    padding: var(--space-2);
     min-width: 60px;
     
     .lang-text {
@@ -158,7 +167,7 @@ const LangSelect = styled.select`
   }
 
   @media (max-width: 480px) {
-    padding: 0.4rem 0.5rem;
+    padding: var(--space-1) var(--space-2);
     min-width: 50px;
     font-size: 0.75rem;
     
@@ -178,20 +187,28 @@ const Logo = styled(Link)`
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  transition: var(--transition);
+  gap: var(--space-3);
+  transition: var(--transition-normal);
   position: relative;
   min-width: 0;
   flex-shrink: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+  }
+  
   @media (max-width: 900px) {
     font-size: 1.2rem;
   }
+  
   @media (max-width: 600px) {
     font-size: 1.1rem;
   }
@@ -199,137 +216,92 @@ const Logo = styled(Link)`
 
 const NavLinks = styled.ul`
   display: flex;
-  gap: 2rem;
+  align-items: center;
+  gap: var(--space-8);
   list-style: none;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: nowrap;
-  min-width: 0;
   margin: 0;
-  animation: ${fadeIn} 0.6s ease-out 0.2s backwards;
-  
-  @media (max-width: 900px) {
-    display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
-    flex-direction: column;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(20px);
-    padding: 1.5rem 0.5rem 1.5rem 0.5rem;
-    box-shadow: var(--shadow-xl);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-    gap: 1.2rem;
-    z-index: 2000;
-    align-items: stretch;
-    margin: 0;
-    justify-content: flex-start;
-    animation: ${slideDown} 0.3s ease-out;
-  }
-`;
+  padding: 0;
 
-const NavLink = styled(Link)`
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 1.125rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius);
-  transition: var(--transition);
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  &::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    transition: var(--transition);
-    transform: translateX(-50%);
-    border-radius: 2px;
-  }
-
-  &:hover {
-    color: var(--primary);
-    transform: translateY(-2px);
-    background: rgba(124, 58, 237, 0.05);
-  }
-
-  &:hover::before {
-    width: 80%;
-  }
-`;
-
-const Hamburger = styled.button`
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  cursor: pointer;
-  padding: 0.75rem;
-  border-radius: var(--radius);
-  transition: var(--transition);
-  background: rgba(124, 58, 237, 0.1);
-  border: none;
-  position: relative;
-
-  &:hover {
-    background: rgba(124, 58, 237, 0.2);
-    transform: scale(1.05);
-  }
-
-  span {
-    width: 28px;
-    height: 2px;
-    background: var(--primary);
-    transition: var(--transition);
-    border-radius: 2px;
-    transform-origin: center;
-  }
-
-  &.active span:nth-child(1) {
-    transform: rotate(45deg) translate(6px, 6px);
-  }
-
-  &.active span:nth-child(2) {
-    opacity: 0;
-  }
-
-  &.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(6px, -6px);
-  }
-
-  @media (max-width: 900px) {
-    display: flex;
-  }
-`;
-
-const MenuBox = styled.div`
-  display: flex;
-  gap: 1.2rem;
-  align-items: center;
-  flex-wrap: nowrap;
-  animation: ${fadeIn} 0.6s ease-out 0.4s backwards;
-  
   @media (max-width: 900px) {
     display: none;
   }
 `;
 
-const AuthButton = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--radius-lg);
-  font-weight: 600;
+const NavLink = styled.li`
+  position: relative;
+`;
+
+const NavLinkItem = styled(Link)`
+  color: var(--text-secondary);
   text-decoration: none;
-  transition: var(--transition);
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-normal);
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-1);
+
+  &:hover {
+    color: var(--primary);
+    background-color: var(--primary-50);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    color: var(--primary);
+    background-color: var(--primary-100);
+    font-weight: 600;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    transition: var(--transition-normal);
+    border-radius: var(--radius-full);
+  }
+
+  &:hover::after,
+  &.active::after {
+    width: 80%;
+  }
+`;
+
+const RightBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+`;
+
+const AuthButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+`;
+
+const Button = styled.button`
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   position: relative;
   overflow: hidden;
 
@@ -337,119 +309,267 @@ const AuthButton = styled(Link)`
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
+    left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transform: translateX(-100%);
-    transition: 0.6s;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: var(--transition-normal);
   }
 
   &:hover::before {
-    transform: translateX(100%);
+    left: 100%;
   }
 `;
 
-const LoginButton = styled(AuthButton)`
+const LoginButton = styled(Button)`
   background: transparent;
   color: var(--primary);
-  border: 2px solid var(--primary);
+  border: 1px solid var(--primary-200);
 
   &:hover {
-    background: var(--primary);
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    background: var(--primary-50);
+    border-color: var(--primary-300);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
   }
 `;
 
-const RegisterButton = styled(AuthButton)`
+const RegisterButton = styled(Button)`
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: white;
-  border: none;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--primary);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
 `;
 
 const UserMenu = styled.div`
   display: flex;
   align-items: center;
-  gap: 1rem;
-  animation: ${fadeIn} 0.6s ease-out 0.4s backwards;
+  gap: var(--space-3);
+  position: relative;
+
+  @media (max-width: 900px) {
+    display: none;
+  }
 `;
 
 const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  overflow: hidden;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
-  transition: var(--transition);
-  box-shadow: var(--shadow);
-  border: 2px solid white;
-  position: relative;
+  transition: var(--transition-normal);
+  border: 2px solid var(--primary-100);
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
   }
+`;
 
-  .default-avatar {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-size: 1.2rem;
-    font-weight: 600;
+const UserDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-2);
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+  min-width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: var(--transition-normal);
+  z-index: var(--z-dropdown);
+
+  ${({ isOpen }) => isOpen && `
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  `}
+`;
+
+const DropdownItem = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  border-bottom: 1px solid var(--border-light);
+
+  &:last-child {
+    border-bottom: none;
   }
 
   &:hover {
-    transform: scale(1.1);
-    box-shadow: var(--shadow-lg);
+    background: var(--gray-50);
+    color: var(--primary);
   }
 `;
 
 const LogoutButton = styled.button`
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--error);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
   cursor: pointer;
-  transition: var(--transition);
+  transition: var(--transition-fast);
 
   &:hover {
-    background: #ef4444;
-    color: white;
-    transform: translateY(-1px);
+    background: var(--error-50);
   }
 `;
 
-const MobileMenuActions = styled.div`
+const MobileMenuButton = styled.button`
   display: none;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-normal);
+
+  &:hover {
+    background: var(--gray-100);
+    color: var(--primary);
+  }
+
   @media (max-width: 900px) {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    align-items: stretch;
+    align-items: center;
+    justify-content: center;
+  }
+`;
+
+const MobileMenu = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal-backdrop);
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition-normal);
+
+  ${({ isOpen }) => isOpen && `
+    opacity: 1;
+    visibility: visible;
+  `}
+`;
+
+const MobileMenuContent = styled.div`
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: white;
+  padding: var(--space-6);
+  transform: translateX(100%);
+  transition: var(--transition-normal);
+  overflow-y: auto;
+
+  ${({ isOpen }) => isOpen && `
+    transform: translateX(0);
+  `}
+`;
+
+const MobileMenuHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+`;
+
+const MobileMenuClose = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-normal);
+
+  &:hover {
+    background: var(--gray-100);
+    color: var(--error);
+  }
+`;
+
+const MobileNavLinks = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+`;
+
+const MobileNavLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-lg);
+  transition: var(--transition-normal);
+  font-weight: 500;
+
+  &:hover {
+    background: var(--gray-50);
+    color: var(--primary);
+  }
+
+  &.active {
+    background: var(--primary-50);
+    color: var(--primary);
+    font-weight: 600;
+  }
+`;
+
+const WritingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--warning-50);
+  color: var(--warning-700);
+  border: 1px solid var(--warning-200);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  animation: ${pulse} 2s ease-in-out infinite;
+
+  @media (max-width: 900px) {
+    display: none;
   }
 `;
 
@@ -578,67 +698,55 @@ const Header = () => {
             </LeftBox>
 
             {!isHome && (
-              <NavLinks $isOpen={isOpen}>
-                <li>
-                  <NavLink 
-                    to="/marketplace" 
-                    onClick={(e) => {
-                      if (isWriting) {
-                        e.preventDefault();
-                        safeNavigate('/marketplace');
-                      }
-                      setIsOpen(false);
-                    }}
-                  >
-                    책거래게시판
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink
-                    to="/my-transactions"
-                    onClick={(e) => {
-                      if (isWriting) {
-                        e.preventDefault();
-                        safeNavigate('/my-transactions');
-                      }
-                      setIsOpen(false);
-                    }}
-                  >
-                    나의 거래
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink 
-                    to="/map" 
-                    onClick={(e) => {
-                      if (isWriting) {
-                        e.preventDefault();
-                        safeNavigate('/map');
-                      }
-                      setIsOpen(false);
-                    }}
-                  >
-                    지도
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink 
-                    to="/ai-chat" 
-                    onClick={(e) => {
-                      if (isWriting) {
-                        e.preventDefault();
-                        safeNavigate('/ai-chat');
-                      }
-                      setIsOpen(false);
-                    }}
-                  >
-                    AI 챗봇
-                  </NavLink>
-                </li>
+              <NavLinks>
+                <NavLinkItem 
+                  to="/marketplace" 
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/marketplace');
+                    }
+                  }}
+                >
+                  책거래게시판
+                </NavLinkItem>
+                <NavLinkItem
+                  to="/my-transactions"
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/my-transactions');
+                    }
+                  }}
+                >
+                  나의 거래
+                </NavLinkItem>
+                <NavLinkItem 
+                  to="/map" 
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/map');
+                    }
+                  }}
+                >
+                  지도
+                </NavLinkItem>
+                <NavLinkItem 
+                  to="/ai-chat" 
+                  onClick={(e) => {
+                    if (isWriting) {
+                      e.preventDefault();
+                      safeNavigate('/ai-chat');
+                    }
+                  }}
+                >
+                  AI 챗봇
+                </NavLinkItem>
               </NavLinks>
             )}
 
-            <MenuBox>
+            <RightBox>
               {isLoggedIn ? (
                 <UserMenu>
                   <UserAvatar 
@@ -659,12 +767,38 @@ const Header = () => {
                       </div>
                     )}
                   </UserAvatar>
-                  <LogoutButton onClick={handleLogout}>
-                    로그아웃
-                  </LogoutButton>
+                  <UserDropdown isOpen={isOpen}>
+                    <DropdownItem 
+                      to="/mypage" 
+                      onClick={(e) => {
+                        if (isWriting) {
+                          e.preventDefault();
+                          safeNavigate('/mypage');
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      마이페이지
+                    </DropdownItem>
+                    <DropdownItem
+                      to="/my-transactions"
+                      onClick={(e) => {
+                        if (isWriting) {
+                          e.preventDefault();
+                          safeNavigate('/my-transactions');
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      나의 거래
+                    </DropdownItem>
+                    <DropdownItem onClick={handleLogout}>
+                      로그아웃
+                    </DropdownItem>
+                  </UserDropdown>
                 </UserMenu>
               ) : (
-                <>
+                <AuthButtons>
                   <LoginButton 
                     to="/login"
                     onClick={(e) => {
@@ -687,26 +821,35 @@ const Header = () => {
                   >
                     회원가입
                   </RegisterButton>
-                </>
+                </AuthButtons>
               )}
-            </MenuBox>
+              {isWriting && (
+                <WritingIndicator>
+                  초안 저장 중
+                </WritingIndicator>
+              )}
+            </RightBox>
 
-            <Hamburger 
-              onClick={toggleMenu} 
-              className={isOpen ? 'active' : ''}
-            >
+            <MobileMenuButton onClick={toggleMenu}>
               <span></span>
               <span></span>
               <span></span>
-            </Hamburger>
+            </MobileMenuButton>
           </FlexRow>
 
-          <MobileMenuActions>
-            {isOpen && (
-              <>
+          <MobileMenu isOpen={isOpen}>
+            <MobileMenuContent isOpen={isOpen}>
+              <MobileMenuHeader>
+                <h3>메뉴</h3>
+                <MobileMenuClose onClick={toggleMenu}>×</MobileMenuClose>
+              </MobileMenuHeader>
+              <MobileNavLinks>
+                <MobileNavLink to="/marketplace" style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
+                  지금 시작하기 <span style={{marginLeft: 4}}>→</span>
+                </MobileNavLink>
                 {isLoggedIn ? (
                   <>
-                    <NavLink 
+                    <MobileNavLink 
                       to="/mypage" 
                       onClick={(e) => {
                         if (isWriting) {
@@ -717,8 +860,8 @@ const Header = () => {
                       }}
                     >
                       마이페이지
-                    </NavLink>
-                    <NavLink
+                    </MobileNavLink>
+                    <MobileNavLink
                       to="/my-transactions"
                       onClick={(e) => {
                         if (isWriting) {
@@ -729,14 +872,14 @@ const Header = () => {
                       }}
                     >
                       나의 거래
-                    </NavLink>
-                    <LogoutButton onClick={handleLogout}>
+                    </MobileNavLink>
+                    <MobileNavLink onClick={handleLogout}>
                       로그아웃
-                    </LogoutButton>
+                    </MobileNavLink>
                   </>
                 ) : (
                   <>
-                    <LoginButton 
+                    <MobileNavLink 
                       to="/login" 
                       onClick={(e) => {
                         if (isWriting) {
@@ -747,8 +890,8 @@ const Header = () => {
                       }}
                     >
                       로그인
-                    </LoginButton>
-                    <RegisterButton 
+                    </MobileNavLink>
+                    <MobileNavLink 
                       to="/register" 
                       onClick={(e) => {
                         if (isWriting) {
@@ -759,12 +902,12 @@ const Header = () => {
                       }}
                     >
                       회원가입
-                    </RegisterButton>
+                    </MobileNavLink>
                   </>
                 )}
-              </>
-            )}
-          </MobileMenuActions>
+              </MobileNavLinks>
+            </MobileMenuContent>
+          </MobileMenu>
         </NavContainer>
       </HeaderContainer>
 
