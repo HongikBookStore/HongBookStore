@@ -11,6 +11,7 @@ import Login from './pages/Login/Login.jsx';
 import Register from './pages/Register/Register.jsx';
 import FindId from './pages/FindId/FindId.jsx';
 import FindPw from './pages/FindPw/FindPw.jsx';
+import ResetPassword from './pages/ResetPassword/ResetPassword.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
@@ -88,6 +89,7 @@ function App() {
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
                             <Route path="/find-pw" element={<FindPw />} />
+                            <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/ai-chat" element={<AIChatbot />} />
                             <Route path="/marketplace/:id" element={<BookDetail />} />
                             <Route path="/bookwrite/:id" element={<BookWrite />} />

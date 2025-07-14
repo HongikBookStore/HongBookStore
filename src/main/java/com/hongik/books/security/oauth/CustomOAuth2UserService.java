@@ -2,9 +2,9 @@ package com.hongik.books.security.oauth;
 
 import com.hongik.books.security.oauth.info.OAuth2UserInfo;
 import com.hongik.books.security.oauth.info.OAuth2UserInfoFactory;
-import com.hongik.books.user.domain.User;
-import com.hongik.books.user.domain.UserRole;
-import com.hongik.books.user.repository.UserRepository;
+import com.hongik.books.domain.user.domain.User;
+import com.hongik.books.domain.user.domain.UserRole;
+import com.hongik.books.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

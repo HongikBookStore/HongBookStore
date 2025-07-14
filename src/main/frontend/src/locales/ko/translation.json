@@ -36,7 +36,7 @@
   "showPw": "비밀번호 보기",
   "hidePw": "비밀번호 숨기기",
   "findIdResult": "해당 전자우편 주소로 가입된 아이디는 {{id}}입니다.",
-  "findPwResult": "임시 비밀번호가 전자우편 주소로 발송되었습니다. 전자우편 주소를 확인해 주세요.",
+  "findPwResult": "작성하신 이메일로 비밀번호 재설정 링크를 전송했습니다. 받은 편지함을 확인하세요.",
   "emailNotFound": "존재하지 않는 전자우편 주소입니다. 다시 확인해 주세요.",
   "quickLinks": "빠른 링크",
   "marketplace": "북마켓",
@@ -92,5 +92,15 @@
   "cancel": "취소",
   "profileName": "이름",
   "profileEmail": "이메일",
-  "logout": "로그아웃"
+  "logout": "로그아웃",
+  "processing": "처리 중...",
+  "requestFailed": "요청에 실패했습니다. 잠시 후 다시 시도해주세요.",
+  "resetPasswordTitle": "새 비밀번호 설정",
+  "newPassword": "새 비밀번호",
+  "confirmPassword": "새 비밀번호 확인",
+  "passwordRequired": "비밀번호를 입력해주세요.",
+  "passwordMismatch": "비밀번호가 일치하지 않습니다.",
+  "passwordResetSuccess": "비밀번호가 성공적으로 변경되었습니다. 잠시 후 로그인 페이지로 이동합니다.",
+  "invalidToken": "유효하지 않은 접근입니다.",
+  "ok": "확인"
 } 

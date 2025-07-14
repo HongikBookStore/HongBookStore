@@ -35,7 +35,7 @@
   "showPw": "Show password",
   "hidePw": "Hide password",
   "findIdResult": "The ID registered with this email is {{id}}.",
-  "findPwResult": "A temporary password has been sent to your email. Please check your inbox.",
+  "findPwResult": "A password reset link has been sent to the email you provided. Please check your inbox.",
   "emailNotFound": "This email does not exist. Please check again.",
   "quickLinks": "Quick Links",
   "marketplace": "Book Market",
@@ -92,5 +92,15 @@
   "profileName": "Name",
   "profileEmail": "Email",
   "socialLogin": "Login with social account",
-  "logout": "Logout"
+  "logout": "Logout",
+  "processing": "Processing...",
+  "requestFailed": "Request failed. Please try again later.",
+  "resetPasswordTitle": "Reset Password",
+  "newPassword": "New Password",
+  "confirmPassword": "Confirm New Password",
+  "passwordRequired": "Please enter your password.",
+  "passwordMismatch": "Passwords do not match.",
+  "passwordResetSuccess": "Your password has been successfully changed. You will be redirected to the login page shortly.",
+  "invalidToken": "Invalid access.",
+  "ok": "OK"
 } 
