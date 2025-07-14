@@ -75,3 +75,6 @@ yarn-error.log*
 
 # .env 환경 변수 파일 제외
 .env
+
+# GCP 파일 업로드용 키 제외
+gcp-service-account-key.json
