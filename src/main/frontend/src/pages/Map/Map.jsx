@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaTrash, FaStar, FaRoute, FaClock, FaSearch, FaQuestionCircle } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io';
-
-// 네이버 지도 컴포넌트 placeholder (동료가 구현 예정)
-const NaverMap = () => <div style={{width: '100%', height: '100%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888'}}>NaverMap Placeholder</div>;
+import NaverMap from '../../components/NaverMap/NaverMap';
 
 const MapPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -283,7 +281,6 @@ const MapPage = () => {
         )}
       </Sidebar>
       <StyledMapContainer>
-        {/* 네이버 지도 컴포넌트로 교체 예정 */}
         <NaverMap />
       </StyledMapContainer>
       {/* 장소 추가 모달 */}

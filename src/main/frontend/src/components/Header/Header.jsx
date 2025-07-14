@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,6 @@ import bookIcon from '../../assets/book.svg';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { useWriting } from '../../contexts/WritingContext';
 import WarningModal from '../WarningModal/WarningModal';
-import { logout as apiLogout } from '../../api/auth';
 
 const slideDown = keyframes`
   from {
@@ -574,18 +573,34 @@ const WritingIndicator = styled.div`
 `;
 
 const Header = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // 데스크탑 유저 드롭다운 상태
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
+  const location = useLocation();
   
   // Context API를 사용하여 로그인 상태와 로그아웃 함수를 가져옵니다.
   const { isLoggedIn, user, logout } = useContext(AuthCtx);
   const { isWriting, writingType } = useWriting();
-  const location = useLocation();
+
+  const userMenuRef = useRef(null); // 드롭다운 외부 클릭 감지를 위한 ref
   const isHome = location.pathname === '/';
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
 
   const handleLangChange = (e) => {
@@ -594,7 +609,8 @@ const Header = () => {
 
   const handleLogout = async () => {
   // 모바일 메뉴가 열려있을 경우를 대비해 먼저 닫아줍니다.
-  setIsOpen(false);
+  setIsMobileMenuOpen(false);
+  setIsDropdownOpen(false);
 
   try {
         // Context에서 가져온 logout 함수를 호출
@@ -610,8 +626,8 @@ const Header = () => {
 
 };
 
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   // 안전한 네비게이션 함수
@@ -622,6 +638,9 @@ const Header = () => {
     } else {
       navigate(path);
     }
+    // 메뉴가 열려있다면 닫기
+    setIsMobileMenuOpen(false);
+    setIsDropdownOpen(false);
   };
 
   // 경고 모달에서 나가기 선택
@@ -699,48 +718,17 @@ const Header = () => {
 
             {!isHome && (
               <NavLinks>
-                <NavLinkItem 
-                  to="/marketplace" 
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/marketplace');
-                    }
-                  }}
-                >
-                  책거래게시판
+                {/* NavLinkItem들은 safeNavigate를 사용하도록 onClick을 추가 */}
+                <NavLinkItem to="/marketplace" className={location.pathname === '/marketplace' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}>
+                  책 거래 게시판
                 </NavLinkItem>
-                <NavLinkItem
-                  to="/my-transactions"
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/my-transactions');
-                    }
-                  }}
-                >
+                <NavLinkItem to="/my-transactions" className={location.pathname === '/my-transactions' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
                   나의 거래
                 </NavLinkItem>
-                <NavLinkItem 
-                  to="/map" 
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/map');
-                    }
-                  }}
-                >
+                <NavLinkItem to="/hongikmap" className={location.pathname === '/hongikmap' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}>
                   지도
                 </NavLinkItem>
-                <NavLinkItem 
-                  to="/ai-chat" 
-                  onClick={(e) => {
-                    if (isWriting) {
-                      e.preventDefault();
-                      safeNavigate('/ai-chat');
-                    }
-                  }}
-                >
+                <NavLinkItem to="/ai-chat" className={location.pathname === '/ai-chat' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/ai-chat'); }}>
                   AI 챗봇
                 </NavLinkItem>
               </NavLinks>
@@ -748,77 +736,37 @@ const Header = () => {
 
             <RightBox>
               {isLoggedIn ? (
-                <UserMenu>
+                <UserMenu ref={userMenuRef}>
                   <UserAvatar 
-                    onClick={() => {
-                      if (isWriting) {
-                        safeNavigate('/mypage');
-                      } else {
-                        navigate('/mypage');
-                      }
-                    }} 
-                    title="마이페이지"
+                    onClick={() => setIsDropdownOpen(prev => !prev)} 
+                    title="사용자 메뉴"
                   >
-                    {currentUser && currentUser.profileImage ? (
-                      <img src={currentUser.profileImage} alt="Profile" />
+                    {user && user.profileImage ? (
+                      <img src={user.profileImage} alt="Profile" style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}}/>
                     ) : (
                       <div className="default-avatar">
                         {getDefaultAvatar()}
                       </div>
                     )}
                   </UserAvatar>
-                  <UserDropdown isOpen={isOpen}>
-                    <DropdownItem 
-                      to="/mypage" 
-                      onClick={(e) => {
-                        if (isWriting) {
-                          e.preventDefault();
-                          safeNavigate('/mypage');
-                        }
-                        setIsOpen(false);
-                      }}
-                    >
+                  <UserDropdown isOpen={isDropdownOpen}>
+                    <DropdownItem to="/mypage" onClick={() => safeNavigate('/mypage')}>
                       마이페이지
                     </DropdownItem>
-                    <DropdownItem
-                      to="/my-transactions"
-                      onClick={(e) => {
-                        if (isWriting) {
-                          e.preventDefault();
-                          safeNavigate('/my-transactions');
-                        }
-                        setIsOpen(false);
-                      }}
-                    >
+                    <DropdownItem to="/my-transactions" onClick={() => safeNavigate('/my-transactions')}>
                       나의 거래
                     </DropdownItem>
-                    <DropdownItem onClick={handleLogout}>
+                    <LogoutButton onClick={handleLogout}>
                       로그아웃
-                    </DropdownItem>
+                    </LogoutButton>
                   </UserDropdown>
                 </UserMenu>
               ) : (
                 <AuthButtons>
-                  <LoginButton 
-                    to="/login"
-                    onClick={(e) => {
-                      if (isWriting) {
-                        e.preventDefault();
-                        safeNavigate('/login');
-                      }
-                    }}
-                  >
+                  <LoginButton onClick={() => safeNavigate('/login')}>
                     로그인
                   </LoginButton>
-                  <RegisterButton 
-                    to="/register"
-                    onClick={(e) => {
-                      if (isWriting) {
-                        e.preventDefault();
-                        safeNavigate('/register');
-                      }
-                    }}
-                  >
+                  <RegisterButton onClick={() => safeNavigate('/register')}>
                     회원가입
                   </RegisterButton>
                 </AuthButtons>
@@ -830,86 +778,48 @@ const Header = () => {
               )}
             </RightBox>
 
-            <MobileMenuButton onClick={toggleMenu}>
-              <span></span>
-              <span></span>
-              <span></span>
+            <MobileMenuButton onClick={toggleMobileMenu}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </MobileMenuButton>
           </FlexRow>
-
-          <MobileMenu isOpen={isOpen}>
-            <MobileMenuContent isOpen={isOpen}>
-              <MobileMenuHeader>
-                <h3>메뉴</h3>
-                <MobileMenuClose onClick={toggleMenu}>×</MobileMenuClose>
-              </MobileMenuHeader>
-              <MobileNavLinks>
-                <MobileNavLink to="/marketplace" style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
-                  지금 시작하기 <span style={{marginLeft: 4}}>→</span>
-                </MobileNavLink>
-                {isLoggedIn ? (
-                  <>
-                    <MobileNavLink 
-                      to="/mypage" 
-                      onClick={(e) => {
-                        if (isWriting) {
-                          e.preventDefault();
-                          safeNavigate('/mypage');
-                        }
-                        setIsOpen(false);
-                      }}
-                    >
-                      마이페이지
-                    </MobileNavLink>
-                    <MobileNavLink
-                      to="/my-transactions"
-                      onClick={(e) => {
-                        if (isWriting) {
-                          e.preventDefault();
-                          safeNavigate('/my-transactions');
-                        }
-                        setIsOpen(false);
-                      }}
-                    >
-                      나의 거래
-                    </MobileNavLink>
-                    <MobileNavLink onClick={handleLogout}>
-                      로그아웃
-                    </MobileNavLink>
-                  </>
-                ) : (
-                  <>
-                    <MobileNavLink 
-                      to="/login" 
-                      onClick={(e) => {
-                        if (isWriting) {
-                          e.preventDefault();
-                          safeNavigate('/login');
-                        }
-                        setIsOpen(false);
-                      }}
-                    >
-                      로그인
-                    </MobileNavLink>
-                    <MobileNavLink 
-                      to="/register" 
-                      onClick={(e) => {
-                        if (isWriting) {
-                          e.preventDefault();
-                          safeNavigate('/register');
-                        }
-                        setIsOpen(false);
-                      }}
-                    >
-                      회원가입
-                    </MobileNavLink>
-                  </>
-                )}
-              </MobileNavLinks>
-            </MobileMenuContent>
-          </MobileMenu>
         </NavContainer>
       </HeaderContainer>
+
+          <MobileMenu isOpen={isMobileMenuOpen} onClick={toggleMobileMenu}>
+        <MobileMenuContent isOpen={isMobileMenuOpen} onClick={(e) => e.stopPropagation()}>
+          <MobileMenuHeader>
+            <h3>메뉴</h3>
+            <MobileMenuClose onClick={toggleMobileMenu}>×</MobileMenuClose>
+          </MobileMenuHeader>
+          <MobileNavLinks>
+            <MobileNavLink to="/marketplace" onClick={() => safeNavigate('/marketplace')} style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
+              지금 시작하기 <span style={{marginLeft: 4}}>→</span>
+            </MobileNavLink>
+            {isLoggedIn ? (
+              <>
+                <MobileNavLink to="/mypage" onClick={() => safeNavigate('/mypage')}>
+                  마이페이지
+                </MobileNavLink>
+                <MobileNavLink to="/my-transactions" onClick={() => safeNavigate('/my-transactions')}>
+                  나의 거래
+                </MobileNavLink>
+                <MobileNavLink as="button" onClick={handleLogout}>
+                  로그아웃
+                </MobileNavLink>
+              </>
+            ) : (
+              <>
+                <MobileNavLink to="/login" onClick={() => safeNavigate('/login')}>
+                  로그인
+                </MobileNavLink>
+                <MobileNavLink to="/register" onClick={() => safeNavigate('/register')}>
+                  회원가입
+                </MobileNavLink>
+              </>
+            )}
+          </MobileNavLinks>
+        </MobileMenuContent>
+      </MobileMenu>
 
       {/* 경고 모달 */}
       <WarningModal
