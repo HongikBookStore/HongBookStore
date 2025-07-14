@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaSearch, FaEllipsisV, FaBook, FaUser, FaExclamationCircle } from 'react-icons/fa';
+import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
 
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+`;
+
 const ChatListContainer = styled.div`
+  width: 100%;
   max-width: 1600px;
-  width: 100vw;
   margin: 0 auto;
   flex: 1;
   min-height: 0;
@@ -33,6 +41,12 @@ const Header = styled.div`
   border-bottom: 1px solid #e0e0e0;
   background: #f8f9fa;
   margin-bottom: 24px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
 `;
 
 const HeaderLeft = styled.div`
@@ -69,8 +83,11 @@ const Title = styled.h1`
 const SearchContainer = styled.div`
   position: relative;
   width: 300px;
+  @media (max-width: 768px) {
+    width: 100%;
+  }
   @media (max-width: 600px) {
-    width: 200px;
+    width: 100%;
   }
 `;
 
@@ -102,6 +119,11 @@ const TabButtonGroup = styled.div`
   justify-content: center;
   gap: 12px;
   margin: 0 0 48px 0;
+  
+  @media (max-width: 600px) {
+    gap: 8px;
+    margin: 0 0 32px 0;
+  }
 `;
 
 const TabButton = styled.button`
@@ -120,6 +142,11 @@ const TabButton = styled.button`
     background: ${props => props.active ? '#1565c0' : '#f5f5f5'};
     border-color: #1976d2;
     color: ${props => props.active ? 'white' : '#1976d2'};
+  }
+  
+  @media (max-width: 600px) {
+    padding: 4px 12px;
+    font-size: 0.9rem;
   }
 `;
 
@@ -149,6 +176,10 @@ const ChatItem = styled.div`
   ${props => props.hasUnread && `
     background: #e3f2fd;
   `}
+  
+  @media (max-width: 600px) {
+    padding: 15px;
+  }
 `;
 
 const UserAvatar = styled.div`
@@ -164,6 +195,13 @@ const UserAvatar = styled.div`
   font-size: 1.2rem;
   margin-right: 15px;
   flex-shrink: 0;
+  
+  @media (max-width: 600px) {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+    margin-right: 10px;
+  }
 `;
 
 const ChatInfo = styled.div`
@@ -200,6 +238,11 @@ const LastMessage = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+  
+  @media (max-width: 600px) {
+    max-width: 150px;
+    font-size: 0.85rem;
+  }
 `;
 
 const ChatMeta = styled.div`
@@ -209,6 +252,11 @@ const ChatMeta = styled.div`
   gap: 5px;
   margin-left: 15px;
   margin-right: 60px;
+  
+  @media (max-width: 600px) {
+    margin-left: 10px;
+    margin-right: 40px;
+  }
 `;
 
 const LastTime = styled.div`
@@ -342,6 +390,20 @@ const ChatListPage = () => {
     navigate(`/chat/${chatId}`);
   };
 
+  const handleSidebarMenu = (menu) => {
+    switch(menu) {
+      case 'booksale':
+        navigate('/bookstore/add'); break;
+      case 'wanted':
+        navigate('/wanted'); break;
+      case 'mybookstore':
+        navigate('/bookstore'); break;
+      case 'chat':
+        navigate('/chat'); break;
+      default: break;
+    }
+  };
+
   const getStatusText = (status) => {
     switch (status) {
       case 'reserved':
@@ -376,74 +438,79 @@ const ChatListPage = () => {
     });
 
   return (
-    <ChatListContainer>
-      <Header>
-        <HeaderLeft>
-          <BackButton onClick={handleBack}>
-            <FaArrowLeft />
-            뒤로
-          </BackButton>
-          <Title>거래 채팅</Title>
-        </HeaderLeft>
-        <SearchContainer>
-          <SearchInput
-            type="text"
-            placeholder="사용자명 또는 책 제목으로 검색"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <SearchIcon />
-        </SearchContainer>
-      </Header>
+    <PageWrapper>
+      <SidebarMenu active="chat" onMenuClick={handleSidebarMenu} />
+      <MainContent>
+        <ChatListContainer>
+          <Header>
+            <HeaderLeft>
+              <BackButton onClick={handleBack}>
+                <FaArrowLeft />
+                뒤로
+              </BackButton>
+              <Title>거래 채팅</Title>
+            </HeaderLeft>
+            <SearchContainer>
+              <SearchInput
+                type="text"
+                placeholder="사용자명 또는 책 제목으로 검색"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <SearchIcon />
+            </SearchContainer>
+          </Header>
 
-      <TabButtonGroup>
-        <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>전체</TabButton>
-        <TabButton active={activeTab === 'seller'} onClick={() => setActiveTab('seller')}>판매자</TabButton>
-        <TabButton active={activeTab === 'buyer'} onClick={() => setActiveTab('buyer')}>구매자</TabButton>
-      </TabButtonGroup>
+          <TabButtonGroup>
+            <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>전체</TabButton>
+            <TabButton active={activeTab === 'seller'} onClick={() => setActiveTab('seller')}>판매자</TabButton>
+            <TabButton active={activeTab === 'buyer'} onClick={() => setActiveTab('buyer')}>구매자</TabButton>
+          </TabButtonGroup>
 
-      <ChatList>
-        {filteredChatRooms.length > 0 ? (
-          filteredChatRooms.map((chat) => (
-            <ChatItem
-              key={chat.id}
-              onClick={() => handleChatClick(chat.id)}
-              isReserved={chat.isReserved}
-              hasUnread={chat.unreadCount > 0}
-            >
-              <UserAvatar>
-                {chat.userAvatar}
-              </UserAvatar>
-              <ChatInfo>
-                <UserName>
-                  {chat.userName}
-                </UserName>
-                <BookTitle>
-                  <FaBook style={{ color: '#666' }} />
-                  {chat.bookTitle}
-                </BookTitle>
-                <TradeStatus status={chat.tradeStatus}>
-                  {getStatusText(chat.tradeStatus)}
-                </TradeStatus>
-                <LastMessage>{chat.lastMessage}</LastMessage>
-              </ChatInfo>
-              <ChatMeta>
-                <LastTime>{chat.lastTime}</LastTime>
-                {chat.unreadCount > 0 && (
-                  <UnreadCount>{chat.unreadCount}</UnreadCount>
-                )}
-              </ChatMeta>
-            </ChatItem>
-          ))
-        ) : (
-          <EmptyState>
-            <EmptyIcon />
-            <h3>채팅방이 없습니다</h3>
-            <p>책 거래를 시작하면 채팅방이 생성됩니다.</p>
-          </EmptyState>
-        )}
-      </ChatList>
-    </ChatListContainer>
+          <ChatList>
+            {filteredChatRooms.length > 0 ? (
+              filteredChatRooms.map((chat) => (
+                <ChatItem
+                  key={chat.id}
+                  onClick={() => handleChatClick(chat.id)}
+                  isReserved={chat.isReserved}
+                  hasUnread={chat.unreadCount > 0}
+                >
+                  <UserAvatar>
+                    {chat.userAvatar}
+                  </UserAvatar>
+                  <ChatInfo>
+                    <UserName>
+                      {chat.userName}
+                    </UserName>
+                    <BookTitle>
+                      <FaBook style={{ color: '#666' }} />
+                      {chat.bookTitle}
+                    </BookTitle>
+                    <TradeStatus status={chat.tradeStatus}>
+                      {getStatusText(chat.tradeStatus)}
+                    </TradeStatus>
+                    <LastMessage>{chat.lastMessage}</LastMessage>
+                  </ChatInfo>
+                  <ChatMeta>
+                    <LastTime>{chat.lastTime}</LastTime>
+                    {chat.unreadCount > 0 && (
+                      <UnreadCount>{chat.unreadCount}</UnreadCount>
+                    )}
+                  </ChatMeta>
+                </ChatItem>
+              ))
+            ) : (
+              <EmptyState>
+                <EmptyIcon />
+                <h3>채팅방이 없습니다</h3>
+                <p>책 거래를 시작하면 채팅방이 생성됩니다.</p>
+              </EmptyState>
+            )}
+          </ChatList>
+        </ChatListContainer>
+      </MainContent>
+    </PageWrapper>
   );
 };
 
