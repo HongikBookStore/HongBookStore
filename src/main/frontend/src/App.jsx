@@ -26,10 +26,11 @@ import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
-const AIChatbot = () => <div style={{padding: '64px 0', textAlign: 'center', fontSize: '1.5rem'}}>AI 챗봇 준비중입니다.</div>;
+// const AIChatbot = () => <div style={{padding: '64px 0', textAlign: 'center', fontSize: '1.5rem'}}>AI 챗봇 준비중입니다.</div>;
 
 function App() {
     const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +90,7 @@ function App() {
                             <Route path="/find-id" element={<FindId />} />
                             <Route path="/find-pw" element={<FindPw />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
-                            <Route path="/ai-chat" element={<AIChatbot />} />
+                            <Route path="/ai-chat" element={<ChatBotPage />} />
                             <Route path="/marketplace/:id" element={<BookDetail />} />
                             <Route path="/bookwrite/:id" element={<BookWrite />} />
                             <Route path="/book-write" element={<BookWrite />} />
