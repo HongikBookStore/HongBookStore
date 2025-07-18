@@ -1,6 +1,7 @@
 package com.hongik.books.domain.post.domain;
 
 import com.hongik.books.domain.book.domain.Book;
+import com.hongik.books.domain.post.dto.SalePostUpdateRequestDTO;
 import com.hongik.books.domain.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -78,5 +79,16 @@ public class SalePost {
 
     public enum SaleStatus {
         FOR_SALE, RESERVED, SOLD_OUT
+    }
+
+    /**
+     * 게시글 정보를 수정하는 메서드
+     * 엔티티의 비즈니스 로직을 내부에 캡슐화하여 객체지향적인 설계
+     * @param request 수정할 정보가 담긴 DTO
+     */
+    public void update(SalePostUpdateRequestDTO request) {
+        this.postTitle = request.getPostTitle();
+        this.postContent = request.getPostContent();
+        this.price = request.getPrice();
     }
 }

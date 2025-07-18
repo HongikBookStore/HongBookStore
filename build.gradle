@@ -21,12 +21,17 @@ configurations {
 
 repositories {
     mavenCentral()
-    //univcert
-    maven{url 'https://jitpack.io'}
 }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // 비동기 HTTP 통신을 위한 WebClient
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    testImplementation 'io.projectreactor:reactor-test'
+    implementation 'io.netty:netty-resolver-dns-native-macos:4.2.3.Final'
+    runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.2.3.Final:osx-aarch_64' // MacOS Silicon 라이브러리 누락 문제
+
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
@@ -68,9 +73,6 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
-
-    // Univcert
-    implementation 'com.github.in-seo:univcert:master-SNAPSHOT'
 
     // GCP Cloud Storage
     implementation platform('com.google.cloud:libraries-bom:26.61.0')

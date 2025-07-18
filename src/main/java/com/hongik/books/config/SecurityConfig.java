@@ -61,6 +61,8 @@ public class SecurityConfig {
                 // HTTP 요청에 대한 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
                                 "/api/auth/password/**",
                                 "/api/auth/login",
                                 "/api/users/signup",
@@ -70,6 +72,7 @@ public class SecurityConfig {
                                 "/api/users/verify/**",
                                 "/api/images/**",
                                 "/api/posts/**",
+                                "/api/search/**",
                                 "/actuator/health",
                                 // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
                                 "/", "/login", "/oauth2/**", "/error"
