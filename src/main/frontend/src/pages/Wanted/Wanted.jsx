@@ -353,7 +353,7 @@ const Wanted = () => {
             <SearchForm onSubmit={handleSearch}>
               <SearchInput
                 type="text"
-                placeholder="원하는 책을 검색해보세요..."
+                placeholder="책의 제목이나 저자명을 검색해보세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
