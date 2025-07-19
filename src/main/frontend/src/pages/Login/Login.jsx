@@ -78,7 +78,7 @@ const SubmitButton = styled.button`
   cursor: pointer;
   transition: var(--transition);
   letter-spacing: -0.5px;
-  box-shadow: 0 2px 8px rgba(35,81,233,0.07);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.07);
   &:hover {
     background: var(--primary-dark);
     transform: translateY(-2px) scale(1.03);

@@ -191,31 +191,39 @@ const SearchIcon = styled.div`
 `;
 
 const FilterButton = styled.button`
-  padding: 1.25rem 2rem;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-xl);
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text);
+  padding: 8px 16px;
+  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
+  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
+  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border-medium)'};
+  border-radius: 20px;
   cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  box-shadow: var(--shadow-sm);
-  min-width: 140px;
-  justify-content: center;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  margin-right: 8px;
+  margin-bottom: 8px;
 
   &:hover {
+    background: ${props => props.active ? 'var(--primary-dark)' : 'var(--gray-50)'};
     border-color: var(--primary);
-    color: var(--primary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow);
+    color: ${props => props.active ? 'white' : 'var(--primary)'};
   }
+`;
 
-  &:active {
-    transform: translateY(0);
+const SortButton = styled.button`
+  padding: 8px 16px;
+  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
+  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
+  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border-medium)'};
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  margin-right: 8px;
+
+  &:hover {
+    background: ${props => props.active ? 'var(--primary-dark)' : 'var(--gray-50)'};
+    border-color: var(--primary);
+    color: ${props => props.active ? 'white' : 'var(--primary)'};
   }
 `;
 
@@ -348,39 +356,34 @@ const BookGrid = styled.div`
 
 const BookCard = styled.div`
   background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--border);
 
   &::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(-100%);
+    transition: 0.6s;
+  }
+
+  &:hover::before {
+    transform: translateX(100%);
   }
 
   &:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     border-color: var(--primary);
-
-    &::before {
-      transform: scaleX(1);
-    }
-  }
-
-  &:hover .book-image {
-    transform: scale(1.05);
   }
 `;
 
@@ -493,7 +496,7 @@ const OriginalPrice = styled.span`
 `;
 
 const DiscountBadge = styled.span`
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  background: #ff6b6b;
   color: white;
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-sm);
@@ -545,8 +548,7 @@ const SkeletonCard = styled.div`
 const SkeletonImage = styled.div`
   width: 100%;
   height: 200px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200px 100%;
+  background: rgba(240, 240, 240, 0.8);
   animation: ${shimmer} 1.5s infinite;
   border-radius: 12px;
   margin-bottom: 1rem;
@@ -554,8 +556,7 @@ const SkeletonImage = styled.div`
 
 const SkeletonText = styled.div`
   height: 1rem;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200px 100%;
+  background: rgba(240, 240, 240, 0.8);
   animation: ${shimmer} 1.5s infinite;
   border-radius: var(--radius-sm);
   margin-bottom: 0.5rem;
@@ -596,8 +597,14 @@ const SectionTitle = styled.h2`
   font-size: 1.8rem;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 1.5rem;
-  text-align: center;
+  margin: 0;
+`;
+
+const PopularSectionTitle = styled.h2`
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
 `;
 
 // 할인율에 따른 책 상태 반환 함수
@@ -712,6 +719,162 @@ const MOCK_BOOKS = [
   }
 ];
 
+// 인기 도서 데이터 (좋아요 수와 조회수를 기준으로 인기 도서 생성)
+const POPULAR_BOOKS = [
+  {
+    id: 101,
+    title: '컴퓨터구조론',
+    author: '홍길동',
+    category: { major: '공과대학', sub: '컴퓨터공학' },
+    price: 15000,
+    status: 'available',
+    image: '',
+    views: 250,
+    createdAt: '2024-06-20',
+    likes: 15,
+    discountRate: 10,
+    location: '교내'
+  },
+  {
+    id: 102,
+    title: '전자회로',
+    author: '이공학',
+    category: { major: '공과대학', sub: '전자전기공학' },
+    price: 18000,
+    status: 'available',
+    image: '',
+    views: 200,
+    createdAt: '2024-06-19',
+    likes: 12,
+    discountRate: 15,
+    location: '교외'
+  },
+  {
+    id: 103,
+    title: '경영학원론',
+    author: '김경영',
+    category: { major: '경영대학', sub: '' },
+    price: 12000,
+    status: 'available',
+    image: '',
+    views: 180,
+    createdAt: '2024-06-18',
+    likes: 10,
+    discountRate: 20,
+    location: '교내'
+  },
+  {
+    id: 104,
+    title: '미적분학',
+    author: '박수학',
+    category: { major: '사범대학', sub: '수학교육과' },
+    price: 14000,
+    status: 'available',
+    image: '',
+    views: 160,
+    createdAt: '2024-06-17',
+    likes: 8,
+    discountRate: 12,
+    location: '교내'
+  },
+  {
+    id: 105,
+    title: '영어회화',
+    author: '최영어',
+    category: { major: '문과대학', sub: '영어영문학과' },
+    price: 10000,
+    status: 'available',
+    image: '',
+    views: 140,
+    createdAt: '2024-06-16',
+    likes: 7,
+    discountRate: 25,
+    location: '교외'
+  },
+  {
+    id: 106,
+    title: '디자인사',
+    author: '정디자인',
+    category: { major: '미술대학', sub: '시각디자인전공' },
+    price: 16000,
+    status: 'available',
+    image: '',
+    views: 120,
+    createdAt: '2024-06-15',
+    likes: 6,
+    discountRate: 18,
+    location: '교내'
+  },
+  {
+    id: 107,
+    title: '건축학개론',
+    author: '한건축',
+    category: { major: '건축도시대학', sub: '건축학전공' },
+    price: 20000,
+    status: 'available',
+    image: '',
+    views: 110,
+    createdAt: '2024-06-14',
+    likes: 5,
+    discountRate: 8,
+    location: '교내'
+  },
+  {
+    id: 108,
+    title: '화학공학실험',
+    author: '최화학',
+    category: { major: '공과대학', sub: '화학공학' },
+    price: 18000,
+    status: 'available',
+    image: '',
+    views: 100,
+    createdAt: '2024-06-13',
+    likes: 4,
+    discountRate: 15,
+    location: '교외'
+  }
+];
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+`;
+
+const ViewMoreButton = styled.button`
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-normal);
+
+  &:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+`;
+
+const PopularBooksGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+  
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+`;
+
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: row;
@@ -733,6 +896,8 @@ const Marketplace = () => {
   const [activeSubMenu, setActiveSubMenu] = useState('booksale');
   const [filterOpen, setFilterOpen] = useState(false);
   const [locationFilter, setLocationFilter] = useState('전체');
+  const [showAllPopularBooks, setShowAllPopularBooks] = useState(false);
+  const [showAllRecentBooks, setShowAllRecentBooks] = useState(false);
   const filterRef = useRef();
   const [pendingMainCategory, setPendingMainCategory] = useState(selectedMainCategory);
   const [pendingSubCategory, setPendingSubCategory] = useState(selectedSubCategory);
@@ -897,8 +1062,12 @@ const Marketplace = () => {
     return 0;
   });
 
-  // 최근 등록된 책 리스트 (최신 5권)
-  const recentBooks = [...MOCK_BOOKS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+  // 최근 등록된 책 리스트 (6개 또는 전체)
+  const recentBooks = [...MOCK_BOOKS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const displayedRecentBooks = showAllRecentBooks ? recentBooks : recentBooks.slice(0, 6);
+
+  // 인기 도서 리스트 (6개 또는 전체)
+  const displayedPopularBooks = showAllPopularBooks ? POPULAR_BOOKS : POPULAR_BOOKS.slice(0, 6);
 
   return (
     <MarketplaceContainer>
@@ -982,10 +1151,28 @@ const Marketplace = () => {
 
           {/* 최근 등록된 책 리스트 */}
           <SectionContainer>
-            <SectionTitle>최근 등록된 책</SectionTitle>
+            <SectionHeader>
+              <SectionTitle>최근 등록된 책</SectionTitle>
+              <ViewMoreButton onClick={() => setShowAllRecentBooks(prev => !prev)}>
+                {showAllRecentBooks ? '더보기 취소' : '더보기'}
+              </ViewMoreButton>
+            </SectionHeader>
             <BookGrid>
-              {recentBooks.map(renderBookCard)}
+              {displayedRecentBooks.map(renderBookCard)}
             </BookGrid>
+          </SectionContainer>
+
+          {/* 인기 도서 리스트 */}
+          <SectionContainer>
+            <SectionHeader>
+              <PopularSectionTitle>인기 도서</PopularSectionTitle>
+              <ViewMoreButton onClick={() => setShowAllPopularBooks(prev => !prev)}>
+                {showAllPopularBooks ? '더보기 취소' : '더보기'}
+              </ViewMoreButton>
+            </SectionHeader>
+            <PopularBooksGrid>
+              {displayedPopularBooks.map(renderBookCard)}
+            </PopularBooksGrid>
           </SectionContainer>
 
           {isLoading ? (

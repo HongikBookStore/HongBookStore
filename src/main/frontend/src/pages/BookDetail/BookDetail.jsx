@@ -59,26 +59,30 @@ const ImageSection = styled.div`
   gap: 1rem;
 `;
 
-const MainImage = styled.div`
+const BookImage = styled.div`
   width: 100%;
-  max-width: 400px;
-  aspect-ratio: 1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  height: 300px;
+  background: #667eea;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 2rem;
+  margin-bottom: 20px;
+`;
+
+const BookImageLarge = styled.div`
+  width: 100%;
+  height: 400px;
+  background: #667eea;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 3rem;
-  position: relative;
-  overflow: hidden;
-  margin: 0 auto;
-`;
-
-const MainImageImg = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  margin-bottom: 20px;
 `;
 
 const ThumbnailGrid = styled.div`
@@ -493,9 +497,9 @@ const BookDetail = () => {
 
         <BookDetailGrid>
           <ImageSection>
-            <MainImage>
+            <BookImageLarge>
               <MainImageImg src={bookData.images[selectedImage]} alt={bookData.title} />
-            </MainImage>
+            </BookImageLarge>
             
             {bookData.images.length > 1 && (
               <ThumbnailGrid>

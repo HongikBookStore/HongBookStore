@@ -29,7 +29,7 @@ const SubMenuContainer = styled.div`
 `;
 
 const SubMenuButton = styled.button`
-  background: ${props => props.active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'transparent'};
+  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
   color: ${props => props.active ? 'white' : 'var(--text)'};
   border: 2px solid ${props => props.active ? 'transparent' : 'var(--border)'};
   border-radius: var(--radius-lg);
@@ -51,7 +51,7 @@ const SubMenuButton = styled.button`
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background: rgba(255, 255, 255, 0.1);
     transform: translateX(-100%);
     transition: 0.6s;
   }
@@ -66,7 +66,7 @@ const SubMenuButton = styled.button`
     ${props => !props.active && `
       border-color: var(--primary);
       color: var(--primary);
-      background: rgba(124, 58, 237, 0.05);
+      background: rgba(0, 123, 255, 0.05);
     `}
   }
 

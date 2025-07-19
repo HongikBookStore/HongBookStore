@@ -38,7 +38,7 @@ const HeroSection = styled.section`
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: var(--space-32) 0;
+  padding: var(--space-16) 0;
   position: relative;
   overflow: hidden;
   background: #fff;
@@ -111,7 +111,7 @@ const Title = styled.h1`
   font-size: clamp(3rem, 8vw, 5rem);
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
   padding-bottom: var(--space-4);
   color: var(--text-primary);
   animation: fadeInUp 1s ease-out;
@@ -133,14 +133,14 @@ const Title = styled.h1`
 
   @media (max-width: 768px) {
     font-size: clamp(2.5rem, 6vw, 3.5rem);
-    margin-bottom: var(--space-6);
+    margin-bottom: var(--space-4);
   }
 `;
 
 const Description = styled.p`
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   color: var(--text-secondary);
-  margin-bottom: var(--space-12);
+  margin-bottom: var(--space-8);
   animation: fadeInUp 1s ease-out 0.2s backwards;
   position: relative;
   line-height: 1.6;
@@ -148,7 +148,7 @@ const Description = styled.p`
 
   @media (max-width: 768px) {
     font-size: clamp(1.125rem, 3vw, 1.5rem);
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-6);
   }
 `;
 
@@ -157,11 +157,16 @@ const MainGrid = styled.div`
   justify-content: center;
   align-items: center;
   gap: 3rem;
-  margin-top: var(--space-16);
+  margin-top: var(--space-12);
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 2rem;
+    margin-top: var(--space-8);
+  }
 `;
 
 const MainCard = styled(Link)`
@@ -301,7 +306,7 @@ const Hero = () => {
       <BookIcon>📖</BookIcon>
       
       <HeroContent>
-        <Title>홍북스토어</Title>
+        <Title>홍책방</Title>
         <Description>
           홍익대학교 학생들을 위한 중고책 거래 플랫폼
         </Description>

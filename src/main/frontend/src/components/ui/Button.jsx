@@ -2,12 +2,12 @@ import styled, { css } from 'styled-components';
 
 const buttonVariants = {
   primary: css`
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    background: var(--primary);
     color: white;
     border: 1px solid var(--primary);
 
     &:hover {
-      background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+      background: var(--primary-dark);
       transform: translateY(-1px);
       box-shadow: var(--shadow-md);
     }
@@ -167,7 +167,7 @@ const StyledButton = styled.button`
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: rgba(255, 255, 255, 0.1);
     transition: var(--transition-normal);
   }
 

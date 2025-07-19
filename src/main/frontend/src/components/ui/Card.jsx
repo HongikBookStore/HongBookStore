@@ -102,7 +102,7 @@ const StyledCard = styled.div`
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      background: rgba(255, 255, 255, 0.2);
       animation: shimmer 1.5s infinite;
     }
   `}

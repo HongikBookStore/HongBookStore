@@ -4,6 +4,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useLocation } from '../../contexts/LocationContext';
 
 const UNIVCERT_API_KEY = '77ddffda-a3e8-4363-a31d-96e507f9b19c';
 const UNIVCERT_ENDPOINT = 'https://univcert.com/api/v1/certify';
@@ -592,7 +593,7 @@ const SmallButton = styled.button`
   box-shadow: none;
   outline: none;
   &:hover {
-    background: rgba(124,58,237,0.07);
+    background: rgba(0, 123, 255, 0.07);
     color: var(--primary-dark);
     border-color: var(--primary-dark);
   }
@@ -618,6 +619,8 @@ const SchoolRow = styled.div`
 const MyPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { locations, setDefaultLocation, addLocation, deleteLocation } = useLocation();
+  
   const [isVerified, setIsVerified] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -627,10 +630,6 @@ const MyPage = () => {
   const [verificationStep, setVerificationStep] = useState('email');
   const [profileImage, setProfileImage] = useState(null);
   const [isDefaultImage, setIsDefaultImage] = useState(true);
-  const [locations, setLocations] = useState([
-    { id: 1, name: 'Hongik University Main Gate', address: '94 Wausan-ro, Mapo-gu, Seoul', isDefault: true },
-    { id: 2, name: 'Hongik University Station', address: 'Exit 3, Hongik University Station', isDefault: false },
-  ]);
   const [newLocation, setNewLocation] = useState({ name: '', address: '' });
   const [showAddForm, setShowAddForm] = useState(false);
   const fileInputRef = useRef();
@@ -676,27 +675,21 @@ const MyPage = () => {
   }, [showPhotoMenu]);
 
   const handleSetDefault = (locationId) => {
-    setLocations(locations.map(loc => ({
-      ...loc,
-      isDefault: loc.id === locationId
-    })));
+    setDefaultLocation(locationId);
   };
 
   const handleDeleteLocation = (locationId) => {
-    setLocations(locations.filter(loc => loc.id !== locationId));
+    deleteLocation(locationId);
   };
 
   const handleAddLocation = () => {
     if (newLocation.name && newLocation.address) {
-      setLocations([
-        ...locations,
-        {
-          id: Date.now(),
-          name: newLocation.name,
-          address: newLocation.address,
-          isDefault: locations.length === 0
-        }
-      ]);
+      addLocation({
+        name: newLocation.name,
+        address: newLocation.address,
+        lat: 37.5519, // 기본값 (실제로는 지오코딩 API 사용)
+        lng: 126.9259
+      });
       setNewLocation({ name: '', address: '' });
       setShowAddForm(false);
     }

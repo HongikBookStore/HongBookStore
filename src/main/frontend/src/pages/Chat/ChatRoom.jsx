@@ -109,7 +109,7 @@ const HeaderRight = styled.div`
 `;
 
 const ChatMenuButton = styled.button`
-  background: ${props => props.active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'var(--surface)'};
+  background: ${props => props.active ? 'var(--primary)' : 'var(--surface)'};
   color: ${props => props.active ? 'white' : 'var(--text)'};
   border: 2px solid ${props => props.active ? 'transparent' : 'var(--border)'};
   border-radius: var(--radius-lg);
@@ -139,7 +139,7 @@ const ChatMenuButton = styled.button`
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background: rgba(255, 255, 255, 0.1);
     transform: translateX(-100%);
     transition: 0.6s;
   }
@@ -153,7 +153,7 @@ const ChatMenuButton = styled.button`
     box-shadow: var(--shadow-lg);
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(124, 58, 237, 0.05);
+    background: rgba(0, 123, 255, 0.05);
   }
 
   &:active {

@@ -23,6 +23,7 @@ import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import MapPage from './pages/Map/Map.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
+import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 
@@ -63,11 +64,12 @@ function App() {
 
     return (
         <AuthProvider>
+            <LocationProvider>
                 <WritingProvider>
                     <Router>
                         <GlobalStyles />
-                        <Header />
                         <Routes>
+<<<<<<< Updated upstream
                             <Route path="/" element={<Hero />} />
                             <Route path="/marketplace" element={<Marketplace />} />
                             <Route path="/search" element={<Search />} />
@@ -83,10 +85,103 @@ function App() {
                             <Route path="/community" element={<Community />} />
                             <Route path="/map" element={<MapPage />} />
                             <Route path="/mypage" element={<MyPage />} />
+=======
+                            <Route path="/" element={
+                                <>
+                                    <Header />
+                                    <Hero />
+                                </>
+                            } />
+                            <Route path="/marketplace" element={
+                                <>
+                                    <Header />
+                                    <Marketplace />
+                                </>
+                            } />
+                            <Route path="/search" element={
+                                <>
+                                    <Header />
+                                    <Search />
+                                </>
+                            } />
+                            <Route path="/wanted" element={
+                                <>
+                                    <Header />
+                                    <Wanted />
+                                </>
+                            } />
+                            <Route path="/wanted/write" element={
+                                <>
+                                    <Header />
+                                    <WantedWrite />
+                                </>
+                            } />
+                            <Route path="/bookstore" element={
+                                <>
+                                    <Header />
+                                    <MyBookstore />
+                                </>
+                            } />
+                            <Route path="/my-bookstore" element={
+                                <>
+                                    <Header />
+                                    <MyBookstore />
+                                </>
+                            } />
+                            <Route path="/my-transactions" element={
+                                <>
+                                    <Header />
+                                    <MyTransactions />
+                                </>
+                            } />
+                            <Route path="/bookstore/add" element={
+                                <>
+                                    <Header />
+                                    <BookWrite />
+                                </>
+                            } />
+                            <Route path="/book/:id" element={
+                                <>
+                                    <Header />
+                                    <BookDetail />
+                                </>
+                            } />
+                            <Route path="/chat" element={
+                                <>
+                                    <Header />
+                                    <ChatList />
+                                </>
+                            } />
+                            <Route path="/chat/:id" element={
+                                <>
+                                    <Header />
+                                    <ChatRoom />
+                                </>
+                            } />
+                            <Route path="/community" element={
+                                <>
+                                    <Header />
+                                    <Community />
+                                </>
+                            } />
+                            <Route path="/hongikmap" element={
+                                <>
+                                    <Header />
+                                    <MapPage />
+                                </>
+                            } />
+                            <Route path="/mypage" element={
+                                <>
+                                    <Header />
+                                    <MyPage />
+                                </>
+                            } />
+>>>>>>> Stashed changes
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
                             <Route path="/find-pw" element={<FindPw />} />
+<<<<<<< Updated upstream
                             <Route path="/ai-chat" element={<AIChatbot />} />
                             <Route path="/marketplace/:id" element={<BookDetail />} />
                             <Route path="/bookwrite/:id" element={<BookWrite />} />
@@ -95,11 +190,28 @@ function App() {
                             <Route path="/wantedwrite/:id" element={<WantedWrite />} />
                             <Route path="/oauth/callback"
                                 element={<OAuth2RedirectHandler />} />
+=======
+                            <Route path="/reset-password" element={<ResetPassword />} />
+                            <Route path="/ai-chat" element={
+                                <>
+                                    <Header />
+                                    <AIChatbot />
+                                </>
+                            } />
+                            <Route path="/marketplace/:id" element={
+                                <>
+                                    <Header />
+                                    <BookDetail />
+                                </>
+                            } />
+                            <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+>>>>>>> Stashed changes
                         </Routes>
                         <Footer />
                     </Router>
                 </WritingProvider>
-            </AuthProvider>
+            </LocationProvider>
+        </AuthProvider>
     );
 }
 

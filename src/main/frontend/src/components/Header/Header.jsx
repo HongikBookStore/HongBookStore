@@ -255,24 +255,6 @@ const NavLinkItem = styled(Link)`
     background-color: var(--primary-100);
     font-weight: 600;
   }
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 2px;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    transition: var(--transition-normal);
-    border-radius: var(--radius-full);
-  }
-
-  &:hover::after,
-  &.active::after {
-    width: 80%;
-  }
 `;
 
 const RightBox = styled.div`
@@ -312,7 +294,7 @@ const Button = styled.button`
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: rgba(255, 255, 255, 0.1);
     transition: var(--transition-normal);
   }
 
@@ -335,12 +317,12 @@ const LoginButton = styled(Button)`
 `;
 
 const RegisterButton = styled(Button)`
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--primary);
   color: white;
   border: 1px solid var(--primary);
 
   &:hover {
-    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    background: var(--primary-dark);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
   }
@@ -361,7 +343,7 @@ const UserAvatar = styled.div`
   width: 40px;
   height: 40px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
