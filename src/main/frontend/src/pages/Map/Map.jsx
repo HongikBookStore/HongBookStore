@@ -2,14 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaTrash, FaStar, FaRoute, FaClock, FaSearch, FaCamera, FaMapMarkerAlt, FaThumbsUp, FaThumbsDown, FaEdit, FaShare, FaUser, FaHeart, FaCrosshairs, FaMinus } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io';
-<<<<<<< Updated upstream
-
-// 네이버 지도 컴포넌트 placeholder (동료가 구현 예정)
-const NaverMap = () => <div style={{width: '100%', height: '100%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888'}}>NaverMap Placeholder</div>;
-=======
 import NaverMap from '../../components/NaverMap/Navermap';
 import { useLocation } from '../../contexts/LocationContext';
->>>>>>> Stashed changes
 
 const MapPage = () => {
   // LocationContext에서 사용자 위치 정보 가져오기
@@ -113,8 +107,10 @@ const MapPage = () => {
     name: '', 
     category: 'restaurant', 
     address: '', 
+    detailedAddress: '', // 세부 주소 추가
     description: '',
-    photos: []
+    photos: [],
+    coordinates: null // 좌표 정보 추가
   });
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [editingReview, setEditingReview] = useState(null);
@@ -395,14 +391,19 @@ const MapPage = () => {
 
   // 장소 추가
   const addPlace = () => {
-    if (newPlace.name.trim()) {
+    if (newPlace.name.trim() && newPlace.coordinates) {
+      // 전체 주소 구성 (좌표 + 세부 주소)
+      const fullAddress = newPlace.detailedAddress.trim() 
+        ? `${newPlace.address} - ${newPlace.detailedAddress}`
+        : newPlace.address;
+
       const place = {
         id: Date.now(),
         name: newPlace.name,
-        lat: selectedLocation ? selectedLocation.lat : 37.5665,
-        lng: selectedLocation ? selectedLocation.lng : 126.978,
+        lat: newPlace.coordinates.lat,
+        lng: newPlace.coordinates.lng,
         category: newPlace.category,
-        address: newPlace.address,
+        address: fullAddress,
         description: newPlace.description,
         rating: 0,
         photos: newPlace.photos,
@@ -414,8 +415,10 @@ const MapPage = () => {
         name: '', 
         category: 'restaurant', 
         address: '', 
+        detailedAddress: '',
         description: '',
-        photos: []
+        photos: [],
+        coordinates: null
       });
       setShowAddPlace(false);
       setShowMapAddPlace(false);
@@ -426,19 +429,48 @@ const MapPage = () => {
 
   // 지도 클릭으로 장소 추가 시작
   const startMapAddPlace = () => {
+    console.log('=== startMapAddPlace 호출됨 ===');
     setMapClickMode(true);
     setShowMapAddPlace(true);
-    console.log('지도 클릭 모드 활성화');
+    console.log('지도 클릭 모드 활성화 ✅');
+    
+    // 상태 변경 확인을 위한 타이머
+    setTimeout(() => {
+      console.log('mapClickMode 상태 확인:', mapClickMode);
+    }, 100);
   };
 
   // 지도 클릭 이벤트 처리
-  const handleMapClick = (lat, lng) => {
-    console.log('지도 클릭됨:', lat, lng, 'mapClickMode:', mapClickMode);
+  const handleMapClick = (lat, lng, address = null) => {
+    console.log('=== handleMapClick 호출됨 ===');
+    console.log('클릭 좌표:', lat, lng);
+    console.log('변환된 주소:', address);
+    console.log('mapClickMode 상태:', mapClickMode);
+    console.log('showMapAddPlace 상태:', showMapAddPlace);
+    
     if (mapClickMode) {
+      console.log('장소 추가 모드 활성화됨 - 모달 열기');
       setSelectedLocation({ lat, lng });
+      
+      // 주소가 있으면 사용하고, 없으면 좌표 표시
+      const displayAddress = address || `위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`;
+      
+      // 새로운 장소 정보 초기화 (좌표 포함)
+      setNewPlace({
+        name: '',
+        category: 'restaurant',
+        address: displayAddress,
+        detailedAddress: '',
+        description: '',
+        photos: [],
+        coordinates: { lat, lng }
+      });
+      
       setShowAddPlace(true);
       setMapClickMode(false);
-      console.log('장소 추가 모달 열림');
+      console.log('장소 추가 모달 열림 ✅');
+    } else {
+      console.log('일반 클릭 모드 - 아무 동작 없음');
     }
   };
 
@@ -635,10 +667,6 @@ const MapPage = () => {
       </Sidebar>
 
       <StyledMapContainer>
-<<<<<<< Updated upstream
-        {/* 네이버 지도 컴포넌트로 교체 예정 */}
-        <NaverMap />
-=======
         {console.log('NaverMap에 전달되는 routePath:', routePath)}
         <NaverMap 
           ref={mapRef}
@@ -682,7 +710,6 @@ const MapPage = () => {
             </ZoomButton>
           </ZoomControls>
         </MapControls>
->>>>>>> Stashed changes
       </StyledMapContainer>
 
       {/* 장소 추가 모달 */}
@@ -715,6 +742,13 @@ const MapPage = () => {
                 placeholder="주소"
                 value={newPlace.address}
                 onChange={(e) => setNewPlace({ ...newPlace, address: e.target.value })}
+                style={{ backgroundColor: '#f8f9fa', color: '#666' }}
+                readOnly
+              />
+              <Input
+                placeholder="세부 주소 (건물명, 층수, 호수 등)"
+                value={newPlace.detailedAddress}
+                onChange={(e) => setNewPlace({ ...newPlace, detailedAddress: e.target.value })}
               />
               <TextArea
                 placeholder="설명 (선택사항)"

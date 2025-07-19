@@ -303,28 +303,86 @@ const Button = styled.button`
   }
 `;
 
-const LoginButton = styled(Button)`
+const LoginButton = styled(Link)`
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  border: 1px solid var(--primary-200);
   background: transparent;
   color: var(--primary);
-  border: 1px solid var(--primary-200);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: var(--transition-normal);
+  }
 
   &:hover {
     background: var(--primary-50);
     border-color: var(--primary-300);
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--primary);
+  }
+
+  &:hover::before {
+    left: 100%;
   }
 `;
 
-const RegisterButton = styled(Button)`
+const RegisterButton = styled(Link)`
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  border: 1px solid var(--primary);
   background: var(--primary);
   color: white;
-  border: 1px solid var(--primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: var(--transition-normal);
+  }
 
   &:hover {
     background: var(--primary-dark);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
+    text-decoration: none;
+    color: white;
+  }
+
+  &:hover::before {
+    left: 100%;
   }
 `;
 

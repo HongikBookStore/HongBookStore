@@ -37,8 +37,98 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
         getMap: () => mapInstanceRef.current
     }));
 
+    // 좌표를 도로명 주소로 변환하는 함수
+    const getAddressFromCoordinates = async (lat, lng) => {
+        console.log('주소 변환 시작:', lat, lng);
+        
+        // API 키 확인
+        const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+        const clientSecret = import.meta.env.VITE_NAVER_MAP_CLIENT_SECRET;
+        
+        console.log('API 키 확인:', { clientId: !!clientId, clientSecret: !!clientSecret });
+        
+        if (!clientId || !clientSecret) {
+            console.error('API 키가 설정되지 않음 - 테스트 주소 반환');
+            // 테스트용 주소 반환
+            return `서울특별시 마포구 홍대로 ${Math.floor(Math.random() * 100) + 1} (테스트)`;
+        }
+        
+        try {
+            const url = `https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc?coords=${lng},${lat}&sourcecrs=epsg:4326&targetcrs=epsg:4326&orders=roadaddr&output=json`;
+            console.log('API 호출 URL:', url);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-NCP-APIGW-API-KEY-ID': clientId,
+                    'X-NCP-APIGW-API-KEY': clientSecret,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('API 응답 상태:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API 응답 오류:', errorText);
+                // API 실패 시 테스트 주소 반환
+                return `서울특별시 마포구 홍대로 ${Math.floor(Math.random() * 100) + 1} (API 실패)`;
+            }
+            
+            const data = await response.json();
+            console.log('주소 변환 결과:', data);
+            
+            if (data.results && data.results.length > 0) {
+                const result = data.results[0];
+                if (result.region && result.land) {
+                    const roadAddress = `${result.region.area1.name} ${result.region.area2.name} ${result.region.area3.name} ${result.land.name}`;
+                    console.log('변환된 주소:', roadAddress);
+                    return roadAddress;
+                }
+            }
+            
+            console.log('주소 변환 결과가 없음 - 테스트 주소 반환');
+            return `서울특별시 마포구 홍대로 ${Math.floor(Math.random() * 100) + 1} (결과 없음)`;
+        } catch (error) {
+            console.error('주소 변환 오류:', error);
+            // 오류 시 테스트 주소 반환
+            return `서울특별시 마포구 홍대로 ${Math.floor(Math.random() * 100) + 1} (오류)`;
+        }
+    };
+
+    // 테스트용 지도 클릭 핸들러
+    const handleTestMapClick = async (e) => {
+        console.log('테스트 지도 클릭됨!');
+        console.log('클릭 좌표:', e.clientX, e.clientY);
+        console.log('onMapClick 함수:', onMapClick);
+        console.log('mapClickMode:', mapClickMode);
+        
+        if (onMapClick) {
+            // 간단한 좌표 계산 (실제로는 지도 좌표계로 변환해야 함)
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 간단한 위도/경도 변환 (테스트용)
+            const lat = 37.5665 + (y - rect.height / 2) * 0.001;
+            const lng = 126.978 + (x - rect.width / 2) * 0.001;
+            
+            console.log('계산된 좌표:', lat, lng);
+            
+            // 주소 변환 시도
+            const address = await getAddressFromCoordinates(lat, lng);
+            onMapClick(lat, lng, address);
+        }
+    };
+
     useEffect(() => {
         console.log('Client ID:', import.meta.env.VITE_NAVER_MAP_CLIENT_ID);
+
+        // API 키가 없으면 테스트 모드로 실행
+        if (!import.meta.env.VITE_NAVER_MAP_CLIENT_ID) {
+            console.log('API 키가 없어서 테스트 모드로 실행');
+            return;
+        }
 
         const script = document.createElement('script');
         script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${import.meta.env.VITE_NAVER_MAP_CLIENT_ID}`;
@@ -65,12 +155,32 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
                 }
 
                 // 지도 클릭 이벤트 추가
-                window.naver.maps.Event.addListener(map, 'click', (e) => {
-                    console.log('지도 클릭 이벤트 발생:', e.coord.lat(), e.coord.lng());
+                window.naver.maps.Event.addListener(map, 'click', async (e) => {
+                    console.log('=== 네이버 지도 클릭 이벤트 발생 ===');
+                    console.log('클릭 좌표:', e.coord.lat(), e.coord.lng());
+                    console.log('onMapClick 함수 존재:', !!onMapClick);
+                    console.log('mapClickMode:', mapClickMode);
+                    
                     if (onMapClick) {
-                        onMapClick(e.coord.lat(), e.coord.lng());
+                        console.log('onMapClick 함수 호출');
+                        
+                        // 주소 변환 시도
+                        const address = await getAddressFromCoordinates(e.coord.lat(), e.coord.lng());
+                        onMapClick(e.coord.lat(), e.coord.lng(), address);
+                    } else {
+                        console.log('onMapClick 함수가 없음');
                     }
                 });
+
+                // 지도 로드 완료 이벤트 추가
+                window.naver.maps.Event.addListener(map, 'init', () => {
+                    console.log('지도 초기화 완료');
+                });
+
+                // 지도 클릭 모드에 따른 커서 스타일 변경
+                if (mapElement) {
+                    mapElement.style.cursor = mapClickMode ? 'crosshair' : 'grab';
+                }
 
                 console.log('네이버 지도 초기화 완료 ✅');
             } else {
@@ -404,15 +514,144 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
 
     // 지도 클릭 모드에 따른 커서 스타일 변경
     useEffect(() => {
+        console.log('mapClickMode 변경됨:', mapClickMode);
+        
         if (!mapInstanceRef.current) return;
 
         const mapElement = document.getElementById('map');
         if (mapElement) {
-            mapElement.style.cursor = mapClickMode ? 'crosshair' : 'grab';
+            const newCursor = mapClickMode ? 'crosshair' : 'grab';
+            mapElement.style.cursor = newCursor;
+            console.log('지도 커서 변경:', newCursor);
         }
     }, [mapClickMode]);
 
-    return <div id="map" ref={mapRef} style={{ width: '100%', height: '100%' }} />;
+    // API 키가 없을 때 테스트용 지도 렌더링
+    if (!import.meta.env.VITE_NAVER_MAP_CLIENT_ID) {
+        return (
+            <div 
+                id="map" 
+                ref={mapRef} 
+                style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    background: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
+                    backgroundSize: '20px 20px',
+                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                    cursor: mapClickMode ? 'crosshair' : 'pointer',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#666',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    userSelect: 'none'
+                }}
+                onClick={handleTestMapClick}
+                onMouseDown={(e) => {
+                    console.log('마우스 다운 이벤트:', e.type);
+                }}
+                onMouseUp={(e) => {
+                    console.log('마우스 업 이벤트:', e.type);
+                }}
+            >
+                {mapClickMode ? (
+                    <div 
+                        style={{
+                            background: 'rgba(255, 107, 107, 0.9)',
+                            color: 'white',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            textAlign: 'center',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            pointerEvents: 'none' // 이 div가 클릭을 방해하지 않도록
+                        }}
+                    >
+                        🗺️ 테스트 지도<br/>
+                        지도를 클릭하여 장소를 추가하세요!<br/>
+                        <small>클릭 모드 활성화됨</small>
+                    </div>
+                ) : (
+                    <div 
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.9)',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            textAlign: 'center',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            pointerEvents: 'none' // 이 div가 클릭을 방해하지 않도록
+                        }}
+                    >
+                        🗺️ 테스트 지도<br/>
+                        "지도에서 장소 추가" 버튼을 클릭하세요<br/>
+                        <small>API 키가 없어서 테스트 모드로 실행 중</small>
+                    </div>
+                )}
+                
+                {/* 클릭 테스트용 투명 오버레이 */}
+                <div 
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'transparent',
+                        zIndex: 1
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('오버레이 클릭됨!');
+                        handleTestMapClick(e);
+                    }}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <div id="map" ref={mapRef} style={{ width: '100%', height: '100%' }} />
+            
+            {/* 클릭 모드일 때 투명한 오버레이 추가 */}
+            {mapClickMode && (
+                <div 
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'transparent',
+                        cursor: 'crosshair',
+                        zIndex: 1000
+                    }}
+                    onClick={async (e) => {
+                        e.stopPropagation();
+                        console.log('=== 오버레이 클릭 이벤트 발생 ===');
+                        
+                        // 지도 좌표로 변환
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        // 간단한 좌표 변환 (실제로는 지도 좌표계 사용)
+                        const lat = 37.5665 + (y - rect.height / 2) * 0.001;
+                        const lng = 126.978 + (x - rect.width / 2) * 0.001;
+                        
+                        console.log('오버레이 클릭 좌표:', lat, lng);
+                        
+                        if (onMapClick) {
+                            // 주소 변환 시도
+                            const address = await getAddressFromCoordinates(lat, lng);
+                            onMapClick(lat, lng, address);
+                        }
+                    }}
+                />
+            )}
+        </div>
+    );
 });
 
 export default NaverMap;

@@ -69,23 +69,6 @@ function App() {
                     <Router>
                         <GlobalStyles />
                         <Routes>
-<<<<<<< Updated upstream
-                            <Route path="/" element={<Hero />} />
-                            <Route path="/marketplace" element={<Marketplace />} />
-                            <Route path="/search" element={<Search />} />
-                            <Route path="/wanted" element={<Wanted />} />
-                            <Route path="/wanted/write" element={<WantedWrite />} />
-                            <Route path="/bookstore" element={<MyBookstore />} />
-                            <Route path="/my-bookstore" element={<MyBookstore />} />
-                            <Route path="/my-transactions" element={<MyTransactions />} />
-                            <Route path="/bookstore/add" element={<BookWrite />} />
-                            <Route path="/book/:id" element={<BookDetail />} />
-                            <Route path="/chat" element={<ChatList />} />
-                            <Route path="/chat/:id" element={<ChatRoom />} />
-                            <Route path="/community" element={<Community />} />
-                            <Route path="/map" element={<MapPage />} />
-                            <Route path="/mypage" element={<MyPage />} />
-=======
                             <Route path="/" element={
                                 <>
                                     <Header />
@@ -164,7 +147,7 @@ function App() {
                                     <Community />
                                 </>
                             } />
-                            <Route path="/hongikmap" element={
+                            <Route path="/map" element={
                                 <>
                                     <Header />
                                     <MapPage />
@@ -176,22 +159,10 @@ function App() {
                                     <MyPage />
                                 </>
                             } />
->>>>>>> Stashed changes
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
                             <Route path="/find-pw" element={<FindPw />} />
-<<<<<<< Updated upstream
-                            <Route path="/ai-chat" element={<AIChatbot />} />
-                            <Route path="/marketplace/:id" element={<BookDetail />} />
-                            <Route path="/bookwrite/:id" element={<BookWrite />} />
-                            <Route path="/book-write" element={<BookWrite />} />
-                            <Route path="/wanted/:id" element={<WantedWrite />} />
-                            <Route path="/wantedwrite/:id" element={<WantedWrite />} />
-                            <Route path="/oauth/callback"
-                                element={<OAuth2RedirectHandler />} />
-=======
-                            <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/ai-chat" element={
                                 <>
                                     <Header />
@@ -204,8 +175,32 @@ function App() {
                                     <BookDetail />
                                 </>
                             } />
+                            <Route path="/bookwrite/:id" element={
+                                <>
+                                    <Header />
+                                    <BookWrite />
+                                </>
+                            } />
+                            <Route path="/book-write" element={
+                                <>
+                                    <Header />
+                                    <BookWrite />
+                                </>
+                            } />
+                            <Route path="/wanted/:id" element={
+                                <>
+                                    <Header />
+                                    <WantedWrite />
+                                </>
+                            } />
+                            <Route path="/wantedwrite/:id" element={
+                                <>
+                                    <Header />
+                                    <WantedWrite />
+                                </>
+                            } />
+                            <Route path="/oauth/callback" element={<OAuth2RedirectHandler />} />
                             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
->>>>>>> Stashed changes
                         </Routes>
                         <Footer />
                     </Router>
