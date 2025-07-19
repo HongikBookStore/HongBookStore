@@ -13,7 +13,10 @@ import {
   FaRoute,
   FaSyncAlt,
   FaCalendarAlt,
-  FaLocationArrow
+  FaLocationArrow,
+  FaRegClock,
+  FaCheckCircle,
+  FaList
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
@@ -74,15 +77,258 @@ const TransactionCard = styled.div`
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   transition: transform 0.2s;
+  cursor: pointer;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
+`;
+
+const CompactTransactionCard = styled.div`
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+`;
+
+const CompactCardContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const BookImage = styled.div`
+  width: 60px;
+  height: 80px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+`;
+
+const CompactBookInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const CompactBookTitle = styled.h4`
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0 0 6px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const CompactMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+`;
+
+const CompactMetaItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const CompactPrice = styled.div`
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #007bff;
+`;
+
+const CompactStatus = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: ${props => {
+    switch (props.status) {
+      case 'RESERVED': return '#e3f2fd';
+      case 'COMPLETED': return '#e8f5e8';
+      case 'CANCELLED': return '#ffebee';
+      default: return '#f5f5f5';
+    }
+  }};
+  color: ${props => {
+    switch (props.status) {
+      case 'RESERVED': return '#1976d2';
+      case 'COMPLETED': return '#2e7d32';
+      case 'CANCELLED': return '#d32f2f';
+      default: return '#666';
+    }
+  }};
+`;
+
+const CompactActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+const CompactActionButton = styled.button`
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &.primary {
+    background: #007bff;
+    color: white;
+    &:hover { background: #0056b3; }
+  }
+
+  &.secondary {
+    background: #6c757d;
+    color: white;
+    &:hover { background: #545b62; }
+  }
+
+  &.danger {
+    background: #dc3545;
+    color: white;
+    &:hover { background: #c82333; }
+  }
+
+  &:disabled {
+    background: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+  }
+`;
+
+const DetailModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+`;
+
+const DetailModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+`;
+
+const DetailModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const DetailModalTitle = styled.h2`
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+`;
+
+const FilterContainer = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  flex-wrap: wrap;
+`;
+
+const FilterButton = styled.button`
+  padding: 8px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 20px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &.active {
+    border-color: #007bff;
+    background: #007bff;
+    color: white;
+  }
+
+  &:hover {
+    border-color: #007bff;
+    color: #007bff;
+    
+    &.active {
+      color: white;
+    }
+  }
+`;
+
+const FilterCount = styled.span`
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
 `;
 
 const TransactionHeader = styled.div`
@@ -424,8 +670,11 @@ const MyTransactions = () => {
   const [reservation, setReservation] = useState({ place: '', date: '', time: '' });
   const [editReservationId, setEditReservationId] = useState(null);
   const [editReservation, setEditReservation] = useState({ place: '', date: '', time: '' });
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('reserved'); // 'reserved', 'completed', 'all'
 
-  // 임시 데이터 - 예약된 거래
+  // 임시 데이터 - 예약된 거래 + 완료된 거래
   const mockTransactions = [
     {
       id: 1,
@@ -434,6 +683,7 @@ const MyTransactions = () => {
       price: 15000,
       reservationDate: '2024-01-20',
       reservationTime: '14:00',
+      completedDate: null,
       buyer: '김학생',
       buyerId: 'buyer123',
       location: {
@@ -464,6 +714,7 @@ const MyTransactions = () => {
       price: 20000,
       reservationDate: '2024-01-22',
       reservationTime: '16:30',
+      completedDate: null,
       buyer: '이학생',
       buyerId: 'buyer456',
       location: {
@@ -494,6 +745,7 @@ const MyTransactions = () => {
       price: 18000,
       reservationDate: '2024-01-25',
       reservationTime: '13:00',
+      completedDate: null,
       buyer: '박학생',
       buyerId: 'buyer789',
       location: {
@@ -515,6 +767,76 @@ const MyTransactions = () => {
         rating: 'good',
         ratingScore: 75,
         ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요']
+      }
+    },
+    {
+      id: 4,
+      bookTitle: '리액트를 다루는 기술',
+      bookAuthor: '김민준',
+      price: 25000,
+      reservationDate: '2024-01-15',
+      reservationTime: '15:00',
+      completedDate: '2024-01-15',
+      buyer: '최학생',
+      buyerId: 'buyer101',
+      location: {
+        name: '홍익대학교 학생회관',
+        address: '서울특별시 마포구 와우산로 94 홍익대학교 학생회관',
+        coordinates: { lat: 37.5519, lng: 126.9259 }
+      },
+      qrCode: 'transaction_004_qr_code_data',
+      route: {
+        type: '도보',
+        description: '홍대입구역에서 도보로 이동',
+        duration: '8분',
+        distance: '0.8km'
+      },
+      status: 'COMPLETED',
+      reason: '',
+      myReview: {
+        rating: 'best',
+        ratingScore: 100,
+        ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요', '친절해요']
+      },
+      theirReview: {
+        rating: 'good',
+        ratingScore: 75,
+        ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요']
+      }
+    },
+    {
+      id: 5,
+      bookTitle: 'Node.js 교과서',
+      bookAuthor: '조현영',
+      price: 22000,
+      reservationDate: '2024-01-10',
+      reservationTime: '14:30',
+      completedDate: '2024-01-10',
+      buyer: '정학생',
+      buyerId: 'buyer202',
+      location: {
+        name: '홍익대학교 정문',
+        address: '서울특별시 마포구 와우산로 94',
+        coordinates: { lat: 37.5519, lng: 126.9259 }
+      },
+      qrCode: 'transaction_005_qr_code_data',
+      route: {
+        type: '지하철',
+        description: '2호선 홍대입구역 1번 출구에서 도보 5분',
+        duration: '15분',
+        distance: '1.2km'
+      },
+      status: 'COMPLETED',
+      reason: '',
+      myReview: {
+        rating: 'good',
+        ratingScore: 75,
+        ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요']
+      },
+      theirReview: {
+        rating: 'best',
+        ratingScore: 100,
+        ratingKeywords: ['약속 시간을 잘 지켜요', '친절해요', '가격 협상이 원활해요']
       }
     }
   ];
@@ -566,13 +888,56 @@ const MyTransactions = () => {
   // 기존 핸들러에서 모달로 변경
   const handleCancelReservation = (transactionId) => { openReasonModal('reserve-cancel', transactionId); };
 
-  // 예약 가까운 순서대로 정렬
-  const activeTransactions = (transactions.length > 0 ? transactions : mockTransactions).filter(t => t.status === 'RESERVED');
-  const sortedTransactions = activeTransactions.sort((a, b) => {
-    const dateA = new Date(`${a.reservationDate} ${a.reservationTime}`);
-    const dateB = new Date(`${b.reservationDate} ${b.reservationTime}`);
-    return dateA - dateB;
-  });
+  // 필터링 및 정렬 로직
+  const allTransactions = transactions.length > 0 ? transactions : mockTransactions;
+  
+  const getFilteredTransactions = () => {
+    let filtered = [];
+    
+    switch (activeFilter) {
+      case 'reserved':
+        filtered = allTransactions.filter(t => t.status === 'RESERVED');
+        // 예약된 거래: 가까운 거래 일자 순으로 정렬
+        return filtered.sort((a, b) => {
+          const dateA = new Date(`${a.reservationDate} ${a.reservationTime}`);
+          const dateB = new Date(`${b.reservationDate} ${b.reservationTime}`);
+          return dateA - dateB;
+        });
+      case 'completed':
+        filtered = allTransactions.filter(t => t.status === 'COMPLETED');
+        // 완료된 거래: 최근 거래한 일자 순으로 정렬
+        return filtered.sort((a, b) => {
+          const dateA = new Date(a.completedDate);
+          const dateB = new Date(b.completedDate);
+          return dateB - dateA; // 최신순
+        });
+      case 'all':
+        // 전체 거래: 예약된 거래는 예약일순, 완료된 거래는 완료일순
+        const reserved = allTransactions.filter(t => t.status === 'RESERVED').sort((a, b) => {
+          const dateA = new Date(`${a.reservationDate} ${a.reservationTime}`);
+          const dateB = new Date(`${b.reservationDate} ${b.reservationTime}`);
+          return dateA - dateB;
+        });
+        const completed = allTransactions.filter(t => t.status === 'COMPLETED').sort((a, b) => {
+          const dateA = new Date(a.completedDate);
+          const dateB = new Date(b.completedDate);
+          return dateB - dateA;
+        });
+        return [...reserved, ...completed];
+      default:
+        return filtered;
+    }
+  };
+
+  const sortedTransactions = getFilteredTransactions();
+  
+  // 필터별 개수 계산
+  const getFilterCounts = () => {
+    const reserved = allTransactions.filter(t => t.status === 'RESERVED').length;
+    const completed = allTransactions.filter(t => t.status === 'COMPLETED').length;
+    const all = allTransactions.length;
+    return { reserved, completed, all };
+  };
 
   // 평가 모달 열기/닫기
   const openRatingModal = (transactionId) => {
@@ -683,6 +1048,16 @@ const MyTransactions = () => {
     setEditReservationId(null);
   };
 
+  const openDetailModal = (transaction) => {
+    setSelectedTransaction(transaction);
+    setShowDetailModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setSelectedTransaction(null);
+    setShowDetailModal(false);
+  };
+
   return (
     <>
       <div className="header-spacer" />
@@ -694,144 +1069,115 @@ const MyTransactions = () => {
           <PageTitle>나의 거래</PageTitle>
         </Header>
 
+        <FilterContainer>
+          <FilterButton 
+            className={activeFilter === 'reserved' ? 'active' : ''}
+            onClick={() => setActiveFilter('reserved')}
+          >
+            <FaRegClock />
+            예약된 거래
+            <FilterCount>{getFilterCounts().reserved}</FilterCount>
+          </FilterButton>
+          <FilterButton 
+            className={activeFilter === 'completed' ? 'active' : ''}
+            onClick={() => setActiveFilter('completed')}
+          >
+            <FaCheckCircle />
+            완료된 거래
+            <FilterCount>{getFilterCounts().completed}</FilterCount>
+          </FilterButton>
+          <FilterButton 
+            className={activeFilter === 'all' ? 'active' : ''}
+            onClick={() => setActiveFilter('all')}
+          >
+            <FaList />
+            전체 거래
+            <FilterCount>{getFilterCounts().all}</FilterCount>
+          </FilterButton>
+        </FilterContainer>
+
         {sortedTransactions.length > 0 ? (
           sortedTransactions.map(transaction => (
-            <TransactionCard key={transaction.id}>
-              <TransactionHeader>
-                <BookInfo>
-                  <BookTitle>{transaction.bookTitle}</BookTitle>
-                  <TransactionMeta>
-                    <MetaItem>
+            <CompactTransactionCard key={transaction.id} onClick={() => openDetailModal(transaction)}>
+              <CompactCardContent>
+                <BookImage>
+                  <FaBook size={24} />
+                </BookImage>
+                <CompactBookInfo>
+                  <CompactBookTitle>{transaction.bookTitle}</CompactBookTitle>
+                  <CompactMeta>
+                    <CompactMetaItem>
                       <FaUser />
-                      구매자: {transaction.buyer}
-                    </MetaItem>
-                    <MetaItem>
+                      {transaction.buyer}
+                    </CompactMetaItem>
+                    <CompactMetaItem>
                       <FaCalendarAlt />
-                      예약일: {transaction.reservationDate}
-                    </MetaItem>
-                    <MetaItem>
+                      {transaction.status === 'COMPLETED' ? transaction.completedDate : transaction.reservationDate}
+                    </CompactMetaItem>
+                    <CompactMetaItem>
                       <FaClock />
-                      예약시간: {transaction.reservationTime}
-                    </MetaItem>
-                  </TransactionMeta>
-                  <Price>{transaction.price.toLocaleString()}원</Price>
-                </BookInfo>
-              </TransactionHeader>
-
-              <TransactionContent>
-                <QRCodeSection style={transaction.myReview ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
-                  <QRCodeTitle>
-                    <FaQrcode /> 결제 QR 코드
-                  </QRCodeTitle>
-                  <QRCodeContainer>
-                    <QRCode value={transaction.qrCode} size={120} />
-                  </QRCodeContainer>
-                  <RegenerateButton onClick={() => regenerateQRCode(transaction.id)} disabled={!!transaction.myReview}>
-                    <FaSyncAlt /> QR 코드 재생성
-                  </RegenerateButton>
-                  {transaction.myReview && (
-                    <div style={{color:'#dc3545', marginTop:8, fontWeight:500, fontSize:'0.97rem'}}>
-                      거래가 완료되어 QR코드를 사용할 수 없습니다
-                    </div>
-                  )}
-                </QRCodeSection>
-
-                <RouteSection>
-                  <RouteTitle>
-                    <FaRoute /> 약속 장소 경로
-                  </RouteTitle>
-                  <LocationInfo>
-                    <LocationName>{transaction.location.name}</LocationName>
-                    <LocationAddress>{transaction.location.address}</LocationAddress>
-                  </LocationInfo>
-                  <RouteInfo>
-                    <RouteIcon>
-                      {transaction.route.type === '지하철' && <FaRoute />}
-                      {transaction.route.type === '버스' && <FaRoute />}
-                      {transaction.route.type === '도보' && <FaLocationArrow />}
-                    </RouteIcon>
-                    <RouteDetails>
-                      <RouteType>{transaction.route.type}</RouteType>
-                      <RouteDescription>{transaction.route.description}</RouteDescription>
-                    </RouteDetails>
-                    <RouteTime>{transaction.route.duration}</RouteTime>
-                  </RouteInfo>
-                </RouteSection>
-              </TransactionContent>
-
-              <ActionButtons>
-                <ActionButton 
-                  className="reserve-cancel"
-                  onClick={() => handleCancelReservation(transaction.id)}
-                >
-                  <FaTimes /> 예약 취소
-                </ActionButton>
-                <ActionButton 
-                  className="complete"
-                  onClick={() => handleCompleteTransaction(transaction.id)}
-                  disabled={!!transaction.myReview}
-                >
-                  <FaCheck /> {transaction.myReview ? '거래 후기' : '거래 완료'}
-                </ActionButton>
-                <ActionButton 
-                  className="chat"
+                      {transaction.status === 'COMPLETED' ? '완료' : transaction.reservationTime}
+                    </CompactMetaItem>
+                  </CompactMeta>
+                  <CompactPrice>{transaction.price.toLocaleString()}원</CompactPrice>
+                </CompactBookInfo>
+                <CompactStatus status={transaction.status}>
+                  {transaction.status === 'RESERVED' && '예약됨'}
+                  {transaction.status === 'COMPLETED' && '완료'}
+                  {transaction.status === 'CANCELLED' && '취소됨'}
+                </CompactStatus>
+              </CompactCardContent>
+              <CompactActions onClick={(e) => e.stopPropagation()}>
+                <CompactActionButton 
+                  className="primary"
                   onClick={() => navigate(`/chat/${transaction.buyerId}`)}
                 >
-                  <FaUser /> 채팅방으로 가기
-                </ActionButton>
-              </ActionButtons>
-
-              {transaction.reason && (
-                <div style={{background:'#fff3cd', color:'#856404', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
-                  <b>취소/예약취소 사유:</b> {transaction.reason}
-                </div>
-              )}
-
-              {transaction.rating && (
-                <div style={{background:'#e6f0ff', color:'#007bff', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
-                  <b>평가:</b> {ratingOptions.find(r => r.value === transaction.rating)?.label} ({transaction.ratingScore}점)
-                  {transaction.ratingKeywords && transaction.ratingKeywords.length > 0 && (
-                    <div style={{marginTop:6, fontSize:'0.96rem'}}>
-                      <b>키워드:</b> {transaction.ratingKeywords.join(', ')}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 예약 정보 표시 및 수정 */}
-              {editReservationId === transaction.id ? (
-                <TransactionReservationForm onSubmit={e => handleEditReservationSave(transaction.id, e)}>
-                  <TransactionReservationLabel>거래 장소</TransactionReservationLabel>
-                  <TransactionReservationInput name="place" value={editReservation.place} onChange={handleEditReservationChange} placeholder="거래 장소를 입력하세요" />
-                  <TransactionReservationLabel>예약 일자</TransactionReservationLabel>
-                  <TransactionReservationInput name="date" value={editReservation.date} onChange={handleEditReservationChange} placeholder="예: 2024-07-01" type="date" />
-                  <TransactionReservationLabel>예약 시간</TransactionReservationLabel>
-                  <TransactionReservationInput name="time" value={editReservation.time} onChange={handleEditReservationChange} placeholder="예: 14:00" type="time" />
-                  <div style={{display:'flex', gap:'0.5rem', marginTop:'0.5rem'}}>
-                    <TransactionReservationSaveBtn type="submit">저장</TransactionReservationSaveBtn>
-                    <TransactionReservationSaveBtn type="button" style={{background:'#ccc', color:'#333'}} onClick={handleEditReservationCancel}>취소</TransactionReservationSaveBtn>
-                  </div>
-                </TransactionReservationForm>
-              ) : (
-                <div style={{margin:'0.7rem 0 1.2rem 0', background:'#f8f9fa', borderRadius:'10px', padding:'14px 16px'}}>
-                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>거래 장소</div>
-                  <div style={{marginBottom:'0.3rem'}}>{transaction.location?.name || '-'}</div>
-                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 일자</div>
-                  <div style={{marginBottom:'0.3rem'}}>{transaction.reservationDate || '-'}</div>
-                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 시간</div>
-                  <div style={{marginBottom:'0.3rem'}}>{transaction.reservationTime || '-'}</div>
-                  <TransactionReservationSaveBtn type="button" onClick={() => handleEditReservationClick(transaction)} style={{marginTop:'0.7rem'}}>예약 정보 수정</TransactionReservationSaveBtn>
-                </div>
-              )}
-            </TransactionCard>
+                  <FaUser /> 채팅
+                </CompactActionButton>
+                {transaction.status === 'RESERVED' ? (
+                  <>
+                    <CompactActionButton 
+                      className="secondary"
+                      onClick={() => handleCompleteTransaction(transaction.id)}
+                      disabled={!!transaction.myReview}
+                    >
+                      <FaCheck /> {transaction.myReview ? '후기' : '완료'}
+                    </CompactActionButton>
+                    <CompactActionButton 
+                      className="danger"
+                      onClick={() => handleCancelReservation(transaction.id)}
+                    >
+                      <FaTimes /> 취소
+                    </CompactActionButton>
+                  </>
+                ) : (
+                  <CompactActionButton 
+                    className="secondary"
+                    onClick={() => handleCompleteTransaction(transaction.id)}
+                  >
+                    <FaCheck /> 후기
+                  </CompactActionButton>
+                )}
+              </CompactActions>
+            </CompactTransactionCard>
           ))
         ) : (
           <EmptyState>
             <EmptyIcon>
-              <FaQrcode />
+              {activeFilter === 'reserved' && <FaRegClock />}
+              {activeFilter === 'completed' && <FaCheckCircle />}
+              {activeFilter === 'all' && <FaList />}
             </EmptyIcon>
-            <h3>예약된 거래가 없습니다</h3>
-            <p>채팅방에서 예약을 진행하면 여기서 확인할 수 있습니다.</p>
+            <h3>
+              {activeFilter === 'reserved' && '예약된 거래가 없습니다'}
+              {activeFilter === 'completed' && '완료된 거래가 없습니다'}
+              {activeFilter === 'all' && '거래 내역이 없습니다'}
+            </h3>
+            <p>
+              {activeFilter === 'reserved' && '채팅방에서 예약을 진행하면 여기서 확인할 수 있습니다.'}
+              {activeFilter === 'completed' && '거래를 완료하면 여기서 확인할 수 있습니다.'}
+              {activeFilter === 'all' && '채팅방에서 거래를 진행하면 여기서 확인할 수 있습니다.'}
+            </p>
           </EmptyState>
         )}
       </TransactionsContainer>
@@ -911,6 +1257,147 @@ const MyTransactions = () => {
             </ModalActions>
           </RatingModalBox>
         </ModalOverlay>
+      )}
+
+      {/* 상세 보기 모달 */}
+      {showDetailModal && selectedTransaction && (
+        <DetailModal onClick={closeDetailModal}>
+          <DetailModalContent onClick={(e) => e.stopPropagation()}>
+            <DetailModalHeader>
+              <DetailModalTitle>거래 상세 정보</DetailModalTitle>
+              <CloseButton onClick={closeDetailModal}>×</CloseButton>
+            </DetailModalHeader>
+            
+            <TransactionCard>
+              <TransactionHeader>
+                <BookInfo>
+                  <BookTitle>{selectedTransaction.bookTitle}</BookTitle>
+                  <TransactionMeta>
+                    <MetaItem>
+                      <FaUser />
+                      구매자: {selectedTransaction.buyer}
+                    </MetaItem>
+                    <MetaItem>
+                      <FaCalendarAlt />
+                      예약일: {selectedTransaction.reservationDate}
+                    </MetaItem>
+                    <MetaItem>
+                      <FaClock />
+                      예약시간: {selectedTransaction.reservationTime}
+                    </MetaItem>
+                  </TransactionMeta>
+                  <Price>{selectedTransaction.price.toLocaleString()}원</Price>
+                </BookInfo>
+              </TransactionHeader>
+
+              <TransactionContent>
+                <QRCodeSection style={selectedTransaction.myReview ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
+                  <QRCodeTitle>
+                    <FaQrcode /> 결제 QR 코드
+                  </QRCodeTitle>
+                  <QRCodeContainer>
+                    <QRCode value={selectedTransaction.qrCode} size={120} />
+                  </QRCodeContainer>
+                  <RegenerateButton onClick={() => regenerateQRCode(selectedTransaction.id)} disabled={!!selectedTransaction.myReview}>
+                    <FaSyncAlt /> QR 코드 재생성
+                  </RegenerateButton>
+                  {selectedTransaction.myReview && (
+                    <div style={{color:'#dc3545', marginTop:8, fontWeight:500, fontSize:'0.97rem'}}>
+                      거래가 완료되어 QR코드를 사용할 수 없습니다
+                    </div>
+                  )}
+                </QRCodeSection>
+
+                <RouteSection>
+                  <RouteTitle>
+                    <FaRoute /> 약속 장소 경로
+                  </RouteTitle>
+                  <LocationInfo>
+                    <LocationName>{selectedTransaction.location.name}</LocationName>
+                    <LocationAddress>{selectedTransaction.location.address}</LocationAddress>
+                  </LocationInfo>
+                  <RouteInfo>
+                    <RouteIcon>
+                      {selectedTransaction.route.type === '지하철' && <FaRoute />}
+                      {selectedTransaction.route.type === '버스' && <FaRoute />}
+                      {selectedTransaction.route.type === '도보' && <FaLocationArrow />}
+                    </RouteIcon>
+                    <RouteDetails>
+                      <RouteType>{selectedTransaction.route.type}</RouteType>
+                      <RouteDescription>{selectedTransaction.route.description}</RouteDescription>
+                    </RouteDetails>
+                    <RouteTime>{selectedTransaction.route.duration}</RouteTime>
+                  </RouteInfo>
+                </RouteSection>
+              </TransactionContent>
+
+              <ActionButtons>
+                <ActionButton 
+                  className="reserve-cancel"
+                  onClick={() => handleCancelReservation(selectedTransaction.id)}
+                >
+                  <FaTimes /> 예약 취소
+                </ActionButton>
+                <ActionButton 
+                  className="complete"
+                  onClick={() => handleCompleteTransaction(selectedTransaction.id)}
+                  disabled={!!selectedTransaction.myReview}
+                >
+                  <FaCheck /> {selectedTransaction.myReview ? '거래 후기' : '거래 완료'}
+                </ActionButton>
+                <ActionButton 
+                  className="chat"
+                  onClick={() => navigate(`/chat/${selectedTransaction.buyerId}`)}
+                >
+                  <FaUser /> 채팅방으로 가기
+                </ActionButton>
+              </ActionButtons>
+
+              {selectedTransaction.reason && (
+                <div style={{background:'#fff3cd', color:'#856404', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
+                  <b>취소/예약취소 사유:</b> {selectedTransaction.reason}
+                </div>
+              )}
+
+              {selectedTransaction.rating && (
+                <div style={{background:'#e6f0ff', color:'#007bff', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
+                  <b>평가:</b> {ratingOptions.find(r => r.value === selectedTransaction.rating)?.label} ({selectedTransaction.ratingScore}점)
+                  {selectedTransaction.ratingKeywords && selectedTransaction.ratingKeywords.length > 0 && (
+                    <div style={{marginTop:6, fontSize:'0.96rem'}}>
+                      <b>키워드:</b> {selectedTransaction.ratingKeywords.join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 예약 정보 표시 및 수정 */}
+              {editReservationId === selectedTransaction.id ? (
+                <TransactionReservationForm onSubmit={e => handleEditReservationSave(selectedTransaction.id, e)}>
+                  <TransactionReservationLabel>거래 장소</TransactionReservationLabel>
+                  <TransactionReservationInput name="place" value={editReservation.place} onChange={handleEditReservationChange} placeholder="거래 장소를 입력하세요" />
+                  <TransactionReservationLabel>예약 일자</TransactionReservationLabel>
+                  <TransactionReservationInput name="date" value={editReservation.date} onChange={handleEditReservationChange} placeholder="예: 2024-07-01" type="date" />
+                  <TransactionReservationLabel>예약 시간</TransactionReservationLabel>
+                  <TransactionReservationInput name="time" value={editReservation.time} onChange={handleEditReservationChange} placeholder="예: 14:00" type="time" />
+                  <div style={{display:'flex', gap:'0.5rem', marginTop:'0.5rem'}}>
+                    <TransactionReservationSaveBtn type="submit">저장</TransactionReservationSaveBtn>
+                    <TransactionReservationSaveBtn type="button" style={{background:'#ccc', color:'#333'}} onClick={handleEditReservationCancel}>취소</TransactionReservationSaveBtn>
+                  </div>
+                </TransactionReservationForm>
+              ) : (
+                <div style={{margin:'0.7rem 0 1.2rem 0', background:'#f8f9fa', borderRadius:'10px', padding:'14px 16px'}}>
+                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>거래 장소</div>
+                  <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.location?.name || '-'}</div>
+                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 일자</div>
+                  <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.reservationDate || '-'}</div>
+                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 시간</div>
+                  <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.reservationTime || '-'}</div>
+                  <TransactionReservationSaveBtn type="button" onClick={() => handleEditReservationClick(selectedTransaction)} style={{marginTop:'0.7rem'}}>예약 정보 수정</TransactionReservationSaveBtn>
+                </div>
+              )}
+            </TransactionCard>
+          </DetailModalContent>
+        </DetailModal>
       )}
     </>
   );

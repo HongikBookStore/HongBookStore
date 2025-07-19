@@ -37,17 +37,17 @@ const MapPage = () => {
       category: 'bookstore',
       rating: 4.5,
       address: '서울 마포구 홍대로 123',
-      photos: [],
+      photos: ['https://via.placeholder.com/300x200/FF6B6B/FFFFFF?text=서점'],
       createdBy: 1,
       reviews: [
         { 
           id: 1, 
           rating: 5, 
-          comment: '책이 정말 많아요!', 
+          comment: '책이 정말 많아요! 특히 프로그래밍 서적이 잘 정리되어 있어서 좋습니다.', 
           author: '김철수', 
           authorId: 2,
           date: '2024-01-15',
-          likes: 3,
+          likes: 8,
           dislikes: 0,
           userLiked: false,
           userDisliked: false
@@ -55,11 +55,11 @@ const MapPage = () => {
         { 
           id: 2, 
           rating: 4, 
-          comment: '좋은 분위기입니다.', 
+          comment: '좋은 분위기입니다. 조용해서 공부하기 좋아요.', 
           author: '이영희', 
           authorId: 3,
           date: '2024-01-10',
-          likes: 1,
+          likes: 5,
           dislikes: 0,
           userLiked: false,
           userDisliked: false
@@ -74,17 +74,166 @@ const MapPage = () => {
       category: 'cafe',
       rating: 4.2,
       address: '서울 마포구 홍대로 456',
-      photos: [],
+      photos: ['https://via.placeholder.com/300x200/4ECDC4/FFFFFF?text=카페'],
       createdBy: 1,
       reviews: [
         { 
           id: 3, 
           rating: 4, 
-          comment: '커피가 맛있어요', 
+          comment: '커피가 맛있어요! 아메리카노가 특히 좋습니다.', 
           author: '박민수', 
           authorId: 4,
           date: '2024-01-12',
-          likes: 2,
+          likes: 6,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        }
+      ]
+    },
+    {
+      id: 3,
+      name: '홍대 도서관',
+      lat: 37.5565,
+      lng: 126.9240,
+      category: 'library',
+      rating: 4.8,
+      address: '서울 마포구 홍대로 789',
+      photos: ['https://via.placeholder.com/300x200/96CEB4/FFFFFF?text=도서관'],
+      createdBy: 1,
+      reviews: [
+        { 
+          id: 4, 
+          rating: 5, 
+          comment: '시설이 깔끔하고 책이 정말 많아요! 공부하기 최고입니다.', 
+          author: '최지영', 
+          authorId: 5,
+          date: '2024-01-08',
+          likes: 12,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        },
+        { 
+          id: 5, 
+          rating: 4, 
+          comment: '좋은 분위기이고 직원들이 친절해요.', 
+          author: '정민호', 
+          authorId: 6,
+          date: '2024-01-05',
+          likes: 7,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        }
+      ]
+    },
+    {
+      id: 4,
+      name: '홍대 인쇄소',
+      lat: 37.5590,
+      lng: 126.9270,
+      category: 'print',
+      rating: 4.0,
+      address: '서울 마포구 홍대로 101',
+      photos: ['https://via.placeholder.com/300x200/A8E6CF/FFFFFF?text=인쇄소'],
+      createdBy: 1,
+      reviews: [
+        { 
+          id: 6, 
+          rating: 4, 
+          comment: '가격이 합리적이고 품질이 좋아요. 과제 인쇄하기 좋습니다.', 
+          author: '김서연', 
+          authorId: 7,
+          date: '2024-01-14',
+          likes: 4,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        }
+      ]
+    },
+    {
+      id: 5,
+      name: '홍대 공원',
+      lat: 37.5555,
+      lng: 126.9230,
+      category: 'park',
+      rating: 4.3,
+      address: '서울 마포구 홍대로 202',
+      photos: ['https://via.placeholder.com/300x200/FFEAA7/FFFFFF?text=공원'],
+      createdBy: 1,
+      reviews: [
+        { 
+          id: 7, 
+          rating: 4, 
+          comment: '산책하기 좋고 분위기가 평화로워요. 휴식하기 좋습니다.', 
+          author: '이준호', 
+          authorId: 8,
+          date: '2024-01-11',
+          likes: 9,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        }
+      ]
+    },
+    {
+      id: 6,
+      name: '홍대 맛집',
+      lat: 37.5570,
+      lng: 126.9280,
+      category: 'restaurant',
+      rating: 4.6,
+      address: '서울 마포구 홍대로 303',
+      photos: ['https://via.placeholder.com/300x200/FF6B6B/FFFFFF?text=맛집'],
+      createdBy: 1,
+      reviews: [
+        { 
+          id: 8, 
+          rating: 5, 
+          comment: '음식이 정말 맛있어요! 특히 파스타가 최고입니다.', 
+          author: '김미영', 
+          authorId: 9,
+          date: '2024-01-13',
+          likes: 15,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        },
+        { 
+          id: 9, 
+          rating: 4, 
+          comment: '분위기도 좋고 서비스도 친절해요.', 
+          author: '박지훈', 
+          authorId: 10,
+          date: '2024-01-09',
+          likes: 8,
+          dislikes: 0,
+          userLiked: false,
+          userDisliked: false
+        }
+      ]
+    },
+    {
+      id: 7,
+      name: '홍대 제휴 서점',
+      lat: 37.5585,
+      lng: 126.9245,
+      category: 'partner',
+      rating: 4.4,
+      address: '서울 마포구 홍대로 404',
+      photos: ['https://via.placeholder.com/300x200/FFB3BA/FFFFFF?text=제휴서점'],
+      createdBy: 1,
+      reviews: [
+        { 
+          id: 10, 
+          rating: 4, 
+          comment: '학생 할인이 있어서 좋아요! 책도 다양하게 구비되어 있습니다.', 
+          author: '최수진', 
+          authorId: 11,
+          date: '2024-01-16',
+          likes: 11,
           dislikes: 0,
           userLiked: false,
           userDisliked: false
@@ -122,6 +271,7 @@ const MapPage = () => {
   const [routePath, setRoutePath] = useState(null); // State for route path coordinates
   const [currentZoom, setCurrentZoom] = useState(16); // Current zoom level
   const [isDragging, setIsDragging] = useState(false); // Slider drag state
+  const [showMyLocation, setShowMyLocation] = useState(false); // 내 위치 표시 상태
 
   // 카테고리별 장소 필터링 + 검색
   const filteredPlaces = places.filter(place => {
@@ -130,6 +280,11 @@ const MapPage = () => {
       place.name.toLowerCase().includes(searchQuery.toLowerCase());
     return categoryMatch && searchMatch;
   });
+
+  // 선택된 카테고리의 장소들만 지도에 표시
+  const mapPlaces = selectedCategory === 'all' ? 
+    filteredPlaces : 
+    places.filter(place => place.category === selectedCategory);
 
   // 선택된 카테고리의 기존 장소들
   const existingPlacesInCategory = places.filter(place => 
@@ -177,6 +332,24 @@ const MapPage = () => {
     searchPlaces(searchQuery);
   }, [searchQuery]);
 
+  // 두 지점 간의 거리와 시간 계산
+  const calculateDistanceAndTime = (lat1, lng1, lat2, lng2) => {
+    // Haversine 공식을 사용한 정확한 거리 계산
+    const R = 6371000; // 지구 반지름 (미터)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c; // 미터 단위
+
+    // 예상 시간 계산 (도보 기준: 분당 80m)
+    const timeMinutes = Math.round(distance / 80);
+    
+    return { distance, timeMinutes };
+  };
+
   // 경로 정보 가져오기 (실제로는 네이버 지도 API 사용)
   const getRouteInfo = (destination) => {
     console.log('getRouteInfo 호출됨:', destination);
@@ -188,14 +361,9 @@ const MapPage = () => {
       return;
     }
 
-    // 거리 계산 (간단한 유클리드 거리)
-    const distance = Math.sqrt(
-      Math.pow(destination.lat - currentLoc.lat, 2) + 
-      Math.pow(destination.lng - currentLoc.lng, 2)
-    ) * 111000; // 대략적인 미터 단위
-
-    // 예상 시간 계산 (도보 기준)
-    const timeMinutes = Math.round(distance / 80); // 분당 80m
+    const { distance, timeMinutes } = calculateDistanceAndTime(
+      currentLoc.lat, currentLoc.lng, destination.lat, destination.lng
+    );
 
     const routeData = {
       distance: `${Math.round(distance)}m`,
@@ -263,6 +431,9 @@ const MapPage = () => {
     if (mapRef.current) {
       mapRef.current.moveToLocation(currentLoc.lat, currentLoc.lng, 16);
     }
+    
+    // 내 위치 표시 토글
+    setShowMyLocation(prev => !prev);
   };
 
   // 지도 확대
@@ -569,6 +740,49 @@ const MapPage = () => {
     })));
   };
 
+  // 검색 결과 클릭 핸들러
+  const handleSearchResultClick = (place) => {
+    setShowSearchResults(false);
+    setSearchQuery('');
+    setShowPlaceDetail(place);
+    
+    // 지도에서 해당 장소로 이동
+    if (mapRef.current && mapRef.current.moveToLocation) {
+      mapRef.current.moveToLocation(place.lat, place.lng);
+    }
+  };
+
+  // 검색 결과 닫기
+  const closeSearchResults = () => {
+    setShowSearchResults(false);
+    setSearchQuery('');
+  };
+
+  // 검색어 변경 시 검색 결과 표시
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setShowSearchResults(true);
+    } else {
+      setShowSearchResults(false);
+    }
+  }, [searchQuery]);
+
+  // 카테고리 변경 시 지도 이동
+  useEffect(() => {
+    if (selectedCategory !== 'all' && mapPlaces.length > 0 && mapRef.current) {
+      // 선택된 카테고리의 모든 장소들의 중심점 계산
+      const totalLat = mapPlaces.reduce((sum, place) => sum + place.lat, 0);
+      const totalLng = mapPlaces.reduce((sum, place) => sum + place.lng, 0);
+      const centerLat = totalLat / mapPlaces.length;
+      const centerLng = totalLng / mapPlaces.length;
+      
+      // 지도를 해당 위치로 이동 (애니메이션과 함께)
+      setTimeout(() => {
+        mapRef.current.moveToLocation(centerLat, centerLng, 15);
+      }, 100);
+    }
+  }, [selectedCategory, mapPlaces]);
+
   return (
     <MapPageContainer>
       <Sidebar>
@@ -595,49 +809,44 @@ const MapPage = () => {
               active={selectedCategory === 'all'}
               onClick={() => setSelectedCategory('all')}
             >
-              전체
+              <span>전체 ({places.length})</span>
             </CategoryItem>
-            {categories.map(category => (
-              <CategoryItem 
-                key={category.id}
-                active={selectedCategory === category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                color={category.color}
-              >
-                <span>{category.name}</span>
-                <CategoryActions>
-                  <AddButton 
-                    small
-                    onClick={(e) => {
+            {categories.map(category => {
+              const categoryPlaces = places.filter(place => place.category === category.id);
+              return (
+                <CategoryItem 
+                  key={category.id}
+                  active={selectedCategory === category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  color={category.color}
+                >
+                  <span>{category.name} ({categoryPlaces.length})</span>
+                  <CategoryActions>
+                    <AddButton 
+                      small
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addPlaceToCategory(category.id);
+                      }}
+                    >
+                      <FaPlus />
+                    </AddButton>
+                    <DeleteButton onClick={(e) => {
                       e.stopPropagation();
-                      addPlaceToCategory(category.id);
-                    }}
-                  >
-                    <FaPlus />
-                  </AddButton>
-                  <DeleteButton onClick={(e) => {
-                    e.stopPropagation();
-                    deleteCategory(category.id);
-                  }}>
-                    <FaTrash />
-                  </DeleteButton>
-                </CategoryActions>
-              </CategoryItem>
-            ))}
+                      deleteCategory(category.id);
+                    }}>
+                      <FaTrash />
+                    </DeleteButton>
+                  </CategoryActions>
+                </CategoryItem>
+              );
+            })}
           </CategoryList>
         </CategorySection>
         <PlacesSection>
           <h3>장소</h3>
-          <SearchContainer>
-            <FaSearch />
-            <SearchInput
-              placeholder="장소 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </SearchContainer>
           <PlacesList>
-            {(searchQuery ? searchResults : filteredPlaces).map(place => (
+            {filteredPlaces.map(place => (
               <PlaceItem key={place.id} onClick={() => setShowPlaceDetail(place)}>
                 <PlaceInfo>
                   <PlaceName>{place.name}</PlaceName>
@@ -647,12 +856,6 @@ const MapPage = () => {
                     <FaStar style={{ color: '#FFD700' }} />
                     {calculateAverageRating(place.reviews)}
                   </PlaceRating>
-                  {searchQuery && getBestReview(place.reviews) && (
-                    <BestReview>
-                      <FaHeart style={{ color: '#dc3545' }} />
-                      {getBestReview(place.reviews).comment}
-                    </BestReview>
-                  )}
                 </PlaceInfo>
                 <RouteButton onClick={(e) => {
                   e.stopPropagation();
@@ -667,15 +870,91 @@ const MapPage = () => {
       </Sidebar>
 
       <StyledMapContainer>
+        {/* 지도 위 검색창 */}
+        <MapSearchContainer>
+          <MapSearchInput
+            placeholder="장소 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <MapSearchIcon>
+            <FaSearch />
+          </MapSearchIcon>
+        </MapSearchContainer>
+
+        {/* 검색 결과 오버레이 */}
+        <SearchResultsContainer show={showSearchResults && searchResults.length > 0}>
+          <SearchResultsHeader>
+            <SearchResultsTitle>
+              검색 결과 ({searchResults.length})
+            </SearchResultsTitle>
+            <CloseSearchButton onClick={closeSearchResults}>
+              <IoMdClose />
+            </CloseSearchButton>
+          </SearchResultsHeader>
+          <SearchResultsList>
+            {searchResults.map(place => {
+              const category = categories.find(c => c.id === place.category);
+              const bestReview = getBestReview(place.reviews);
+              return (
+                <SearchResultItem key={place.id} onClick={() => handleSearchResultClick(place)}>
+                  <SearchResultHeader>
+                    <SearchResultName>{place.name}</SearchResultName>
+                    <SearchResultCategory color={category?.color || '#666'}>
+                      {category?.name || '기타'}
+                    </SearchResultCategory>
+                  </SearchResultHeader>
+                  
+                  <SearchResultRating>
+                    <FaStar style={{ color: '#FFD700' }} />
+                    {calculateAverageRating(place.reviews)}
+                  </SearchResultRating>
+                  
+                  {place.photos.length > 0 && (
+                    <SearchResultPhotos>
+                      {place.photos.slice(0, 3).map((photo, index) => (
+                        <SearchResultPhoto key={index} src={photo} alt={`사진 ${index + 1}`} />
+                      ))}
+                    </SearchResultPhotos>
+                  )}
+                  
+                  {bestReview && (
+                    <SearchResultBestComment>
+                      <strong>베스트 코멘트:</strong> {bestReview.comment}
+                    </SearchResultBestComment>
+                  )}
+                  
+                  <SearchResultAddress>
+                    <FaMapMarkerAlt />
+                    {place.address}
+                  </SearchResultAddress>
+                </SearchResultItem>
+              );
+            })}
+          </SearchResultsList>
+        </SearchResultsContainer>
+
         {console.log('NaverMap에 전달되는 routePath:', routePath)}
         <NaverMap 
           ref={mapRef}
-          places={filteredPlaces}
+          places={mapPlaces.map(place => {
+            const currentLoc = userLocation || getDefaultLocation();
+            const { timeMinutes } = currentLoc ? 
+              calculateDistanceAndTime(currentLoc.lat, currentLoc.lng, place.lat, place.lng) : 
+              { timeMinutes: 0 };
+            
+            return {
+              ...place,
+              averageRating: calculateAverageRating(place.reviews),
+              estimatedTime: timeMinutes
+            };
+          })}
           categories={categories}
           onMapClick={handleMapClick}
           mapClickMode={mapClickMode}
           userLocation={userLocation}
           routePath={routePath}
+          showMyLocation={showMyLocation}
         />
         
         {mapClickMode && (
@@ -686,7 +965,11 @@ const MapPage = () => {
           </MapClickOverlay>
         )}
         <MapControls>
-          <LocationButton onClick={moveToMyLocation} title="내 위치로 이동">
+          <LocationButton 
+            onClick={moveToMyLocation} 
+            title="내 위치로 이동"
+            active={showMyLocation}
+          >
             <FaCrosshairs />
           </LocationButton>
           <ZoomControls>
@@ -1150,20 +1433,24 @@ const CategoryItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  background: ${props => props.active ? '#f8f9fa' : 'transparent'};
-  color: ${props => props.active ? '#007bff' : '#666'};
-  border-left: 3px solid ${props => props.active ? '#007bff' : 'transparent'};
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  background: ${props => props.active ? '#e3f2fd' : 'transparent'};
+  border-left: 4px solid ${props => props.active ? (props.color || '#007bff') : 'transparent'};
+  box-shadow: ${props => props.active ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'};
   
   &:hover {
-    background: #f8f9fa;
+    background: ${props => props.active ? '#e3f2fd' : '#f8f9fa'};
+    transform: ${props => props.active ? 'translateX(2px)' : 'none'};
   }
   
   span {
-    font-weight: 500;
+    color: ${props => props.active ? '#1976d2' : '#333'};
+    font-weight: ${props => props.active ? '600' : '400'};
+    font-size: 14px;
   }
 `;
 
@@ -1353,7 +1640,7 @@ const MapControls = styled.div`
 `;
 
 const LocationButton = styled.button`
-  background: #007bff;
+  background: ${props => props.active ? '#28a745' : '#007bff'};
   color: white;
   border: none;
   width: 56px;
@@ -1362,23 +1649,49 @@ const LocationButton = styled.button`
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: ${props => props.active ? 
+    '0 4px 12px rgba(40, 167, 69, 0.4)' : 
+    '0 4px 12px rgba(0, 123, 255, 0.3)'};
+  transition: all 0.3s ease;
   border-radius: 8px;
+  position: relative;
 
   svg {
     width: 24px;
     height: 24px;
+    transition: transform 0.3s ease;
   }
 
   &:hover {
-    background: #0056b3;
+    background: ${props => props.active ? '#218838' : '#0056b3'};
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+    box-shadow: ${props => props.active ? 
+      '0 6px 16px rgba(40, 167, 69, 0.5)' : 
+      '0 6px 16px rgba(0, 123, 255, 0.4)'};
   }
 
   &:active {
     transform: translateY(0);
+  }
+
+  ${props => props.active && `
+    &::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border: 2px solid #28a745;
+      border-radius: 10px;
+      animation: pulse 2s infinite;
+    }
+  `}
+
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
   }
 `;
 
@@ -1642,6 +1955,211 @@ const RouteInfo = styled.div`
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
+`;
+
+// 검색 결과 관련 스타일
+const SearchResultsContainer = styled.div`
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  max-width: 90%;
+  max-height: 400px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  z-index: 1000;
+  overflow: hidden;
+  display: ${props => props.show ? 'block' : 'none'};
+
+  @media (max-width: 768px) {
+    width: 90%;
+    top: 70px;
+  }
+`;
+
+const SearchResultsHeader = styled.div`
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const SearchResultsTitle = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+`;
+
+const CloseSearchButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+`;
+
+const SearchResultsList = styled.div`
+  max-height: 320px;
+  overflow-y: auto;
+`;
+
+const SearchResultItem = styled.div`
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #f8f9fa;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const SearchResultHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+`;
+
+const SearchResultName = styled.h4`
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+  flex: 1;
+`;
+
+const SearchResultCategory = styled.span`
+  background: ${props => props.color};
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-left: 8px;
+`;
+
+const SearchResultRating = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: #666;
+`;
+
+const SearchResultPhotos = styled.div`
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+  overflow-x: auto;
+`;
+
+const SearchResultPhoto = styled.img`
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
+`;
+
+const SearchResultBestComment = styled.div`
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #555;
+  border-left: 3px solid #007bff;
+`;
+
+const SearchResultAddress = styled.div`
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const NoSearchResults = styled.div`
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+`;
+
+const SearchIcon = styled.div`
+  font-size: 3rem;
+  color: #ddd;
+  margin-bottom: 16px;
+`;
+
+// 지도 위 검색창 스타일
+const MapSearchContainer = styled.div`
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  max-width: 90%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+
+  &:focus-within {
+    box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+    border-color: #007bff;
+  }
+
+  @media (max-width: 768px) {
+    width: 90%;
+    top: 10px;
+  }
+`;
+
+const MapSearchInput = styled.input`
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const MapSearchIcon = styled.div`
+  padding: 12px 16px;
+  color: #666;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #007bff;
+  }
 `;
 
 const PhotosSection = styled.div`

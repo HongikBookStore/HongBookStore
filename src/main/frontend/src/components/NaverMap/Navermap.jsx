@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 
-const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClickMode = false, userLocation = null, routePath = null }, ref) => {
+const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClickMode = false, userLocation = null, routePath = null, showMyLocation = false }, ref) => {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markersRef = useRef([]);
@@ -8,6 +8,28 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
     const userMarkerRef = useRef(null);
     const routeLineRef = useRef(null);
     const routeMarkersRef = useRef([]);
+
+    // 카테고리별 아이콘 반환 함수
+    const getCategoryIcon = (categoryId) => {
+        switch (categoryId) {
+            case 'restaurant':
+                return '🍽️';
+            case 'cafe':
+                return '☕';
+            case 'bookstore':
+                return '📚';
+            case 'library':
+                return '📖';
+            case 'park':
+                return '🌳';
+            case 'print':
+                return '🖨️';
+            case 'partner':
+                return '🤝';
+            default:
+                return '📍';
+        }
+    };
 
     // 부모 컴포넌트에서 지도 인스턴스에 접근할 수 있도록 expose
     useImperativeHandle(ref, () => ({
@@ -130,6 +152,8 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
             return;
         }
 
+
+
         const script = document.createElement('script');
         script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${import.meta.env.VITE_NAVER_MAP_CLIENT_ID}`;
         script.async = true;
@@ -211,6 +235,7 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
         places.forEach(place => {
             const category = categories.find(cat => cat.id === place.category);
             const markerColor = category ? category.color : '#FF6B6B';
+            const categoryName = category ? category.name : '기타';
 
             const marker = new window.naver.maps.Marker({
                 position: new window.naver.maps.LatLng(place.lat, place.lng),
@@ -218,35 +243,118 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
                 icon: {
                     content: `
                         <div style="
-                            background: ${markerColor};
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 50%;
-                            border: 2px solid white;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            position: relative;
                             display: flex;
+                            flex-direction: column;
                             align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-size: 10px;
-                            font-weight: bold;
                         ">
-                            ${place.name.charAt(0)}
+                            <!-- 메인 마커 -->
+                            <div style="
+                                background: ${markerColor};
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 50%;
+                                border: 3px solid white;
+                                box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-size: 12px;
+                                font-weight: bold;
+                                margin-bottom: 3px;
+                                position: relative;
+                            ">
+                                ${getCategoryIcon(place.category)}
+                            </div>
+                            
+                            <!-- 평점 표시 -->
+                            ${place.averageRating > 0 ? `
+                                <div style="
+                                    background: rgba(255, 215, 0, 0.9);
+                                    color: #333;
+                                    padding: 2px 4px;
+                                    border-radius: 8px;
+                                    font-size: 9px;
+                                    font-weight: bold;
+                                    white-space: nowrap;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                                    margin-bottom: 1px;
+                                ">
+                                    ⭐ ${place.averageRating}
+                                </div>
+                            ` : ''}
+                            
+                            <!-- 경로 시간 표시 -->
+                            ${place.estimatedTime > 0 ? `
+                                <div style="
+                                    background: rgba(0, 123, 255, 0.9);
+                                    color: white;
+                                    padding: 2px 4px;
+                                    border-radius: 8px;
+                                    font-size: 9px;
+                                    font-weight: bold;
+                                    white-space: nowrap;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                                ">
+                                    ${place.estimatedTime}분
+                                </div>
+                            ` : ''}
                         </div>
                     `,
-                    size: new window.naver.maps.Size(20, 20),
-                    anchor: new window.naver.maps.Point(10, 10)
+                    size: new window.naver.maps.Size(28, 70),
+                    anchor: new window.naver.maps.Point(14, 14)
                 }
             });
 
             const infoWindow = new window.naver.maps.InfoWindow({
                 content: `
-                    <div style="padding: 10px; min-width: 200px;">
-                        <h4 style="margin: 0 0 5px 0; color: #333;">${place.name}</h4>
-                        <p style="margin: 0; color: #666; font-size: 12px;">${place.address}</p>
-                        <p style="margin: 5px 0 0 0; color: #007bff; font-size: 12px;">
-                            ${category ? category.name : '기타'}
-                        </p>
+                    <div style="padding: 12px; min-width: 220px; font-family: Arial, sans-serif;">
+                        <h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px;">${place.name}</h4>
+                        <p style="margin: 0 0 6px 0; color: #666; font-size: 11px;">${place.address}</p>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0;">
+                            <span style="
+                                background: ${markerColor};
+                                color: white;
+                                padding: 3px 8px;
+                                border-radius: 12px;
+                                font-size: 10px;
+                                font-weight: bold;
+                            ">
+                                ${category ? category.name : '기타'}
+                            </span>
+                            
+                            ${place.averageRating > 0 ? `
+                                <span style="
+                                    background: #FFD700;
+                                    color: #333;
+                                    padding: 3px 6px;
+                                    border-radius: 8px;
+                                    font-size: 10px;
+                                    font-weight: bold;
+                                ">
+                                    ⭐ ${place.averageRating}
+                                </span>
+                            ` : ''}
+                        </div>
+                        
+                        ${place.estimatedTime > 0 ? `
+                            <div style="
+                                background: #e3f2fd;
+                                color: #1976d2;
+                                padding: 6px 8px;
+                                border-radius: 6px;
+                                font-size: 11px;
+                                font-weight: bold;
+                                margin-top: 6px;
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
+                            ">
+                                🚶‍♂️ 예상 도보 시간: ${place.estimatedTime}분
+                            </div>
+                        ` : ''}
                     </div>
                 `
             });
@@ -280,47 +388,83 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, mapClic
         // 기존 사용자 마커 제거
         if (userMarkerRef.current) {
             userMarkerRef.current.setMap(null);
+            userMarkerRef.current = null;
         }
 
-        // 새로운 사용자 마커 생성 (빨간 점)
-        const userMarker = new window.naver.maps.Marker({
-            position: new window.naver.maps.LatLng(userLocation.lat, userLocation.lng),
-            map: map,
-            icon: {
-                content: `
-                    <div style="
-                        background: #ff0000;
-                        width: 16px;
-                        height: 16px;
-                        border-radius: 50%;
-                        border: 3px solid white;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                    ">
+        // showMyLocation이 true일 때만 마커 표시
+        if (showMyLocation) {
+            // 새로운 사용자 마커 생성 (빨간 점)
+            const userMarker = new window.naver.maps.Marker({
+                position: new window.naver.maps.LatLng(userLocation.lat, userLocation.lng),
+                map: map,
+                icon: {
+                    content: `
                         <div style="
-                            background: #ff0000;
-                            width: 8px;
-                            height: 8px;
-                            border-radius: 50%;
-                        "></div>
-                    </div>
-                `,
-                size: new window.naver.maps.Size(16, 16),
-                anchor: new window.naver.maps.Point(8, 8)
-            },
-            zIndex: 1000
-        });
+                            position: relative;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                        ">
+                            <!-- 메인 마커 -->
+                            <div style="
+                                background: #ff0000;
+                                width: 20px;
+                                height: 20px;
+                                border-radius: 50%;
+                                border: 3px solid white;
+                                box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                animation: pulse 2s infinite;
+                            ">
+                                <div style="
+                                    background: #ff0000;
+                                    width: 10px;
+                                    height: 10px;
+                                    border-radius: 50%;
+                                "></div>
+                            </div>
+                            
+                            <!-- 위치 라벨 -->
+                            <div style="
+                                background: rgba(0, 0, 0, 0.8);
+                                color: white;
+                                padding: 4px 8px;
+                                border-radius: 12px;
+                                font-size: 10px;
+                                font-weight: bold;
+                                white-space: nowrap;
+                                margin-top: 4px;
+                                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                            ">
+                                내 위치
+                            </div>
+                        </div>
+                        
+                        <style>
+                            @keyframes pulse {
+                                0% { transform: scale(1); }
+                                50% { transform: scale(1.1); }
+                                100% { transform: scale(1); }
+                            }
+                        </style>
+                    `,
+                    size: new window.naver.maps.Size(20, 50),
+                    anchor: new window.naver.maps.Point(10, 10)
+                },
+                zIndex: 1000
+            });
 
-        userMarkerRef.current = userMarker;
+            userMarkerRef.current = userMarker;
 
-        // 마커 클릭 이벤트 (선택사항)
-        window.naver.maps.Event.addListener(userMarker, 'click', () => {
-            console.log('사용자 위치 클릭됨:', userLocation);
-        });
+            // 마커 클릭 이벤트
+            window.naver.maps.Event.addListener(userMarker, 'click', () => {
+                console.log('사용자 위치 클릭됨:', userLocation);
+            });
+        }
 
-    }, [userLocation]);
+    }, [userLocation, showMyLocation]);
 
     // 경로 표시 업데이트
     useEffect(() => {
