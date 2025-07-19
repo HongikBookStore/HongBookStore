@@ -22,10 +22,7 @@ const typing = keyframes`
   80% { transform: translateY(-5px); }
 `;
 
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-`;
+
 
 const ChatBotContainer = styled.div`
   max-width: 900px;
