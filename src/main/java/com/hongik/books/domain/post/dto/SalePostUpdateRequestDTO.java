@@ -1,5 +1,6 @@
 package com.hongik.books.domain.post.dto;
 
+import com.hongik.books.domain.post.domain.Condition;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +9,9 @@ import lombok.NoArgsConstructor;
 public class SalePostUpdateRequestDTO {
     private String postTitle;
     private String postContent;
-    private Integer price;
-    // 필요하다면 status 등 다른 필드도 추가할 수 있습니다.
+    private int price;
+    private Condition writingCondition; // 필기 상태
+    private Condition tearCondition;    // 찢어짐 상태
+    private Condition waterCondition;   // 물흘림 상태
+    private boolean negotiable;         // 가격 협의 여부
 }

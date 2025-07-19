@@ -57,8 +57,9 @@ public class AuthController {
             return HttpStatus.BAD_REQUEST;
         }
     }
+
     /**
-     * 로그아웃을 처리합니다.
+     * 로그아웃을 처리
      * @param authorizationHeader "Authorization" 헤더 (Bearer 토큰 포함)
      * @return 성공 응답
      */

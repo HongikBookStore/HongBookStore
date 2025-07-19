@@ -56,7 +56,6 @@ public class AuthService {
      * @param accessToken 로그아웃할 사용자의 액세스 토큰
      */
     public void logout(String accessToken) {
-        // ✨ [변경] 새로운 로그아웃 로직
         // 1. 토큰 유효성 검증
         if (!jwtTokenProvider.validateToken(accessToken)) {
             throw new IllegalArgumentException("유효하지 않은 토큰입니다.");

@@ -5,10 +5,7 @@ import com.hongik.books.common.util.GcpStorageUtil;
 import com.hongik.books.domain.book.domain.Book;
 import com.hongik.books.domain.book.repository.BookRepository;
 import com.hongik.books.domain.post.domain.SalePost;
-import com.hongik.books.domain.post.dto.SalePostCreateRequestDTO;
-import com.hongik.books.domain.post.dto.SalePostDetailResponseDTO;
-import com.hongik.books.domain.post.dto.SalePostSummaryResponseDTO;
-import com.hongik.books.domain.post.dto.SalePostUpdateRequestDTO;
+import com.hongik.books.domain.post.dto.*;
 import com.hongik.books.domain.post.repository.SalePostRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
@@ -26,7 +23,7 @@ import java.io.IOException;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 서비스 전체를 읽기 전용으로 설정하고, 데이터 변경이 필요한 메서드에만 @Transactional을 따로
+@Transactional
 public class SalePostService {
     private final SalePostRepository salePostRepository;
     private final BookRepository bookRepository; // Book을 저장하기 위해 추가
@@ -34,29 +31,85 @@ public class SalePostService {
     private final GcpStorageUtil gcpStorageUtil; // 이미지 업로드를 위해 추가
 
     /**
-     * 이미지를 포함한 새로운 판매 게시글을 생성
-     * @param request 게시글 정보 DTO
-     * @param imageFile 업로드할 이미지 파일
-     * @param sellerId 판매자 ID (로그인 구현 후에는 SecurityContext에서 직접 가져옵니다)
-     * @return 생성된 판매 게시글의 ID
+     * [검색된 책]으로 판매 게시글을 생성합니다. (기존 로직)
      */
-    @Transactional // 데이터 변경이 일어나므로 readOnly=false로 동작
-    public Long createSalePost(SalePostCreateRequestDTO request,
-                               MultipartFile imageFile,
-                               Long sellerId) throws IOException {
-        // 1. 판매자 정보 조회 (실제로는 SecurityContextHolder에서 가져와야 함)
+    public Long createSalePostFromSearch(SalePostCreateRequestDTO request, Long sellerId) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
-        // 2. 이미지 파일을 GCP에 업로드하고 URL을 받아옵니다.
+        Book book = bookRepository.findByIsbn(request.getIsbn())
+                .orElseGet(() -> {
+                    Book newBook = Book.builder()
+                            .isbn(request.getIsbn())
+                            .title(request.getBookTitle())
+                            .author(request.getAuthor())
+                            .publisher(request.getPublisher())
+                            .coverImageUrl(request.getCoverImageUrl())
+                            .isCustom(false)
+                            .originalPrice(request.getOriginalPrice())
+                            .build();
+                    return bookRepository.save(newBook);
+                });
+
+        SalePost newSalePost = SalePost.builder()
+                .seller(seller)
+                .book(book)
+                .postTitle(request.getPostTitle())
+                .postContent(request.getPostContent())
+                .price(request.getPrice())
+                .status(SalePost.SaleStatus.FOR_SALE)
+                .writingCondition(request.getWritingCondition())
+                .tearCondition(request.getTearCondition())
+                .waterCondition(request.getWaterCondition())
+                .negotiable(request.isNegotiable())
+                .build();
+
+        salePostRepository.save(newSalePost);
+
+        return newSalePost.getId();
+    }
+
+    /**
+     * [직접 등록]으로 판매 게시글을 생성 (이미지 업로드 포함)
+     * @param request 게시글 정보 DTO
+     * @param sellerId 판매자 ID
+     * @return 생성된 판매 게시글의 ID
+     */
+    public Long createSalePostCustom(
+            SalePostCustomCreateRequestDTO request,
+            MultipartFile imageFile,
+            Long sellerId) throws IOException {
+        User seller = userRepository.findById(sellerId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        // 1. 이미지 업로드
         String imageUrl = gcpStorageUtil.uploadImage(imageFile, "book-covers");
 
-        // 3. 책 정보를 생성하고 DB에 저장합니다.
-        Book newBook = request.toBookEntity(imageUrl);
+        // 2. 새로운 Book 엔티티 생성 (isCustom=true)
+        Book newBook = Book.builder()
+                .title(request.getBookTitle())
+                .author(request.getAuthor())
+                .publisher(request.getPublisher())
+                .coverImageUrl(imageUrl)
+                .isCustom(true)
+                .originalPrice(request.getOriginalPrice())
+                .build();
         bookRepository.save(newBook);
 
-        // 4. 판매 게시글 정보를 생성하고 DB에 저장합니다.
-        SalePost newSalePost = request.toSalePostEntity(seller, newBook);
+        // 3. SalePost 생성
+        SalePost newSalePost = SalePost.builder()
+                .seller(seller)
+                .book(newBook)
+                .postTitle(request.getPostTitle())
+                .postContent(request.getPostContent())
+                .price(request.getPrice())
+                .status(SalePost.SaleStatus.FOR_SALE)
+                .writingCondition(request.getWritingCondition())
+                .tearCondition(request.getTearCondition())
+                .waterCondition(request.getWaterCondition())
+                .negotiable(request.isNegotiable())
+                .build();
+
         salePostRepository.save(newSalePost);
 
         return newSalePost.getId();

@@ -1,15 +1,11 @@
 package com.hongik.books.auth.jwt;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -27,7 +23,7 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final UserDetailsService userDetailsService;
+
 
     @Value("${jwt.token-validity-in-seconds}")
     private long accessTokenValiditySeconds;
@@ -36,10 +32,9 @@ public class JwtTokenProvider {
     private long refreshTokenValiditySeconds;
 
     // 생성자에서 비밀키 초기화 - 의존성 주입
-    public JwtTokenProvider(@Value("${jwt.secret}") String secret,
-                            UserDetailsService userDetailsService) {
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.userDetailsService = userDetailsService;
+
     }
 
     // 주어진 Authentication 객체를 기반으로 Access JWT 토큰을 생성한다.
@@ -109,11 +104,6 @@ public class JwtTokenProvider {
             return bearerToken.substring(7).trim(); // Bearer 토큰을 제외한 JWT 토큰 리턴
         }
         return null;
-    }
-
-    public Authentication getAuthentication(String token) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(this.getUsernameFromToken(token));
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }
 
     // 비밀번호 재설정용 토큰 생성 메서드 추가

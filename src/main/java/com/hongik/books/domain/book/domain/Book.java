@@ -41,6 +41,8 @@ public class Book {
     @Column(nullable = false)
     private boolean isCustom = false;
 
+    private Integer originalPrice;
+
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookCategory> bookCategories = new ArrayList<>();
 
@@ -52,12 +54,13 @@ public class Book {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Book(String isbn, String title, String author, String publisher, String coverImageUrl, boolean isCustom) {
+    public Book(String isbn, String title, String author, String publisher, String coverImageUrl, boolean isCustom, Integer originalPrice) {
         this.isbn = isbn;
         this.title = title;
         this.author = author;
         this.publisher = publisher;
         this.coverImageUrl = coverImageUrl;
         this.isCustom = isCustom;
+        this.originalPrice = originalPrice;
     }
 }

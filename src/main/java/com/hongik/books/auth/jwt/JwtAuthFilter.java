@@ -1,5 +1,6 @@
 package com.hongik.books.auth.jwt;
 
+import com.hongik.books.auth.dto.LoginUserDTO;
 import com.hongik.books.domain.user.domain.CustomUserDetails;
 import com.hongik.books.domain.user.service.CustomUserDetailsService;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -53,8 +54,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(username);
 
                 // 인증 객체 생성
+                LoginUserDTO loginUser = new LoginUserDTO(userDetails.getUser().getId(), userDetails.getUsername());
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                        loginUser, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 // SecurityContext에 인증 객체 설정
