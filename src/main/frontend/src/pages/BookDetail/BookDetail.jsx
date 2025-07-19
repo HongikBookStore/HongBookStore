@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar } from 'react-icons/fa';
+import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const DetailContainer = styled.div`
@@ -83,6 +83,13 @@ const BookImageLarge = styled.div`
   color: white;
   font-size: 3rem;
   margin-bottom: 20px;
+  overflow: hidden;
+`;
+
+const MainImageImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 const ThumbnailGrid = styled.div`
@@ -185,12 +192,12 @@ const OverallConditionTitle = styled.h3`
 `;
 
 const OverallConditionBadge = styled.div`
-  background: ${props => props.bgColor};
+  background: ${props => props.$bgColor};
   border-radius: 8px;
   padding: 0.5rem 1rem;
   font-size: 1rem;
   font-weight: 600;
-  color: ${props => props.color};
+  color: ${props => props.$color};
   margin-bottom: 0.5rem;
 `;
 
@@ -374,7 +381,48 @@ const ActionButtons = styled.div`
   display: flex;
   gap: 1rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 `;
+
+const ViewOtherBooksButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+`;
+
+const OtherBooksSection = styled.div`
+  margin-top: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: var(--surface);
+`;
+
+const OtherBooksTitle = styled.h3`
+  font-size: 1.3rem;
+  color: var(--text);
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+
 
 const ActionButton = styled.button`
   flex: 1;
@@ -430,6 +478,129 @@ const LikeButton = styled.button`
   }
 `;
 
+// 팝업 모달 스타일 컴포넌트들
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+`;
+
+// 팝업 모달용 스타일 컴포넌트들
+const OtherBooksGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+`;
+
+const OtherBookCard = styled.div`
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #007bff;
+  }
+`;
+
+const OtherBookImage = styled.div`
+  width: 100%;
+  height: 120px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  padding: 0.5rem;
+`;
+
+const OtherBookTitle = styled.div`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.3rem;
+  line-height: 1.3;
+`;
+
+const OtherBookPrice = styled.div`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #007bff;
+  margin-bottom: 0.5rem;
+`;
+
+const OtherBookCondition = styled.div`
+  background: ${props => props.$bgColor};
+  color: ${props => props.$color};
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: inline-block;
+`;
+
 // 할인율에 따른 책 상태 반환 함수
 const getBookCondition = (discountRate) => {
   if (discountRate <= 20) return { text: '상', color: '#28a745', bgColor: '#d4edda' };
@@ -442,10 +613,19 @@ const BookDetail = () => {
   const { id } = useParams();
   const [selectedImage, setSelectedImage] = useState(0);
   const [liked, setLiked] = useState(false);
+  const [showOtherBooks, setShowOtherBooks] = useState(false);
+
+  // URL 파라미터가 변경될 때마다 상태 초기화
+  useEffect(() => {
+    setSelectedImage(0);
+    setLiked(false);
+    setShowOtherBooks(false);
+    console.log('BookDetail 컴포넌트 마운트/업데이트, ID:', id);
+  }, [id]);
 
   // Mock 데이터 (실제로는 API에서 가져올 데이터)
   const bookData = {
-    id: id,
+    id: parseInt(id),
     title: "자바의 정석",
     author: "남궁성",
     originalPrice: 25000,
@@ -474,6 +654,58 @@ const BookDetail = () => {
     }
   };
 
+  // 판매자의 다른 책들 Mock 데이터
+  const sellerOtherBooks = [
+    {
+      id: 101,
+      title: "알고리즘 문제해결전략",
+      author: "구종만",
+      price: 20000,
+      discountRate: 25,
+      image: "https://via.placeholder.com/200x200/667eea/ffffff?text=알고리즘"
+    },
+    {
+      id: 102,
+      title: "데이터구조론",
+      author: "이석호",
+      price: 18000,
+      discountRate: 30,
+      image: "https://via.placeholder.com/200x200/764ba2/ffffff?text=데이터구조"
+    },
+    {
+      id: 103,
+      title: "운영체제",
+      author: "Abraham Silberschatz",
+      price: 22000,
+      discountRate: 15,
+      image: "https://via.placeholder.com/200x200/f093fb/ffffff?text=운영체제"
+    },
+    {
+      id: 104,
+      title: "네트워크 프로그래밍",
+      author: "김성우",
+      price: 16000,
+      discountRate: 35,
+      image: "https://via.placeholder.com/200x200/4facfe/ffffff?text=네트워크"
+    },
+    {
+      id: 105,
+      title: "데이터베이스 시스템",
+      author: "Ramez Elmasri",
+      price: 25000,
+      discountRate: 20,
+      image: "https://via.placeholder.com/200x200/667eea/ffffff?text=데이터베이스"
+    },
+    {
+      id: 106,
+      title: "소프트웨어 공학",
+      author: "Roger S. Pressman",
+      price: 19000,
+      discountRate: 40,
+      image: "https://via.placeholder.com/200x200/764ba2/ffffff?text=소프트웨어공학"
+    }
+  ];
+
   const handleLike = () => {
     setLiked(!liked);
   };
@@ -485,6 +717,22 @@ const BookDetail = () => {
   const handleCall = () => {
     // 실제로는 전화 연결 로직
     alert('전화 연결 기능은 준비 중입니다.');
+  };
+
+  const handleViewOtherBooks = () => {
+    setShowOtherBooks(!showOtherBooks);
+  };
+
+  const handleOtherBookClick = (bookId) => {
+    console.log('다른 책 클릭:', bookId, '현재 ID:', id);
+    // 현재 URL의 id와 다른 경우에만 네비게이션
+    if (bookId !== parseInt(id)) {
+      console.log('페이지 이동:', `/book/${bookId}`);
+      // replace: true로 현재 페이지를 대체
+      navigate(`/book/${bookId}`, { replace: true });
+    } else {
+      console.log('현재 책과 동일하므로 이동하지 않음');
+    }
   };
 
   return (
@@ -539,8 +787,8 @@ const BookDetail = () => {
                 📊 전체 책 상태
               </OverallConditionTitle>
               <OverallConditionBadge 
-                bgColor={getBookCondition(bookData.discountRate).bgColor}
-                color={getBookCondition(bookData.discountRate).color}
+                $bgColor={getBookCondition(bookData.discountRate).bgColor}
+                $color={getBookCondition(bookData.discountRate).color}
               >
                 {getBookCondition(bookData.discountRate).text}
               </OverallConditionBadge>
@@ -633,11 +881,78 @@ const BookDetail = () => {
                   <FaComment />
                   채팅하기
                 </ChatButton>
+                <ViewOtherBooksButton onClick={handleViewOtherBooks}>
+                  <FaUser />
+                  다른 책 보기
+                </ViewOtherBooksButton>
               </ActionButtons>
             </SellerSection>
+
+
           </InfoSection>
         </BookDetailGrid>
       </DetailContainer>
+
+      {/* 팝업 모달 */}
+      {showOtherBooks && (
+        <ModalOverlay onClick={() => setShowOtherBooks(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>
+                <FaUser /> {bookData.seller.name}님이 판매하는 다른 책들
+              </ModalTitle>
+              <CloseButton onClick={() => setShowOtherBooks(false)}>
+                <FaTimes />
+              </CloseButton>
+            </ModalHeader>
+            
+            <OtherBooksGrid>
+              {sellerOtherBooks.map(book => (
+                <OtherBookCard 
+                  key={book.id} 
+                  onClick={() => handleOtherBookClick(book.id)}
+                  style={{ 
+                    borderColor: book.id === parseInt(id) ? '#007bff' : '#e0e0e0',
+                    backgroundColor: book.id === parseInt(id) ? '#f8f9fa' : 'white',
+                    position: 'relative'
+                  }}
+                >
+                  {book.id === parseInt(id) && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '0.5rem',
+                      right: '0.5rem',
+                      background: '#007bff',
+                      color: 'white',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      zIndex: 1
+                    }}>
+                      현재
+                    </div>
+                  )}
+                  <OtherBookImage>
+                    {book.title}
+                  </OtherBookImage>
+                  <OtherBookTitle>{book.title}</OtherBookTitle>
+                  <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
+                    {book.author}
+                  </div>
+                  <OtherBookPrice>{book.price.toLocaleString()}원</OtherBookPrice>
+                  <OtherBookCondition 
+                    $bgColor={getBookCondition(book.discountRate).bgColor}
+                    $color={getBookCondition(book.discountRate).color}
+                  >
+                    {getBookCondition(book.discountRate).text}
+                  </OtherBookCondition>
+                </OtherBookCard>
+              ))}
+            </OtherBooksGrid>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </>
   );
 };

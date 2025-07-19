@@ -515,13 +515,13 @@ const BookMeta = styled.div`
 `;
 
 const Condition = styled.span`
-  background: ${props => props.bgColor};
-  color: ${props => props.color};
+  background: ${props => props.$bgColor};
+  color: ${props => props.$color};
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
-  border: 1px solid ${props => props.color}20;
+  border: 1px solid ${props => props.$color}20;
 `;
 
 const Location = styled.span`
@@ -875,6 +875,93 @@ const PopularBooksGrid = styled.div`
   }
 `;
 
+const NoResultsMessage = styled.div`
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-light);
+  font-size: 1.1rem;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--border);
+  margin: 2rem 0;
+  
+  .icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+  }
+  
+  .title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  
+  .description {
+    color: var(--text-light);
+    line-height: 1.6;
+  }
+`;
+
+const SearchResultsSection = styled.div`
+  margin-top: 2rem;
+  animation: ${fadeIn} 0.6s ease-out;
+`;
+
+const SearchResultsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+`;
+
+const SearchResultsTitle = styled.h3`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  
+  .search-term {
+    color: var(--primary);
+    font-weight: 800;
+  }
+  
+  .result-count {
+    color: var(--text-light);
+    font-weight: 400;
+    font-size: 1rem;
+  }
+`;
+
+const BackButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  
+  &:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+  
+  .icon {
+    font-size: 1.1rem;
+  }
+`;
+
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: row;
@@ -962,15 +1049,28 @@ const Marketplace = () => {
   };
 
   const handlePendingMajorChange = (e) => {
-    setPendingMainCategory(e.target.value);
-    const firstSub = Object.keys(CATEGORIES[e.target.value])[0];
-    setPendingSubCategory(firstSub);
-    setPendingDetailCategory(CATEGORIES[e.target.value][firstSub][0]);
+    const selectedValue = e.target.value;
+    setPendingMainCategory(selectedValue);
+    
+    if (selectedValue === '전체') {
+      setPendingSubCategory('');
+      setPendingDetailCategory('');
+    } else {
+      const firstSub = Object.keys(CATEGORIES[selectedValue])[0];
+      setPendingSubCategory(firstSub);
+      setPendingDetailCategory(CATEGORIES[selectedValue][firstSub][0]);
+    }
   };
 
   const handlePendingSubChange = (e) => {
-    setPendingSubCategory(e.target.value);
-    setPendingDetailCategory(CATEGORIES[pendingMainCategory][e.target.value][0]);
+    const selectedValue = e.target.value;
+    setPendingSubCategory(selectedValue);
+    
+    if (selectedValue === '') {
+      setPendingDetailCategory('');
+    } else {
+      setPendingDetailCategory(CATEGORIES[pendingMainCategory][selectedValue][0]);
+    }
   };
 
   const handlePendingDetailChange = (e) => {
@@ -991,6 +1091,11 @@ const Marketplace = () => {
     if (e.key === 'Enter') {
       handleSearch();
     }
+  };
+
+  const handleBackToMarketplace = () => {
+    setSearchQuery('');
+    setSearchInput('');
   };
 
   const renderSkeletonCards = (count = 6) => (
@@ -1031,7 +1136,7 @@ const Marketplace = () => {
           )}
         </BookPrice>
         <BookMeta>
-          <Condition bgColor={getBookCondition(book.discountRate).bgColor} color={getBookCondition(book.discountRate).color}>
+          <Condition $bgColor={getBookCondition(book.discountRate).bgColor} $color={getBookCondition(book.discountRate).color}>
             {getBookCondition(book.discountRate).text}
           </Condition>
           <Location>{book.location}</Location>
@@ -1040,15 +1145,31 @@ const Marketplace = () => {
     </BookCard>
   );
 
+  // 검색 필터링 함수
+  const filterBooksBySearch = (books, query) => {
+    if (!query.trim()) return books;
+    
+    const searchTerms = query.toLowerCase().trim().split(' ').filter(term => term.length > 0);
+    
+    return books.filter(book => {
+      const title = book.title.toLowerCase();
+      const author = book.author.toLowerCase();
+      
+      // 모든 검색어가 제목이나 저자에 포함되어야 함
+      return searchTerms.every(term => 
+        title.includes(term) || author.includes(term)
+      );
+    });
+  };
+
   // 필터링 및 정렬
-  const filteredBooks = MOCK_BOOKS.filter(book => {
-    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         book.author.toLowerCase().includes(searchQuery.toLowerCase());
+  const searchFilteredBooks = filterBooksBySearch(MOCK_BOOKS, searchQuery);
+  const filteredBooks = searchFilteredBooks.filter(book => {
     const matchesMain = selectedMainCategory === '전체' || book.category?.main === selectedMainCategory;
-    const matchesSub = !selectedSubCategory || book.category?.sub === selectedSubCategory;
-    const matchesDetail = !selectedDetailCategory || book.category?.detail === selectedDetailCategory;
+    const matchesSub = selectedSubCategory && selectedSubCategory !== '' ? book.category?.sub === selectedSubCategory : true;
+    const matchesDetail = selectedDetailCategory && selectedDetailCategory !== '' ? book.category?.detail === selectedDetailCategory : true;
     const matchesLocation = locationFilter === '전체' || book.location === locationFilter;
-    return matchesSearch && matchesMain && matchesSub && matchesDetail && matchesLocation;
+    return matchesMain && matchesSub && matchesDetail && matchesLocation;
   });
 
   const sortedBooks = [...filteredBooks].sort((a, b) => {
@@ -1062,12 +1183,28 @@ const Marketplace = () => {
     return 0;
   });
 
-  // 최근 등록된 책 리스트 (6개 또는 전체)
-  const recentBooks = [...MOCK_BOOKS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const displayedRecentBooks = showAllRecentBooks ? recentBooks : recentBooks.slice(0, 6);
+  // 학과 필터링 함수
+  const filterBooksByCategory = (books) => {
+    if (selectedMainCategory === '전체') {
+      return books;
+    }
+    
+    return books.filter(book => {
+      const matchesMain = book.category?.main === selectedMainCategory;
+      const matchesSub = selectedSubCategory && selectedSubCategory !== '' ? book.category?.sub === selectedSubCategory : true;
+      const matchesDetail = selectedDetailCategory && selectedDetailCategory !== '' ? book.category?.detail === selectedDetailCategory : true;
+      return matchesMain && matchesSub && matchesDetail;
+    });
+  };
 
-  // 인기 도서 리스트 (6개 또는 전체)
-  const displayedPopularBooks = showAllPopularBooks ? POPULAR_BOOKS : POPULAR_BOOKS.slice(0, 6);
+  // 최근 등록된 책 리스트 (학과 필터 적용)
+  const recentBooks = [...MOCK_BOOKS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const filteredRecentBooks = filterBooksByCategory(recentBooks);
+  const displayedRecentBooks = showAllRecentBooks ? filteredRecentBooks : filteredRecentBooks.slice(0, 6);
+
+  // 인기 도서 리스트 (학과 필터 적용)
+  const filteredPopularBooks = filterBooksByCategory(POPULAR_BOOKS);
+  const displayedPopularBooks = showAllPopularBooks ? filteredPopularBooks : filteredPopularBooks.slice(0, 6);
 
   return (
     <MarketplaceContainer>
@@ -1128,19 +1265,22 @@ const Marketplace = () => {
           {/* 카테고리 선택 및 적용 영역 */}
           <CategoryContainer>
             <CategorySelect value={pendingMainCategory} onChange={handlePendingMajorChange}>
+              <option value="전체">전체</option>
               {Object.keys(CATEGORIES).map(mainCategory => (
                 <option key={mainCategory} value={mainCategory}>{mainCategory}</option>
               ))}
             </CategorySelect>
-            {pendingMainCategory && (
+            {pendingMainCategory && pendingMainCategory !== '전체' && (
               <CategorySelect value={pendingSubCategory} onChange={handlePendingSubChange}>
+                <option value="">전체</option>
                 {Object.keys(CATEGORIES[pendingMainCategory]).map(subCategory => (
                   <option key={subCategory} value={subCategory}>{subCategory}</option>
                 ))}
               </CategorySelect>
             )}
-            {pendingSubCategory && CATEGORIES[pendingMainCategory]?.[pendingSubCategory]?.length > 0 && (
+            {pendingSubCategory && pendingSubCategory !== '' && CATEGORIES[pendingMainCategory]?.[pendingSubCategory]?.length > 0 && (
               <CategorySelect value={pendingDetailCategory} onChange={handlePendingDetailChange}>
+                <option value="">전체</option>
                 {CATEGORIES[pendingMainCategory][pendingSubCategory].map(detailCategory => (
                   <option key={detailCategory} value={detailCategory}>{detailCategory}</option>
                 ))}
@@ -1149,38 +1289,90 @@ const Marketplace = () => {
             <button style={{marginLeft: '1rem', padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: 'var(--primary)', color: 'white', fontWeight: 600, fontSize: '1rem', cursor: 'pointer'}} onClick={handleApplyCategory}>적용</button>
           </CategoryContainer>
 
-          {/* 최근 등록된 책 리스트 */}
-          <SectionContainer>
-            <SectionHeader>
-              <SectionTitle>최근 등록된 책</SectionTitle>
-              <ViewMoreButton onClick={() => setShowAllRecentBooks(prev => !prev)}>
-                {showAllRecentBooks ? '더보기 취소' : '더보기'}
-              </ViewMoreButton>
-            </SectionHeader>
-            <BookGrid>
-              {displayedRecentBooks.map(renderBookCard)}
-            </BookGrid>
-          </SectionContainer>
+          {/* 검색 결과가 있을 때는 검색 결과만 표시 */}
+          {searchQuery && (
+            <SearchResultsSection>
+              <SearchResultsHeader>
+                <BackButton onClick={handleBackToMarketplace}>
+                  <span className="icon">←</span>
+                  책 거래 게시판으로 돌아가기
+                </BackButton>
+                <SearchResultsTitle>
+                  <span className="search-term">"{searchQuery}"</span> 검색 결과
+                  <span className="result-count"> ({sortedBooks.length}개)</span>
+                </SearchResultsTitle>
+              </SearchResultsHeader>
+              
+              {isLoading ? (
+                renderSkeletonCards()
+              ) : sortedBooks.length > 0 ? (
+                <BookGrid>
+                  {sortedBooks.map(renderBookCard)}
+                </BookGrid>
+              ) : (
+                <NoResultsMessage>
+                  <div className="icon">🔍</div>
+                  <div className="title">검색 결과가 없습니다</div>
+                  <div className="description">
+                    <strong>"{searchQuery}"</strong>에 대한 검색 결과를 찾을 수 없습니다.<br />
+                    다른 키워드로 검색하거나 카테고리를 변경해보세요.
+                  </div>
+                </NoResultsMessage>
+              )}
+            </SearchResultsSection>
+          )}
 
-          {/* 인기 도서 리스트 */}
-          <SectionContainer>
-            <SectionHeader>
-              <PopularSectionTitle>인기 도서</PopularSectionTitle>
-              <ViewMoreButton onClick={() => setShowAllPopularBooks(prev => !prev)}>
-                {showAllPopularBooks ? '더보기 취소' : '더보기'}
-              </ViewMoreButton>
-            </SectionHeader>
-            <PopularBooksGrid>
-              {displayedPopularBooks.map(renderBookCard)}
-            </PopularBooksGrid>
-          </SectionContainer>
+          {/* 검색 중이 아닐 때만 인기 도서와 최근 등록된 책 표시 */}
+          {!searchQuery && (
+            <>
+              {/* 인기 도서 리스트 */}
+              <SectionContainer>
+                <SectionHeader>
+                  <PopularSectionTitle>
+                    {selectedMainCategory === '전체' ? (
+                      '인기 도서'
+                    ) : (
+                      <>
+                        <span style={{ color: 'var(--primary)', fontWeight: '700' }}>
+                          {selectedDetailCategory || selectedSubCategory || selectedMainCategory}
+                        </span>
+                        {' '}인기 도서
+                      </>
+                    )}
+                  </PopularSectionTitle>
+                  <ViewMoreButton onClick={() => setShowAllPopularBooks(prev => !prev)}>
+                    {showAllPopularBooks ? '더보기 취소' : '더보기'}
+                  </ViewMoreButton>
+                </SectionHeader>
+                <PopularBooksGrid>
+                  {displayedPopularBooks.map(renderBookCard)}
+                </PopularBooksGrid>
+              </SectionContainer>
 
-          {isLoading ? (
-            renderSkeletonCards()
-          ) : (
-            <BookGrid>
-              {sortedBooks.map(renderBookCard)}
-            </BookGrid>
+              {/* 최근 등록된 책 리스트 */}
+              <SectionContainer>
+                <SectionHeader>
+                  <SectionTitle>
+                    {selectedMainCategory === '전체' ? (
+                      '최근 등록된 책'
+                    ) : (
+                      <>
+                        <span style={{ color: 'var(--primary)', fontWeight: '700' }}>
+                          {selectedDetailCategory || selectedSubCategory || selectedMainCategory}
+                        </span>
+                        {' '}최근 등록된 책
+                      </>
+                    )}
+                  </SectionTitle>
+                  <ViewMoreButton onClick={() => setShowAllRecentBooks(prev => !prev)}>
+                    {showAllRecentBooks ? '더보기 취소' : '더보기'}
+                  </ViewMoreButton>
+                </SectionHeader>
+                <BookGrid>
+                  {displayedRecentBooks.map(renderBookCard)}
+                </BookGrid>
+              </SectionContainer>
+            </>
           )}
         </div>
       </PageWrapper>

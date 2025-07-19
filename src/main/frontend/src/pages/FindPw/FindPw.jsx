@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header.jsx';
 
 const FindContainer = styled.div`
@@ -80,55 +81,122 @@ const Message = styled.div`
 const Title = styled.h2`
   font-size: 2rem;
   font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--primary);
+`;
+
+const Description = styled.p`
+  font-size: 1rem;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
+  text-align: center;
+  line-height: 1.5;
+`;
+
+const SignupLink = styled.span`
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+  &:hover {
+    color: var(--primary-dark);
+  }
 `;
 
 function FindPw() {
   const { t, i18n } = useTranslation();
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+  });
   const [lang, setLang] = useState(i18n.language || 'ko');
   const [msgKey, setMsgKey] = useState('');
   const [msgColor, setMsgColor] = useState('');
+  const [isNotRegistered, setIsNotRegistered] = useState(false);
 
   const handleLangChange = e => {
     setLang(e.target.value);
     i18n.changeLanguage(e.target.value);
   };
 
-  const handleSubmit = e => {
+  const handleChange = e => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setMsgKey('');
+    setIsNotRegistered(false);
+  };
+
+  const handleSubmit = async e => {
     e.preventDefault();
-    if (!email.trim()) {
-      setMsgKey('emailRequired');
+    
+    if (!form.username.trim() || !form.email.trim()) {
+      setMsgKey('loginRequired');
       setMsgColor('red');
       return;
     }
-    // 임시: test@test.com만 성공, 그 외는 에러
-    if (email.trim() !== 'test@test.com') {
-      setMsgKey('emailNotFound');
+
+    try {
+      // TODO: 실제 API 호출로 변경
+      // const response = await findPassword(form.username, form.email);
+      
+      // 임시 로직: test/test@test.com만 성공, 그 외는 미가입 계정
+      if (form.username === 'test' && form.email === 'test@test.com') {
+        setMsgKey('findPwSuccess');
+        setMsgColor('green');
+        setIsNotRegistered(false);
+      } else {
+        setMsgKey('findPwNotRegistered');
+        setMsgColor('red');
+        setIsNotRegistered(true);
+      }
+    } catch (error) {
+      setMsgKey('findPwFail');
       setMsgColor('red');
-      return;
+      setIsNotRegistered(false);
     }
-    setMsgKey('findPwResult');
-    setMsgColor('green');
+  };
+
+  const handleGoToSignup = () => {
+    navigate('/register');
   };
 
   return (
     <>
       <Header lang={lang} onLangChange={handleLangChange} />
       <FindContainer>
-        <Title>{t('findPw')}</Title>
+        <Title>{t('findPwTitle')}</Title>
+        <Description>{t('findPwDesc')}</Description>
         <StyledForm onSubmit={handleSubmit}>
           <InputGroup>
             <Input
-              name="email"
-              placeholder={t('emailPlaceholder')}
-              value={email}
-              onChange={e => { setEmail(e.target.value); setMsgKey(''); }}
+              name="username"
+              placeholder={t('findPwIdPlaceholder')}
+              value={form.username}
+              onChange={handleChange}
             />
           </InputGroup>
-          <SubmitButton type="submit">{t('findPw')}</SubmitButton>
+          <InputGroup>
+            <Input
+              name="email"
+              placeholder={t('findPwEmailPlaceholder')}
+              value={form.email}
+              onChange={handleChange}
+            />
+          </InputGroup>
+          <SubmitButton type="submit">{t('findPwSubmit')}</SubmitButton>
         </StyledForm>
-        {msgKey && <Message color={msgColor}>{t(msgKey)}</Message>}
+        {msgKey && (
+          <Message color={msgColor}>
+            {t(msgKey)}
+            {isNotRegistered && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <SignupLink onClick={handleGoToSignup}>
+                  {t('findPwGoToSignup')}
+                </SignupLink>
+              </div>
+            )}
+          </Message>
+        )}
       </FindContainer>
     </>
   );
