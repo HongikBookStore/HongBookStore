@@ -168,7 +168,7 @@ function App() {
                             <Route path="/ai-chat" element={
                                 <>
                                     <Header />
-                                    <AIChatbot />
+                                    <ChatBotPage />
                                 </>
                             } />
                             <Route path="/marketplace/:id" element={
