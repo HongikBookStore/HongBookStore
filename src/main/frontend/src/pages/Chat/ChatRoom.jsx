@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle, FaMapMarkerAlt, FaRoute, FaQrcode, FaCloudSun } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle, FaMapMarkerAlt, FaRoute, FaQrcode, FaCloudSun, FaDownload } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 
 const ChatContainer = styled.div`
   width: 100%;
@@ -109,7 +110,7 @@ const HeaderRight = styled.div`
 `;
 
 const ChatMenuButton = styled.button`
-  background: ${props => props.active ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'var(--surface)'};
+  background: ${props => props.active ? 'var(--primary)' : 'var(--surface)'};
   color: ${props => props.active ? 'white' : 'var(--text)'};
   border: 2px solid ${props => props.active ? 'transparent' : 'var(--border)'};
   border-radius: var(--radius-lg);
@@ -139,7 +140,7 @@ const ChatMenuButton = styled.button`
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background: rgba(255, 255, 255, 0.1);
     transform: translateX(-100%);
     transition: 0.6s;
   }
@@ -153,7 +154,7 @@ const ChatMenuButton = styled.button`
     box-shadow: var(--shadow-lg);
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(124, 58, 237, 0.05);
+    background: rgba(0, 123, 255, 0.05);
   }
 
   &:active {
@@ -602,6 +603,125 @@ const DateItem = styled.button`
   }
 `;
 
+// QR 코드 관련 스타일 컴포넌트들
+const QRModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+`;
+
+const QRModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+`;
+
+const QRCodeContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+`;
+
+const QRCodeInfo = styled.div`
+  margin: 1rem 0;
+  text-align: left;
+`;
+
+const QRCodeInfoItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const QRCodeLabel = styled.span`
+  font-weight: 600;
+  color: #333;
+`;
+
+const QRCodeValue = styled.span`
+  color: #666;
+`;
+
+const QRCodeActions = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+`;
+
+const QRCodeButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  
+  &.download {
+    background: #007bff;
+    color: white;
+    
+    &:hover {
+      background: #0056b3;
+    }
+  }
+  
+
+  
+  &.close {
+    background: #6c757d;
+    color: white;
+    
+    &:hover {
+      background: #5a6268;
+    }
+  }
+`;
+
+const QRCodeQuestion = styled.div`
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #e3f2fd;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+`;
+
+const QRCodeQuestionText = styled.div`
+  font-weight: 600;
+  color: #1976d2;
+  margin-bottom: 0.5rem;
+`;
+
+const QRCodeQuestionDescription = styled.div`
+  font-size: 0.9rem;
+  color: #424242;
+`;
+
 // 반응형 width 감지 훅
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -678,6 +798,9 @@ const ChatRoom = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [reserveConfirmed, setReserveConfirmed] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showQRQuestion, setShowQRQuestion] = useState(false);
+  const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
   const width = useWindowWidth();
 
   // 버튼 텍스트 반응형
@@ -866,6 +989,10 @@ const ChatRoom = () => {
       ...prev,
       { id: Date.now(), type: 'system', content: `예약이 확정되었습니다!\n장소: ${selectedPlace}, 날짜: ${selectedDate?.date} (${selectedDate?.weather})`, timestamp: new Date().toLocaleString('ko-KR') }
     ]);
+    
+    // QR 코드 생성 여부 즉시 묻기
+    setShowQRQuestion(true);
+    
     // TODO: 나의 거래 페이지에 예약 정보 자동 입력(모킹)
   };
 
@@ -936,6 +1063,70 @@ const ChatRoom = () => {
   const handleReportStay = () => {
     setShowReportExitModal(false);
   };
+
+  // QR 코드 관련 함수들
+  const handleQRCodeGenerate = () => {
+    setShowQRQuestion(true);
+  };
+
+  const handleQRCodeConfirm = () => {
+    setQrCodeGenerated(true);
+    setShowQRQuestion(false);
+    setShowQRModal(true);
+  };
+
+  const handleQRCodeCancel = () => {
+    setShowQRQuestion(false);
+  };
+
+  const handleQRCodeClose = () => {
+    setShowQRModal(false);
+  };
+
+  const handleQRCodeDownload = () => {
+    const svg = document.querySelector('#qr-code svg');
+    if (svg) {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const link = document.createElement('a');
+        link.download = '결제QR코드.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      };
+      
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    }
+  };
+
+
+
+  const generateQRData = () => {
+    const bookInfo = messages[0]?.content?.split(' - ') || [];
+    const bookTitle = bookInfo[0] || '알 수 없는 책';
+    const priceText = bookInfo[1] || '0';
+    const price = priceText.replace(/[^0-9]/g, '') || '0'; // 숫자만 추출
+    
+    // 간편 결제 QR 코드 데이터 (토스페이먼츠, 카카오페이 등)
+    return {
+      type: 'payment',
+      amount: parseInt(price),
+      currency: 'KRW',
+      merchantId: 'hongbookstore',
+      orderId: `order_${chatId}_${Date.now()}`,
+      description: `책 구매: ${bookTitle}`,
+      timestamp: new Date().toISOString()
+    };
+  };
+
+
 
   // 비속어 감지 함수
   const detectProfanity = (text) => {
@@ -1068,6 +1259,17 @@ const ChatRoom = () => {
               <FaCheckCircle style={{ color: iconColor('#1976d2', isCompleted, hovered===(isCompleted?'complete-cancel':'complete')), fontSize: '1.1em' }} />
               {getLabel(isCompleted ? 'complete-cancel' : 'complete')}
             </ChatMenuButton>
+            {isReserved && (
+              <ChatMenuButton
+                onClick={handleQRCodeGenerate}
+                title="결제 QR 코드 생성"
+                onMouseEnter={() => setHovered('qr')}
+                onMouseLeave={() => setHovered('')}
+              >
+                <FaQrcode style={{ color: iconColor('#28a745', qrCodeGenerated, hovered==='qr'), fontSize: '1.1em' }} />
+                {width > 600 && '결제QR'}
+              </ChatMenuButton>
+            )}
             <ExitButton onClick={handleExit} title="채팅방 나가기">
               <FaSignOutAlt /> {width > 600 && '나가기'}
             </ExitButton>
@@ -1166,12 +1368,95 @@ const ChatRoom = () => {
               {reserveConfirmed && (
                 <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
                   예약이 확정되었습니다!<br/>
-                  <FaQrcode style={{marginRight:6}}/> QR 코드가 생성되며, 나의 거래 페이지에서도 확인할 수 있습니다.
+                  <FaQrcode style={{marginRight:6}}/> 다음 화면에서 결제 QR 코드 생성 여부를 선택할 수 있습니다.
                 </div>
               )}
             </ReserveModalBox>
           </ModalOverlay>
         )}
+        
+        {/* QR 코드 생성 여부 묻기 모달 */}
+        {showQRQuestion && (
+          <QRModal>
+            <QRModalContent>
+              <QRCodeQuestion>
+                <QRCodeQuestionText>💳 결제 QR 코드를 생성하시겠습니까?</QRCodeQuestionText>
+                <QRCodeQuestionDescription>
+                  간편 결제를 위한 QR 코드를 생성합니다.<br/>
+                  QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.<br/>
+                  추후 언제든지 헤더의 QR코드 버튼을 통해 다시 생성할 수 있습니다.
+                </QRCodeQuestionDescription>
+              </QRCodeQuestion>
+              <QRCodeActions>
+                <QRCodeButton className="close" onClick={handleQRCodeCancel}>
+                  나중에
+                </QRCodeButton>
+                <QRCodeButton className="download" onClick={handleQRCodeConfirm}>
+                  결제 QR 코드 생성
+                </QRCodeButton>
+              </QRCodeActions>
+            </QRModalContent>
+          </QRModal>
+        )}
+
+        {/* QR 코드 표시 모달 */}
+        {showQRModal && (
+          <QRModal>
+            <QRModalContent>
+              <h3>💳 간편 결제 QR 코드</h3>
+              <QRCodeContainer id="qr-code">
+                <QRCode 
+                  value={JSON.stringify(generateQRData())}
+                  size={200}
+                  level="M"
+                  includeMargin={true}
+                />
+              </QRCodeContainer>
+              <QRCodeInfo>
+                <QRCodeInfoItem>
+                  <QRCodeLabel>결제 금액:</QRCodeLabel>
+                  <QRCodeValue>{generateQRData().amount.toLocaleString()}원</QRCodeValue>
+                </QRCodeInfoItem>
+                <QRCodeInfoItem>
+                  <QRCodeLabel>상품명:</QRCodeLabel>
+                  <QRCodeValue>{generateQRData().description}</QRCodeValue>
+                </QRCodeInfoItem>
+                <QRCodeInfoItem>
+                  <QRCodeLabel>주문번호:</QRCodeLabel>
+                  <QRCodeValue>{generateQRData().orderId}</QRCodeValue>
+                </QRCodeInfoItem>
+                <QRCodeInfoItem>
+                  <QRCodeLabel>결제 수단:</QRCodeLabel>
+                  <QRCodeValue>토스페이먼츠 / 카카오페이</QRCodeValue>
+                </QRCodeInfoItem>
+                <QRCodeInfoItem>
+                  <QRCodeLabel>생성 시간:</QRCodeLabel>
+                  <QRCodeValue>{new Date(generateQRData().timestamp).toLocaleString('ko-KR')}</QRCodeValue>
+                </QRCodeInfoItem>
+              </QRCodeInfo>
+              <div style={{ 
+                background: '#f8f9fa', 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                margin: '1rem 0',
+                fontSize: '0.9rem',
+                color: '#666'
+              }}>
+                💡 QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.
+              </div>
+              <QRCodeActions>
+                <QRCodeButton className="download" onClick={handleQRCodeDownload}>
+                  <FaDownload />
+                  다운로드
+                </QRCodeButton>
+                <QRCodeButton className="close" onClick={handleQRCodeClose}>
+                  닫기
+                </QRCodeButton>
+              </QRCodeActions>
+            </QRModalContent>
+          </QRModal>
+        )}
+        
         <ChatMessages>
           {messages.length > 0 ? (
             messages.map(message => (

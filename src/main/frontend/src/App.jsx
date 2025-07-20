@@ -24,6 +24,7 @@ import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import MapPage from './pages/Map/Map.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
+import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
@@ -65,44 +66,149 @@ function App() {
 
     return (
         <AuthProvider>
+            <LocationProvider>
                 <WritingProvider>
                     <Router>
                         <GlobalStyles />
-                        <Header />
                         <Routes>
-                            <Route path="/" element={<Hero />} />
-                            <Route path="/marketplace" element={<Marketplace />} />
-                            <Route path="/search" element={<Search />} />
-                            <Route path="/wanted" element={<Wanted />} />
-                            <Route path="/wanted/write" element={<WantedWrite />} />
-                            <Route path="/bookstore" element={<MyBookstore />} />
-                            <Route path="/my-bookstore" element={<MyBookstore />} />
-                            <Route path="/my-transactions" element={<MyTransactions />} />
-                            <Route path="/bookstore/add" element={<BookWrite />} />
-                            <Route path="/book/:id" element={<BookDetail />} />
-                            <Route path="/chat" element={<ChatList />} />
-                            <Route path="/chat/:id" element={<ChatRoom />} />
-                            <Route path="/community" element={<Community />} />
-                            <Route path="/hongikmap" element={<MapPage />} />
-                            <Route path="/mypage" element={<MyPage />} />
+                            <Route path="/" element={
+                                <>
+                                    <Header />
+                                    <Hero />
+                                </>
+                            } />
+                            <Route path="/marketplace" element={
+                                <>
+                                    <Header />
+                                    <Marketplace />
+                                </>
+                            } />
+                            <Route path="/search" element={
+                                <>
+                                    <Header />
+                                    <Search />
+                                </>
+                            } />
+                            <Route path="/wanted" element={
+                                <>
+                                    <Header />
+                                    <Wanted />
+                                </>
+                            } />
+                            <Route path="/wanted/write" element={
+                                <>
+                                    <Header />
+                                    <WantedWrite />
+                                </>
+                            } />
+                            <Route path="/bookstore" element={
+                                <>
+                                    <Header />
+                                    <MyBookstore />
+                                </>
+                            } />
+                            <Route path="/my-bookstore" element={
+                                <>
+                                    <Header />
+                                    <MyBookstore />
+                                </>
+                            } />
+                            <Route path="/my-transactions" element={
+                                <>
+                                    <Header />
+                                    <MyTransactions />
+                                </>
+                            } />
+                            <Route path="/bookstore/add" element={
+                                <>
+                                    <Header />
+                                    <BookWrite />
+                                </>
+                            } />
+                            <Route path="/book/:id" element={
+                                <>
+                                    <Header />
+                                    <BookDetail />
+                                </>
+                            } />
+                            <Route path="/chat" element={
+                                <>
+                                    <Header />
+                                    <ChatList />
+                                </>
+                            } />
+                            <Route path="/chat/:id" element={
+                                <>
+                                    <Header />
+                                    <ChatRoom />
+                                </>
+                            } />
+                            <Route path="/community" element={
+                                <>
+                                    <Header />
+                                    <Community />
+                                </>
+                            } />
+                            <Route path="/hongikmap" element={
+                                <>
+                                    <Header />
+                                    <MapPage />
+                                </>
+                            } />
+                            <Route path="/mypage" element={
+                                <>
+                                    <Header />
+                                    <MyPage />
+                                </>
+                            } />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
                             <Route path="/find-pw" element={<FindPw />} />
-                            <Route path="/reset-password" element={<ResetPassword />} />
-                            <Route path="/ai-chat" element={<ChatBotPage />} />
-                            <Route path="/marketplace/:id" element={<BookDetail />} />
-                            <Route path="/bookwrite/:id" element={<BookWrite />} />
-                            <Route path="/book-write" element={<BookWrite />} />
-                            <Route path="/wanted/:id" element={<WantedWrite />} />
-                            <Route path="/wantedwrite/:id" element={<WantedWrite />} />
-                            <Route path="/oauth/callback"
-                                element={<OAuth2RedirectHandler />} />
+                            <Route path="/ai-chat" element={
+                                <>
+                                    <Header />
+                                    <AIChatbot />
+                                </>
+                            } />
+                            <Route path="/marketplace/:id" element={
+                                <>
+                                    <Header />
+                                    <BookDetail />
+                                </>
+                            } />
+                            <Route path="/bookwrite/:id" element={
+                                <>
+                                    <Header />
+                                    <BookWrite />
+                                </>
+                            } />
+                            <Route path="/book-write" element={
+                                <>
+                                    <Header />
+                                    <BookWrite />
+                                </>
+                            } />
+                            <Route path="/wanted/:id" element={
+                                <>
+                                    <Header />
+                                    <WantedWrite />
+                                </>
+                            } />
+                            <Route path="/wantedwrite/:id" element={
+                                <>
+                                    <Header />
+                                    <WantedWrite />
+                                </>
+                            } />
+                            <Route path="/oauth/callback" element={<OAuth2RedirectHandler />} />
+                            <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
                         </Routes>
                         <Footer />
                     </Router>
                 </WritingProvider>
-            </AuthProvider>
+            </LocationProvider>
+        </AuthProvider>
     );
 }
 

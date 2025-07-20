@@ -78,7 +78,7 @@ const SubmitButton = styled.button`
   cursor: pointer;
   transition: var(--transition);
   letter-spacing: -0.5px;
-  box-shadow: 0 2px 8px rgba(35,81,233,0.07);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.07);
   &:hover {
     background: var(--primary-dark);
     transform: translateY(-2px) scale(1.03);
@@ -108,6 +108,22 @@ const SocialBtn = styled.button`
     border-color: #2351e9;
     opacity: 0.95;
   }
+`;
+
+const RememberMeGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+  color: var(--text);
+`;
+
+const Checkbox = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
 `;
 
 const LinkGroup = styled.div`
@@ -142,9 +158,23 @@ function Login() {
   const [msg, setMsg] = useState('');
   const [msgColor, setMsgColor] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [lang, setLang] = useState(i18n.language || 'ko');
+  
   useEffect(() => {
     setLang(i18n.language);
+    // 저장된 로그인 정보 불러오기
+    const savedUsername = localStorage.getItem('rememberedUsername');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    const remembered = localStorage.getItem('rememberMe') === 'true';
+    
+    if (remembered && savedUsername && savedPassword) {
+      setForm({
+        username: savedUsername,
+        password: savedPassword,
+      });
+      setRememberMe(true);
+    }
   }, [i18n.language]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams(); // URL 파라미터 읽기
@@ -190,7 +220,18 @@ function Login() {
       // 4. "관리인(AuthContext)"에게 토큰과 사용자 정보를 전달하여 최종 로그인 처리를 합니다.
       save(accessToken, userInfo);
 
-      // 5. 사용자에게 성공 메시지를 보여주고 홈페이지로 이동합니다.
+      // 5. 아이디/비밀번호 기억하기 처리
+      if (rememberMe) {
+        localStorage.setItem('rememberedUsername', form.username);
+        localStorage.setItem('rememberedPassword', form.password);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberedUsername');
+        localStorage.removeItem('rememberedPassword');
+        localStorage.removeItem('rememberMe');
+      }
+
+      // 6. 사용자에게 성공 메시지를 보여주고 홈페이지로 이동합니다.
       setMsg(t('loginSuccess'));
       setMsgColor('green');
       setTimeout(() => navigate('/'), 500);
@@ -240,6 +281,15 @@ function Login() {
           </InputGroup>
           <SubmitButton type="submit">{t('login')}</SubmitButton>
         </StyledForm>
+        <RememberMeGroup>
+          <Checkbox
+            type="checkbox"
+            id="rememberMe"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          <label htmlFor="rememberMe">{t('rememberMe')}</label>
+        </RememberMeGroup>
         {msg && <Message color={msgColor}>{msg}</Message>}
         <LinkGroup>
           <span onClick={() => navigate('/register')}>{t('signup')}</span>

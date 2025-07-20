@@ -7,6 +7,8 @@ import bookIcon from '../../assets/book.svg';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { useWriting } from '../../contexts/WritingContext';
 import WarningModal from '../WarningModal/WarningModal';
+import { logout as apiLogout } from '../../api/auth';
+import { FaBell, FaTimes, FaComment, FaHeart, FaTag } from 'react-icons/fa';
 
 const slideDown = keyframes`
   from {
@@ -33,6 +35,11 @@ const fadeIn = keyframes`
 const pulse = keyframes`
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
+`;
+
+const notificationPulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 `;
 
 const HeaderContainer = styled.header`
@@ -254,24 +261,6 @@ const NavLinkItem = styled(Link)`
     background-color: var(--primary-100);
     font-weight: 600;
   }
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 2px;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    transition: var(--transition-normal);
-    border-radius: var(--radius-full);
-  }
-
-  &:hover::after,
-  &.active::after {
-    width: 80%;
-  }
 `;
 
 const RightBox = styled.div`
@@ -311,7 +300,7 @@ const Button = styled.button`
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: rgba(255, 255, 255, 0.1);
     transition: var(--transition-normal);
   }
 
@@ -320,28 +309,86 @@ const Button = styled.button`
   }
 `;
 
-const LoginButton = styled(Button)`
+const LoginButton = styled(Link)`
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  border: 1px solid var(--primary-200);
   background: transparent;
   color: var(--primary);
-  border: 1px solid var(--primary-200);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: var(--transition-normal);
+  }
 
   &:hover {
     background: var(--primary-50);
     border-color: var(--primary-300);
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--primary);
+  }
+
+  &:hover::before {
+    left: 100%;
   }
 `;
 
-const RegisterButton = styled(Button)`
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
+const RegisterButton = styled(Link)`
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: var(--transition-normal);
+  cursor: pointer;
   border: 1px solid var(--primary);
+  background: var(--primary);
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: var(--transition-normal);
+  }
 
   &:hover {
-    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    background: var(--primary-dark);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
+    text-decoration: none;
+    color: white;
+  }
+
+  &:hover::before {
+    left: 100%;
   }
 `;
 
@@ -360,7 +407,7 @@ const UserAvatar = styled.div`
   width: 40px;
   height: 40px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -572,11 +619,207 @@ const WritingIndicator = styled.div`
   }
 `;
 
+// 알림 관련 스타일 컴포넌트들
+const NotificationContainer = styled.div`
+  position: relative;
+  margin-right: var(--space-4);
+  
+  @media (max-width: 768px) {
+    margin-right: var(--space-2);
+  }
+`;
+
+const NotificationButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  transition: var(--transition-normal);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: var(--surface);
+    color: var(--primary);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    padding: var(--space-1);
+  }
+`;
+
+const NotificationBadge = styled.div`
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--error);
+  color: white;
+  border-radius: var(--radius-full);
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ${notificationPulse} 2s ease-in-out infinite;
+  
+  @media (max-width: 768px) {
+    width: 16px;
+    height: 16px;
+    font-size: 0.6rem;
+  }
+`;
+
+const NotificationDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: var(--z-dropdown);
+  animation: ${fadeIn} 0.2s ease-out;
+  
+  @media (max-width: 768px) {
+    min-width: 280px;
+    max-width: 320px;
+    right: -50px;
+  }
+`;
+
+const NotificationHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+`;
+
+const NotificationTitle = styled.h3`
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+`;
+
+const ClearAllButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
+
+  &:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
+`;
+
+const NotificationList = styled.div`
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
+const NotificationItem = styled.div`
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+
+  &:hover {
+    background: var(--surface);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.unread {
+    background: var(--primary-50);
+  }
+`;
+
+const NotificationIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: white;
+  background: ${props => {
+    switch (props.type) {
+      case 'chat': return 'var(--primary)';
+      case 'price': return 'var(--warning)';
+      case 'system': return 'var(--success)';
+      default: return 'var(--text-light)';
+    }
+  }};
+`;
+
+const NotificationContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const NotificationText = styled.div`
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: var(--space-1);
+`;
+
+const NotificationTime = styled.div`
+  font-size: 0.8rem;
+  color: var(--text-light);
+`;
+
+const NotificationEmpty = styled.div`
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9rem;
+`;
+
+const UnreadDot = styled.div`
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+`;
+
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // 데스크탑 유저 드롭다운 상태
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]); // 빈 배열로 시작하여 알림 없음 상태 테스트
   
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -692,6 +935,62 @@ const Header = () => {
 
   const currentUser = getUserInfo();
 
+  // 알림 관련 함수들
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  const markAsRead = (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, unread: false }
+          : notification
+      )
+    );
+  };
+
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    setShowNotifications(false);
+    if (notification.link) {
+      navigate(notification.link);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => n.unread).length;
+
+  // 테스트용: 알림 추가/제거 함수
+  const addTestNotification = () => {
+    const newNotification = {
+      id: Date.now(),
+      type: 'chat',
+      text: '테스트 알림입니다.',
+      time: '방금 전',
+      unread: true,
+      link: '/marketplace'
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]); // 모든 알림 제거
+  };
+
+  // 외부 클릭 시 알림 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotifications && !event.target.closest('.notification-container')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
+
   return (
     <>
       <HeaderContainer>
@@ -734,7 +1033,65 @@ const Header = () => {
               </NavLinks>
             )}
 
-            <RightBox>
+                        <RightBox>
+              {isLoggedIn && (
+                <NotificationContainer className="notification-container">
+                <NotificationButton onClick={toggleNotifications}>
+                  <FaBell />
+                  {unreadCount > 0 && (
+                    <NotificationBadge>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </NotificationBadge>
+                  )}
+                </NotificationButton>
+                
+                {showNotifications && (
+                  <NotificationDropdown>
+                    <NotificationHeader>
+                      <NotificationTitle>알림</NotificationTitle>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <ClearAllButton onClick={addTestNotification}>
+                          테스트
+                        </ClearAllButton>
+                        <ClearAllButton onClick={clearAllNotifications}>
+                          모두 삭제
+                        </ClearAllButton>
+                      </div>
+                    </NotificationHeader>
+                    
+                    <NotificationList>
+                      {notifications.length > 0 ? (
+                        notifications.map(notification => (
+                          <NotificationItem
+                            key={notification.id}
+                            className={notification.unread ? 'unread' : ''}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <NotificationIcon type={notification.type}>
+                              {notification.type === 'chat' && <FaComment />}
+                              {notification.type === 'price' && <FaTag />}
+                              {notification.type === 'system' && <FaHeart />}
+                            </NotificationIcon>
+                            <NotificationContent>
+                              <NotificationText>{notification.text}</NotificationText>
+                              <NotificationTime>{notification.time}</NotificationTime>
+                            </NotificationContent>
+                            {notification.unread && <UnreadDot />}
+                          </NotificationItem>
+                        ))
+                      ) : (
+                        <NotificationEmpty>
+                          <div style={{ fontSize: '2rem', marginBottom: '1rem', opacity: 0.5 }}>🔔</div>
+                          <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>알림이 없습니다</div>
+                          <div style={{ fontSize: '0.8rem' }}>새로운 메시지나 가격 변동이 있을 때 알려드립니다</div>
+                        </NotificationEmpty>
+                      )}
+                    </NotificationList>
+                  </NotificationDropdown>
+                )}
+              </NotificationContainer>
+              )}
+              
               {isLoggedIn ? (
                 <UserMenu ref={userMenuRef}>
                   <UserAvatar 

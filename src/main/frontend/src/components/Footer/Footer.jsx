@@ -146,48 +146,26 @@ const FooterSection = styled.div`
 `;
 
 const FooterLink = styled(Link)`
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--gray-600);
   text-decoration: none;
   transition: var(--transition-normal);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 1.125rem;
   position: relative;
-  padding: var(--space-2) 0;
-  font-weight: 500;
-
-  &::before {
-    content: '→';
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: var(--transition-normal);
-    color: var(--accent);
-    font-weight: bold;
+  
+  &:hover {
+    color: var(--primary);
   }
-
+  
   &::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: -2px;
     left: 0;
     width: 0;
     height: 2px;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    background: var(--primary);
     transition: var(--transition-normal);
-    border-radius: var(--radius-full);
   }
-
-  &:hover {
-    color: white;
-    transform: translateX(8px);
-  }
-
-  &:hover::before {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
+  
   &:hover::after {
     width: 100%;
   }
@@ -207,26 +185,19 @@ const SocialLink = styled.a`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-xl);
-  color: rgba(255, 255, 255, 0.8);
+  width: 40px;
+  height: 40px;
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-full);
   text-decoration: none;
   transition: var(--transition-normal);
-  backdrop-filter: blur(10px);
-
+  box-shadow: var(--shadow-sm);
+  
   &:hover {
-    background: var(--primary);
-    color: white;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary);
-  }
-
-  svg {
-    font-size: 1.25rem;
+    box-shadow: var(--shadow-md);
+    background: var(--primary-dark);
   }
 `;
 
@@ -338,7 +309,7 @@ const NewsletterInput = styled.input`
 
 const NewsletterButton = styled.button`
   padding: var(--space-3) var(--space-6);
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -348,7 +319,7 @@ const NewsletterButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    background: var(--primary-dark);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
   }

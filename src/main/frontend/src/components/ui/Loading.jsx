@@ -79,10 +79,8 @@ const Pulse = styled.div`
 const Shimmer = styled.div`
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
-  background-size: 200px 100%;
-  animation: ${shimmer} 1.5s infinite;
-  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.2);
+  animation: shimmer 1.5s infinite;
 `;
 
 const LoadingContainer = styled.div`

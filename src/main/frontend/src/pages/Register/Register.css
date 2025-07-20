@@ -9,7 +9,7 @@
 
 .header {
   width: 100%;
-  background-color: #0033cc;
+  background-color: #007bff;
   color: white;
   padding: 20px 0;
   display: flex;
@@ -42,7 +42,7 @@
 
 .page-title {
   text-align: center;
-  color: #0033cc;
+  color: #007bff;
   margin-bottom: 25px;
   font-size: 22px;
 }
@@ -69,9 +69,9 @@
 
 .input-group button {
   padding: 8px 14px;
-  background: #e0e7ff;
-  color: #0033cc;
-  border: 1px solid #0033cc;
+  background: #e0f2ff;
+  color: #007bff;
+  border: 1px solid #007bff;
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
@@ -79,12 +79,12 @@
 }
 
 .input-group button:hover {
-  background: #c7d2fe;
+  background: #c7e6ff;
 }
 
 .register-form button[type="submit"] {
   margin-top: 10px;
-  background: #0033cc;
+  background: #007bff;
   color: white;
   border: none;
   font-size: 16px;
@@ -95,7 +95,7 @@
 }
 
 .register-form button[type="submit"]:hover {
-  background: #001a66;
+  background: #0056b3;
 }
 
 .social-login-section {

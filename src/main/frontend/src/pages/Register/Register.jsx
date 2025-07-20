@@ -143,24 +143,21 @@ const SocialSection = styled.div`
 
 const SocialBtn = styled.button`
   margin: 0 0.5rem;
-  padding: 0.5rem 1.2rem;
-  border: none;
-  border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 1rem;
-  color: ${({ type }) => (type === 'kakao' ? '#222' : 'white')};
-  background: ${({ type }) =>
-    type === 'naver' ? '#03c75a' :
-    type === 'kakao' ? '#fee500' :
-    type === 'google' ? '#4285F4' :
-    'var(--primary)'};
-  margin-bottom: 0.5rem;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   cursor: pointer;
   transition: var(--transition);
-  min-width: 80px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   &:hover {
-    opacity: 0.85;
+    box-shadow: 0 4px 16px rgba(35,81,233,0.10);
+    border-color: #2351e9;
+    opacity: 0.95;
   }
 `;
 
@@ -499,7 +496,7 @@ function Register() {
         </StyledForm>
         {submitMsgKey && <Message color={submitMsgColor}>{t(submitMsgKey)}</Message>}
         <SocialSection>
-                  <p>{t('socialLogin')}</p>
+                  <p>{t('social')}</p>
                   <div style={{display:'flex', justifyContent:'center', gap:'1.5rem', marginTop:'1rem'}}>
                     <SocialBtn type="naver" aria-label="Naver Login" onClick={() => handleSocialLogin('naver')}>
                       <img src={naverLogo} alt="Naver" style={{width:40, height:40}} />

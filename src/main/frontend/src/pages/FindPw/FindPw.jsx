@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header.jsx';
 
 const FindContainer = styled.div`
@@ -80,12 +81,35 @@ const Message = styled.div`
 const Title = styled.h2`
   font-size: 2rem;
   font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--primary);
+`;
+
+const Description = styled.p`
+  font-size: 1rem;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
+  text-align: center;
+  line-height: 1.5;
+`;
+
+const SignupLink = styled.span`
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+  &:hover {
+    color: var(--primary-dark);
+  }
 `;
 
 function FindPw() {
   const { t, i18n } = useTranslation();
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+  });
   const [lang, setLang] = useState(i18n.language || 'ko');
   const [message, setMessage] = useState({ textKey: '', color: '' });
   const [loading, setLoading] = useState(false);
@@ -135,7 +159,8 @@ function FindPw() {
     <>
       <Header lang={lang} onLangChange={handleLangChange} />
       <FindContainer>
-        <Title>{t('findPw')}</Title>
+        <Title>{t('findPwTitle')}</Title>
+        <Description>{t('findPwDesc')}</Description>
         <StyledForm onSubmit={handleSubmit}>
           <InputGroup>
             <Input
