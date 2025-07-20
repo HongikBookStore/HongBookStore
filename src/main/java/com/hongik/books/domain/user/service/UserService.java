@@ -71,7 +71,7 @@ public class UserService {
                 user.verifyEmail(); // 도메인 메서드 사용
                 userRepository.save(user);
 
-                UserResponseDTO userResponse = new UserResponseDTO(user.getUsername(), user.getEmail());
+                UserResponseDTO userResponse = new UserResponseDTO(user.getId(), user.getUsername(), user.getEmail());
                 return new ApiResponse<>(true, "이메일 인증이 완료되었습니다.", userResponse);
             } else {
                 return new ApiResponse<>(false, "유효하지 않은 인증 토큰입니다.", null);
@@ -99,7 +99,7 @@ public class UserService {
                 mailService.sendEmail(userRequestDTO.email(), subject, text);
 
                 userRepository.save(user);
-                UserResponseDTO userResponse = new UserResponseDTO(user.getUsername(), user.getEmail());
+                UserResponseDTO userResponse = new UserResponseDTO(user.getId(),user.getUsername(), user.getEmail());
 
                 return new ApiResponse<>(true, "사용자 정보가 성공적으로 수정되었습니다.", userResponse);
             }).orElse(new ApiResponse<>(false, "사용자를 찾을 수 없습니다.", null));
@@ -132,6 +132,7 @@ public class UserService {
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             UserResponseDTO userResponse = new UserResponseDTO(
+                    user.get().getId(),
                     user.get().getUsername(),
                     user.get().getEmail()
             );

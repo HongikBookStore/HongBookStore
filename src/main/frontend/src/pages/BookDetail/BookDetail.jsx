@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthCtx } from '../../contexts/AuthContext'; // ✅ 너 AuthContext 경로 맞춰서!
 
 const DetailContainer = styled.div`
   max-width: 1200px;
@@ -474,8 +476,43 @@ const BookDetail = () => {
     setLiked(!liked);
   };
 
-  const handleChat = () => {
-    navigate(`/chat?bookId=${id}`);
+  const { user } = useContext(AuthCtx);
+
+  const handleChat = async () => {
+    try {
+      const salePostId = id;           // 책 게시글 ID
+      const buyerId = user?.id;        // ✅ 현재 로그인 사용자 ID 가져오기
+
+      if (!buyerId) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const token = localStorage.getItem('accessToken');
+      console.log("🔥 accessToken:", token);
+      console.log("✅ 현재 buyerId:", buyerId);
+
+      const res = await fetch(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log("🔥 fetch status:", res.status);
+      const text = await res.text();
+      console.log("🔥 response body:", text);
+
+      if (!res.ok) throw new Error('채팅방 생성 실패!');
+      const chatRoom = JSON.parse(text);
+
+      navigate(`/chat/${chatRoom.id}`);
+
+    } catch (err) {
+      console.error(err);
+      alert('채팅방 생성 실패!');
+    }
   };
 
   const handleCall = () => {

@@ -26,6 +26,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import ChatRoomWrapper from './pages/Chat/ChatRoomWrapper.jsx'
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -80,7 +81,7 @@ function App() {
                             <Route path="/bookstore/add" element={<BookWrite />} />
                             <Route path="/book/:id" element={<BookDetail />} />
                             <Route path="/chat" element={<ChatList />} />
-                            <Route path="/chat/:id" element={<ChatRoom />} />
+                            <Route path="/chat/:chatId" element={<ChatRoomWrapper />} />
                             <Route path="/community" element={<Community />} />
                             <Route path="/hongikmap" element={<MapPage />} />
                             <Route path="/mypage" element={<MyPage />} />

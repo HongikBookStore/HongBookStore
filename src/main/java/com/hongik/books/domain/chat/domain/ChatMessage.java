@@ -23,6 +23,9 @@ public class ChatMessage {
     @Column(name = "message_id")
     private Long id;
 
+    @ManyToOne
+    private ChatRoom chatRoom; // ✅ 이 필드가 반드시 있어야 함
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
     private SalePost salePost;

@@ -35,7 +35,9 @@ public class UserController {
 
             if (signUpResult.success()) {
                 // 회원가입 성공 시 UserResponse 생성
+                Long savedUserId = signUpResult.data(); // 저장된 id를 반환하도록 서비스 메서드 구현되어 있음
                 UserResponseDTO userResponse = new UserResponseDTO(
+                        savedUserId,
                         request.username(),
                         request.email()
                 );
@@ -153,6 +155,7 @@ public class UserController {
 
         // 3. User 엔티티를 프론트엔드로 보낼 UserResponseDTO로 변환합니다.
         UserResponseDTO userResponse = new UserResponseDTO(
+                loggedInUser.getId(),
                 loggedInUser.getUsername(),
                 loggedInUser.getEmail()
                 // 필요하다면 다른 정보(프로필 이미지 경로 등)도 추가할 수 있습니다.

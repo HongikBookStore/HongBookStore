@@ -61,6 +61,7 @@ public class SecurityConfig {
                 // HTTP 요청에 대한 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/ws-stomp/**",
                                 "/api/auth/password/**",
                                 "/api/auth/login",
                                 "/api/users/signup",
