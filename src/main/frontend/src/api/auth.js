@@ -1,4 +1,4 @@
-import api from '../lib/api'; // axios 인스턴스를 import 합니다.
+import api from '../lib/api'; // axios 인스턴스를 import
 
 // 회원가입
 export const signUp = (body) => api.post('/users/signup', body);
