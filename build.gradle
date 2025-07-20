@@ -69,8 +69,12 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
-    //Univcert
+    // Univcert
     implementation 'com.github.in-seo:univcert:master-SNAPSHOT'
+
+    // GCP Cloud Storage
+    implementation platform('com.google.cloud:libraries-bom:26.61.0')
+    implementation 'com.google.cloud:google-cloud-storage'
 
 }
 

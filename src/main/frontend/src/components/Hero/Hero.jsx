@@ -326,7 +326,7 @@ const Hero = () => {
             <CardTitle>구해요</CardTitle>
           </MainCard>
           
-          <MainCard to="/map">
+          <MainCard to="/hongikmap">
             <CardIcon>
               <FaMapMarkedAlt />
             </CardIcon>

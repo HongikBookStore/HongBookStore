@@ -73,7 +73,7 @@ export const logout = async () => {
 
   try {
     if (refreshToken) {
-      await api.delete('/auth/logout', {
+      await api.post('/auth/logout', {
         headers: {
           'Refresh-Token': refreshToken
         }

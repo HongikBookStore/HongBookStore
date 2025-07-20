@@ -35,7 +35,7 @@
   "showPw": "パスワードを表示",
   "hidePw": "パスワードを隠す",
   "findIdResult": "このメールアドレスで登録されたIDは{{id}}です。",
-  "findPwResult": "仮パスワードがメールで送信されました。メールをご確認ください。",
+  "findPwResult": "ご指定のメールアドレスにパスワード再設定リンクを送信しました。受信トレイを確認してください。",
   "emailNotFound": "存在しないメールアドレスです。再度ご確認ください。",
   "quickLinks": "クイックリンク",
   "marketplace": "ブックマーケット",
@@ -92,5 +92,15 @@
   "profileName": "名前",
   "profileEmail": "メール",
   "socialLogin": "ソーシャルアカウントでログイン",
-  "logout": "ログアウト"
-} 
+  "logout": "ログアウト",
+  "processing": "処理中...",
+  "requestFailed": "リクエストに失敗しました。しばらくしてから再試行してください。",
+  "resetPasswordTitle": "新しいパスワードの設定",
+  "newPassword": "新しいパスワード",
+  "confirmPassword": "新しいパスワードの確認",
+  "passwordRequired": "パスワードを入力してください。",
+  "passwordMismatch": "パスワードが一致しません。",
+  "passwordResetSuccess": "パスワードが正常に変更されました。まもなくログインページに移動します。",
+  "invalidToken": "無効なアクセスです。",
+  "ok": "確認"
+}

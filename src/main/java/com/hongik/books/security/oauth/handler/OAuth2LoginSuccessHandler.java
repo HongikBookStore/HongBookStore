@@ -1,10 +1,10 @@
 package com.hongik.books.security.oauth.handler;
 
-import com.hongik.books.jwt.JwtTokenProvider;
+import com.hongik.books.auth.jwt.JwtTokenProvider;
 
 import com.hongik.books.security.oauth.CustomOAuth2User;
-import com.hongik.books.user.domain.CustomUserDetails;
-import com.hongik.books.user.domain.User;
+import com.hongik.books.domain.user.domain.CustomUserDetails;
+import com.hongik.books.domain.user.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package com.hongik.books.security.oauth;
 
-import com.hongik.books.user.domain.User;
+import com.hongik.books.domain.user.domain.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;

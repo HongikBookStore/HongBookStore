@@ -1252,9 +1252,11 @@ const Marketplace = () => {
                   <FilterSection>
                     <FilterLabel>정렬 기준</FilterLabel>
                     <FilterSelect value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                      <option value="createdAt">등록 순</option>
+                      <option value="createdAt">최신 순</option>
                       <option value="likes">인기 순</option>
                       <option value="price">낮은 가격 순</option>
+                      <option value="price">상태 순</option>
+
                     </FilterSelect>
                   </FilterSection>
                 </FilterPopover>

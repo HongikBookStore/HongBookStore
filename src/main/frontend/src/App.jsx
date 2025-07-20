@@ -11,6 +11,7 @@ import Login from './pages/Login/Login.jsx';
 import Register from './pages/Register/Register.jsx';
 import FindId from './pages/FindId/FindId.jsx';
 import FindPw from './pages/FindPw/FindPw.jsx';
+import ResetPassword from './pages/ResetPassword/ResetPassword.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
@@ -26,10 +27,11 @@ import { WritingProvider } from './contexts/WritingContext';
 import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
-const AIChatbot = () => <div style={{padding: '64px 0', textAlign: 'center', fontSize: '1.5rem'}}>AI 챗봇 준비중입니다.</div>;
+// const AIChatbot = () => <div style={{padding: '64px 0', textAlign: 'center', fontSize: '1.5rem'}}>AI 챗봇 준비중입니다.</div>;
 
 function App() {
     const [isLoading, setIsLoading] = useState(true);
@@ -147,7 +149,7 @@ function App() {
                                     <Community />
                                 </>
                             } />
-                            <Route path="/map" element={
+                            <Route path="/hongikmap" element={
                                 <>
                                     <Header />
                                     <MapPage />

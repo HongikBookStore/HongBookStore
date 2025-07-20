@@ -782,9 +782,9 @@ const MyPage = () => {
         localStorage.setItem('isVerified', 'true');
         localStorage.setItem('verifiedEmail', schoolEmail);
 
-        console.log("📦 JWT 토큰:", localStorage.getItem("jwt"));
+        console.log("📦 JWT 토큰:", localStorage.getItem("accessToken"));
         // ⬇️ 인증 성공 시 서버에도 반영
-        const token = localStorage.getItem('jwt');
+        const token = localStorage.getItem('accessToken');
         axios.post('/api/users/verify-student', null, {
           headers: {
             Authorization: `Bearer ${token}`
