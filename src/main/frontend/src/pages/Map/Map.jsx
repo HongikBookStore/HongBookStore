@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaTrash, FaStar, FaRoute, FaClock, FaSearch, FaCamera, FaMapMarkerAlt, FaThumbsUp, FaThumbsDown, FaEdit, FaShare, FaUser, FaHeart, FaCrosshairs, FaMinus } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaStar, FaRoute, FaClock, FaSearch, FaCamera, FaMapMarkerAlt, FaThumbsUp, FaThumbsDown, FaEdit, FaShare, FaUser, FaHeart, FaCrosshairs, FaMinus, FaChevronDown } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io';
 import NaverMap from '../../components/NaverMap/Navermap';
 import { useLocation } from '../../contexts/LocationContext';
@@ -18,15 +18,33 @@ const MapPage = () => {
   });
 
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [categories, setCategories] = useState([
-    { id: 'restaurant', name: '음식점', color: '#FF6B6B' },
-    { id: 'cafe', name: '카페', color: '#4ECDC4' },
-    { id: 'bookstore', name: '서점', color: '#45B7D1' },
-    { id: 'library', name: '도서관', color: '#96CEB4' },
-    { id: 'park', name: '공원', color: '#FFEAA7' },
-    { id: 'print', name: '인쇄', color: '#A8E6CF' },
-    { id: 'partner', name: '제휴업체', color: '#FFB3BA' }
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+  
+  // 기본 카테고리 (시스템 제공)
+  const [systemCategories] = useState([
+    { id: 'restaurant', name: '음식점', color: '#FF6B6B', type: 'system' },
+    { id: 'cafe', name: '카페', color: '#4ECDC4', type: 'system' },
+    { id: 'bookstore', name: '서점', color: '#45B7D1', type: 'system' },
+    { id: 'library', name: '도서관', color: '#96CEB4', type: 'system' },
+    { id: 'park', name: '공원', color: '#FFEAA7', type: 'system' },
+    { id: 'print', name: '인쇄', color: '#A8E6CF', type: 'system' },
+    { id: 'partner', name: '제휴업체', color: '#FFB3BA', type: 'system' }
   ]);
+  
+  // 사용자 정의 카테고리
+  const [userCategories, setUserCategories] = useState([
+    { id: 'favorite', name: '즐겨찾기', color: '#FFD93D', type: 'user' },
+    { id: 'study', name: '공부하기 좋은 곳', color: '#6C5CE7', type: 'user' }
+  ]);
+  
+  // 모든 카테고리 합치기
+  const categories = [...systemCategories, ...userCategories];
+  
+  // 카테고리별 저장된 장소들
+  const [categoryPlaces, setCategoryPlaces] = useState({
+    favorite: [1, 3], // 홍대 서점, 홍대 도서관
+    study: [2, 3]     // 홍대 카페, 홍대 도서관
+  });
   
   const [places, setPlaces] = useState([
     {
@@ -246,7 +264,7 @@ const MapPage = () => {
   const [showAddPlace, setShowAddPlace] = useState(false);
   const [showPlaceDetail, setShowPlaceDetail] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showMapAddPlace, setShowMapAddPlace] = useState(false);
+
   const [showExistingPlaceModal, setShowExistingPlaceModal] = useState(false);
   const [showMyReviews, setShowMyReviews] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -266,25 +284,63 @@ const MapPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [mapClickMode, setMapClickMode] = useState(false);
+
   const [routeInfo, setRouteInfo] = useState(null);
   const [routePath, setRoutePath] = useState(null); // State for route path coordinates
+  const [currentRouteDestination, setCurrentRouteDestination] = useState(null); // 현재 경로 목적지
   const [currentZoom, setCurrentZoom] = useState(16); // Current zoom level
   const [isDragging, setIsDragging] = useState(false); // Slider drag state
-  const [showMyLocation, setShowMyLocation] = useState(false); // 내 위치 표시 상태
+  const [isAddingPlace, setIsAddingPlace] = useState(false);
+  const [tempMarker, setTempMarker] = useState(null);
 
-  // 카테고리별 장소 필터링 + 검색
-  const filteredPlaces = places.filter(place => {
-    const categoryMatch = selectedCategory === 'all' || place.category === selectedCategory;
+
+  // 카테고리별 아이콘 반환 함수
+  const getCategoryIcon = (categoryId) => {
+    switch (categoryId) {
+      case 'restaurant':
+        return '🍽️';
+      case 'cafe':
+        return '☕';
+      case 'bookstore':
+        return '📚';
+      case 'library':
+        return '📖';
+      case 'park':
+        return '🌳';
+      case 'print':
+        return '🖨️';
+      case 'partner':
+        return '🤝';
+      default:
+        return '📍';
+    }
+  };
+
+  // 선택된 카테고리에 따라 표시할 장소들 필터링
+  const getFilteredPlaces = () => {
+    if (selectedCategory === 'all') {
+      return places;
+    }
+    
+    // 시스템 장소 유형인 경우 해당 유형의 장소들
+    if (systemCategories.find(cat => cat.id === selectedCategory)) {
+      return places.filter(place => place.category === selectedCategory);
+    }
+    
+    // 사용자 카테고리인 경우 해당 카테고리에 저장된 장소들 (모든 유형 가능)
+    const categoryPlaceIds = categoryPlaces[selectedCategory] || [];
+    return places.filter(place => categoryPlaceIds.includes(place.id));
+  };
+
+  // 필터링된 장소들 (카테고리 + 검색)
+  const filteredPlaces = getFilteredPlaces().filter(place => {
     const searchMatch = searchQuery === '' || 
       place.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return categoryMatch && searchMatch;
+    return searchMatch;
   });
 
   // 선택된 카테고리의 장소들만 지도에 표시
-  const mapPlaces = selectedCategory === 'all' ? 
-    filteredPlaces : 
-    places.filter(place => place.category === selectedCategory);
+  const mapPlaces = filteredPlaces;
 
   // 선택된 카테고리의 기존 장소들
   const existingPlacesInCategory = places.filter(place => 
@@ -332,6 +388,16 @@ const MapPage = () => {
     searchPlaces(searchQuery);
   }, [searchQuery]);
 
+  // routePath 상태 변화 추적
+  useEffect(() => {
+    console.log('routePath 상태 변화 감지:', routePath);
+  }, [routePath]);
+
+  // tempMarker 상태 변화 추적
+  useEffect(() => {
+    console.log('tempMarker 상태 변화 감지:', tempMarker);
+  }, [tempMarker]);
+
   // 두 지점 간의 거리와 시간 계산
   const calculateDistanceAndTime = (lat1, lng1, lat2, lng2) => {
     // Haversine 공식을 사용한 정확한 거리 계산
@@ -350,38 +416,86 @@ const MapPage = () => {
     return { distance, timeMinutes };
   };
 
+  // 경로 초기화
+  const clearRoute = () => {
+    console.log('경로 초기화');
+    setRoutePath(null);
+    setRouteInfo(null);
+    setCurrentRouteDestination(null);
+  };
+
   // 경로 정보 가져오기 (실제로는 네이버 지도 API 사용)
   const getRouteInfo = (destination) => {
+    console.log('=== getRouteInfo 함수 시작 ===');
     console.log('getRouteInfo 호출됨:', destination);
+    console.log('destination 타입:', typeof destination);
+    console.log('destination 내용:', JSON.stringify(destination, null, 2));
+    
+    if (!destination) {
+      console.error('목적지 정보가 없습니다.');
+      setRouteInfo({ error: '목적지 정보가 없습니다.' });
+      return;
+    }
+    
     const currentLoc = userLocation || getDefaultLocation();
     console.log('현재 위치:', currentLoc);
+    console.log('currentLoc 타입:', typeof currentLoc);
     
     if (!currentLoc) {
+      console.error('현재 위치를 찾을 수 없습니다.');
       setRouteInfo({ error: '현재 위치를 찾을 수 없습니다.' });
       return;
     }
 
-    const { distance, timeMinutes } = calculateDistanceAndTime(
-      currentLoc.lat, currentLoc.lng, destination.lat, destination.lng
-    );
+    console.log('거리 계산 시작:', currentLoc, destination);
+    try {
+      const { distance, timeMinutes } = calculateDistanceAndTime(
+        currentLoc.lat, currentLoc.lng, destination.lat, destination.lng
+      );
+      console.log('거리 계산 결과:', { distance, timeMinutes });
 
-    const routeData = {
-      distance: `${Math.round(distance)}m`,
-      time: `${timeMinutes}분`,
-      method: '도보',
-      description: `${currentLoc.name}에서 ${destination.name}까지`
-    };
+      const routeData = {
+        distance: `${Math.round(distance)}m`,
+        time: `${timeMinutes}분`,
+        method: '도보',
+        description: `${currentLoc.name}에서 ${destination.name}까지`
+      };
 
-    setRouteInfo(routeData);
+      console.log('경로 데이터 생성:', routeData);
+      setRouteInfo(routeData);
 
-    // 경로를 지도에 표시하기 위한 데이터 설정
-    const pathData = {
-      start: { lat: currentLoc.lat, lng: currentLoc.lng },
-      end: { lat: destination.lat, lng: destination.lng }
-    };
-    
-    console.log('경로 데이터 설정:', pathData);
-    setRoutePath(pathData);
+      // 경로를 지도에 표시하기 위한 데이터 설정
+      const pathData = {
+        start: { lat: currentLoc.lat, lng: currentLoc.lng },
+        end: { lat: destination.lat, lng: destination.lng },
+        path: [
+          { lat: currentLoc.lat, lng: currentLoc.lng },
+          { lat: destination.lat, lng: destination.lng }
+        ]
+      };
+      
+      console.log('경로 데이터 설정:', pathData);
+      console.log('setRoutePath 호출 전');
+      setRoutePath(pathData);
+      setCurrentRouteDestination(destination); // 현재 경로 목적지 저장
+      console.log('setRoutePath 호출 후');
+      
+      // 상태 업데이트 확인을 위한 추가 로그
+      setTimeout(() => {
+        console.log('setRoutePath 후 routePath 상태 확인:', routePath);
+      }, 100);
+      
+      // 강제로 NaverMap에 경로 전달
+      setTimeout(() => {
+        console.log('강제 경로 업데이트:', pathData);
+        setRoutePath({...pathData}); // 새로운 객체로 강제 업데이트
+      }, 200);
+      
+      console.log('=== getRouteInfo 함수 완료 ===');
+    } catch (error) {
+      console.error('거리 계산 중 오류 발생:', error);
+      setRouteInfo({ error: '거리 계산 중 오류가 발생했습니다.' });
+    }
   };
 
   // 장소 상세 정보 열 때 자동으로 경로 정보 계산
@@ -392,7 +506,8 @@ const MapPage = () => {
       getRouteInfo(showPlaceDetail);
     } else {
       console.log('경로 정보 초기화');
-      setRoutePath(null);
+      // 경로는 유지 (사라지지 않도록)
+      // setRoutePath(null);
     }
   }, [showPlaceDetail]);
 
@@ -418,10 +533,13 @@ const MapPage = () => {
 
   // 나의 위치로 지도 이동
   const moveToMyLocation = (e) => {
+    console.log('내 위치 버튼 클릭됨');
     e.preventDefault();
     e.stopPropagation();
     
     const currentLoc = userLocation || getDefaultLocation();
+    console.log('현재 위치:', currentLoc);
+    
     if (!currentLoc) {
       alert('현재 위치를 찾을 수 없습니다. 마이페이지에서 위치를 설정해주세요.');
       return;
@@ -429,58 +547,85 @@ const MapPage = () => {
 
     // ref를 통해 NaverMap 컴포넌트의 moveToLocation 메서드 호출
     if (mapRef.current) {
+      console.log('지도 이동 실행:', currentLoc.lat, currentLoc.lng);
       mapRef.current.moveToLocation(currentLoc.lat, currentLoc.lng, 16);
+    } else {
+      console.log('mapRef.current가 없음');
     }
-    
-    // 내 위치 표시 토글
-    setShowMyLocation(prev => !prev);
   };
 
   // 지도 확대
   const zoomIn = (e) => {
+    console.log('확대 버튼 클릭됨');
     e.preventDefault();
     e.stopPropagation();
     
     if (mapRef.current) {
-      mapRef.current.zoomIn();
-      setCurrentZoom(prev => Math.min(20, prev + 1));
+      console.log('확대 실행');
+      const currentZoomLevel = mapRef.current.getMap().getZoom();
+      const newZoom = Math.min(20, currentZoomLevel + 1);
+      
+      // 바로 확대 (애니메이션 없이)
+      mapRef.current.setZoom(newZoom);
+      setCurrentZoom(newZoom);
+    } else {
+      console.log('mapRef.current가 없음');
     }
   };
 
   // 지도 축소
   const zoomOut = (e) => {
+    console.log('축소 버튼 클릭됨');
     e.preventDefault();
     e.stopPropagation();
     
     if (mapRef.current) {
-      mapRef.current.zoomOut();
-      setCurrentZoom(prev => Math.max(1, prev - 1));
+      console.log('축소 실행');
+      const currentZoomLevel = mapRef.current.getMap().getZoom();
+      const newZoom = Math.max(1, currentZoomLevel - 1);
+      
+      // 바로 축소 (애니메이션 없이)
+      mapRef.current.setZoom(newZoom);
+      setCurrentZoom(newZoom);
+    } else {
+      console.log('mapRef.current가 없음');
     }
   };
 
   // 슬라이더 드래그 시작
   const handleSliderMouseDown = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    console.log('슬라이더 드래그 시작');
     setIsDragging(true);
     document.addEventListener('mousemove', handleSliderMouseMove);
     document.addEventListener('mouseup', handleSliderMouseUp);
+    document.addEventListener('mouseleave', handleSliderMouseUp);
   };
 
   // 슬라이더 드래그 중
   const handleSliderMouseMove = (e) => {
     if (!isDragging) return;
     
-    const track = e.currentTarget.querySelector('.zoom-track');
-    if (!track) return;
+    e.preventDefault();
     
-    const rect = track.getBoundingClientRect();
-    const y = e.clientY - rect.top;
+    // document에서 마우스 위치를 가져와서 슬라이더 위치 계산
+    const sliderElement = document.querySelector('.zoom-track');
+    if (!sliderElement) {
+      console.log('슬라이더 요소를 찾을 수 없음');
+      return;
+    }
+    
+    const rect = sliderElement.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
     const height = rect.height;
     
     // 줌 레벨 계산 (1-20 범위)
     const zoomLevel = Math.max(1, Math.min(20, 21 - Math.round((y / height) * 20)));
+    console.log('드래그 중 줌 레벨:', zoomLevel);
     
     if (mapRef.current && zoomLevel !== currentZoom) {
+      console.log('드래그로 줌 레벨 설정:', zoomLevel);
       mapRef.current.setZoom(zoomLevel);
       setCurrentZoom(zoomLevel);
     }
@@ -488,24 +633,42 @@ const MapPage = () => {
 
   // 슬라이더 드래그 종료
   const handleSliderMouseUp = () => {
+    console.log('슬라이더 드래그 종료');
     setIsDragging(false);
     document.removeEventListener('mousemove', handleSliderMouseMove);
     document.removeEventListener('mouseup', handleSliderMouseUp);
+    document.removeEventListener('mouseleave', handleSliderMouseUp);
   };
 
   // 슬라이더 클릭
   const handleSliderClick = (e) => {
+    console.log('=== 슬라이더 클릭 이벤트 시작 ===');
+    console.log('클릭 이벤트:', e);
+    console.log('현재 줌 레벨:', currentZoom);
+    
     const track = e.currentTarget;
     const rect = track.getBoundingClientRect();
     const y = e.clientY - rect.top;
     const height = rect.height;
     
+    console.log('트랙 정보:', { rect, y, height });
+    
     const zoomLevel = Math.max(1, Math.min(20, 21 - Math.round((y / height) * 20)));
+    console.log('계산된 줌 레벨:', zoomLevel);
     
     if (mapRef.current) {
+      console.log('줌 레벨 설정:', zoomLevel);
+      
+      // 바로 줌 설정 (애니메이션 없이)
       mapRef.current.setZoom(zoomLevel);
       setCurrentZoom(zoomLevel);
+      
+      console.log('줌 레벨 설정 완료');
+    } else {
+      console.log('mapRef.current가 없음');
     }
+    
+    console.log('=== 슬라이더 클릭 이벤트 완료 ===');
   };
 
   // 키보드 단축키
@@ -515,11 +678,10 @@ const MapPage = () => {
         setShowAddPlace(false);
         setShowPlaceDetail(null);
         setShowCategoryModal(false);
-        setShowMapAddPlace(false);
+
         setShowExistingPlaceModal(false);
         setShowMyReviews(false);
         setShowSearchResults(false);
-        setMapClickMode(false);
       }
       // Ctrl + L 또는 Cmd + L로 내 위치로 이동
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
@@ -532,47 +694,86 @@ const MapPage = () => {
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [userLocation]);
 
-  // 카테고리 추가
+  // 사용자 카테고리 추가
   const addCategory = () => {
     if (newCategory.name.trim()) {
       const category = {
-        id: Date.now().toString(),
+        id: `user_${Date.now()}`,
         name: newCategory.name,
-        color: newCategory.color
+        color: newCategory.color,
+        type: 'user'
       };
-      setCategories([...categories, category]);
+      setUserCategories([...userCategories, category]);
+      setCategoryPlaces({ ...categoryPlaces, [category.id]: [] });
       setNewCategory({ name: '', color: '#FF6B6B' });
       setShowCategoryModal(false);
     }
   };
 
-  // 카테고리 삭제
+  // 사용자 카테고리 삭제 (시스템 카테고리는 삭제 불가)
   const deleteCategory = (categoryId) => {
-    setCategories(categories.filter(cat => cat.id !== categoryId));
-    if (selectedCategory === categoryId) {
-      setSelectedCategory('all');
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category && category.type === 'user') {
+      setUserCategories(userCategories.filter(cat => cat.id !== categoryId));
+      const newCategoryPlaces = { ...categoryPlaces };
+      delete newCategoryPlaces[categoryId];
+      setCategoryPlaces(newCategoryPlaces);
+      if (selectedCategory === categoryId) {
+        setSelectedCategory('all');
+      }
     }
   };
 
-  // 카테고리에 장소 추가
+  // 장소를 카테고리에 추가/제거
+  const togglePlaceInCategory = (placeId, categoryId) => {
+    const currentPlaces = categoryPlaces[categoryId] || [];
+    const isInCategory = currentPlaces.includes(placeId);
+    
+    if (isInCategory) {
+      // 카테고리에서 제거
+      setCategoryPlaces({
+        ...categoryPlaces,
+        [categoryId]: currentPlaces.filter(id => id !== placeId)
+      });
+    } else {
+      // 카테고리에 추가
+      setCategoryPlaces({
+        ...categoryPlaces,
+        [categoryId]: [...currentPlaces, placeId]
+      });
+    }
+  };
+
+  // 카테고리에 속한 장소인지 확인
+  const isPlaceInCategory = (placeId, categoryId) => {
+    return (categoryPlaces[categoryId] || []).includes(placeId);
+  };
+
+  // 카테고리에 장소 추가 (기존 함수 유지)
   const addPlaceToCategory = (categoryId) => {
     setSelectedCategoryForAdd(categoryId);
     setShowExistingPlaceModal(true);
   };
 
+
+
   // 장소 추가
   const addPlace = () => {
-    if (newPlace.name.trim() && newPlace.coordinates) {
-      // 전체 주소 구성 (좌표 + 세부 주소)
+    if (newPlace.name.trim()) {
+      // 기본 위치 설정 (사용자가 입력하지 않은 경우)
+      const defaultLocation = getDefaultLocation();
+      const coordinates = newPlace.coordinates || { lat: defaultLocation.lat, lng: defaultLocation.lng };
+      
+      // 전체 주소 구성
       const fullAddress = newPlace.detailedAddress.trim() 
-        ? `${newPlace.address} - ${newPlace.detailedAddress}`
-        : newPlace.address;
+        ? `${newPlace.address || defaultLocation.address} - ${newPlace.detailedAddress}`
+        : (newPlace.address || defaultLocation.address);
 
       const place = {
         id: Date.now(),
         name: newPlace.name,
-        lat: newPlace.coordinates.lat,
-        lng: newPlace.coordinates.lng,
+        lat: coordinates.lat,
+        lng: coordinates.lng,
         category: newPlace.category,
         address: fullAddress,
         description: newPlace.description,
@@ -581,7 +782,11 @@ const MapPage = () => {
         createdBy: currentUser.id,
         reviews: []
       };
+      
+      console.log('새 장소 추가:', place);
       setPlaces([...places, place]);
+      
+      // 폼 초기화
       setNewPlace({ 
         name: '', 
         category: 'restaurant', 
@@ -592,39 +797,64 @@ const MapPage = () => {
         coordinates: null
       });
       setShowAddPlace(false);
-      setShowMapAddPlace(false);
       setSelectedLocation(null);
-      setMapClickMode(false);
+      
+      // 성공 메시지 (선택사항)
+      alert('장소가 성공적으로 추가되었습니다!');
+    } else {
+      alert('장소 이름을 입력해주세요.');
     }
   };
 
-  // 지도 클릭으로 장소 추가 시작
-  const startMapAddPlace = () => {
-    console.log('=== startMapAddPlace 호출됨 ===');
-    setMapClickMode(true);
-    setShowMapAddPlace(true);
-    console.log('지도 클릭 모드 활성화 ✅');
+
+
+  // 장소 추가 모드 시작 (바로 모달 열기)
+  const startAddPlaceMode = () => {
+    console.log('장소 추가 모달 열기');
     
-    // 상태 변경 확인을 위한 타이머
-    setTimeout(() => {
-      console.log('mapClickMode 상태 확인:', mapClickMode);
-    }, 100);
+    // 기본 위치 설정
+    const defaultLocation = getDefaultLocation();
+    
+    // 새로운 장소 정보 초기화
+    setNewPlace({
+      name: '',
+      category: 'restaurant',
+      address: defaultLocation.address,
+      detailedAddress: '',
+      description: '',
+      photos: [],
+      coordinates: { lat: defaultLocation.lat, lng: defaultLocation.lng }
+    });
+    
+    // 모달 열기
+    setShowAddPlace(true);
   };
 
-  // 지도 클릭 이벤트 처리
-  const handleMapClick = (lat, lng, address = null) => {
-    console.log('=== handleMapClick 호출됨 ===');
-    console.log('클릭 좌표:', lat, lng);
-    console.log('변환된 주소:', address);
-    console.log('mapClickMode 상태:', mapClickMode);
-    console.log('showMapAddPlace 상태:', showMapAddPlace);
-    
-    if (mapClickMode) {
-      console.log('장소 추가 모드 활성화됨 - 모달 열기');
-      setSelectedLocation({ lat, lng });
+  // 장소 추가 모드 종료
+  const cancelAddPlaceMode = () => {
+    console.log('취소 버튼 클릭됨');
+    console.log('장소 추가 모드 종료');
+    setIsAddingPlace(false);
+    setTempMarker(null);
+  };
+
+  // 임시 마커 위치 업데이트
+  const updateTempMarkerPosition = (lat, lng, address = null) => {
+    if (isAddingPlace) {
+      console.log('임시 마커 위치 업데이트:', lat, lng);
+      setTempMarker({ lat, lng, address });
+    }
+  };
+
+  // 임시 마커로 장소 추가 확인
+  const confirmAddPlace = () => {
+    console.log('확인 버튼 클릭됨, tempMarker:', tempMarker);
+    if (tempMarker) {
+      console.log('장소 추가 확인:', tempMarker);
+      setSelectedLocation({ lat: tempMarker.lat, lng: tempMarker.lng });
       
       // 주소가 있으면 사용하고, 없으면 좌표 표시
-      const displayAddress = address || `위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`;
+      const displayAddress = tempMarker.address || `위도: ${tempMarker.lat.toFixed(6)}, 경도: ${tempMarker.lng.toFixed(6)}`;
       
       // 새로운 장소 정보 초기화 (좌표 포함)
       setNewPlace({
@@ -634,14 +864,22 @@ const MapPage = () => {
         detailedAddress: '',
         description: '',
         photos: [],
-        coordinates: { lat, lng }
+        coordinates: { lat: tempMarker.lat, lng: tempMarker.lng }
       });
       
       setShowAddPlace(true);
-      setMapClickMode(false);
-      console.log('장소 추가 모달 열림 ✅');
+      setIsAddingPlace(false);
+      setTempMarker(null);
     } else {
-      console.log('일반 클릭 모드 - 아무 동작 없음');
+      console.log('tempMarker가 없어서 장소 추가 모달을 열 수 없음');
+    }
+  };
+
+  // 지도 클릭 이벤트 처리
+  const handleMapClick = (lat, lng, address = null) => {
+    console.log('지도 클릭:', lat, lng, 'isAddingPlace:', isAddingPlace);
+    if (isAddingPlace) {
+      updateTempMarkerPosition(lat, lng, address);
     }
   };
 
@@ -758,6 +996,32 @@ const MapPage = () => {
     setSearchQuery('');
   };
 
+  // 유형 드롭다운 토글
+  const toggleTypeDropdown = () => {
+    setIsTypeDropdownOpen(!isTypeDropdownOpen);
+  };
+
+  // 유형 드롭다운 닫기
+  const closeTypeDropdown = () => {
+    setIsTypeDropdownOpen(false);
+  };
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isTypeDropdownOpen && !event.target.closest('.map-type-dropdown')) {
+        closeTypeDropdown();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTypeDropdownOpen]);
+
+
+
   // 검색어 변경 시 검색 결과 표시
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -789,41 +1053,42 @@ const MapPage = () => {
         <SidebarHeader>
           <h2>지도</h2>
           <HeaderButtons>
-            <AddButton onClick={startMapAddPlace}>
-              <FaMapMarkerAlt /> 지도에서 장소 추가
+            <AddButton onClick={startAddPlaceMode}>
+              <FaMapMarkerAlt /> 장소 추가
             </AddButton>
             <AddButton onClick={() => setShowMyReviews(true)}>
               <FaUser /> 내 리뷰
             </AddButton>
           </HeaderButtons>
         </SidebarHeader>
+        {/* 사용자 카테고리 */}
         <CategorySection>
           <CategoryHeader>
-            <h3>카테고리</h3>
+            <h3>내 카테고리</h3>
             <AddButton onClick={() => setShowCategoryModal(true)}>
               <FaPlus />
             </AddButton>
           </CategoryHeader>
           <CategoryList>
             <CategoryItem 
-              active={selectedCategory === 'all'}
+              $active={selectedCategory === 'all'}
               onClick={() => setSelectedCategory('all')}
             >
               <span>전체 ({places.length})</span>
             </CategoryItem>
-            {categories.map(category => {
-              const categoryPlaces = places.filter(place => place.category === category.id);
+            {userCategories.map(category => {
+              const categoryPlaceCount = (categoryPlaces[category.id] || []).length;
               return (
                 <CategoryItem 
                   key={category.id}
-                  active={selectedCategory === category.id}
+                  $active={selectedCategory === category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   color={category.color}
                 >
-                  <span>{category.name} ({categoryPlaces.length})</span>
+                  <span>{category.name} ({categoryPlaceCount})</span>
                   <CategoryActions>
                     <AddButton 
-                      small
+                      $small
                       onClick={(e) => {
                         e.stopPropagation();
                         addPlaceToCategory(category.id);
@@ -847,21 +1112,53 @@ const MapPage = () => {
           <h3>장소</h3>
           <PlacesList>
             {filteredPlaces.map(place => (
-              <PlaceItem key={place.id} onClick={() => setShowPlaceDetail(place)}>
-                <PlaceInfo>
+              <PlaceItem key={place.id}>
+                <PlaceInfo onClick={() => setShowPlaceDetail(place)}>
                   <PlaceName>{place.name}</PlaceName>
-                  <PlaceCategory>{categories.find(c => c.id === place.category)?.name}</PlaceCategory>
+                  <PlaceCategory>{systemCategories.find(c => c.id === place.category)?.name}</PlaceCategory>
                   <PlaceAddress>{place.address}</PlaceAddress>
                   <PlaceRating>
                     <FaStar style={{ color: '#FFD700' }} />
                     {calculateAverageRating(place.reviews)}
                   </PlaceRating>
                 </PlaceInfo>
-                <RouteButton onClick={(e) => {
-                  e.stopPropagation();
-                  getRouteInfo(place);
-                }}>
+                <RouteButton 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('=== 경로 찾기 버튼 클릭 시작 ===');
+                    console.log('클릭된 장소:', place);
+                    console.log('이벤트 객체:', e);
+                    console.log('현재 routePath 상태:', routePath);
+                    console.log('현재 경로 목적지:', currentRouteDestination);
+                    
+                    // 이미 같은 목적지의 경로가 있다면 제거, 없다면 새로 생성
+                    if (currentRouteDestination && currentRouteDestination.id === place.id) {
+                      console.log('같은 목적지 경로 제거');
+                      clearRoute();
+                    } else {
+                      console.log('새 경로 생성');
+                      setTimeout(() => {
+                        console.log('setTimeout으로 getRouteInfo 호출');
+                        getRouteInfo(place);
+                      }, 0);
+                    }
+                    
+                    console.log('=== 경로 찾기 버튼 클릭 완료 ===');
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('경로 버튼 마우스 다운:', place);
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('경로 버튼 터치 시작:', place);
+                  }}
+                >
                   <FaRoute />
+                  <span style={{ fontSize: '10px', marginLeft: '4px' }}>경로</span>
                 </RouteButton>
               </PlaceItem>
             ))}
@@ -870,7 +1167,7 @@ const MapPage = () => {
       </Sidebar>
 
       <StyledMapContainer>
-        {/* 지도 위 검색창 */}
+        {/* 지도 위 검색창 (왼쪽 위) */}
         <MapSearchContainer>
           <MapSearchInput
             placeholder="장소 검색..."
@@ -882,8 +1179,79 @@ const MapPage = () => {
           </MapSearchIcon>
         </MapSearchContainer>
 
+        {/* 지도 위 장소 유형 필터 (오른쪽) */}
+        <MapTypeButtonsContainer>
+          {/* 데스크톱: 버튼들 */}
+          <MapTypeButtonsScroll>
+            <MapTypeButton
+              $active={selectedCategory === 'all'}
+              onClick={() => setSelectedCategory('all')}
+              color="#007bff"
+            >
+              <MapTypeIcon>📍</MapTypeIcon>
+              <MapTypeLabel>전체</MapTypeLabel>
+            </MapTypeButton>
+            {systemCategories.map(category => (
+              <MapTypeButton
+                key={category.id}
+                $active={selectedCategory === category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                color={category.color}
+              >
+                <MapTypeIcon>{getCategoryIcon(category.id)}</MapTypeIcon>
+                <MapTypeLabel>{category.name}</MapTypeLabel>
+              </MapTypeButton>
+            ))}
+          </MapTypeButtonsScroll>
+          
+          {/* 모바일: 드롭다운 */}
+          <MapTypeDropdown className="map-type-dropdown">
+            <MapTypeDropdownButton onClick={toggleTypeDropdown}>
+              <MapTypeIcon>
+                {selectedCategory === 'all' ? '📍' : getCategoryIcon(selectedCategory)}
+              </MapTypeIcon>
+              <span>
+                {selectedCategory === 'all' ? '전체' : systemCategories.find(c => c.id === selectedCategory)?.name || '전체'}
+              </span>
+              <FaChevronDown style={{ 
+                transform: isTypeDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }} />
+            </MapTypeDropdownButton>
+            
+            <MapTypeDropdownContent $isOpen={isTypeDropdownOpen}>
+              <MapTypeDropdownItem
+                $active={selectedCategory === 'all'}
+                onClick={() => {
+                  setSelectedCategory('all');
+                  closeTypeDropdown();
+                }}
+              >
+                <MapTypeIcon>📍</MapTypeIcon>
+                <span>전체</span>
+              </MapTypeDropdownItem>
+              
+              {systemCategories.map(category => (
+                <MapTypeDropdownItem
+                  key={category.id}
+                  $active={selectedCategory === category.id}
+                  onClick={() => {
+                    setSelectedCategory(category.id);
+                    closeTypeDropdown();
+                  }}
+                >
+                  <MapTypeIcon>{getCategoryIcon(category.id)}</MapTypeIcon>
+                  <span>{category.name}</span>
+                </MapTypeDropdownItem>
+              ))}
+            </MapTypeDropdownContent>
+          </MapTypeDropdown>
+        </MapTypeButtonsContainer>
+
+
+
         {/* 검색 결과 오버레이 */}
-        <SearchResultsContainer show={showSearchResults && searchResults.length > 0}>
+        <SearchResultsContainer $show={showSearchResults && searchResults.length > 0}>
           <SearchResultsHeader>
             <SearchResultsTitle>
               검색 결과 ({searchResults.length})
@@ -951,24 +1319,19 @@ const MapPage = () => {
           })}
           categories={categories}
           onMapClick={handleMapClick}
-          mapClickMode={mapClickMode}
+          tempMarker={tempMarker}
+          isAddingPlace={isAddingPlace}
           userLocation={userLocation}
           routePath={routePath}
-          showMyLocation={showMyLocation}
+
         />
+
+
         
-        {mapClickMode && (
-          <MapClickOverlay>
-            <MapClickMessage>
-              지도를 클릭하여 장소를 추가하세요
-            </MapClickMessage>
-          </MapClickOverlay>
-        )}
         <MapControls>
           <LocationButton 
             onClick={moveToMyLocation} 
             title="내 위치로 이동"
-            active={showMyLocation}
           >
             <FaCrosshairs />
           </LocationButton>
@@ -998,73 +1361,290 @@ const MapPage = () => {
       {/* 장소 추가 모달 */}
       {showAddPlace && (
         <Modal>
-          <ModalContent>
-            <ModalHeader>
-              <h3>새 장소 추가</h3>
-              <CloseButton onClick={() => setShowAddPlace(false)}>
+          <ModalContent style={{
+            maxWidth: '500px',
+            width: '90%',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: '#ffffff'
+          }}>
+            <ModalHeader style={{
+              borderBottom: '2px solid #e9ecef',
+              padding: '24px 24px 16px 24px',
+              background: '#007bff',
+              color: 'white',
+              borderRadius: '16px 16px 0 0',
+              margin: '-1px -1px 0 -1px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>
+                📍 새 장소 추가
+              </h3>
+              <CloseButton 
+                onClick={() => setShowAddPlace(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
                 <IoMdClose />
               </CloseButton>
             </ModalHeader>
-            <ModalBody>
-              <Input
-                placeholder="장소 이름"
-                value={newPlace.name}
-                onChange={(e) => setNewPlace({ ...newPlace, name: e.target.value })}
-              />
-              <Select
-                value={newPlace.category}
-                onChange={(e) => setNewPlace({ ...newPlace, category: e.target.value })}
-              >
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-              <Input
-                placeholder="주소"
-                value={newPlace.address}
-                onChange={(e) => setNewPlace({ ...newPlace, address: e.target.value })}
-                style={{ backgroundColor: '#f8f9fa', color: '#666' }}
-                readOnly
-              />
-              <Input
-                placeholder="세부 주소 (건물명, 층수, 호수 등)"
-                value={newPlace.detailedAddress}
-                onChange={(e) => setNewPlace({ ...newPlace, detailedAddress: e.target.value })}
-              />
-              <TextArea
-                placeholder="설명 (선택사항)"
-                value={newPlace.description}
-                onChange={(e) => setNewPlace({ ...newPlace, description: e.target.value })}
-              />
-              <PhotoUploadSection>
-                <h5>사진 추가</h5>
-                <PhotoUploadButton htmlFor="photo-upload">
-                  <FaCamera /> 사진 선택
-                </PhotoUploadButton>
-                <PhotoUploadInput
-                  id="photo-upload"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
+            <ModalBody style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  🏷️ 장소 이름 *
+                </label>
+                <Input
+                  placeholder="예: 홍대 맛집, 스타벅스 홍대점"
+                  value={newPlace.name}
+                  onChange={(e) => setNewPlace({ ...newPlace, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    transition: 'border-color 0.2s ease'
+                  }}
                 />
-                <PhotoPreview>
-                  {newPlace.photos.map((photo, index) => (
-                    <PhotoItem key={index}>
-                      <img src={photo} alt={`사진 ${index + 1}`} />
-                    </PhotoItem>
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  🏪 카테고리
+                </label>
+                <Select
+                  value={newPlace.category}
+                  onChange={(e) => setNewPlace({ ...newPlace, category: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  {systemCategories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {getCategoryIcon(category.id)} {category.name}
+                    </option>
                   ))}
-                </PhotoPreview>
-              </PhotoUploadSection>
-              {selectedLocation && (
-                <LocationInfo>
-                  <FaMapMarkerAlt />
-                  선택된 위치: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-                </LocationInfo>
-              )}
-              <Button onClick={addPlace}>장소 추가</Button>
+                </Select>
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  📍 기본 주소
+                </label>
+                <Input
+                  placeholder="주소"
+                  value={newPlace.address}
+                  onChange={(e) => setNewPlace({ ...newPlace, address: e.target.value })}
+                  style={{ 
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: '#f8f9fa',
+                    color: '#666'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  🏢 세부 주소
+                </label>
+                <Input
+                  placeholder="예: 2층 201호, 건물명, 상세 위치"
+                  value={newPlace.detailedAddress}
+                  onChange={(e) => setNewPlace({ ...newPlace, detailedAddress: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  📝 설명 (선택사항)
+                </label>
+                <TextArea
+                  placeholder="장소에 대한 간단한 설명을 입력하세요"
+                  value={newPlace.description}
+                  onChange={(e) => setNewPlace({ ...newPlace, description: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  📸 사진 추가 (선택사항)
+                </label>
+                <div style={{
+                  border: '2px dashed #e9ecef',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  backgroundColor: '#f8f9fa',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <FaCamera style={{ fontSize: '24px', color: '#6c757d', marginBottom: '8px' }} />
+                  <div style={{ color: '#6c757d', fontSize: '14px' }}>
+                    사진을 선택하려면 클릭하세요
+                  </div>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    style={{ display: 'none' }}
+                    id="photo-upload"
+                  />
+                  <label htmlFor="photo-upload" style={{ cursor: 'pointer' }}>
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '8px 16px',
+                      backgroundColor: '#007bff',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      display: 'inline-block'
+                    }}>
+                      사진 선택
+                    </div>
+                  </label>
+                </div>
+                {newPlace.photos.length > 0 && (
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                      선택된 사진 ({newPlace.photos.length}개)
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {newPlace.photos.map((photo, index) => (
+                        <div key={index} style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: '2px solid #e9ecef'
+                        }}>
+                          <img 
+                            src={photo} 
+                            alt={`사진 ${index + 1}`} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                marginTop: '32px',
+                paddingTop: '20px',
+                borderTop: '2px solid #e9ecef'
+              }}>
+                <button 
+                  onClick={() => setShowAddPlace(false)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  취소
+                </button>
+                <button 
+                  onClick={addPlace}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(0, 123, 255, 0.3)'
+                  }}
+                >
+                  ✅ 장소 추가
+                </button>
+              </div>
             </ModalBody>
           </ModalContent>
         </Modal>
@@ -1082,7 +1662,7 @@ const MapPage = () => {
             </ModalHeader>
             <ModalBody>
               <PlaceDetailInfo>
-                <p><strong>카테고리:</strong> {categories.find(c => c.id === showPlaceDetail.category)?.name}</p>
+                <p><strong>장소 유형:</strong> {systemCategories.find(c => c.id === showPlaceDetail.category)?.name}</p>
                 <p><strong>주소:</strong> {showPlaceDetail.address}</p>
                 <p><strong>평점:</strong> {calculateAverageRating(showPlaceDetail.reviews)}</p>
                 {showPlaceDetail.description && (
@@ -1094,20 +1674,44 @@ const MapPage = () => {
                 <ActionButton onClick={() => sharePlace(showPlaceDetail)}>
                   <FaShare /> 공유
                 </ActionButton>
-                <ActionButton onClick={() => {
-                  setSelectedCategoryForAdd(showPlaceDetail.category);
-                  setShowExistingPlaceModal(true);
-                }}>
-                  <FaPlus /> 카테고리 추가
-                </ActionButton>
               </ActionButtons>
+
+              {/* 사용자 카테고리 관리 */}
+              <CategoryManagement>
+                <h4>내 카테고리에 추가</h4>
+                <CategoryList>
+                  {userCategories.map(category => (
+                                    <CategoryToggleItem
+                  key={category.id}
+                  $active={isPlaceInCategory(showPlaceDetail.id, category.id)}
+                  onClick={() => togglePlaceInCategory(showPlaceDetail.id, category.id)}
+                >
+                      <span>{category.name}</span>
+                      {isPlaceInCategory(showPlaceDetail.id, category.id) ? (
+                        <FaHeart style={{ color: '#FF6B6B' }} />
+                      ) : (
+                        <FaHeart style={{ color: '#e0e0e0' }} />
+                      )}
+                    </CategoryToggleItem>
+                  ))}
+                </CategoryList>
+              </CategoryManagement>
 
               {routeInfo && (
                 <RouteInfo>
                   <FaRoute />
-                  {routeInfo.error ? routeInfo.error : 
-                    `${routeInfo.description} - ${routeInfo.distance} (${routeInfo.time})`
-                  }
+                  {routeInfo.error ? (
+                    <span style={{ color: '#dc3545' }}>{routeInfo.error}</span>
+                  ) : (
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                        {routeInfo.description}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#666' }}>
+                        거리: {routeInfo.distance} | 시간: {routeInfo.time} | 방법: {routeInfo.method}
+                      </div>
+                    </div>
+                  )}
                 </RouteInfo>
               )}
 
@@ -1144,17 +1748,17 @@ const MapPage = () => {
                     </ReviewHeader>
                     <ReviewComment>{review.comment}</ReviewComment>
                     <ReviewReactions>
-                      <ReactionButton
-                        active={review.userLiked}
-                        onClick={() => toggleReviewReaction(review.id, 'like')}
-                      >
+                                      <ReactionButton
+                  $active={review.userLiked}
+                  onClick={() => toggleReviewReaction(review.id, 'like')}
+                >
                         <FaThumbsUp />
                         {review.likes}
                       </ReactionButton>
-                      <ReactionButton
-                        active={review.userDisliked}
-                        onClick={() => toggleReviewReaction(review.id, 'dislike')}
-                      >
+                                      <ReactionButton
+                  $active={review.userDisliked}
+                  onClick={() => toggleReviewReaction(review.id, 'dislike')}
+                >
                         <FaThumbsDown />
                         {review.dislikes}
                       </ReactionButton>
@@ -1185,7 +1789,7 @@ const MapPage = () => {
                   {[1, 2, 3, 4, 5].map(star => (
                     <StarButton
                       key={star}
-                      active={star <= newReview.rating}
+                      $active={star <= newReview.rating}
                       onClick={() => setNewReview({ ...newReview, rating: star })}
                     >
                       ★
@@ -1209,7 +1813,7 @@ const MapPage = () => {
         <Modal>
           <ModalContent>
             <ModalHeader>
-              <h3>새 카테고리 추가</h3>
+              <h3>새로운 내 카테고리 추가</h3>
               <CloseButton onClick={() => setShowCategoryModal(false)}>
                 <IoMdClose />
               </CloseButton>
@@ -1311,11 +1915,11 @@ const MapPage = () => {
             <ModalBody>
               <RatingInput>
                 {[1, 2, 3, 4, 5].map(star => (
-                  <StarButton
-                    key={star}
-                    active={star <= editingReview.rating}
-                    onClick={() => setEditingReview({ ...editingReview, rating: star })}
-                  >
+                                      <StarButton
+                      key={star}
+                      $active={star <= editingReview.rating}
+                      onClick={() => setEditingReview({ ...editingReview, rating: star })}
+                    >
                     ★
                   </StarButton>
                 ))}
@@ -1387,21 +1991,21 @@ const HeaderButtons = styled.div`
 `;
 
 const AddButton = styled.button`
-  background: ${props => props.active ? '#dc3545' : '#007bff'};
+  background: ${props => props.$active ? '#dc3545' : '#007bff'};
   color: white;
   border: none;
-  padding: ${props => props.small ? '4px 8px' : '8px 12px'};
+  padding: ${props => props.$small ? '4px 8px' : '8px 12px'};
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: ${props => props.small ? '10px' : '12px'};
+  font-size: ${props => props.$small ? '10px' : '12px'};
   font-weight: 500;
   transition: all 0.2s ease;
   
   &:hover {
-    background: ${props => props.active ? '#c82333' : '#0056b3'};
+    background: ${props => props.$active ? '#c82333' : '#0056b3'};
   }
 `;
 
@@ -1438,18 +2042,18 @@ const CategoryItem = styled.div`
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => props.active ? '#e3f2fd' : 'transparent'};
-  border-left: 4px solid ${props => props.active ? (props.color || '#007bff') : 'transparent'};
-  box-shadow: ${props => props.active ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'};
+  background: ${props => props.$active ? '#e3f2fd' : 'transparent'};
+  border-left: 4px solid ${props => props.$active ? (props.color || '#007bff') : 'transparent'};
+  box-shadow: ${props => props.$active ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'};
   
   &:hover {
-    background: ${props => props.active ? '#e3f2fd' : '#f8f9fa'};
-    transform: ${props => props.active ? 'translateX(2px)' : 'none'};
+    background: ${props => props.$active ? '#e3f2fd' : '#f8f9fa'};
+    transform: ${props => props.$active ? 'translateX(2px)' : 'none'};
   }
   
   span {
-    color: ${props => props.active ? '#1976d2' : '#333'};
-    font-weight: ${props => props.active ? '600' : '400'};
+    color: ${props => props.$active ? '#1976d2' : '#333'};
+    font-weight: ${props => props.$active ? '600' : '400'};
     font-size: 14px;
   }
 `;
@@ -1527,7 +2131,6 @@ const PlaceItem = styled.div`
   padding: 12px;
   border: 1px solid #f0f0f0;
   border-radius: 6px;
-  cursor: pointer;
   background: white;
   transition: all 0.2s ease;
   
@@ -1539,6 +2142,14 @@ const PlaceItem = styled.div`
 
 const PlaceInfo = styled.div`
   flex: 1;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+  }
 `;
 
 const PlaceName = styled.div`
@@ -1587,9 +2198,22 @@ const RouteButton = styled.button`
   padding: 6px 8px;
   border-radius: 4px;
   font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  position: relative;
   
   &:hover {
     background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    background: #004085;
   }
 `;
 
@@ -1631,67 +2255,47 @@ const MapClickMessage = styled.div`
 
 const MapControls = styled.div`
   position: absolute;
-  bottom: 40px;
+  bottom: 20px;
   right: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   z-index: 100;
 `;
 
 const LocationButton = styled.button`
-  background: ${props => props.active ? '#28a745' : '#007bff'};
+  background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   border: none;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: ${props => props.active ? 
-    '0 4px 12px rgba(40, 167, 69, 0.4)' : 
-    '0 4px 12px rgba(0, 123, 255, 0.3)'};
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
   transition: all 0.3s ease;
   border-radius: 8px;
-  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   svg {
-    width: 24px;
-    height: 24px;
-    transition: transform 0.3s ease;
+    width: 22px;
+    height: 22px;
+    transition: transform 0.2s ease;
   }
 
   &:hover {
-    background: ${props => props.active ? '#218838' : '#0056b3'};
+    background: linear-gradient(135deg, #0056b3, #004085);
     transform: translateY(-2px);
-    box-shadow: ${props => props.active ? 
-      '0 6px 16px rgba(40, 167, 69, 0.5)' : 
-      '0 6px 16px rgba(0, 123, 255, 0.4)'};
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    
+    svg {
+      transform: scale(1.1);
+    }
   }
 
   &:active {
     transform: translateY(0);
-  }
-
-  ${props => props.active && `
-    &::after {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      border: 2px solid #28a745;
-      border-radius: 10px;
-      animation: pulse 2s infinite;
-    }
-  `}
-
-  @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
   }
 `;
 
@@ -1699,66 +2303,80 @@ const ZoomControls = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.6);
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.95);
   padding: 6px 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-  position: relative;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(8px);
 `;
 
 const ZoomButton = styled.button`
-  background: rgba(0, 123, 255, 0.6);
+  background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   border: none;
-  width: 28px;
-  height: 24px;
+  width: 26px;
+  height: 22px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: all 0.2s ease;
   border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   svg {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
   }
 
   &:hover {
-    background: rgba(0, 86, 179, 0.7);
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   }
 
   &:active {
-    transform: scale(1);
+    transform: translateY(0) scale(0.95);
   }
 `;
 
 const ZoomSlider = styled.div`
-  width: 3px;
-  height: 80px;
-  background: rgba(233, 236, 239, 0.8);
+  width: 4px;
+  height: 90px;
+  background: #e0e0e0;
   position: relative;
   cursor: pointer;
-  border-radius: 2px;
-  margin: 2px 0;
+  border-radius: 3px;
+  margin: 3px 0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 `;
 
 const ZoomThumb = styled.div`
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 3px;
-  height: 12px;
-  background: rgba(0, 123, 255, 0.4);
-  border-radius: 2px;
+  width: 8px;
+  height: 16px;
+  background: #007bff;
+  border-radius: 4px;
   cursor: grab;
-  box-shadow: 0 1px 2px rgba(0, 123, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+
+  &:hover {
+    box-shadow: 0 3px 8px rgba(0, 123, 255, 0.4), 0 2px 4px rgba(0, 0, 0, 0.15);
+    transform: translateX(-50%) scale(1.1);
+  }
 
   &:active {
     cursor: grabbing;
+    transform: translateX(-50%) scale(0.95);
   }
 `;
 
@@ -1767,21 +2385,22 @@ const ZoomLevel = styled.div`
   right: -30px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.8);
   color: white;
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
   pointer-events: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(4px);
 
   ${ZoomSlider}:hover & {
     opacity: 1;
+    transform: translateY(-50%) scale(1.05);
   }
 
   &::before {
@@ -1794,7 +2413,7 @@ const ZoomLevel = styled.div`
     height: 0;
     border-top: 4px solid transparent;
     border-bottom: 4px solid transparent;
-    border-right: 4px solid rgba(0, 0, 0, 0.6);
+    border-right: 4px solid rgba(0, 0, 0, 0.8);
   }
 `;
 
@@ -1927,20 +2546,20 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button`
-  background: ${props => props.small ? '#6c757d' : '#007bff'};
+  background: ${props => props.$small ? '#6c757d' : '#007bff'};
   color: white;
   border: none;
-  padding: ${props => props.small ? '4px 8px' : '8px 12px'};
+  padding: ${props => props.$small ? '4px 8px' : '8px 12px'};
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: ${props => props.small ? '10px' : '12px'};
+  font-size: ${props => props.$small ? '10px' : '12px'};
   font-weight: 500;
   
   &:hover {
-    background: ${props => props.small ? '#5a6268' : '#0056b3'};
+    background: ${props => props.$small ? '#5a6268' : '#0056b3'};
   }
 `;
 
@@ -1971,7 +2590,7 @@ const SearchResultsContainer = styled.div`
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   z-index: 1000;
   overflow: hidden;
-  display: ${props => props.show ? 'block' : 'none'};
+  display: ${props => props.$show ? 'block' : 'none'};
 
   @media (max-width: 768px) {
     width: 90%;
@@ -2105,38 +2724,225 @@ const SearchIcon = styled.div`
   margin-bottom: 16px;
 `;
 
+// 지도 위 장소 유형 버튼들 스타일
+const MapTypeButtonsContainer = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  overflow: hidden;
+  
+  @media (max-width: 1200px) {
+    top: 20px;
+    right: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    top: 20px;
+    right: 5px;
+  }
+`;
+
+const MapTypeButtonsScroll = styled.div`
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0;
+  
+  /* 스크롤바 숨기기 */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  
+  @media (max-width: 1200px) {
+    display: none;
+  }
+`;
+
+const MapTypeButton = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid ${props => props.$active ? props.color : '#e0e0e0'};
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  ${props => props.$active && `
+    background: ${props.color}15;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: ${props.color};
+  `}
+  
+  @media (max-width: 1200px) {
+    display: none;
+  }
+`;
+
+const MapTypeLabel = styled.span`
+  font-size: 11px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  
+  @media (max-width: 1200px) {
+    display: none;
+  }
+`;
+
+// 드롭다운 스타일들 (1200px 이하에서 사용)
+const MapTypeDropdown = styled.div`
+  position: relative;
+  display: none;
+  
+  @media (max-width: 1200px) {
+    display: block;
+  }
+`;
+
+const MapTypeDropdownButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  @media (max-width: 480px) {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+`;
+
+const MapTypeDropdownContent = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 1001;
+  display: ${props => props.$isOpen ? 'block' : 'none'};
+  
+  @media (max-width: 480px) {
+    min-width: 180px;
+  }
+`;
+
+const MapTypeDropdownItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: ${props => props.$active ? '#f8f9fa' : 'white'};
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #333;
+  
+  &:last-child {
+    border-bottom: none;
+    border-radius: 0 0 12px 12px;
+  }
+  
+  &:first-child {
+    border-radius: 12px 12px 0 0;
+  }
+  
+  &:hover {
+    background: #f8f9fa;
+  }
+  
+  ${props => props.$active && `
+    background: #e3f2fd;
+    color: #1976d2;
+    font-weight: 600;
+  `}
+  
+  @media (max-width: 480px) {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+`;
+
+const MapTypeIcon = styled.span`
+  font-size: 16px;
+  line-height: 1;
+`;
+
 // 지도 위 검색창 스타일
 const MapSearchContainer = styled.div`
   position: absolute;
   top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 400px;
-  max-width: 90%;
+  left: 20px;
+  width: 280px;
+  max-width: 40%;
   z-index: 1000;
   display: flex;
   align-items: center;
   background: white;
   border-radius: 25px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0e0e0;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  padding: 8px 16px;
 
   &:focus-within {
-    box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     border-color: #007bff;
   }
 
-  @media (max-width: 768px) {
-    width: 90%;
-    top: 10px;
+  @media (max-width: 1200px) {
+    width: 140px;
+    max-width: 35%;
+    top: 20px;
+    left: 10px;
+    padding: 6px 12px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 100px;
+    max-width: 30%;
+    top: 20px;
+    left: 5px;
+    padding: 5px 10px;
   }
 `;
 
 const MapSearchInput = styled.input`
   flex: 1;
-  padding: 12px 16px;
+  padding: 0 8px;
   border: none;
   outline: none;
   font-size: 14px;
@@ -2148,7 +2954,7 @@ const MapSearchInput = styled.input`
 `;
 
 const MapSearchIcon = styled.div`
-  padding: 12px 16px;
+  padding: 0 8px;
   color: #666;
   background: transparent;
   display: flex;
@@ -2395,5 +3201,42 @@ const MyReviewActions = styled.div`
   display: flex;
   gap: 6px;
 `;
+
+const CategoryManagement = styled.div`
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+  
+  h4 {
+    margin: 0 0 12px 0;
+    color: #1a1a1a;
+    font-size: 16px;
+    font-weight: 600;
+  }
+`;
+
+const CategoryToggleItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border: 1px solid ${props => props.active ? '#FF6B6B' : '#e0e0e0'};
+  border-radius: 6px;
+  background: ${props => props.active ? '#fff5f5' : 'white'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.active ? '#ffe5e5' : '#f8f9fa'};
+  }
+  
+  span {
+    font-size: 14px;
+    color: #333;
+  }
+`;
+
+
 
 export default MapPage; 

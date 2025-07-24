@@ -444,7 +444,7 @@ const UserDropdown = styled.div`
   transition: var(--transition-normal);
   z-index: var(--z-dropdown);
 
-  ${({ isOpen }) => isOpen && `
+  ${({ $isOpen }) => $isOpen && `
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -525,7 +525,7 @@ const MobileMenu = styled.div`
   visibility: hidden;
   transition: var(--transition-normal);
 
-  ${({ isOpen }) => isOpen && `
+  ${({ $isOpen }) => $isOpen && `
     opacity: 1;
     visibility: visible;
   `}
@@ -543,7 +543,7 @@ const MobileMenuContent = styled.div`
   transition: var(--transition-normal);
   overflow-y: auto;
 
-  ${({ isOpen }) => isOpen && `
+  ${({ $isOpen }) => $isOpen && `
     transform: translateX(0);
   `}
 `;
@@ -1137,7 +1137,7 @@ const Header = () => {
                       </div>
                     )}
                   </UserAvatar>
-                  <UserDropdown isOpen={isDropdownOpen}>
+                  <UserDropdown $isOpen={isDropdownOpen}>
                     <DropdownItem to="/mypage" onClick={() => safeNavigate('/mypage')}>
                       마이페이지
                     </DropdownItem>
@@ -1187,8 +1187,8 @@ const Header = () => {
         </NavContainer>
       </HeaderContainer>
 
-          <MobileMenu isOpen={isMobileMenuOpen} onClick={toggleMobileMenu}>
-        <MobileMenuContent isOpen={isMobileMenuOpen} onClick={(e) => e.stopPropagation()}>
+          <MobileMenu $isOpen={isMobileMenuOpen} onClick={toggleMobileMenu}>
+        <MobileMenuContent $isOpen={isMobileMenuOpen} onClick={(e) => e.stopPropagation()}>
           <MobileMenuHeader>
             <h3>메뉴</h3>
             <MobileMenuClose onClick={toggleMobileMenu}>×</MobileMenuClose>
@@ -1225,7 +1225,7 @@ const Header = () => {
 
       {/* 경고 모달 */}
       <WarningModal
-        isOpen={showWarningModal}
+        $isOpen={showWarningModal}
         onClose={handleCancelExit}
         onConfirm={handleConfirmExit}
         onCancel={handleCancelExit}

@@ -331,16 +331,16 @@ const Wanted = () => {
                 <Card key={post.id}>
                   <CardTitle>{post.title}</CardTitle>
                   <CardMeta>
-                    <MetaLabel>저자</MetaLabel>
-                    <MetaValue>{post.author}</MetaValue>
+                        <MetaLabel>저자</MetaLabel>
+                        <MetaValue>{post.author}</MetaValue>
                   </CardMeta>
                   <CardMeta>
-                    <MetaLabel>상태</MetaLabel>
-                    <MetaValue>{post.condition}</MetaValue>
+                        <MetaLabel>상태</MetaLabel>
+                        <MetaValue>{post.condition}</MetaValue>
                   </CardMeta>
                   <CardMeta>
-                    <MetaLabel>희망 가격</MetaLabel>
-                    <MetaValue>{post.price.toLocaleString()}원</MetaValue>
+                        <MetaLabel>희망 가격</MetaLabel>
+                        <MetaValue>{post.price.toLocaleString()}원</MetaValue>
                   </CardMeta>
                   <CardMeta>
                     <MetaLabel>카테고리</MetaLabel>

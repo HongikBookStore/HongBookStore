@@ -338,12 +338,12 @@ const Search = () => {
                   <CardTitle>{book.title}</CardTitle>
                   <CardMeta>
                     <MetaLabel>
-                      <FaUser size={12} />
-                      {book.author}
+                    <FaUser size={12} />
+                    {book.author}
                     </MetaLabel>
                     <MetaValue>
-                      <FaGraduationCap size={12} />
-                      {book.subject}
+                    <FaGraduationCap size={12} />
+                    {book.subject}
                     </MetaValue>
                   </CardMeta>
                   <BookPrice>{book.price.toLocaleString()}원</BookPrice>
