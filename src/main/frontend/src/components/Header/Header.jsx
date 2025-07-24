@@ -325,6 +325,8 @@ const LoginButton = styled(Link)`
   gap: var(--space-2);
   position: relative;
   overflow: hidden;
+  z-index: 10;
+  pointer-events: auto;
 
   &::before {
     content: '';
@@ -367,6 +369,8 @@ const RegisterButton = styled(Link)`
   gap: var(--space-2);
   position: relative;
   overflow: hidden;
+  z-index: 10;
+  pointer-events: auto;
 
   &::before {
     content: '';
@@ -827,7 +831,7 @@ const Header = () => {
   
   // Context API를 사용하여 로그인 상태와 로그아웃 함수를 가져옵니다.
   const { isLoggedIn, user, logout } = useContext(AuthCtx);
-  const { isWriting, writingType } = useWriting();
+  const { isWriting, writingType, hasUnsavedChanges } = useWriting();
 
   const userMenuRef = useRef(null); // 드롭다운 외부 클릭 감지를 위한 ref
   const isHome = location.pathname === '/';
@@ -875,10 +879,13 @@ const Header = () => {
 
   // 안전한 네비게이션 함수
   const safeNavigate = (path) => {
-    if (isWriting) {
+    console.log('safeNavigate 호출됨:', path, 'isWriting:', isWriting, 'hasUnsavedChanges:', hasUnsavedChanges);
+    if (isWriting && hasUnsavedChanges) {
+      console.log('작성 중이고 저장되지 않은 변경사항이 있으므로 경고 모달 표시');
       setPendingNavigation(path);
       setShowWarningModal(true);
     } else {
+      console.log('네비게이션 실행:', path);
       navigate(path);
     }
     // 메뉴가 열려있다면 닫기
@@ -892,6 +899,9 @@ const Header = () => {
     if (pendingNavigation) {
       navigate(pendingNavigation);
       setPendingNavigation(null);
+    } else {
+      // pendingNavigation이 없으면 기본적으로 마켓플레이스로 이동
+      navigate('/marketplace');
     }
   };
 
@@ -899,6 +909,27 @@ const Header = () => {
   const handleCancelExit = () => {
     setShowWarningModal(false);
     setPendingNavigation(null);
+  };
+
+  // 임시저장 후 나가기
+  const handleSaveDraftAndExit = async () => {
+    try {
+      // 임시저장 로직은 각 페이지에서 처리하도록 이벤트 발생
+      window.dispatchEvent(new CustomEvent('saveDraft'));
+      setShowWarningModal(false);
+      if (pendingNavigation) {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }
+    } catch (error) {
+      console.error('임시저장 실패:', error);
+      // 임시저장 실패 시에도 나가기
+      setShowWarningModal(false);
+      if (pendingNavigation) {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }
+    }
   };
 
   // 기본 아바타 생성 함수
@@ -1120,10 +1151,24 @@ const Header = () => {
                 </UserMenu>
               ) : (
                 <AuthButtons>
-                  <LoginButton onClick={() => safeNavigate('/login')}>
+                  <LoginButton 
+                    to="/login" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('로그인 버튼 클릭됨');
+                      safeNavigate('/login');
+                    }}
+                  >
                     로그인
                   </LoginButton>
-                  <RegisterButton onClick={() => safeNavigate('/register')}>
+                  <RegisterButton 
+                    to="/register" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('회원가입 버튼 클릭됨');
+                      safeNavigate('/register');
+                    }}
+                  >
                     회원가입
                   </RegisterButton>
                 </AuthButtons>
@@ -1184,6 +1229,7 @@ const Header = () => {
         onClose={handleCancelExit}
         onConfirm={handleConfirmExit}
         onCancel={handleCancelExit}
+        onSaveDraft={handleSaveDraftAndExit}
         type={writingType}
         showSaveDraft={writingType === 'sale'}
       />

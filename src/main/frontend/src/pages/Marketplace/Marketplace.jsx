@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
+import { SearchButton, FilterButton } from '../../components/ui';
 
 const shimmer = keyframes`
   0% { background-position: -200px 0; }
@@ -121,38 +122,7 @@ const SearchBar = styled.div`
   }
 `;
 
-const SearchButton = styled.button`
-  padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: var(--shadow-sm);
-  min-width: 80px;
-  justify-content: center;
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
 
 const SearchIcon = styled.div`
   position: absolute;
@@ -190,24 +160,7 @@ const SearchIcon = styled.div`
   }
 `;
 
-const FilterButton = styled.button`
-  padding: 8px 16px;
-  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
-  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
-  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border-medium)'};
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  margin-right: 8px;
-  margin-bottom: 8px;
 
-  &:hover {
-    background: ${props => props.active ? 'var(--primary-dark)' : 'var(--gray-50)'};
-    border-color: var(--primary);
-    color: ${props => props.active ? 'white' : 'var(--primary)'};
-  }
-`;
 
 const SortButton = styled.button`
   padding: 8px 16px;

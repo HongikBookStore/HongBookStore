@@ -585,7 +585,7 @@ const MyBookstore = () => {
   ];
 
   // 임시 데이터 - 찜한 책
-  const mockWishlist = [
+  const [wishlist, setWishlist] = useState([
     {
       id: 101,
       title: '클린 코드',
@@ -622,7 +622,7 @@ const MyBookstore = () => {
       createdAt: '2024-01-09',
       image: null
     }
-  ];
+  ]);
 
   // 임시 데이터 - 최근 본 책
   const mockRecentBooks = [
@@ -747,6 +747,8 @@ const MyBookstore = () => {
     if (window.confirm('찜을 해제하시겠습니까?')) {
       // 실제로는 API 호출
       console.log('찜 목록에서 제거:', bookId);
+      // 상태에서 제거
+      setWishlist(prev => prev.filter(book => book.id !== bookId));
     }
   };
 
@@ -914,7 +916,7 @@ const MyBookstore = () => {
             <SectionHeader>
               <SectionTitle>
                 <FaHeart />
-                찜한 책 ({mockWishlist.length})
+                찜한 책 ({wishlist.length})
               </SectionTitle>
               <ViewMoreButton onClick={() => setShowAllWishlist(!showAllWishlist)}>
                 {showAllWishlist ? '접기' : '더보기'}
@@ -922,9 +924,9 @@ const MyBookstore = () => {
               </ViewMoreButton>
             </SectionHeader>
 
-            {mockWishlist.length > 0 ? (
+            {wishlist.length > 0 ? (
               <CompactList>
-                {(showAllWishlist ? mockWishlist : mockWishlist.slice(0, 3)).map(book => (
+                {(showAllWishlist ? wishlist : wishlist.slice(0, 3)).map(book => (
                   <CompactBookCard key={book.id}>
                     <CompactBookImage>
                       {book.image ? (

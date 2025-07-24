@@ -1,81 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 import Header from '../../components/Header/Header.jsx';
-
-// Styled-components는 FindPw.jsx와 유사하게 작성
-const ResetContainer = styled.div`
-  padding: 8rem 2rem 4rem;
-  max-width: 400px;
-  margin: 0 auto;
-  background: var(--background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  min-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  @media (max-width: 600px) {
-    padding: 4rem 0.5rem 2rem;
-    max-width: 98vw;
-  }
-`;
-
-const StyledForm = styled.form`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  align-items: stretch;
-`;
-
-const Input = styled.input`
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 1rem;
-  transition: var(--transition);
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-  }
-`;
-
-const SubmitButton = styled.button`
-  width: 100%;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: var(--transition);
-  margin-top: 0.5rem;
-  &:hover {
-    background: var(--primary-dark);
-    transform: translateY(-2px);
-  }
-`;
-
-const Message = styled.div`
-  color: ${({ color }) => color || 'var(--primary)'};
-  font-size: 1rem;
-  margin: 0.5rem 0 0 2px;
-  text-align: center;
-`;
-
-const Title = styled.h2`
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 2rem;
-`;
+import { FormContainer, Title, Form, Input, SubmitButton, Message } from '../../components/ui';
 
 function ResetPassword() {
   const { t } = useTranslation();
@@ -141,9 +68,9 @@ function ResetPassword() {
   return (
     <>
       <Header />
-      <ResetContainer>
+      <FormContainer>
         <Title>{t('resetPasswordTitle')}</Title>
-        <StyledForm onSubmit={handleSubmit}>
+        <Form onSubmit={handleSubmit}>
           <Input
             type="password"
             placeholder={t('newPassword')}
@@ -161,9 +88,9 @@ function ResetPassword() {
           <SubmitButton type="submit" disabled={!token || loading}>
             {loading ? t('processing') : t('ok')}
           </SubmitButton>
-        </StyledForm>
+        </Form>
         {message.textKey && <Message color={message.color}>{t(message.textKey)}</Message>}
-      </ResetContainer>
+      </FormContainer>
     </>
   );
 }

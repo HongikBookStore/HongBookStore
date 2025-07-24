@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaSearch, FaFilter, FaBook, FaUser, FaGraduationCap } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { Container, Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue } from '../../components/ui';
 
 const SearchContainer = styled.div`
   max-width: 1600px;
@@ -59,20 +60,7 @@ const SearchInput = styled.input`
   }
 `;
 
-const SearchButton = styled.button`
-  padding: 15px 25px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s;
 
-  &:hover {
-    background: #0056b3;
-  }
-`;
 
 const FilterSection = styled.div`
   background: #f8f9fa;
@@ -145,73 +133,7 @@ const SortSelect = styled.select`
   background: white;
 `;
 
-const BookGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-  width: 100%;
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-`;
 
-const BookCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 20px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px;
-    font-size: 0.95rem;
-  }
-`;
-
-const BookImage = styled.div`
-  width: 100%;
-  height: 200px;
-  background: #f0f0f0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 15px;
-  color: #999;
-`;
-
-const BookTitle = styled.h3`
-  font-size: 1.2rem;
-  margin-bottom: 8px;
-  color: #333;
-`;
-
-const BookAuthor = styled.p`
-  color: #666;
-  margin-bottom: 5px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-`;
-
-const BookSubject = styled.p`
-  color: #888;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-`;
 
 const BookPrice = styled.div`
   font-size: 1.3rem;
@@ -403,33 +325,35 @@ const Search = () => {
           {loading ? (
             <NoResults>검색 중...</NoResults>
           ) : books.length > 0 ? (
-            <BookGrid>
+            <Grid>
               {books.map(book => (
-                <BookCard key={book.id} onClick={() => handleBookClick(book.id)}>
-                  <BookImage>
+                <Card key={book.id} onClick={() => handleBookClick(book.id)}>
+                  <Card.Image>
                     {book.image ? (
                       <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                     ) : (
                       <FaBook size={40} />
                     )}
-                  </BookImage>
-                  <BookTitle>{book.title}</BookTitle>
-                  <BookAuthor>
-                    <FaUser size={12} />
-                    {book.author}
-                  </BookAuthor>
-                  <BookSubject>
-                    <FaGraduationCap size={12} />
-                    {book.subject}
-                  </BookSubject>
+                  </Card.Image>
+                  <CardTitle>{book.title}</CardTitle>
+                  <CardMeta>
+                    <MetaLabel>
+                      <FaUser size={12} />
+                      {book.author}
+                    </MetaLabel>
+                    <MetaValue>
+                      <FaGraduationCap size={12} />
+                      {book.subject}
+                    </MetaValue>
+                  </CardMeta>
                   <BookPrice>{book.price.toLocaleString()}원</BookPrice>
                   <BookStatus status={book.status}>
                     {book.status === 'SALE' ? '판매중' : 
                      book.status === 'RESERVED' ? '예약중' : '판매완료'}
                   </BookStatus>
-                </BookCard>
+                </Card>
               ))}
-            </BookGrid>
+            </Grid>
           ) : (
             <NoResults>
               <FaBook size={60} style={{marginBottom: '20px', opacity: 0.5}} />

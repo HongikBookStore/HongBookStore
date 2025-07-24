@@ -778,7 +778,7 @@ const BookWrite = () => {
   const location = useLocation();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const { startWriting, stopWriting } = useWriting();
+  const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
   
   // mock 데이터 (실제로는 API 호출)
   const mockMyBooks = [
@@ -863,7 +863,8 @@ const BookWrite = () => {
       value && value.toString().trim() !== ''
     ) || images.length > 0;
     setHasUnsavedChanges(hasChanges);
-  }, [formData, images]);
+    setUnsavedChanges(hasChanges);
+  }, [formData, images, setUnsavedChanges]);
 
   // 브라우저 뒤로가기/앞으로가기 감지
   useEffect(() => {
@@ -874,8 +875,38 @@ const BookWrite = () => {
       }
     };
 
+    // 브라우저 뒤로가기/앞으로가기 감지
+    const handlePopState = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        setPendingNavigation('/marketplace'); // 기본적으로 마켓플레이스로 이동
+        setShowWarningModal(true);
+        // 히스토리 상태를 다시 추가하여 뒤로가기 방지
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    // 임시저장 이벤트 처리
+    const handleSaveDraftEvent = async () => {
+      try {
+        await handleSaveDraft();
+      } catch (error) {
+        console.error('임시저장 실패:', error);
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('saveDraft', handleSaveDraftEvent);
+    
+    // 페이지 로드 시 히스토리 상태 추가
+    window.history.pushState(null, '', window.location.pathname);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('saveDraft', handleSaveDraftEvent);
+    };
   }, [hasUnsavedChanges]);
 
   // 수정 모드일 때 기존 데이터 불러오기
@@ -1090,6 +1121,9 @@ const BookWrite = () => {
     if (pendingNavigation) {
       navigate(pendingNavigation);
       setPendingNavigation(null);
+    } else {
+      // pendingNavigation이 없으면 기본적으로 마켓플레이스로 이동
+      navigate('/marketplace');
     }
   };
 
@@ -1107,6 +1141,9 @@ const BookWrite = () => {
       if (pendingNavigation) {
         navigate(pendingNavigation);
         setPendingNavigation(null);
+      } else {
+        // pendingNavigation이 없으면 기본적으로 마켓플레이스로 이동
+        navigate('/marketplace');
       }
     } catch (error) {
       console.error('임시저장 실패:', error);
@@ -1115,6 +1152,9 @@ const BookWrite = () => {
       if (pendingNavigation) {
         navigate(pendingNavigation);
         setPendingNavigation(null);
+      } else {
+        // pendingNavigation이 없으면 기본적으로 마켓플레이스로 이동
+        navigate('/marketplace');
       }
     }
   };

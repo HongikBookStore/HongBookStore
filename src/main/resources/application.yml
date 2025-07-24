@@ -2,7 +2,7 @@ spring:
   application:
     name: HongBookStore
   config:
-    import: optional:file:.env[.properties]
+    import: optional:file:.env[.properties], optional:file:src/main/resources/.env[.properties]
 
   ### OAuth ###
   security:

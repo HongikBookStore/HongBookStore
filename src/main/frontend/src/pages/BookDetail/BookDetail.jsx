@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getOrCreateChatRoom } from '../../api/chat';
 
 const DetailContainer = styled.div`
   max-width: 1200px;
@@ -710,8 +711,23 @@ const BookDetail = () => {
     setLiked(!liked);
   };
 
-  const handleChat = () => {
-    navigate(`/chat?bookId=${id}`);
+  const handleChat = async () => {
+    try {
+      console.log('채팅하기 버튼 클릭됨, 책 ID:', id);
+      
+      // 해당 책에 대한 채팅방을 조회하거나 생성
+      const response = await getOrCreateChatRoom(id);
+      const chatRoom = await response.json();
+      
+      console.log('생성된/조회된 채팅방:', chatRoom);
+      
+      // 생성된 또는 기존 채팅방으로 이동
+      navigate(`/chat/${chatRoom.id}`);
+    } catch (error) {
+      console.error('채팅방 생성/조회 실패:', error);
+      // 에러 발생 시 채팅 목록으로 이동
+      navigate('/chat');
+    }
   };
 
   const handleCall = () => {
