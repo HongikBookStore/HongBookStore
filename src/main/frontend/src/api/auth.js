@@ -68,6 +68,43 @@ export const getMyInfo = async () => {
   }
 };
 
+// 비밀번호 변경
+export const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await api.put('/users/password', {
+      currentPassword,
+      newPassword
+    });
+
+    if (response && response.success) {
+      return response.data;
+    } else {
+      throw new Error(response?.message || '비밀번호 변경에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('비밀번호 변경 API 호출 실패:', error);
+    throw error;
+  }
+};
+
+// 계정 탈퇴
+export const deleteAccount = async (password) => {
+  try {
+    const response = await api.delete('/users/me', {
+      data: { password }
+    });
+
+    if (response && response.success) {
+      return response.data;
+    } else {
+      throw new Error(response?.message || '계정 탈퇴에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('계정 탈퇴 API 호출 실패:', error);
+    throw error;
+  }
+};
+
 // 로그아웃
 export const logout = async () => {
   const refreshToken = localStorage.getItem('refreshToken');
