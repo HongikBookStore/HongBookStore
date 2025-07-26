@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled, { keyframes } from "styled-components";
+import { useTranslation } from "react-i18next";
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(20px); }
@@ -285,98 +286,88 @@ const BackButton = styled.button`
   }
 `;
 
-const OPTIONS = [
-  { 
-    label: "홍북스토어는 무엇인가요?", 
-    answer: "홍북스토어는 홍익대학교 학생들을 위한 중고책 거래 플랫폼입니다. 교재, 전공서적, 일반도서 등을 안전하게 거래할 수 있어요. 홍익대학교 이메일로만 가입 가능합니다."
-  },
-  { 
-    label: "책을 팔고 싶어요.", 
-    answer: "책을 팔고 싶으시다면 '책 거래 게시판'에서 '책 등록' 버튼을 눌러 진행하세요. 책 제목, 저자, 출판사, 상태, 가격, 설명을 입력하고 사진을 첨부하면 됩니다. 등록 후에는 구매 문의가 올 때까지 기다리시면 됩니다!",
-    image: "/images/book-register-guide.png",
-    image2: "/images/book-register-guide2.png"
-  },
-  { 
-    label: "책을 사고 싶어요.", 
-    answer: "책을 사고 싶으시다면 '책 거래 게시판'에서 원하는 책을 찾아보세요. 마음에 드는 책이 있으면 해당 게시글에서 판매자와 채팅으로 거래를 진행하세요. 채팅창에서 거래를 예약하고 거래를 수행하실 수 있습니다. 거래 완료 후에는 서로 평가를 남겨주세요!",
-    image: "/images/trade-guide.png",
-    image2: "/images/trade-guide2.png"
-  },
-  { 
-    label: "구하기 게시판이 궁금해요.", 
-    answer: "구하기 게시판은 원하는 책을 찾지 못했을 때 사용하는 기능입니다. 원하는 책의 제목, 저자, 출판사, 희망 가격을 작성하면 해당 책을 가지고 있는 판매자가 연락을 해드릴 수 있어요. 책을 찾기 어려울 때 활용해보세요!"
-  },
-  { 
-    label: "나의 책방이 궁금해요.", 
-    answer: "나의 책방에서는 내가 등록한 책들을 관리할 수 있습니다. 등록한 책의 상태를 수정하거나 삭제할 수 있고, 구매 문의가 온 책들을 확인할 수 있어요. 또한 내가 관심을 표시한 책들도 함께 볼 수 있습니다."
-  },
-  { 
-    label: "거래 채팅이 궁금해요.", 
-    answer: "거래 채팅은 판매자와 구매자가 직접 소통할 수 있는 기능입니다. 책에 관심이 있거나 구매하고 싶다면 해당 게시글에서 채팅을 시작할 수 있어요. 채팅을 통해 책 상태를 더 자세히 확인하거나 거래 장소와 시간을 정할 수 있습니다."
-  },
-  { 
-    label: "거래 내역은 어디서 볼 수 있나요?", 
-    answer: "'나의 거래' 메뉴에서 구매/판매 내역을 모두 확인할 수 있습니다. 거래 상태(진행중, 완료, 취소)도 함께 표시됩니다."
-  },
-  { 
-    label: "거래 약속을 잊어버렸어요.", 
-    answer: "거래 약속을 잊어버리셨다면 '나의 거래'에서 확인할 수 있습니다. 진행중인 거래를 클릭하면 채팅 내용과 함께 정한 거래 장소와 시간을 다시 확인할 수 있어요. 거래 전에 꼭 한 번 더 확인해보세요!"
-  },
-  { 
-    label: "안전한 거래 방법이 궁금해요.", 
-    answer: "거래는 안전한 공공장소에서 진행하세요. 개인 거래는 피해주세요. 또한 거래 전에 책 상태를 꼼꼼히 확인하고, 거래 후에는 서로 평가를 남겨주세요."
-  },
-  { 
-    label: "거래 후 문제가 생겼어요.", 
-    answer: "거래 후 문제가 발생하면 '나의 거래'에서 해당 거래를 찾아 신고할 수 있습니다. 사진과 함께 구체적인 문제 상황을 설명해주세요. 다만 운영진이 모든 문제를 해결해드릴 수는 없으니, 거래 전에 책 상태를 꼼꼼히 확인하시는 것을 권장합니다."
-  },
-  { 
-    label: "책 가격은 어떻게 정하나요?", 
-    answer: "책 등록 시 책 상태(새책, 깨끗함, 보통, 낡음)를 선택하면 자동으로 적절한 가격이 추천됩니다. 또한 '구하기 게시판'에서 비슷한 책의 수요를 확인해보시면 도움이 됩니다."
-  },
-  { 
-    label: "지도 기능이 궁금해요.", 
-    answer: "지도는 학교 생활에 필요한 장소들을 이용자들끼리 정보를 공유하는 기능입니다. 도서관, 카페, 식당, 편의점 등 학교 주변의 유용한 장소들을 분류하고 평가할 수 있어요. 다른 학생들이 추천한 장소들을 확인하고, 직접 좋은 장소를 공유할 수도 있습니다!"
-  },
-  { 
-    label: "계정 관련 문제가 있어요.", 
-    answer: "어떤 계정 관련 문제인지 선택해 주세요.",
-    subOptions: [
-      {
-        label: "회원 탈퇴",
-        answer: "회원 탈퇴는 '마이페이지' → '회원 탈퇴'에서 진행할 수 있습니다. 탈퇴 시 모든 데이터가 삭제되니 신중하게 결정해 주세요.",
-        image: "/images/register-withdraw.png"
-      },
-      {
-        label: "아이디 찾기",
-        answer: "아이디 찾기는 로그인 페이지에서 '아이디 찾기' 버튼을 클릭하여 진행할 수 있습니다. 홍익대학교 이메일로 가입하신 이메일 주소를 입력해 주세요.",
-        image: "/images/find-password.png"
-      },
-      {
-        label: "비밀번호 찾기",
-        answer: "비밀번호 찾기는 로그인 페이지에서 '비밀번호 찾기' 버튼을 클릭하여 진행할 수 있습니다. 홍익대학교 이메일로 임시 비밀번호를 발송해 드립니다.",
-        image: "/images/find-password.png"
-      },
-      {
-        label: "재학생 인증",
-        answer: "재학생 인증은 '마이페이지'에서 별도로 진행하세요. g.hongik.ac.kr 이메일을 입력하여 인증할 수 있습니다. 인증을 완료해야 중고 거래 등의 서비스를 제한 없이 이용할 수 있어요."
-      }
-    ]
-  },
-  { 
-    label: "지도에서 내 위치가 안 나와요.", 
-    answer: "브라우저 위치 권한이 허용되어 있는지 확인해 주세요. 위치 권한이 꺼져 있으면 내 위치가 표시되지 않습니다. 설정에서 위치 권한을 허용해주세요."
-  },
-  { 
-    label: "거래 장소 추천 시 내 위치가 실제와 달라요.", 
-    answer: "내 위치가 실제 위치와 다르게 표시된다면 '마이페이지'에서 나의 위치를 추가하여 직접 설정할 수 있습니다. 정확한 위치를 설정하면 더 정확한 거래 장소 추천을 받을 수 있어요!"
-  }
-];
-
 const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
-  const [currentOptions, setCurrentOptions] = useState(OPTIONS);
+  const { t } = useTranslation();
+  const [currentOptions, setCurrentOptions] = useState([]);
   const [optionHistory, setOptionHistory] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+
+  // 번역된 옵션들을 생성하는 함수
+  const getTranslatedOptions = () => [
+    {
+      label: t("chatbot.questions.sellBook"),
+      answer: t("chatbot.answers.sellBook"),
+      image: "/images/book-register-guide.png",
+      image2: "/images/book-register-guide2.png"
+    },
+    {
+      label: t("chatbot.questions.buyBook"),
+      answer: t("chatbot.answers.buyBook"),
+      image: "/images/trade-guide.png",
+      image2: "/images/trade-guide2.png"
+    },
+    {
+      label: t("chatbot.questions.safeTrade"),
+      answer: t("chatbot.answers.safeTrade")
+    },
+    {
+      label: t("chatbot.questions.bookPrice"),
+      answer: t("chatbot.answers.bookPrice")
+    },
+    {
+      label: t("chatbot.questions.accountIssues"),
+      subOptions: [
+        {
+          label: t("chatbot.subQuestions.withdraw"),
+          answer: t("chatbot.subAnswers.withdraw"),
+          image: "/images/register-withdraw.png"
+        },
+        {
+          label: t("chatbot.subQuestions.findId"),
+          answer: t("chatbot.subAnswers.findId"),
+          image: "/images/find-password.png"
+        },
+        {
+          label: t("chatbot.subQuestions.findPassword"),
+          answer: t("chatbot.subAnswers.findPassword"),
+          image: "/images/find-password.png"
+        },
+        {
+          label: t("chatbot.subQuestions.studentVerification"),
+          answer: t("chatbot.subAnswers.studentVerification")
+        }
+      ]
+    },
+    {
+      label: t("chatbot.questions.wantedBoard"),
+      answer: t("chatbot.answers.wantedBoard")
+    },
+    {
+      label: t("chatbot.questions.myBookstore"),
+      answer: t("chatbot.answers.myBookstore")
+    },
+    {
+      label: t("chatbot.questions.tradeChat"),
+      answer: t("chatbot.answers.tradeChat")
+    },
+    {
+      label: t("chatbot.questions.forgotTrade"),
+      answer: t("chatbot.answers.forgotTrade")
+    },
+    {
+      label: t("chatbot.questions.mapFeature"),
+      answer: t("chatbot.answers.mapFeature")
+    },
+    {
+      label: t("chatbot.questions.locationMismatch"),
+      answer: t("chatbot.answers.locationMismatch")
+    }
+  ];
+
+  // 언어 변경 시 옵션 업데이트
+  useEffect(() => {
+    setCurrentOptions(getTranslatedOptions());
+  }, [t]);
 
   const handleImageClick = (imageSrc) => {
     setSelectedImage(imageSrc);
@@ -395,7 +386,7 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
         { sender: "bot", text: option.answer }
       ]);
       setCurrentOptions(option.subOptions);
-      setOptionHistory((prev) => [...prev, { options: OPTIONS, message: option.label }]);
+      setOptionHistory((prev) => [...prev, { options: getTranslatedOptions(), message: option.label }]);
     } else {
       // 일반 옵션인 경우
       setMessages((prev) => [
@@ -428,7 +419,7 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
           <MessageContainer key={idx} sender={msg.sender}>
             <Message sender={msg.sender}>
               <MessageSender sender={msg.sender}>
-                {msg.sender === "bot" ? "챗봇" : "나"}
+                {msg.sender === "bot" ? t("chatbot.title") : "나"}
               </MessageSender>
               <MessageBubble sender={msg.sender}>
                 {msg.text}
@@ -458,7 +449,7 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
       
       {optionHistory.length > 0 && (
         <BackButton onClick={handleBackClick}>
-          ← 뒤로가기
+          {t("chatbot.back")}
         </BackButton>
       )}
       
@@ -475,7 +466,7 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
       
       {messages.length > 1 && (
         <ResetButton onClick={onReset}>
-          대화 초기화
+          {t("chatbot.reset")}
         </ResetButton>
       )}
 

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ChatBotContent from '../ChatBotModal/ChatBotModal';
+import { useTranslation } from 'react-i18next';
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -150,11 +151,21 @@ const SideModalBody = styled.div`
 `;
 
 const FloatingChatBot = () => {
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "안녕하세요! 홍북스토어 도우미입니다. 궁금한 점을 선택해 주세요! 📚" }
+    { sender: "bot", text: t("chatbot.welcome") }
   ]);
   const [chatKey, setChatKey] = useState(0); // ChatBotContent의 상태를 관리하기 위한 key
+
+  // 언어 변경 시 초기 메시지 업데이트
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].sender === "bot") {
+      setMessages([
+        { sender: "bot", text: t("chatbot.welcome") }
+      ]);
+    }
+  }, [i18n.language, t]);
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -165,7 +176,9 @@ const FloatingChatBot = () => {
   };
 
   const handleReset = () => {
-    setMessages([{ sender: "bot", text: "안녕하세요! 홍북스토어 도우미입니다. 궁금한 점을 선택해 주세요! 📚" }]);
+    setMessages([
+      { sender: "bot", text: t("chatbot.welcome") }
+    ]);
     // ChatBotContent의 상태도 초기화하기 위해 key를 변경
     setChatKey(prev => prev + 1);
   };
@@ -173,10 +186,9 @@ const FloatingChatBot = () => {
   return (
     <>
       <FloatingButton onClick={handleOpen}>
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          <path d="M8 9h8"></path>
-          <path d="M8 13h6"></path>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
+          <path d="M7 9H17V11H7V9ZM7 12H14V14H7V12Z" fill="currentColor"/>
         </svg>
       </FloatingButton>
       
@@ -184,8 +196,8 @@ const FloatingChatBot = () => {
         <SideModalOverlay>
           <SideModalContent>
             <SideModalHeader>
-              <SideModalTitle>AI 챗봇</SideModalTitle>
-              <CloseButton onClick={handleClose}>&times;</CloseButton>
+              <SideModalTitle>{t("chatbot.title")}</SideModalTitle>
+              <CloseButton onClick={handleClose}>×</CloseButton>
             </SideModalHeader>
             <SideModalBody>
               <ChatBotContent 

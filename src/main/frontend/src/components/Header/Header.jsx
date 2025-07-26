@@ -607,7 +607,9 @@ const Header = () => {
 
 
   const handleLangChange = (e) => {
-    i18n.changeLanguage(e.target.value);
+    const newLang = e.target.value;
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('lang', newLang);
   };
 
   const handleLogout = async () => {

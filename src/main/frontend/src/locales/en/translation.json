@@ -95,12 +95,55 @@
   "logout": "Logout",
   "processing": "Processing...",
   "requestFailed": "Request failed. Please try again later.",
-  "resetPasswordTitle": "Reset Password",
+  "resetPasswordTitle": "Set New Password",
   "newPassword": "New Password",
   "confirmPassword": "Confirm New Password",
   "passwordRequired": "Please enter your password.",
   "passwordMismatch": "Passwords do not match.",
   "passwordResetSuccess": "Your password has been successfully changed. You will be redirected to the login page shortly.",
   "invalidToken": "Invalid access.",
-  "ok": "OK"
+  "ok": "OK",
+  "chatbot": {
+    "title": "HongBookStore Helper",
+    "welcome": "Hello! I'm the HongBookStore Helper. Please select what you'd like to know! 📚",
+    "reset": "Reset Conversation",
+    "back": "← Back",
+    "questions": {
+      "sellBook": "I want to sell a book.",
+      "buyBook": "I want to buy a book.",
+      "wantedBoard": "I'm curious about the wanted board.",
+      "myBookstore": "I'm curious about my bookstore.",
+      "tradeChat": "I'm curious about trade chat.",
+      "forgotTrade": "I forgot my trade appointment.",
+      "safeTrade": "I'm curious about safe trading methods.",
+      "bookPrice": "How do I set book prices?",
+      "accountIssues": "I have account-related issues.",
+      "mapFeature": "I'm curious about the map feature.",
+      "locationMismatch": "My location is different from actual when recommending trade locations."
+    },
+    "answers": {
+      "sellBook": "To sell a book, click the 'Register Book' button in the 'Book Trading Board'. Enter the book title, author, publisher, condition, price, description, and attach photos. After registration, wait for purchase inquiries!",
+      "buyBook": "To buy a book, search for the book you want in the 'Book Trading Board'. If you find a book you like, proceed with the trade through chat with the seller. You can reserve and complete the trade in the chat. After the trade is complete, leave reviews for each other!",
+      "wantedBoard": "The wanted board is a feature used when you can't find the book you want. Write the title, author, publisher, and desired price of the book you want, and sellers who have that book can contact you. Use it when it's difficult to find a book!",
+      "myBookstore": "In my bookstore, you can manage the books you've registered. You can modify or delete the status of registered books, and check books that have received purchase inquiries. You can also view books you've shown interest in.",
+      "tradeChat": "Trade chat is a feature where sellers and buyers can communicate directly. If you're interested in a book or want to buy it, you can start a chat from the relevant post. Through chat, you can check the book's condition in more detail or arrange the trade location and time.",
+      "forgotTrade": "If you've forgotten your trade appointment, you can check it in 'My Trades'. Click on an ongoing trade to see the chat content and the agreed trade location and time again. Make sure to check once more before the trade!",
+      "safeTrade": "Conduct trades in safe public places. Avoid private trades. Also, carefully check the book's condition before trading, and leave reviews for each other after the trade.",
+      "bookPrice": "When registering a book, select the book's condition (new, clean, normal, worn) and an appropriate price will be automatically recommended. You can also check the demand for similar books in the 'Wanted Board'.",
+      "mapFeature": "The map is a feature for users to share information about places needed for school life. You can categorize and rate useful places around the school such as libraries, cafes, restaurants, and convenience stores. You can check places recommended by other students and share good places yourself!",
+      "locationMismatch": "If your location is displayed differently from the actual location, you can add your location in 'My Page' and set it directly. Setting an accurate location will help you receive more accurate trade location recommendations!"
+    },
+    "subQuestions": {
+      "withdraw": "Withdraw Account",
+      "findId": "Find ID",
+      "findPassword": "Find Password",
+      "studentVerification": "Student Verification"
+    },
+    "subAnswers": {
+      "withdraw": "Account withdrawal can be processed in 'My Page' → 'Withdraw Account'. Please decide carefully as all data will be deleted upon withdrawal.",
+      "findId": "You can find your ID by clicking the 'Find ID' button on the login page. Please enter the email address you used to register with Hongik University email.",
+      "findPassword": "You can find your password by clicking the 'Find Password' button on the login page. A temporary password will be sent to your Hongik University email.",
+      "studentVerification": "Student verification is done separately in 'My Page'. You can verify using a g.hongik.ac.kr email. You must complete verification to use services like used book trading without restrictions."
+    }
+  }
 } 
