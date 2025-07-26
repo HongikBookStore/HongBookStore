@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
 /**
  * 판매 게시글 관련 API 요청을 처리하는 컨트롤러
@@ -101,5 +102,28 @@ public class SalePostController {
 
         salePostService.deleteSalePost(postId, loginUser.id());
         return ResponseEntity.noContent().build(); // 내용 없이 성공(204 No Content) 응답
+    }
+
+    /**
+     * 내 판매글 목록을 조회하는 API
+     * [GET] /api/my/posts
+     */
+    @GetMapping("/my")
+    public ResponseEntity<List<MyPostSummaryResponseDTO>> getMySalePosts(@AuthenticationPrincipal LoginUserDTO loginUser) {
+        List<MyPostSummaryResponseDTO> myPosts = salePostService.getMySalePosts(loginUser.id());
+        return ResponseEntity.ok(myPosts);
+    }
+
+    /**
+     * 판매 게시글의 상태를 변경하는 API
+     * [PATCH] /api/posts/{postId}/status
+     */
+    @PatchMapping("/{postId}/status")
+    public ResponseEntity<Void> updateSalePostStatus(
+            @PathVariable Long postId,
+            @RequestBody SalePostStatusUpdateRequestDTO request,
+            @AuthenticationPrincipal LoginUserDTO loginUser) {
+        salePostService.updateSalePostStatus(postId, request, loginUser.id());
+        return ResponseEntity.ok().build();
     }
 }

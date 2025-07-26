@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Getter
 public class CustomOAuth2User extends DefaultOAuth2User {
-    // 우리 서비스의 User 엔티티를 필드로 가집니다.
+    // 우리 서비스의 User 엔티티를 필드로 가짐
     private final User user;
 
     /**

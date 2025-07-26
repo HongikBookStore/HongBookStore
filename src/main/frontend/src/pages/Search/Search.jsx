@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { FaSearch, FaFilter, FaBook, FaUser, FaGraduationCap } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const SearchContainer = styled.div`
   max-width: 1600px;
@@ -228,9 +229,9 @@ const BookStatus = styled.span`
   
   ${props => {
     switch(props.status) {
-      case 'SALE': return 'background: #d4edda; color: #155724;';
+      case 'FOR_SALE': return 'background: #d4edda; color: #155724;';
       case 'RESERVED': return 'background: #fff3cd; color: #856404;';
-      case 'SOLD': return 'background: #f8d7da; color: #721c24;';
+      case 'SOLD_OUT': return 'background: #f8d7da; color: #721c24;';
       default: return 'background: #e2e3e5; color: #383d41;';
     }
   }}
@@ -242,72 +243,67 @@ const NoResults = styled.div`
   color: #666;
 `;
 
+// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
+const statusMap = {
+  'FOR_SALE': '판매중',
+  'RESERVED': '예약중',
+  'SOLD_OUT': '판매완료'
+};
+
 const Search = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    subject: '',
-    priceMin: '',
-    priceMax: '',
-    status: '',
-    sortBy: 'createdAt'
+    // TODO: 필터 기능은 백엔드 API에 해당 파라미터가 추가된 후 구현
+    sortBy: 'createdAt,desc' // 기본 정렬: 최신순
   });
-  const [books, setBooks] = useState([]);
+  const [posts, setPosts] = useState([]); // [수정] books -> posts
+  const [pageInfo, setPageInfo] = useState(null); // [추가] 페이지네이션 정보
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 임시 데이터
-  const mockBooks = [
-    {
-      id: 1,
-      title: '자바의 정석',
-      author: '남궁성',
-      subject: '프로그래밍',
-      price: 15000,
-      status: 'SALE',
-      image: null
-    },
-    {
-      id: 2,
-      title: '스프링 부트 실전 활용',
-      author: '김영한',
-      subject: '프로그래밍',
-      price: 20000,
-      status: 'SALE',
-      image: null
-    },
-    {
-      id: 3,
-      title: '알고리즘 문제 해결 전략',
-      author: '구종만',
-      subject: '알고리즘',
-      price: 18000,
-      status: 'RESERVED',
-      image: null
+  // [수정] API 호출 로직
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    try {
+      // API에 보낼 파라미터 구성
+      const params = {
+        page: 0, // TODO: 페이지네이션 UI 구현 시 현재 페이지 상태와 연결
+        size: 20, // 한 번에 20개씩
+        sort: filters.sortBy,
+        // TODO: 백엔드에 검색 기능 추가 후, searchTerm 파라미터도 추가
+        // query: searchTerm, 
+      };
+
+      const response = await axios.get('/api/posts', { params });
+      setPosts(response.data.content); // 실제 데이터는 content 배열에 담겨있음
+      setPageInfo({ // 페이지 정보 저장
+        totalPages: response.data.totalPages,
+        totalElements: response.data.totalElements,
+        currentPage: response.data.number,
+      });
+    } catch (error) {
+      console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
+      alert("게시글을 불러올 수 없습니다.");
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [filters.sortBy]); // 정렬 기준이 바뀔 때마다 함수를 새로 만듦
 
+  // 컴포넌트가 처음 마운트될 때 게시글 목록을 불러옴
   useEffect(() => {
-    setBooks(mockBooks);
-  }, []);
+    fetchPosts();
+  }, [fetchPosts]); // fetchPosts 함수가 변경될 때마다 실행
 
+  // 검색 버튼 클릭 시 동작
   const handleSearch = (e) => {
     e.preventDefault();
-    setLoading(true);
-    
-    // 실제로는 API 호출
-    setTimeout(() => {
-      const filtered = mockBooks.filter(book => 
-        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.subject.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setBooks(filtered);
-      setLoading(false);
-    }, 500);
+    // TODO: 현재 백엔드 API는 검색어(query) 파라미터를 지원하지 않음.
+    // 백엔드에 검색 기능이 추가되면, 이 함수에서 fetchPosts를 다시 호출하도록 구현해야 함.
+    alert('검색 기능은 현재 준비 중입니다!');
   };
 
-  const handleBookClick = (bookId) => {
-    navigate(`/marketplace/${bookId}`);
+  const handleBookClick = (postId) => {
+    navigate(`/posts/${postId}`);
   };
 
   return (
@@ -315,14 +311,14 @@ const Search = () => {
       <div className="header-spacer" />
       <SearchContainer>
         <SearchHeader>
-          <SearchTitle>책 검색</SearchTitle>
-          <SearchSubtitle>원하는 책을 찾아보세요</SearchSubtitle>
+          <SearchTitle>책 마켓플레이스</SearchTitle>
+          <SearchSubtitle>선배들의 지식을 저렴하게 얻어보세요!</SearchSubtitle>
         </SearchHeader>
 
         <SearchForm onSubmit={handleSearch}>
           <SearchInput
             type="text"
-            placeholder="책 제목, 저자, 과목을 검색해보세요..."
+            placeholder="책 제목, 저자를 검색해보세요..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -331,101 +327,44 @@ const Search = () => {
           </SearchButton>
         </SearchForm>
 
-        <FilterSection>
-          <FilterTitle>
-            <FaFilter /> 필터
-          </FilterTitle>
-          <FilterGrid>
-            <FilterGroup>
-              <FilterLabel>
-                <FaGraduationCap /> 과목
-              </FilterLabel>
-              <FilterSelect
-                value={filters.subject}
-                onChange={(e) => setFilters({...filters, subject: e.target.value})}
-              >
-                <option value="">전체</option>
-                <option value="프로그래밍">프로그래밍</option>
-                <option value="알고리즘">알고리즘</option>
-                <option value="수학">수학</option>
-                <option value="영어">영어</option>
-              </FilterSelect>
-            </FilterGroup>
-
-            <FilterGroup>
-              <FilterLabel>최소 가격</FilterLabel>
-              <FilterInput
-                type="number"
-                placeholder="0"
-                value={filters.priceMin}
-                onChange={(e) => setFilters({...filters, priceMin: e.target.value})}
-              />
-            </FilterGroup>
-
-            <FilterGroup>
-              <FilterLabel>최대 가격</FilterLabel>
-              <FilterInput
-                type="number"
-                placeholder="무제한"
-                value={filters.priceMax}
-                onChange={(e) => setFilters({...filters, priceMax: e.target.value})}
-              />
-            </FilterGroup>
-
-            <FilterGroup>
-              <FilterLabel>상태</FilterLabel>
-              <FilterSelect
-                value={filters.status}
-                onChange={(e) => setFilters({...filters, status: e.target.value})}
-              >
-                <option value="">전체</option>
-                <option value="SALE">판매중</option>
-                <option value="RESERVED">예약중</option>
-                <option value="SOLD">판매완료</option>
-              </FilterSelect>
-            </FilterGroup>
-          </FilterGrid>
-        </FilterSection>
+        {/* TODO: 필터 기능은 백엔드 API가 준비되면 활성화 */}
+        {/* <FilterSection> ... </FilterSection> */}
 
         <ResultsSection>
           <ResultsHeader>
-            <ResultsCount>총 {books.length}개의 결과</ResultsCount>
+            <ResultsCount>총 {pageInfo ? pageInfo.totalElements : 0}개의 게시글</ResultsCount>
             <SortSelect
               value={filters.sortBy}
               onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
             >
-              <option value="createdAt">최신순</option>
-              <option value="price">가격순</option>
-              <option value="title">제목순</option>
+              <option value="createdAt,desc">최신순</option>
+              <option value="price,asc">낮은 가격순</option>
+              <option value="price,desc">높은 가격순</option>
+              {/* TODO: 조회수순 정렬은 백엔드에 기능 추가 후 활성화 */}
             </SortSelect>
           </ResultsHeader>
 
           {loading ? (
-            <NoResults>검색 중...</NoResults>
-          ) : books.length > 0 ? (
+            <NoResults>게시글을 불러오는 중...</NoResults>
+          ) : posts.length > 0 ? (
             <BookGrid>
-              {books.map(book => (
-                <BookCard key={book.id} onClick={() => handleBookClick(book.id)}>
+              {posts.map(post => (
+                <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
                   <BookImage>
-                    {book.image ? (
-                      <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                    {post.thumbnailUrl ? (
+                      <BookImageImg src={post.thumbnailUrl} alt={post.postTitle} />
                     ) : (
                       <FaBook size={40} />
                     )}
                   </BookImage>
-                  <BookTitle>{book.title}</BookTitle>
-                  <BookAuthor>
+                  <BookCardTitle>{post.postTitle}</BookCardTitle>
+                  <BookSeller>
                     <FaUser size={12} />
-                    {book.author}
-                  </BookAuthor>
-                  <BookSubject>
-                    <FaGraduationCap size={12} />
-                    {book.subject}
-                  </BookSubject>
-                  <BookPrice>{book.price.toLocaleString()}원</BookPrice>
-                  <BookStatus status={book.status}>
-                    {book.status === 'SALE' ? '판매중' : 
-                     book.status === 'RESERVED' ? '예약중' : '판매완료'}
+                    {post.sellerNickname}
+                  </BookSeller>
+                  <BookPrice>{post.price.toLocaleString()}원</BookPrice>
+                  <BookStatus status={post.status}>
+                    {statusMap[post.status]}
                   </BookStatus>
                 </BookCard>
               ))}
@@ -433,14 +372,15 @@ const Search = () => {
           ) : (
             <NoResults>
               <FaBook size={60} style={{marginBottom: '20px', opacity: 0.5}} />
-              <h3>검색 결과가 없습니다</h3>
-              <p>다른 검색어를 시도해보세요</p>
+              <h3>등록된 게시글이 없습니다</h3>
+              <p>첫 번째 판매글을 등록해보세요!</p>
             </NoResults>
           )}
         </ResultsSection>
+        {/* TODO: 여기에 페이지네이션 버튼 UI를 추가 (예: 1, 2, 3, 다음 >) */}
       </SearchContainer>
     </>
   );
 };
 
-export default Search; 
+export default Search;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { 
   FaArrowLeft, 
@@ -21,6 +21,7 @@ import wowWorst from '../../assets/wow/wow_worst.png';
 import wowBad from '../../assets/wow/wow_bad.png';
 import wowGood from '../../assets/wow/wow_good.png';
 import wowBest from '../../assets/wow/wow_best.png';
+import axios from 'axios';
 
 const TransactionsContainer = styled.div`
   max-width: 1200px;
@@ -412,9 +413,16 @@ const TransactionReservationSaveBtn = styled.button`
   &:hover { background: var(--primary-dark); }
 `;
 
+// 인증 토큰을 가져오는 헬퍼 함수
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
 const MyTransactions = () => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, type: '', transactionId: null });
   const [reason, setReason] = useState('');
   const [ratingModal, setRatingModal] = useState({ open: false, transactionId: null });
@@ -425,112 +433,39 @@ const MyTransactions = () => {
   const [editReservationId, setEditReservationId] = useState(null);
   const [editReservation, setEditReservation] = useState({ place: '', date: '', time: '' });
 
-  // 임시 데이터 - 예약된 거래
-  const mockTransactions = [
-    {
-      id: 1,
-      bookTitle: '자바의 정석',
-      bookAuthor: '남궁성',
-      price: 15000,
-      reservationDate: '2024-01-20',
-      reservationTime: '14:00',
-      buyer: '김학생',
-      buyerId: 'buyer123',
-      location: {
-        name: '홍익대학교 정문',
-        address: '서울특별시 마포구 와우산로 94',
-        coordinates: { lat: 37.5519, lng: 126.9259 }
-      },
-      qrCode: 'transaction_001_qr_code_data',
-      route: {
-        type: '지하철',
-        description: '2호선 홍대입구역 1번 출구에서 도보 5분',
-        duration: '15분',
-        distance: '1.2km'
-      },
-      status: 'RESERVED',
-      reason: '',
-      myReview: null,
-      theirReview: {
-        rating: 'good',
-        ratingScore: 75,
-        ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요']
-      }
-    },
-    {
-      id: 2,
-      bookTitle: '스프링 부트 실전 활용',
-      bookAuthor: '김영한',
-      price: 20000,
-      reservationDate: '2024-01-22',
-      reservationTime: '16:30',
-      buyer: '이학생',
-      buyerId: 'buyer456',
-      location: {
-        name: '홍익대학교 도서관',
-        address: '서울특별시 마포구 와우산로 94 홍익대학교 도서관',
-        coordinates: { lat: 37.5519, lng: 126.9259 }
-      },
-      qrCode: 'transaction_002_qr_code_data',
-      route: {
-        type: '버스',
-        description: '마포 03번 버스 이용, 홍대입구역 하차',
-        duration: '20분',
-        distance: '2.1km'
-      },
-      status: 'RESERVED',
-      reason: '',
-      myReview: null,
-      theirReview: {
-        rating: 'good',
-        ratingScore: 75,
-        ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요']
-      }
-    },
-    {
-      id: 3,
-      bookTitle: '알고리즘 문제 해결 전략',
-      bookAuthor: '구종만',
-      price: 18000,
-      reservationDate: '2024-01-25',
-      reservationTime: '13:00',
-      buyer: '박학생',
-      buyerId: 'buyer789',
-      location: {
-        name: '홍익대학교 학생회관',
-        address: '서울특별시 마포구 와우산로 94 홍익대학교 학생회관',
-        coordinates: { lat: 37.5519, lng: 126.9259 }
-      },
-      qrCode: 'transaction_003_qr_code_data',
-      route: {
-        type: '도보',
-        description: '홍대입구역에서 도보로 이동',
-        duration: '8분',
-        distance: '0.8km'
-      },
-      status: 'RESERVED',
-      reason: '',
-      myReview: null,
-      theirReview: {
-        rating: 'good',
-        ratingScore: 75,
-        ratingKeywords: ['약속 시간을 잘 지켜요', '책이 사진과 동일해요']
-      }
-    }
-  ];
-
-  useEffect(() => {
-    setTransactions(mockTransactions);
-  }, []);
-
-  // 예약 정보 불러오기 (채팅방에서 저장된 정보)
-  useEffect(() => {
-    const saved = localStorage.getItem('lastReservation');
-    if (saved) {
-      const { place, date } = JSON.parse(saved);
-      setReservation(prev => ({ ...prev, place, date }));
+  // API 호출 함수
+  const fetchMyPosts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/posts/my', { headers: getAuthHeader() });
+      setTransactions(response.data);
+    } catch (error) {
+      console.error("내 판매글 목록을 불러오는 데 실패했습니다.", error);
+      // TODO: 401 Unauthorized 에러 시 로그인 페이지로 리다이렉트 처리
+    } finally {
+      setLoading(false);
     }
   }, []);
+
+  // 컴포넌트 마운트 시 내 판매글 목록을 불러옴
+  useEffect(() => {
+    fetchMyPosts();
+  }, [fetchMyPosts]);
+
+  // 거래 상태 변경 핸들러
+  const handleStatusChange = async (postId, status) => {
+    if (!window.confirm(`정말로 이 거래를 '${status === 'SOLD_OUT' ? '거래완료' : '예약취소'}' 상태로 변경하시겠습니까?`)) {
+      return;
+    }
+    try {
+      await axios.patch(`/api/posts/${postId}/status`, { status }, { headers: getAuthHeader() });
+      alert("상태가 성공적으로 변경되었습니다.");
+      fetchMyPosts(); // 목록 새로고침
+    } catch (error) {
+      console.error("상태 변경에 실패했습니다.", error);
+      alert("상태 변경 중 오류가 발생했습니다.");
+    }
+  };
 
   const handleBack = () => {
     navigate('/my-bookstore');
@@ -696,11 +631,15 @@ const MyTransactions = () => {
 
         {sortedTransactions.length > 0 ? (
           sortedTransactions.map(transaction => (
-            <TransactionCard key={transaction.id}>
+            <TransactionCard key={transaction.postId}>
               <TransactionHeader>
                 <BookInfo>
-                  <BookTitle>{transaction.bookTitle}</BookTitle>
+                  <BookCardTitle>{transaction.bookTitle}</BookCardTitle>
                   <TransactionMeta>
+                    <MetaItem>
+                      <FaCalendarAlt />
+                      등록일: {new Date(transaction.createdAt).toLocaleDateString()}
+                    </MetaItem>
                     <MetaItem>
                       <FaUser />
                       구매자: {transaction.buyer}

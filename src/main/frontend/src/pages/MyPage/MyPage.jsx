@@ -5,11 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const UNIVCERT_API_KEY = '77ddffda-a3e8-4363-a31d-96e507f9b19c';
-const UNIVCERT_ENDPOINT = 'https://univcert.com/api/v1/certify';
-// (만약 인증 코드 검증용 별도 엔드포인트가 있다면 추가 정의)
-const VERIFY_ENDPOINT = "https://univcert.com/api/v1/certifycode";
-
 const MyPageContainer = styled.div`
   padding: 6rem 2vw 4rem;
   max-width: 1600px;

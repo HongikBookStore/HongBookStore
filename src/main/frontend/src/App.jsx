@@ -10,8 +10,6 @@ import MyPage from './pages/MyPage/MyPage.jsx';
 import Login from './pages/Login/Login.jsx';
 import Register from './pages/Register/Register.jsx';
 import FindId from './pages/FindId/FindId.jsx';
-import FindPw from './pages/FindPw/FindPw.jsx';
-import ResetPassword from './pages/ResetPassword/ResetPassword.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
@@ -24,7 +22,6 @@ import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import MapPage from './pages/Map/Map.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
-
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 
 // 임시 컴포넌트
@@ -87,8 +84,6 @@ function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
-                            <Route path="/find-pw" element={<FindPw />} />
-                            <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/ai-chat" element={<AIChatbot />} />
                             <Route path="/marketplace/:id" element={<BookDetail />} />
                             <Route path="/bookwrite/:id" element={<BookWrite />} />

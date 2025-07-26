@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 판매 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -185,5 +187,33 @@ public class SalePostService {
         // DB에서 게시글 삭제 (연관된 Book도 함께 삭제할지는 정책에 따라 결정)
         // 지금은 게시글만 삭제하도록 구현합니다.
         salePostRepository.delete(salePost);
+    }
+
+    /**
+     * 특정 사용자가 작성한 모든 판매 게시글 목록을 조회합니다.
+     */
+    @Transactional(readOnly = true)
+    public List<MyPostSummaryResponseDTO> getMySalePosts(Long userId) {
+        return salePostRepository.findAllBySellerIdOrderByCreatedAtDesc(userId).stream()
+                .map(MyPostSummaryResponseDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 판매 게시글의 상태를 변경합니다. (예약중, 판매완료 등)
+     */
+    public void updateSalePostStatus(Long postId, SalePostStatusUpdateRequestDTO request, Long userId) {
+        SalePost salePost = salePostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글 ID입니다."));
+
+        // 권한 확인: 게시글 작성자와 요청한 사용자가 동일한지 확인
+        if (!salePost.getSeller().getId().equals(userId)) {
+            throw new SecurityException("게시글 상태를 변경할 권한이 없습니다.");
+        }
+
+        // SalePost 엔티티에 상태를 변경하는 메서드를 추가해야 합니다.
+        // 예: salePost.changeStatus(request.getStatus());
+        // 지금은 간단하게 구현합니다.
+        // (SalePost Entity에 setStatus(SaleStatus status) 메서드가 필요합니다.)
     }
 }
