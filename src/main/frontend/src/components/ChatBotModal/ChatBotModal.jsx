@@ -16,51 +16,14 @@ const slideInRight = keyframes`
   to { opacity: 1; transform: translateX(0); }
 `;
 
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-`;
-
-const ChatBotContainer = styled.div`
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: var(--surface);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-light);
-  animation: ${fadeIn} 0.6s ease-out;
-  
-  @media (max-width: 768px) {
-    margin: 1rem;
-    padding: 1.5rem;
-  }
-`;
-
-const Title = styled.h2`
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  text-align: center;
-  margin-bottom: 2rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  position: relative;
-  
-  @media (max-width: 768px) {
-    font-size: 2rem;
-  }
-`;
-
 const ChatArea = styled.div`
-  min-height: 400px;
-  max-height: 600px;
+  min-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
   background: var(--background);
   border-radius: var(--radius-xl);
   padding: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-inner);
   
@@ -140,7 +103,7 @@ const ImageContainer = styled.div`
 
 const StyledImage = styled.img`
   width: 100%;
-  max-height: 300px;
+  max-height: 200px;
   object-fit: cover;
   border-radius: var(--radius-lg);
   transition: var(--transition-normal);
@@ -152,24 +115,24 @@ const StyledImage = styled.img`
 
 const OptionsContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 `;
 
 const OptionButton = styled.button`
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.25rem;
   background: var(--surface);
   border: 2px solid var(--border-light);
   border-radius: var(--radius-xl);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
   cursor: pointer;
   transition: var(--transition-normal);
   text-align: left;
   word-break: keep-all;
-  line-height: 1.5;
+  line-height: 1.4;
   position: relative;
   overflow: hidden;
   
@@ -206,11 +169,43 @@ const OptionButton = styled.button`
   }
 `;
 
+const ResetButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  text-align: center;
+  width: 100%;
+  margin-top: 1rem;
+  
+  &:hover {
+    border-color: var(--primary);
+    background: var(--surface-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+`;
+
 const OPTIONS = [
   { 
     label: "책을 어떻게 등록하나요?", 
     answer: "책 등록은 '책 거래 게시판'에서 '책 등록' 버튼을 눌러 진행할 수 있습니다.",
-    image: "/images/book-register-guide.png", // 예시 이미지 경로
+    image: "/images/book-register-guide.png",
     image2: "/images/book-register-guide2.png"
   },
   { 
@@ -252,12 +247,7 @@ const OPTIONS = [
   },
 ];
 
-function ChatBotPage() {
-  const [messages, setMessages] = useState([
-    { sender: "bot", text: "안녕하세요! 궁금한 점을 선택하거나 직접 입력해 주세요." }
-  ]);
-  // const [input, setInput] = useState("");
-
+const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
   const handleOptionClick = (option) => {
     setMessages((prev) => [
       ...prev,
@@ -266,20 +256,12 @@ function ChatBotPage() {
     ]);
   };
 
-  // const handleSend = () => {
-  //   if (!input.trim()) return;
-  //   setMessages((prev) => [
-  //     ...prev,
-  //     { sender: "user", text: input },
-  //     { sender: "bot", text: "죄송해요, 해당 질문에 대한 답변은 준비 중입니다. 선택지에서 골라보세요!" }
-  //   ]);
-  //   setInput("");
-  // };
+  const handleClose = () => {
+    onClose();
+  };
 
   return (
-    <ChatBotContainer>
-      <Title>AI 챗봇 도움말</Title>
-      
+    <>
       <ChatArea>
         {messages.map((msg, idx) => (
           <MessageContainer key={idx} sender={msg.sender}>
@@ -321,8 +303,14 @@ function ChatBotPage() {
           </OptionButton>
         ))}
       </OptionsContainer>
-    </ChatBotContainer>
+      
+      {messages.length > 1 && (
+        <ResetButton onClick={onReset}>
+          대화 초기화
+        </ResetButton>
+      )}
+    </>
   );
-}
+};
 
-export default ChatBotPage; 
+export default ChatBotContent; 

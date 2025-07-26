@@ -26,7 +26,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
-import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
+import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -90,7 +90,6 @@ function App() {
                             <Route path="/find-id" element={<FindId />} />
                             <Route path="/find-pw" element={<FindPw />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
-                            <Route path="/ai-chat" element={<ChatBotPage />} />
                             <Route path="/marketplace/:id" element={<BookDetail />} />
                             <Route path="/bookwrite/:id" element={<BookWrite />} />
                             <Route path="/book-write" element={<BookWrite />} />
@@ -99,6 +98,7 @@ function App() {
                             <Route path="/oauth/callback"
                                 element={<OAuth2RedirectHandler />} />
                         </Routes>
+                        <FloatingChatBot />
                         <Footer />
                     </Router>
                 </WritingProvider>

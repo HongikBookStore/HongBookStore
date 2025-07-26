@@ -438,6 +438,8 @@ const LogoutButton = styled.button`
   }
 `;
 
+
+
 const MobileMenuButton = styled.button`
   display: none;
   background: none;
@@ -577,6 +579,7 @@ const Header = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // 데스크탑 유저 드롭다운 상태
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
+
   
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -727,9 +730,6 @@ const Header = () => {
                 </NavLinkItem>
                 <NavLinkItem to="/hongikmap" className={location.pathname === '/hongikmap' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}>
                   지도
-                </NavLinkItem>
-                <NavLinkItem to="/ai-chat" className={location.pathname === '/ai-chat' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/ai-chat'); }}>
-                  AI 챗봇
                 </NavLinkItem>
               </NavLinks>
             )}

@@ -327,13 +327,6 @@ const Hero = () => {
             </CardIcon>
             <CardTitle>지도</CardTitle>
           </MainCard>
-          
-          <MainCard to="/ai-chat">
-            <CardIcon>
-              <FaRobot />
-            </CardIcon>
-            <CardTitle>AI 챗봇</CardTitle>
-          </MainCard>
         </MainGrid>
 
         {/* 통계(StatsSection) 삭제됨 */}
