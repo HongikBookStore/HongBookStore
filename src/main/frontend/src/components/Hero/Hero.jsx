@@ -306,9 +306,9 @@ const Hero = () => {
       <BookIcon>📖</BookIcon>
       
       <HeroContent>
-        <Title>홍책방</Title>
+        <Title>{t('title')}</Title>
         <Description>
-          홍익대학교 학생들을 위한 중고책 거래 플랫폼
+          {t('heroDescription')}
         </Description>
         
         <MainGrid>
@@ -316,35 +316,35 @@ const Hero = () => {
             <CardIcon>
               <FaBookOpen />
             </CardIcon>
-            <CardTitle>책거래게시판</CardTitle>
+            <CardTitle>{t('marketplace')}</CardTitle>
           </MainCard>
           
           <MainCard to="/wanted">
             <CardIcon>
               <FaExchangeAlt />
             </CardIcon>
-            <CardTitle>구해요</CardTitle>
+            <CardTitle>{t('wanted')}</CardTitle>
           </MainCard>
           
           <MainCard to="/hongikmap">
             <CardIcon>
               <FaMapMarkedAlt />
             </CardIcon>
-            <CardTitle>지도</CardTitle>
+            <CardTitle>{t('map')}</CardTitle>
           </MainCard>
           
           <MainCard to="/ai-chat">
             <CardIcon>
               <FaRobot />
             </CardIcon>
-            <CardTitle>AI 챗봇</CardTitle>
+            <CardTitle>{t('aiChat')}</CardTitle>
           </MainCard>
         </MainGrid>
 
         {/* 통계(StatsSection) 삭제됨 */}
 
         <CTAButton to="/marketplace" className="hero-cta">
-          지금 시작하기
+          {t('getStarted')}
           <span>→</span>
         </CTAButton>
       </HeroContent>

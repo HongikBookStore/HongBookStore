@@ -102,5 +102,19 @@
   "passwordMismatch": "密碼不一致。",
   "passwordResetSuccess": "密碼已成功更改。即將跳轉到登入頁面。",
   "invalidToken": "無效的存取。",
-  "ok": "確認"
+  "ok": "確認",
+  "myTransactions": "我的交易",
+  "aiChat": "AI聊天",
+  "notifications": "通知",
+  "test": "測試",
+  "clearAll": "全部清除",
+  "noNotifications": "沒有通知",
+  "notificationDesc": "當有新消息或價格變動時會通知您",
+  "savingDraft": "保存草稿中...",
+  "menu": "選單",
+  "getStarted": "立即開始",
+  "heroDescription": "弘益大學學生的二手書交易平台",
+  "wanted": "求購",
+  "cookiePolicy": "Cookie政策",
+  "accessibility": "無障礙"
 }

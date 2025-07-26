@@ -289,7 +289,6 @@ const MapPage = () => {
   const [routePath, setRoutePath] = useState(null); // State for route path coordinates
   const [currentRouteDestination, setCurrentRouteDestination] = useState(null); // 현재 경로 목적지
   const [currentZoom, setCurrentZoom] = useState(16); // Current zoom level
-  const [isDragging, setIsDragging] = useState(false); // Slider drag state
   const [isAddingPlace, setIsAddingPlace] = useState(false);
   const [tempMarker, setTempMarker] = useState(null);
 
@@ -555,121 +554,11 @@ const MapPage = () => {
   };
 
   // 지도 확대
-  const zoomIn = (e) => {
-    console.log('확대 버튼 클릭됨');
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (mapRef.current) {
-      console.log('확대 실행');
-      const currentZoomLevel = mapRef.current.getMap().getZoom();
-      const newZoom = Math.min(20, currentZoomLevel + 1);
-      
-      // 바로 확대 (애니메이션 없이)
-      mapRef.current.setZoom(newZoom);
-      setCurrentZoom(newZoom);
-    } else {
-      console.log('mapRef.current가 없음');
-    }
-  };
 
-  // 지도 축소
-  const zoomOut = (e) => {
-    console.log('축소 버튼 클릭됨');
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (mapRef.current) {
-      console.log('축소 실행');
-      const currentZoomLevel = mapRef.current.getMap().getZoom();
-      const newZoom = Math.max(1, currentZoomLevel - 1);
-      
-      // 바로 축소 (애니메이션 없이)
-      mapRef.current.setZoom(newZoom);
-      setCurrentZoom(newZoom);
-    } else {
-      console.log('mapRef.current가 없음');
-    }
-  };
 
-  // 슬라이더 드래그 시작
-  const handleSliderMouseDown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('슬라이더 드래그 시작');
-    setIsDragging(true);
-    document.addEventListener('mousemove', handleSliderMouseMove);
-    document.addEventListener('mouseup', handleSliderMouseUp);
-    document.addEventListener('mouseleave', handleSliderMouseUp);
-  };
 
-  // 슬라이더 드래그 중
-  const handleSliderMouseMove = (e) => {
-    if (!isDragging) return;
-    
-    e.preventDefault();
-    
-    // document에서 마우스 위치를 가져와서 슬라이더 위치 계산
-    const sliderElement = document.querySelector('.zoom-track');
-    if (!sliderElement) {
-      console.log('슬라이더 요소를 찾을 수 없음');
-      return;
-    }
-    
-    const rect = sliderElement.getBoundingClientRect();
-    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-    const height = rect.height;
-    
-    // 줌 레벨 계산 (1-20 범위)
-    const zoomLevel = Math.max(1, Math.min(20, 21 - Math.round((y / height) * 20)));
-    console.log('드래그 중 줌 레벨:', zoomLevel);
-    
-    if (mapRef.current && zoomLevel !== currentZoom) {
-      console.log('드래그로 줌 레벨 설정:', zoomLevel);
-      mapRef.current.setZoom(zoomLevel);
-      setCurrentZoom(zoomLevel);
-    }
-  };
 
-  // 슬라이더 드래그 종료
-  const handleSliderMouseUp = () => {
-    console.log('슬라이더 드래그 종료');
-    setIsDragging(false);
-    document.removeEventListener('mousemove', handleSliderMouseMove);
-    document.removeEventListener('mouseup', handleSliderMouseUp);
-    document.removeEventListener('mouseleave', handleSliderMouseUp);
-  };
 
-  // 슬라이더 클릭
-  const handleSliderClick = (e) => {
-    console.log('=== 슬라이더 클릭 이벤트 시작 ===');
-    console.log('클릭 이벤트:', e);
-    console.log('현재 줌 레벨:', currentZoom);
-    
-    const track = e.currentTarget;
-    const rect = track.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const height = rect.height;
-    
-    console.log('트랙 정보:', { rect, y, height });
-    
-    const zoomLevel = Math.max(1, Math.min(20, 21 - Math.round((y / height) * 20)));
-    console.log('계산된 줌 레벨:', zoomLevel);
-    
-    if (mapRef.current) {
-      console.log('줌 레벨 설정:', zoomLevel);
-      
-      // 바로 줌 설정 (애니메이션 없이)
-      mapRef.current.setZoom(zoomLevel);
-      setCurrentZoom(zoomLevel);
-      
-      console.log('줌 레벨 설정 완료');
-    } else {
-      console.log('mapRef.current가 없음');
-    }
-    
-    console.log('=== 슬라이더 클릭 이벤트 완료 ===');
-  };
 
   // 키보드 단축키
   useEffect(() => {
@@ -693,6 +582,8 @@ const MapPage = () => {
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [userLocation]);
+
+
 
   // 사용자 카테고리 추가
   const addCategory = () => {
@@ -1335,26 +1226,6 @@ const MapPage = () => {
           >
             <FaCrosshairs />
           </LocationButton>
-          <ZoomControls>
-            <ZoomButton onClick={zoomIn} title="확대">
-              <FaPlus />
-            </ZoomButton>
-            <ZoomSlider 
-              className="zoom-track"
-              onClick={handleSliderClick}
-              onMouseDown={handleSliderMouseDown}
-            >
-              <ZoomThumb 
-                style={{ 
-                  top: `${100 - ((currentZoom - 1) / 19) * 100}%` 
-                }} 
-              />
-              <ZoomLevel>{currentZoom}</ZoomLevel>
-            </ZoomSlider>
-            <ZoomButton onClick={zoomOut} title="축소">
-              <FaMinus />
-            </ZoomButton>
-          </ZoomControls>
         </MapControls>
       </StyledMapContainer>
 
@@ -1947,6 +1818,12 @@ const MapPageContainer = styled.div`
   margin-top: 60px;
   background: #ffffff;
   
+  /* 기본 스타일 */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
   @media (max-width: 768px) {
     flex-direction: column;
     height: calc(100vh - 60px);
@@ -2223,6 +2100,12 @@ const StyledMapContainer = styled.div`
   position: relative;
   margin: 16px;
   
+  /* 기본 스타일 */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
   @media (max-width: 768px) {
     height: calc(100vh - 216px);
     margin: 8px;
@@ -2255,7 +2138,7 @@ const MapClickMessage = styled.div`
 
 const MapControls = styled.div`
   position: absolute;
-  bottom: 20px;
+  bottom: 40px;
   right: 20px;
   display: flex;
   flex-direction: column;
@@ -2264,30 +2147,52 @@ const MapControls = styled.div`
 `;
 
 const LocationButton = styled.button`
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #555;
+  border: 1px solid #ddd;
   width: 50px;
   height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
-  transition: all 0.3s ease;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.05), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
 
   svg {
-    width: 22px;
-    height: 22px;
-    transition: transform 0.2s ease;
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
+    color: #333;
   }
 
   &:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
+    background: #f8f9fa;
+    color: #333;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: #ccc;
+    
+    &::before {
+      opacity: 1;
+    }
     
     svg {
       transform: scale(1.1);
@@ -2295,127 +2200,16 @@ const LocationButton = styled.button`
   }
 
   &:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 `;
 
-const ZoomControls = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 6px 4px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(8px);
-`;
 
-const ZoomButton = styled.button`
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  border: none;
-  width: 26px;
-  height: 22px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 
-  svg {
-    width: 9px;
-    height: 9px;
-  }
 
-  &:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  }
 
-  &:active {
-    transform: translateY(0) scale(0.95);
-  }
-`;
 
-const ZoomSlider = styled.div`
-  width: 4px;
-  height: 90px;
-  background: #e0e0e0;
-  position: relative;
-  cursor: pointer;
-  border-radius: 3px;
-  margin: 3px 0;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-`;
-
-const ZoomThumb = styled.div`
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 16px;
-  background: #007bff;
-  border-radius: 4px;
-  cursor: grab;
-  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-
-  &:hover {
-    box-shadow: 0 3px 8px rgba(0, 123, 255, 0.4), 0 2px 4px rgba(0, 0, 0, 0.15);
-    transform: translateX(-50%) scale(1.1);
-  }
-
-  &:active {
-    cursor: grabbing;
-    transform: translateX(-50%) scale(0.95);
-  }
-`;
-
-const ZoomLevel = styled.div`
-  position: absolute;
-  right: -30px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
-
-  ${ZoomSlider}:hover & {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.05);
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: -4px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-right: 4px solid rgba(0, 0, 0, 0.8);
-  }
-`;
 
 const Modal = styled.div`
   position: fixed;

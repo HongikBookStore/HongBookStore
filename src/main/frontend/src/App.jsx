@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import GlobalStyles from './styles/GlobalStyles.js';
+import './i18n.js';
 import Header from './components/Header/Header.jsx';
 import Hero from './components/Hero/Hero.jsx';
 import Footer from './components/Footer/Footer.jsx';
@@ -28,6 +29,7 @@ import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
+import i18n from './i18n.js';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -37,6 +39,12 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        // 저장된 언어 설정 불러오기
+        const savedLang = localStorage.getItem('lang');
+        if (savedLang) {
+            i18n.changeLanguage(savedLang);
+        }
+
         const token = localStorage.getItem('accessToken'); // key 이름 변경
 
         if (token) {

@@ -102,5 +102,19 @@
   "passwordMismatch": "Passwords do not match.",
   "passwordResetSuccess": "Your password has been successfully changed. You will be redirected to the login page shortly.",
   "invalidToken": "Invalid access.",
-  "ok": "OK"
+  "ok": "OK",
+  "myTransactions": "My Transactions",
+  "aiChat": "AI Chat",
+  "notifications": "Notifications",
+  "test": "Test",
+  "clearAll": "Clear All",
+  "noNotifications": "No notifications",
+  "notificationDesc": "We'll notify you when there are new messages or price changes",
+  "savingDraft": "Saving draft...",
+  "menu": "Menu",
+  "getStarted": "Get Started",
+  "heroDescription": "Second-hand book trading platform for Hongik University students",
+  "wanted": "Wanted",
+  "cookiePolicy": "Cookie Policy",
+  "accessibility": "Accessibility"
 } 

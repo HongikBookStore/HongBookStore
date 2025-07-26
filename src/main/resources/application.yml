@@ -130,6 +130,12 @@ logging:
 frontend:
   base-url: http://localhost:5173 # 로컬 개발 환경용 프론트엔드 주소
 
+### Naver Map API ###
+naver:
+  map:
+    client-id: ${VITE_NAVER_MAP_CLIENT_ID:n1y8pc9hl8}
+    client-secret: ${VITE_NAVER_MAP_CLIENT_SECRET:}
+
 
 
 ### Swagger ###

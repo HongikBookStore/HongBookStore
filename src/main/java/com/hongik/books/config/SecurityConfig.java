@@ -70,9 +70,10 @@ public class SecurityConfig {
                                 "/api/users/verify/**",
                                 "/api/images/**",
                                 "/api/posts/**",
+                                "/api/naver/**",
                                 "/actuator/health",
-                                // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
-                                "/", "/login", "/oauth2/**", "/error"
+                                // OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
+                                "/", "/oauth2/**", "/error"
                         ).permitAll()
                         .anyRequest().authenticated()) // 그 외 요청은 인증 필요
                 // OAuth 로그인 설정
@@ -81,7 +82,6 @@ public class SecurityConfig {
                         .failureHandler(oAuth2LoginFailureHandler)
                         .userInfoEndpoint(u -> u
                                 .userService(customOAuth2UserService))
-                        .loginPage("/login")
                 )
                 // JWT 인증 필터 추가
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

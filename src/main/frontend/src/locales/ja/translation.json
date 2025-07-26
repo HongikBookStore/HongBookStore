@@ -102,5 +102,19 @@
   "passwordMismatch": "パスワードが一致しません。",
   "passwordResetSuccess": "パスワードが正常に変更されました。まもなくログインページに移動します。",
   "invalidToken": "無効なアクセスです。",
-  "ok": "確認"
+  "ok": "確認",
+  "myTransactions": "取引履歴",
+  "aiChat": "AIチャット",
+  "notifications": "通知",
+  "test": "テスト",
+  "clearAll": "すべて削除",
+  "noNotifications": "通知はありません",
+  "notificationDesc": "新しいメッセージや価格変動があった時に通知します",
+  "savingDraft": "下書き保存中...",
+  "menu": "メニュー",
+  "getStarted": "今すぐ始める",
+  "heroDescription": "弘益大学の学生のための中古本取引プラットフォーム",
+  "wanted": "求む",
+  "cookiePolicy": "クッキーポリシー",
+  "accessibility": "アクセシビリティ"
 }

@@ -44,13 +44,15 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, tempMar
         zoomIn: () => {
             if (mapInstanceRef.current) {
                 const currentZoom = mapInstanceRef.current.getZoom();
-                mapInstanceRef.current.setZoom(currentZoom + 1);
+                const newZoom = Math.min(20, currentZoom + 1);
+                mapInstanceRef.current.setZoom(newZoom);
             }
         },
         zoomOut: () => {
             if (mapInstanceRef.current) {
                 const currentZoom = mapInstanceRef.current.getZoom();
-                mapInstanceRef.current.setZoom(currentZoom - 1);
+                const newZoom = Math.max(1, currentZoom - 1);
+                mapInstanceRef.current.setZoom(newZoom);
             }
         },
         setZoom: (zoom) => {

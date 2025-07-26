@@ -21,8 +21,11 @@ public class NaverApiController {
     
     private final RestTemplate restTemplate;
     
-    private final String clientId = "n1y8pc9hl8";
-    private final String clientSecret = "T0hcHo9OG0w4kw0DzYnCA7yD9XsuAjR4bmJUmQ0g%";
+    @Value("${naver.map.client-id:n1y8pc9hl8}")
+    private String clientId;
+    
+    @Value("${naver.map.client-secret:}")
+    private String clientSecret;
     
     /**
      * 좌표를 주소로 변환하는 API
