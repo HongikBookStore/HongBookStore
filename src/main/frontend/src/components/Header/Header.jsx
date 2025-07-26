@@ -882,8 +882,8 @@ const Header = () => {
   // 안전한 네비게이션 함수
   const safeNavigate = (path) => {
     console.log('safeNavigate 호출됨:', path, 'isWriting:', isWriting, 'hasUnsavedChanges:', hasUnsavedChanges);
-    if (isWriting && hasUnsavedChanges) {
-      console.log('작성 중이고 저장되지 않은 변경사항이 있으므로 경고 모달 표시');
+    if (isWriting) {
+      console.log('작성 중이므로 경고 모달 표시');
       setPendingNavigation(path);
       setShowWarningModal(true);
     } else {
@@ -918,6 +918,8 @@ const Header = () => {
     try {
       // 임시저장 로직은 각 페이지에서 처리하도록 이벤트 발생
       window.dispatchEvent(new CustomEvent('saveDraft'));
+      
+      // 임시저장 완료 후 바로 나가기
       setShowWarningModal(false);
       if (pendingNavigation) {
         navigate(pendingNavigation);
@@ -1039,10 +1041,8 @@ const Header = () => {
                 </LangSelect>
               </LangSelectBox>
               <Logo to="/" onClick={(e) => {
-                if (isWriting) {
-                  e.preventDefault();
-                  safeNavigate('/');
-                }
+                e.preventDefault();
+                safeNavigate('/');
               }}>
                 {t('title')}
               </Logo>
@@ -1140,10 +1140,16 @@ const Header = () => {
                     )}
                   </UserAvatar>
                   <UserDropdown $isOpen={isDropdownOpen}>
-                    <DropdownItem to="/mypage" onClick={() => safeNavigate('/mypage')}>
+                    <DropdownItem to="/mypage" onClick={(e) => {
+                      e.preventDefault();
+                      safeNavigate('/mypage');
+                    }}>
                       {t('mypage')}
                     </DropdownItem>
-                    <DropdownItem to="/my-transactions" onClick={() => safeNavigate('/my-transactions')}>
+                    <DropdownItem to="/my-transactions" onClick={(e) => {
+                      e.preventDefault();
+                      safeNavigate('/my-transactions');
+                    }}>
                       {t('myTransactions')}
                     </DropdownItem>
                     <LogoutButton onClick={handleLogout}>
@@ -1175,11 +1181,7 @@ const Header = () => {
                   </RegisterButton>
                 </AuthButtons>
               )}
-              {isWriting && (
-                              <WritingIndicator>
-                {t('savingDraft')}
-              </WritingIndicator>
-              )}
+
             </RightBox>
 
             <MobileMenuButton onClick={toggleMobileMenu}>
@@ -1196,15 +1198,24 @@ const Header = () => {
             <MobileMenuClose onClick={toggleMobileMenu}>×</MobileMenuClose>
           </MobileMenuHeader>
           <MobileNavLinks>
-            <MobileNavLink to="/marketplace" onClick={() => safeNavigate('/marketplace')} style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
+            <MobileNavLink to="/marketplace" onClick={(e) => {
+              e.preventDefault();
+              safeNavigate('/marketplace');
+            }} style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
               {t('getStarted')} <span style={{marginLeft: 4}}>→</span>
             </MobileNavLink>
             {isLoggedIn ? (
               <>
-                <MobileNavLink to="/mypage" onClick={() => safeNavigate('/mypage')}>
+                <MobileNavLink to="/mypage" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/mypage');
+                }}>
                   {t('mypage')}
                 </MobileNavLink>
-                <MobileNavLink to="/my-transactions" onClick={() => safeNavigate('/my-transactions')}>
+                <MobileNavLink to="/my-transactions" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/my-transactions');
+                }}>
                   {t('myTransactions')}
                 </MobileNavLink>
                 <MobileNavLink as="button" onClick={handleLogout}>
@@ -1213,10 +1224,16 @@ const Header = () => {
               </>
             ) : (
               <>
-                <MobileNavLink to="/login" onClick={() => safeNavigate('/login')}>
+                <MobileNavLink to="/login" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/login');
+                }}>
                   {t('login')}
                 </MobileNavLink>
-                <MobileNavLink to="/register" onClick={() => safeNavigate('/register')}>
+                <MobileNavLink to="/register" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/register');
+                }}>
                   {t('signup')}
                 </MobileNavLink>
               </>

@@ -480,9 +480,9 @@ const InputTypeButtons = styled.div`
 
 const InputTypeButton = styled.button`
   padding: 0.75rem 1.5rem;
-  border: 2px solid ${props => props.active ? '#007bff' : '#ddd'};
-  background: ${props => props.active ? '#007bff' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
+  border: 2px solid ${props => props.$active ? '#007bff' : '#ddd'};
+  background: ${props => props.$active ? '#007bff' : 'white'};
+  color: ${props => props.$active ? 'white' : '#333'};
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
@@ -491,7 +491,7 @@ const InputTypeButton = styled.button`
 
   &:hover {
     border-color: #007bff;
-    background: ${props => props.active ? '#0056b3' : '#f8f9ff'};
+    background: ${props => props.$active ? '#0056b3' : '#f8f9ff'};
   }
 `;
 
@@ -845,17 +845,52 @@ const BookWrite = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // 컴포넌트 마운트 시 글쓰기 시작
+  // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
     console.log('BookWrite 컴포넌트 마운트됨');
     startWriting('sale');
+    
+    // 임시저장된 데이터 불러오기
+    const savedDraft = localStorage.getItem('bookSaleDraft');
+    if (savedDraft && !isEdit) {
+      try {
+        const draftData = JSON.parse(savedDraft);
+        const draftAge = new Date() - new Date(draftData.timestamp);
+        const oneDay = 24 * 60 * 60 * 1000; // 24시간
+        
+        // 24시간 이내의 임시저장만 불러오기
+        if (draftAge < oneDay) {
+          const shouldLoad = window.confirm('임시저장된 내용이 있습니다. 불러오시겠습니까?');
+          if (shouldLoad) {
+            setFormData(prev => ({
+              ...prev,
+              ...draftData,
+              timestamp: undefined // timestamp는 제외
+            }));
+            if (draftData.images) {
+              setImages(draftData.images);
+            }
+            console.log('임시저장된 데이터 불러옴');
+          } else {
+            // 불러오지 않으면 임시저장 삭제
+            localStorage.removeItem('bookSaleDraft');
+          }
+        } else {
+          // 24시간이 지난 임시저장은 삭제
+          localStorage.removeItem('bookSaleDraft');
+        }
+      } catch (error) {
+        console.error('임시저장 데이터 파싱 오류:', error);
+        localStorage.removeItem('bookSaleDraft');
+      }
+    }
     
     // 컴포넌트 언마운트 시 글쓰기 종료
     return () => {
       console.log('BookWrite 컴포넌트 언마운트됨');
       stopWriting();
     };
-  }, [startWriting, stopWriting]);
+  }, [startWriting, stopWriting, isEdit]);
 
   // 폼 데이터 변경 감지
   useEffect(() => {
@@ -889,9 +924,21 @@ const BookWrite = () => {
     // 임시저장 이벤트 처리
     const handleSaveDraftEvent = async () => {
       try {
-        await handleSaveDraft();
+        // localStorage에 임시저장
+        const draftData = {
+          ...formData,
+          images: images,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('bookSaleDraft', JSON.stringify(draftData));
+        
+        // 실제로는 API 호출
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setHasUnsavedChanges(false);
+        setUnsavedChanges(false);
       } catch (error) {
         console.error('임시저장 실패:', error);
+        alert('임시저장에 실패했습니다.');
       }
     };
 
@@ -907,7 +954,7 @@ const BookWrite = () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('saveDraft', handleSaveDraftEvent);
     };
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, formData, images, setUnsavedChanges]);
 
   // 수정 모드일 때 기존 데이터 불러오기
   useEffect(() => {
@@ -1095,10 +1142,18 @@ const BookWrite = () => {
 
   const handleSaveDraft = async () => {
     try {
+      // localStorage에 임시저장
+      const draftData = {
+        ...formData,
+        images: images,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('bookSaleDraft', JSON.stringify(draftData));
+      
       // 실제로는 API 호출
       await new Promise(resolve => setTimeout(resolve, 500));
-      alert('임시저장되었습니다!');
-      stopWriting(); // 글쓰기 종료
+      setHasUnsavedChanges(false);
+      setUnsavedChanges(false);
     } catch (error) {
       console.error('임시저장 실패:', error);
       alert('임시저장에 실패했습니다.');
@@ -1137,6 +1192,8 @@ const BookWrite = () => {
   const handleSaveDraftAndExit = async () => {
     try {
       await handleSaveDraft();
+      // 임시저장 완료 후 localStorage에서 데이터 삭제
+      localStorage.removeItem('bookSaleDraft');
       setShowWarningModal(false);
       if (pendingNavigation) {
         navigate(pendingNavigation);
@@ -1159,8 +1216,13 @@ const BookWrite = () => {
     }
   };
 
-  const handleCancel = () => {
-    safeNavigate('/marketplace');
+  const handleCancel = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setPendingNavigation('/marketplace');
+    setShowWarningModal(true);
   };
 
   // 책 검색 함수
@@ -1230,7 +1292,12 @@ const BookWrite = () => {
       <div className="header-spacer" />
       <WriteContainer>
         <WriteHeader>
-          <BackButton onClick={handleCancel}>
+          <BackButton onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setPendingNavigation('/marketplace');
+            setShowWarningModal(true);
+          }}>
             <FaArrowLeft /> 뒤로가기
           </BackButton>
           <WriteTitle>{isEdit ? '책 판매 수정' : '책 판매 등록'}</WriteTitle>
@@ -1270,14 +1337,14 @@ const BookWrite = () => {
               <InputTypeButtons>
                 <InputTypeButton
                   type="button"
-                  active={inputType === 'title'}
+                  $active={inputType === 'title'}
                   onClick={() => setInputType('title')}
                 >
                   책 제목으로 입력
                 </InputTypeButton>
                 <InputTypeButton
                   type="button"
-                  active={inputType === 'isbn'}
+                  $active={inputType === 'isbn'}
                   onClick={() => setInputType('isbn')}
                 >
                   ISBN으로 검색
@@ -1663,10 +1730,20 @@ const BookWrite = () => {
           {/* 버튼 영역 */}
           <ButtonSection>
             <ButtonGroup>
-              <CancelButton type="button" onClick={handleCancel}>
+              <CancelButton type="button" onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPendingNavigation('/marketplace');
+                setShowWarningModal(true);
+              }}>
                 취소
               </CancelButton>
-              <SaveDraftButton type="button" onClick={handleSaveDraft}>
+              <SaveDraftButton type="button" onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPendingNavigation('/marketplace');
+                setShowWarningModal(true);
+              }}>
                 <FaSave /> 임시저장
               </SaveDraftButton>
               <SubmitButton type="submit" disabled={loading}>
