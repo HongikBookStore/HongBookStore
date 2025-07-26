@@ -152,8 +152,9 @@ const SideModalBody = styled.div`
 const FloatingChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "안녕하세요! 궁금한 점을 선택해 주세요." }
+    { sender: "bot", text: "안녕하세요! 홍북스토어 도우미입니다. 궁금한 점을 선택해 주세요! 📚" }
   ]);
+  const [chatKey, setChatKey] = useState(0); // ChatBotContent의 상태를 관리하기 위한 key
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -164,7 +165,9 @@ const FloatingChatBot = () => {
   };
 
   const handleReset = () => {
-    setMessages([{ sender: "bot", text: "안녕하세요! 궁금한 점을 선택해 주세요." }]);
+    setMessages([{ sender: "bot", text: "안녕하세요! 홍북스토어 도우미입니다. 궁금한 점을 선택해 주세요! 📚" }]);
+    // ChatBotContent의 상태도 초기화하기 위해 key를 변경
+    setChatKey(prev => prev + 1);
   };
 
   return (
@@ -186,6 +189,7 @@ const FloatingChatBot = () => {
             </SideModalHeader>
             <SideModalBody>
               <ChatBotContent 
+                key={chatKey} // ChatBotContent의 상태를 관리하기 위해 key 추가
                 onClose={handleClose} 
                 messages={messages}
                 setMessages={setMessages}
