@@ -733,7 +733,7 @@ const MyPage = () => {
       const res = await axios.post(UNIVCERT_ENDPOINT, {
         key: UNIVCERT_API_KEY,
         email: schoolEmail,
-        univName: '홍익대학교',
+        univName: t('hongikUniversity'),
         univ_check: true
       });
 
@@ -769,7 +769,7 @@ const MyPage = () => {
       const res = await axios.post(VERIFY_ENDPOINT, {
         key: UNIVCERT_API_KEY,
         email: schoolEmail,
-        univName: '홍익대학교',
+        univName: t('hongikUniversity'),
         code: verificationCode
       });
 
