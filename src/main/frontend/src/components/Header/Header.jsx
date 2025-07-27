@@ -1048,23 +1048,21 @@ const Header = () => {
               </Logo>
             </LeftBox>
 
-            {!isHome && (
-              <NavLinks>
-                {/* NavLinkItem들은 safeNavigate를 사용하도록 onClick을 추가 */}
-                <NavLinkItem to="/marketplace" className={location.pathname === '/marketplace' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}>
-                  {t('marketplace')}
-                </NavLinkItem>
-                <NavLinkItem to="/my-transactions" className={location.pathname === '/my-transactions' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
-                  {t('myTransactions')}
-                </NavLinkItem>
-                <NavLinkItem to="/hongikmap" className={location.pathname === '/hongikmap' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}>
-                  {t('map')}
-                </NavLinkItem>
-                <NavLinkItem to="/ai-chat" className={location.pathname === '/ai-chat' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/ai-chat'); }}>
-                  {t('aiChat')}
-                </NavLinkItem>
-              </NavLinks>
-            )}
+            <NavLinks>
+              {/* NavLinkItem들은 safeNavigate를 사용하도록 onClick을 추가 */}
+              <NavLinkItem to="/marketplace" className={location.pathname === '/marketplace' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}>
+                {t('marketplace')}
+              </NavLinkItem>
+              <NavLinkItem to="/my-transactions" className={location.pathname === '/my-transactions' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
+                {t('myTransactions')}
+              </NavLinkItem>
+              <NavLinkItem to="/hongikmap" className={location.pathname === '/hongikmap' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}>
+                {t('map')}
+              </NavLinkItem>
+              <NavLinkItem to="/ai-chat" className={location.pathname === '/ai-chat' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/ai-chat'); }}>
+                {t('aiChat')}
+              </NavLinkItem>
+            </NavLinks>
 
                         <RightBox>
               {isLoggedIn && (
