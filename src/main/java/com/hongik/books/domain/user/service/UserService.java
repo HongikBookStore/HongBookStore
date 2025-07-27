@@ -2,6 +2,7 @@ package com.hongik.books.domain.user.service;
 
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.common.dto.ApiResponse;
+import com.hongik.books.domain.user.dto.StudentVerificationRequestDTO;
 import com.hongik.books.domain.user.dto.UserResponseDTO;
 import com.hongik.books.domain.user.dto.UserRequestDTO;
 import com.hongik.books.domain.user.repository.UserRepository;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -148,4 +150,46 @@ public class UserService {
 //                .map(u -> new ApiResponse<>(true, "OK", u.getUsername()))
 //                .orElseGet(() -> new ApiResponse<>(false, "존재하지 않는 이메일입니다.", null));
 //    }
+
+    /**
+     * 재학생 인증 메일 발송을 요청
+     */
+    public ApiResponse<Void> requestStudentVerification(Long userId, StudentVerificationRequestDTO request) {
+        String univEmail = request.univEmail();
+
+        // 이미 다른 사용자가 해당 이메일로 인증을 완료했는지 확인
+        if (userRepository.existsByUnivEmailAndStudentVerifiedIsTrue(univEmail)) {
+            return new ApiResponse<>(false, "이미 인증에 사용된 이메일입니다.", null);
+        }
+
+        // 요청한 사용자 정보 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 인증 토큰 생성 및 사용자 정보 업데이트
+        String token = UUID.randomUUID().toString();
+        user.startStudentVerification(univEmail, token);
+
+        // 인증 메일 발송
+        String subject = "[홍북서점] 재학생 인증을 완료해주세요.";
+        String verificationUrl = "http://localhost:5173/verify-student?token=" + token; // ❗️ 프론트엔드 URL로 변경
+        String text = "홍북서점 재학생 인증을 완료하려면 아래 링크를 클릭하세요: " + verificationUrl;
+        mailService.sendEmail(univEmail, subject, text);
+
+        return new ApiResponse<>(true, "인증 메일이 발송되었습니다. 메일함을 확인해주세요.", null);
+    }
+
+    /**
+     * 이메일 링크의 토큰을 검증하여 재학생 인증을 완료
+     */
+    public ApiResponse<String> confirmStudentVerification(String token) {
+        // 토큰으로 사용자 조회
+        User user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 토큰입니다."));
+
+        // 인증 완료 처리
+        user.completeStudentVerification();
+
+        return new ApiResponse<>(true, "재학생 인증이 성공적으로 완료되었습니다.", user.getUsername());
+    }
 }

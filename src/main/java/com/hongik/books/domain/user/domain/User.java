@@ -30,16 +30,18 @@ public class User {
 //    private String socialType; // 소셜 타입 (자체 로그인의 경우 Null)
 //    private String socialId; // 소셜 ID  (자체 로그인의 경우 Null)
 //    private boolean socialUser;
-
-    @Column(nullable = false)
-    private boolean studentVerified = false;
-
 //    private boolean accountNonExpired; // 계정 만료 여부
 //    private boolean accountNonLocked; // 계정 잠김 여부
 //    private boolean credentialsNonExpired; // 자격 증명 만료 여부
 //    private boolean enabled; // 계정 활성화 여부
 
-    private String mailVerificationToken; // 이메일 인증 토큰
+    private String emailVerificationToken; // 이메일 인증 위한 임시 토큰
+
+    @Column(unique = true) // 한 학교 이메일로 한 계정만 인증 가능하도록 unique 설정
+    private String univEmail; // 인증받을 대학교 이메일
+
+    @Column(nullable = false)
+    private boolean studentVerified = false;
 
 //    private int failedLoginAttempts; // 로그인 시도 횟수
 //    private LocalDateTime lockTime; // 계정 잠금 해제 시간
@@ -66,6 +68,23 @@ public class User {
         this.username = name;
         this.profileImagePath = picture;
         return this;
+    }
+
+    /**
+     * 재학생 인증을 시작할 때, 사용자가 입력한 학교 이메일과 발급된 인증 토큰을 저장
+     */
+    public void startStudentVerification(String univEmail, String verificationToken) {
+        this.univEmail = univEmail;
+        this.emailVerificationToken = verificationToken;
+    }
+
+    /**
+     * 이메일 링크 클릭 시, 인증을 완료 처리
+     * 재사용을 막기 위해 토큰은 null로
+     */
+    public void completeStudentVerification() {
+        this.studentVerified = true;
+        this.emailVerificationToken = null;
     }
 
 //    public void verifyEmail() {
@@ -106,7 +125,7 @@ public class User {
 //        return expiryTime.isBefore(LocalDateTime.now()); // 현재 시간이 잠금 만료 시간 이전이면 해제 가능
 //    }
 
-    // Spring Security에서 사용자의 권한 키를 가져갈 수 있도록 getter를 제공합니다.
+    // Spring Security에서 사용자의 권한 키를 가져갈 수 있도록 getter를 제공
     public String getRoleKey() {
         return this.role.getKey();
     }

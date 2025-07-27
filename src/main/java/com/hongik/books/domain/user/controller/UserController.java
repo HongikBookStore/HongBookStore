@@ -2,6 +2,7 @@ package com.hongik.books.domain.user.controller;
 
 import com.hongik.books.auth.dto.LoginUserDTO;
 import com.hongik.books.common.dto.ApiResponse;
+import com.hongik.books.domain.user.dto.StudentVerificationRequestDTO;
 import com.hongik.books.domain.user.dto.UserResponseDTO;
 import com.hongik.books.domain.user.dto.UserRequestDTO;
 import com.hongik.books.domain.user.service.UserService;
@@ -182,4 +183,26 @@ public class UserController {
 //        return userService.findUsernameByEmail(email);
 //    }
 
+    /**
+     * 재학생 인증을 위한 이메일 발송을 요청하는 API
+     */
+    @PostMapping("/verify-student/request")
+    public ResponseEntity<ApiResponse<Void>> requestVerification(
+            @AuthenticationPrincipal LoginUserDTO loginUser,
+            @Valid @RequestBody StudentVerificationRequestDTO request) {
+
+        ApiResponse<Void> response = userService.requestStudentVerification(loginUser.id(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 사용자가 이메일에서 링크를 클릭했을 때, 토큰을 검증하고 인증을 완료하는 API
+     */
+    @GetMapping("/verify-student/confirm")
+    public ResponseEntity<ApiResponse<String>> confirmVerification(@RequestParam("token") String token) {
+        ApiResponse<String> response = userService.confirmStudentVerification(token);
+        // 실제 서비스에서는 성공 시, "인증 완료" 페이지로 리다이렉트 시키는 것이 더 좋아.
+        // 예: return ResponseEntity.status(HttpStatus.FOUND).location(URI.create("http://localhost:5173/verification-success")).build();
+        return ResponseEntity.ok(response);
+    }
 }

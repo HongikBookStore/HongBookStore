@@ -23,6 +23,7 @@ import MapPage from './pages/Map/Map.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { WritingProvider } from './contexts/WritingContext';
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import VerificationConfirmPage from './pages/VerificationConfirmPage';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -90,6 +91,7 @@ function App() {
                             <Route path="/book-write" element={<BookWrite />} />
                             <Route path="/wanted/:id" element={<WantedWrite />} />
                             <Route path="/wantedwrite/:id" element={<WantedWrite />} />
+                            <Route path="/verify-student" element={<VerificationConfirmPage />} />
                             <Route path="/oauth/callback"
                                 element={<OAuth2RedirectHandler />} />
                         </Routes>
