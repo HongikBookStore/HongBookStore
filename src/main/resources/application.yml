@@ -145,3 +145,10 @@ springdoc:
     doc-expansion: none # tag, operation 펼치는 방식
   paths-to-match:
     - /**
+
+naver:
+  place:
+    api:
+      key:
+        id: ${NAVER_CLIENT_ID}
+      secret: ${NAVER_CLIENT_SECRET}
