@@ -36,7 +36,8 @@ public class SecurityConfig {
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
 
-    /** 모든 서비스·컨트롤러에서 주입해 쓰는 PasswordEncoder */
+    /*
+    // 모든 서비스·컨트롤러에서 주입해 쓰는 PasswordEncoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -46,6 +47,7 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
+    */
 
     @Bean // 필터 체인 구성
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -55,7 +57,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                // JWT 토큰 인증 시스템을 사용할 것이기에 서버가 세션을 생성하지 않도록 한다.
+                // JWT 토큰 인증 시스템을 사용할 것이기에 서버가 세션을 생성하지 않도록
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // HTTP 요청에 대한 인가 규칙 설정
@@ -63,19 +65,18 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/auth/password/**",
-                                "/api/auth/login",
-                                "/api/users/signup",
-                                "/api/users/id-check",
-                                "/api/users/email-check",
-                                "/api/users/find-id",
-                                "/api/users/verify/**",
+                                //"/api/auth/password/**",
+                                //"/api/auth/login",
+                                //"/api/users/signup",
+                                //"/api/users/id-check",
+                                //"/api/users/email-check",
+                                //"/api/users/find-id",
+                                //"/api/users/verify/**",
                                 "/api/images/**",
                                 "/api/posts/**",
                                 "/api/search/**",
                                 "/actuator/health",
-                                // 로그인 페이지, OAuth2 콜백 경로, 에러 페이지는 인증 없이 접근 허용
-                                "/", "/login", "/oauth2/**", "/error"
+                                "/", "/login", "/oauth2/**", "/error" // 소셜 로그인 관련 경로 유지
                         ).permitAll()
                         .anyRequest().authenticated()) // 그 외 요청은 인증 필요
                 // OAuth 로그인 설정
@@ -84,7 +85,7 @@ public class SecurityConfig {
                         .failureHandler(oAuth2LoginFailureHandler)
                         .userInfoEndpoint(u -> u
                                 .userService(customOAuth2UserService))
-                        .loginPage("/login")
+                        .loginPage("/login") // 프론트엔드의 소셜 로그인 버튼이 있는 페이지
                 )
                 // JWT 인증 필터 추가
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -95,7 +96,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("http://localhost:5173")); // dev
+        cfg.setAllowedOriginPatterns(List.of("http://localhost:5173"));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

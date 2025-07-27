@@ -1,29 +1,16 @@
 package com.hongik.books.domain.user.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 
+/**
+ * 사용자 프로필 정보 수정을 위한 DTO
+ * 회원가입이 아닌, 정보 수정에 사용
+ */
 public record UserRequestDTO(
-        @NotBlank(message = "사용자 이름을 입력해주세요.")
-        String username,
+        @NotBlank(message = "닉네임을 입력해주세요.")
+        @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하로 입력해주세요.")
+        String username, // '로그인 아이디'가 아닌 '닉네임'으로 사용
 
-        @NotBlank(message = "비밀번호를 입력해주세요.")
-        @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,16}$",
-                message = "비밀번호는 영문 대소문자, 숫자, 특수문자를 포함하여 8 ~ 16자여야 합니다.")
-        String password,
-
-        @NotBlank(message = "이메일을 입력해주세요.")
-        @Email(message = "올바른 이메일 형식이 아닙니다.")
-        String email) {
-
-    @Override
-    public @NotNull String toString() {
-        return "SignUpRequest{" +
-                "username='" + username + '\'' +
-                ", password='[PROTECTED]'" +
-                ", email='" + email + '\'' +
-                '}';
-    }
+        String profileImagePath // 프로필 이미지 경로 업데이트를 위한 필드 (선택적)
+        ) {
 }

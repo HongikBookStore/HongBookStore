@@ -28,18 +28,19 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
 
-        // 소셜 로그인 결과로 새로운 인증 객체 생성
-        Authentication newAuth = getNewAuth(authentication);
+        // Authentication 객체에서 Principal(사용자 정보)을 꺼낸다.
+        CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
-        // 새로운 인증 객체를 사용하여 토큰을 생성
-        String accessToken = jwtTokenProvider.createAccessToken(newAuth);
-        String refreshToken = jwtTokenProvider.createRefreshToken(newAuth);
-        log.info("로그인 성공. JWT Access Token 발급: {}, {}", accessToken,  refreshToken);
+        // Principal에서 우리 서비스의 사용자 고유 ID(PK)를 추출
+        Long userId = oAuth2User.getUser().getId();
 
+        // 추출한 사용자 ID를 사용하여 JWT 토큰을 생성
+        String accessToken = jwtTokenProvider.createAccessToken(userId);
+        String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+        log.info("소셜 로그인 성공. 사용자 ID: {}, Access Token 발급 완료.", userId);
 
-        // 프론트엔드로 리다이렉트할 URL
-        // Token은 쿼리 파라미터로 전달
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback") // 프론트엔드의 콜백 주소
+        // 프론트엔드로 리다이렉트할 URL에 토큰들을 쿼리 파라미터로 추가
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
                 .build().toUriString();
@@ -47,23 +48,5 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // 생성된 URL로 리다이렉트
         // clearAuthenticationAttributes(request); // 로그인 과정에서 생성된 임시 세션 정보를 삭제
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
-    }
-
-    private static Authentication getNewAuth(Authentication authentication) {
-        CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
-
-        // 우리 서비스의 User 엔티티 정보를 꺼냅니다.
-        User user = oAuth2User.getUser();
-
-        // JwtTokenProvider가 이해할 수 있는 CustomUserDetails을 만듭니다.
-        CustomUserDetails userDetails = new CustomUserDetails(user);
-
-        // 새로운 인증(Authentication) 객체를 생성
-        // 이제 이 인증 객체의 Principal은 CustomUserDetails 타입
-        return new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null, // 소셜 로그인이므로 비밀번호는 필요 x
-                userDetails.getAuthorities()
-        );
     }
 }

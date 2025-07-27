@@ -18,8 +18,7 @@ public class CustomOAuth2User extends DefaultOAuth2User {
      *
      * @param authorities      the authorities granted to the user
      * @param attributes       the attributes about the user
-     * @param nameAttributeKey the key used to access the user's &quot;name&quot; from
-     * the attributes map
+     * @param nameAttributeKey the key used to access the user's name from the attributes map
      * @param user             우리 애플리케이션의 User 엔티티
      */
     public CustomOAuth2User(Collection<? extends GrantedAuthority> authorities,

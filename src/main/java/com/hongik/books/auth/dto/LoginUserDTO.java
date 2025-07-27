@@ -6,7 +6,7 @@ package com.hongik.books.auth.dto;
  */
 public record LoginUserDTO(
         Long id,
-        String username
+        String email
 ) {
     public LoginUserDTO {
         if (id == null || id <= 0) {
