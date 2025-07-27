@@ -514,7 +514,7 @@ const ChatListPage = () => {
                       <FaBook style={{ color: '#666' }} />
                       {chat.bookTitle}
                     </BookTitle>
-                    <TradeStatus status={chat.tradeStatus}>
+                    <TradeStatus $status={chat.tradeStatus}>
                       {getStatusText(chat.tradeStatus)}
                     </TradeStatus>
                     <LastMessage>{chat.lastMessage}</LastMessage>

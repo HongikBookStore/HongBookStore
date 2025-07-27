@@ -113,21 +113,125 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, tempMar
     useEffect(() => {
         console.log('Client ID:', import.meta.env.VITE_NAVER_MAP_CLIENT_ID);
 
+        // 지도 로딩 중 표시
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+            mapContainer.innerHTML = `
+                <div style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    background: #f8f9fa;
+                    border: 2px dashed #dee2e6;
+                    border-radius: 8px;
+                    color: #6c757d;
+                    text-align: center;
+                    padding: 20px;
+                ">
+                    <div style="font-size: 48px; margin-bottom: 16px; animation: spin 1s linear infinite;">🔄</div>
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">지도를 불러오는 중...</div>
+                    <div style="font-size: 14px; margin-bottom: 16px;">잠시만 기다려주세요</div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                </div>
+            `;
+        }
+
         const script = document.createElement('script');
         script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${import.meta.env.VITE_NAVER_MAP_CLIENT_ID}`;
         script.async = true;
+        
+        // 네이버 지도 API 오류 감지를 위한 전역 이벤트 리스너
+        const handleNaverMapError = (event) => {
+            if (event.detail && event.detail.error) {
+                console.error('네이버 지도 API 오류 감지:', event.detail.error);
+                
+                const mapContainer = document.getElementById('map');
+                if (mapContainer) {
+                    mapContainer.innerHTML = `
+                        <div style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100%;
+                            background: #f8f9fa;
+                            border: 2px dashed #dee2e6;
+                            border-radius: 8px;
+                            color: #6c757d;
+                            text-align: center;
+                            padding: 20px;
+                        ">
+                            <div style="font-size: 48px; margin-bottom: 16px;">🚫</div>
+                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">지도 서비스 오류</div>
+                            <div style="font-size: 14px; margin-bottom: 16px;">네이버 지도 API에 문제가 있습니다</div>
+                            <div style="font-size: 12px; color: #adb5bd;">
+                                잠시 후 다시 시도해주세요
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        };
+        
+        // 전역 오류 이벤트 리스너 추가
+        window.addEventListener('naver-map-error', handleNaverMapError);
+        
         document.head.appendChild(script);
+        
+        // 컴포넌트 언마운트 시 이벤트 리스너 정리
+        return () => {
+            window.removeEventListener('naver-map-error', handleNaverMapError);
+        };
 
         console.log('네이버 지도 스크립트 추가됨 ✅');
 
         script.onload = () => {
             console.log('window.naver:', window.naver);
 
+            // 네이버 지도 API 오류 감지를 위한 타이머 설정
+            const errorCheckTimer = setTimeout(() => {
+                const mapContainer = document.getElementById('map');
+                if (mapContainer && !mapInstanceRef.current) {
+                    console.error('네이버 지도 초기화 타임아웃 - API 오류 가능성');
+                    
+                    mapContainer.innerHTML = `
+                        <div style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100%;
+                            background: #f8f9fa;
+                            border: 2px dashed #dee2e6;
+                            border-radius: 8px;
+                            color: #6c757d;
+                            text-align: center;
+                            padding: 20px;
+                        ">
+                            <div style="font-size: 48px; margin-bottom: 16px;">⏰</div>
+                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">지도 로딩 시간 초과</div>
+                            <div style="font-size: 14px; margin-bottom: 16px;">네이버 지도 API 응답이 없습니다</div>
+                            <div style="font-size: 12px; color: #adb5bd;">
+                                API 키 또는 도메인 설정을 확인해주세요
+                            </div>
+                        </div>
+                    `;
+                }
+            }, 5000); // 5초 후 체크
+
             if (window.naver && window.naver.maps) {
-                const map = new window.naver.maps.Map('map', {
-                    center: new window.naver.maps.LatLng(37.5665, 126.978),
-                    zoom: 15,
-                });
+                try {
+                    const map = new window.naver.maps.Map('map', {
+                        center: new window.naver.maps.LatLng(37.5665, 126.978),
+                        zoom: 15,
+                    });
                 
                 mapInstanceRef.current = map;
                 
@@ -166,13 +270,102 @@ const NaverMap = forwardRef(({ places = [], categories = [], onMapClick, tempMar
                 }
 
                 console.log('네이버 지도 초기화 완료 ✅');
+                clearTimeout(errorCheckTimer); // 성공 시 타이머 정리
+                } catch (error) {
+                    console.error('네이버 지도 초기화 실패 ❌', error);
+                    
+                    // 지도 컨테이너에 오류 메시지 표시
+                    const mapContainer = document.getElementById('map');
+                    if (mapContainer) {
+                        mapContainer.innerHTML = `
+                            <div style="
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                height: 100%;
+                                background: #f8f9fa;
+                                border: 2px dashed #dee2e6;
+                                border-radius: 8px;
+                                color: #6c757d;
+                                text-align: center;
+                                padding: 20px;
+                            ">
+                                <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                                <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">지도 인증 오류</div>
+                                <div style="font-size: 14px; margin-bottom: 16px;">네이버 지도 API 인증에 실패했습니다</div>
+                                <div style="font-size: 12px; color: #adb5bd;">
+                                    네이버 클라우드 플랫폼에서<br>
+                                    API 키와 도메인 설정을 확인해주세요
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
             } else {
                 console.error('window.naver.maps가 존재하지 않음 ❌');
+                
+                // 지도 컨테이너에 오류 메시지 표시
+                const mapContainer = document.getElementById('map');
+                if (mapContainer) {
+                    mapContainer.innerHTML = `
+                        <div style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100%;
+                            background: #f8f9fa;
+                            border: 2px dashed #dee2e6;
+                            border-radius: 8px;
+                            color: #6c757d;
+                            text-align: center;
+                            padding: 20px;
+                        ">
+                            <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
+                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">지도를 초기화할 수 없습니다</div>
+                            <div style="font-size: 14px; margin-bottom: 16px;">네이버 지도 API가 로드되지 않았습니다</div>
+                            <div style="font-size: 12px; color: #adb5bd;">
+                                잠시 후 다시 시도해주세요
+                            </div>
+                        </div>
+                    `;
+                }
             }
         };
 
-        script.onerror = () => {
-            console.error('네이버 지도 스크립트 로드 실패 ❌');
+        script.onerror = (error) => {
+            console.error('네이버 지도 스크립트 로드 실패 ❌', error);
+            console.error('Client ID:', import.meta.env.VITE_NAVER_MAP_CLIENT_ID);
+            console.error('현재 URL:', window.location.href);
+            
+            // 지도 컨테이너에 오류 메시지 표시
+            const mapContainer = document.getElementById('map');
+            if (mapContainer) {
+                mapContainer.innerHTML = `
+                    <div style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        background: #f8f9fa;
+                        border: 2px dashed #dee2e6;
+                        border-radius: 8px;
+                        color: #6c757d;
+                        text-align: center;
+                        padding: 20px;
+                    ">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">지도를 불러올 수 없습니다</div>
+                        <div style="font-size: 14px; margin-bottom: 16px;">네이버 지도 API 인증에 문제가 있습니다</div>
+                        <div style="font-size: 12px; color: #adb5bd;">
+                            네이버 클라우드 플랫폼에서<br>
+                            도메인 등록 및 API 키를 확인해주세요
+                        </div>
+                    </div>
+                `;
+            }
         };
     }, [onMapClick, isAddingPlace]);
 

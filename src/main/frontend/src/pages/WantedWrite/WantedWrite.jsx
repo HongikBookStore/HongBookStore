@@ -722,14 +722,14 @@ const WantedWrite = () => {
               <InputTypeButtons>
                 <InputTypeButton
                   type="button"
-                  active={inputType === 'title'}
+                  $active={inputType === 'title'}
                   onClick={() => setInputType('title')}
                 >
                   책 제목으로 입력
                 </InputTypeButton>
                 <InputTypeButton
                   type="button"
-                  active={inputType === 'isbn'}
+                  $active={inputType === 'isbn'}
                   onClick={() => setInputType('isbn')}
                 >
                   ISBN으로 검색

@@ -347,7 +347,7 @@ const Search = () => {
                     </MetaValue>
                   </CardMeta>
                   <BookPrice>{book.price.toLocaleString()}원</BookPrice>
-                  <BookStatus status={book.status}>
+                  <BookStatus $status={book.status}>
                     {book.status === 'SALE' ? '판매중' : 
                      book.status === 'RESERVED' ? '예약중' : '판매완료'}
                   </BookStatus>

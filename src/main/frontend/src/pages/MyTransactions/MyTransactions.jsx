@@ -1094,7 +1094,7 @@ const MyTransactions = () => {
                   </CompactMeta>
                   <CompactPrice>{transaction.price.toLocaleString()}원</CompactPrice>
                 </CompactBookInfo>
-                <CompactStatus status={transaction.status}>
+                <CompactStatus $status={transaction.status}>
                   {transaction.status === 'RESERVED' && '예약됨'}
                   {transaction.status === 'COMPLETED' && '완료'}
                   {transaction.status === 'CANCELLED' && '취소됨'}

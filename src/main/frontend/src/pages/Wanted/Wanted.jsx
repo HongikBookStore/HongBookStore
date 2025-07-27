@@ -292,31 +292,31 @@ const Wanted = () => {
 
           <FilterSection>
             <FilterButton 
-              active={activeFilter === 'all'} 
+              $active={activeFilter === 'all'} 
               onClick={() => handleFilter('all')}
             >
               전체
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'programming'} 
+              $active={activeFilter === 'programming'} 
               onClick={() => handleFilter('programming')}
             >
               프로그래밍
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'algorithm'} 
+              $active={activeFilter === 'algorithm'} 
               onClick={() => handleFilter('algorithm')}
             >
               알고리즘
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'math'} 
+              $active={activeFilter === 'math'} 
               onClick={() => handleFilter('math')}
             >
               수학
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'english'} 
+              $active={activeFilter === 'english'} 
               onClick={() => handleFilter('english')}
             >
               영어

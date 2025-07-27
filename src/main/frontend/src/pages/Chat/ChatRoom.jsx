@@ -1193,7 +1193,7 @@ const ChatRoom = () => {
 
     return (
       <MessageStatus isOwn={isOwn}>
-        <StatusIcon status={status}>
+                        <StatusIcon $status={status}>
           {getStatusIcon()}
         </StatusIcon>
         <span>{getStatusText()}</span>
