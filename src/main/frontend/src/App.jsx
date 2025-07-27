@@ -10,8 +10,6 @@ import MyPage from './pages/MyPage/MyPage.jsx';
 import Login from './pages/Login/Login.jsx';
 import Register from './pages/Register/Register.jsx';
 import FindId from './pages/FindId/FindId.jsx';
-import FindPw from './pages/FindPw/FindPw.jsx';
-import ResetPassword from './pages/ResetPassword/ResetPassword.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
@@ -28,6 +26,7 @@ import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
+import VerificationConfirmPage from './pages/VerificationConfirmPage';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -164,7 +163,7 @@ function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
-                            <Route path="/find-pw" element={<FindPw />} />
+							<Route path="/verify-student" element={<VerificationConfirmPage />} />
                             <Route path="/ai-chat" element={
                                 <>
                                     <Header />

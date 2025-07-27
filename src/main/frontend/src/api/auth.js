@@ -1,4 +1,4 @@
-import api from '../lib/api'; // axios 인스턴스를 import 합니다.
+import api from '../lib/api';
 
 // 회원가입
 export const signUp = (body) => api.post('/users/signup', body);
@@ -16,8 +16,7 @@ export const findIdByEmail = (email) =>
   api.get(`/users/find-id?email=${encodeURIComponent(email)}`);
 
 // 일반 로그인
-// 이 함수는 이제 로컬 스토리지를 직접 건드리는 대신,
-// 성공 시 토큰 객체를 반환하여 Context가 상태를 관리하도록 합니다.
+// 성공 시 토큰 객체를 반환하여 Context가 상태를 관리
 export const login = async (username, password) => {
   try {
     const response = await api.post('/auth/login', { username, password });
@@ -83,8 +82,7 @@ export const logout = async () => {
   } catch (error) {
     console.error('서버 로그아웃 요청 실패:', error);
   } finally {
-    // [가장 중요!] 서버 요청의 성공/실패 여부와 관계없이
-    // 로컬 스토리지의 토큰들은 반드시 삭제합니다.
+    // 서버 요청의 성공/실패 여부와 관계없이 로컬 스토리지의 토큰들은 반드시 삭제
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user'); // 사용자 정보도 함께 삭제

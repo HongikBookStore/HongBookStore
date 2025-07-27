@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
 const DetailContainer = styled.div`
   max-width: 1200px;
@@ -478,6 +479,13 @@ const LikeButton = styled.button`
   }
 `;
 
+// 백엔드 Enum(HIGH, MEDIUM, LOW)을 프론트엔드 텍스트(상, 중, 하)로 변환하는 헬퍼
+const conditionMap = {
+  'HIGH': '상',
+  'MEDIUM': '중',
+  'LOW': '하'
+};
+
 // 팝업 모달 스타일 컴포넌트들
 const ModalOverlay = styled.div`
   position: fixed;
@@ -603,15 +611,19 @@ const OtherBookCondition = styled.div`
 
 // 할인율에 따른 책 상태 반환 함수
 const getBookCondition = (discountRate) => {
-  if (discountRate <= 20) return { text: '상', color: '#28a745', bgColor: '#d4edda' };
-  if (discountRate <= 40) return { text: '중', color: '#ffc107', bgColor: '#fff3cd' };
-  return { text: '하', color: '#dc3545', bgColor: '#f8d7da' };
+  if (discountRate <= 20) return { text: conditionMap.HIGH, color: '#28a745', bgColor: '#d4edda' };
+  if (discountRate <= 40) return { text: conditionMap.MEDIUM, color: '#ffc107', bgColor: '#fff3cd' };
+  return { text: conditionMap.LOW, color: '#dc3545', bgColor: '#f8d7da' };
 };
 
 const BookDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [selectedImage, setSelectedImage] = useState(0);
+
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [liked, setLiked] = useState(false);
   const [showOtherBooks, setShowOtherBooks] = useState(false);
 
@@ -623,36 +635,23 @@ const BookDetail = () => {
     console.log('BookDetail 컴포넌트 마운트/업데이트, ID:', id);
   }, [id]);
 
-  // Mock 데이터 (실제로는 API에서 가져올 데이터)
-  const bookData = {
-    id: parseInt(id),
-    title: "자바의 정석",
-    author: "남궁성",
-    originalPrice: 25000,
-    price: 15000,
-    discountRate: 40,
-    bookType: "정식 도서",
-    major: "공과대학",
-    subMajor: "컴퓨터공학",
-    writingCondition: "중",
-    tearCondition: "상",
-    waterCondition: "상",
-    location: "교내",
-    negotiable: true,
-    createdAt: "2024-01-15",
-    views: 120,
-    images: [
-      "https://via.placeholder.com/400x400/667eea/ffffff?text=책+사진+1",
-      "https://via.placeholder.com/400x400/764ba2/ffffff?text=책+사진+2",
-      "https://via.placeholder.com/400x400/f093fb/ffffff?text=책+사진+3"
-    ],
-    seller: {
-      name: "홍길동",
-      location: "서울시 마포구",
-      rating: 4.8,
-      salesCount: 15
-    }
-  };
+  // 컴포넌트가 처음 렌더링될 때 API를 호출하는 로직
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`/api/posts/${id}`);
+        setPost(response.data);
+      } catch (err) {
+        setError(err);
+        console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [id]);
 
   // 판매자의 다른 책들 Mock 데이터
   const sellerOtherBooks = [
@@ -719,6 +718,15 @@ const BookDetail = () => {
     alert('전화 연결 기능은 준비 중입니다.');
   };
 
+  // 로딩 및 에러 처리
+  if (loading) return <DetailContainer><h2>로딩 중...</h2></DetailContainer>;
+  if (error || !post) return <DetailContainer><h2>게시글 정보를 불러올 수 없습니다.</h2></DetailContainer>;
+
+  // 할인율 계산 로직
+  const discountRate = post.originalPrice > 0 
+    ? Math.round(((post.originalPrice - post.price) / post.originalPrice) * 100)
+    : 0;
+
   const handleViewOtherBooks = () => {
     setShowOtherBooks(!showOtherBooks);
   };
@@ -745,41 +753,26 @@ const BookDetail = () => {
 
         <BookDetailGrid>
           <ImageSection>
-            <BookImageLarge>
-              <MainImageImg src={bookData.images[selectedImage]} alt={bookData.title} />
-            </BookImageLarge>
-            
-            {bookData.images.length > 1 && (
-              <ThumbnailGrid>
-                {bookData.images.map((image, index) => (
-                  <Thumbnail 
-                    key={index} 
-                    active={selectedImage === index}
-                    onClick={() => setSelectedImage(index)}
-                  >
-                    <ThumbnailImg src={image} alt={`${bookData.title} ${index + 1}`} />
-                  </Thumbnail>
-                ))}
-              </ThumbnailGrid>
-            )}
+            <MainImage>
+              <MainImageImg src={post.coverImageUrl} alt={post.bookTitle} />
+            </MainImage>
+            {/* 현재는 이미지가 하나지만, 나중에 여러 개가 되면 썸네일 로직을 여기에 추가 */}
           </ImageSection>
 
           <InfoSection>
             <div>
               <BookTitle>
-                {bookData.title}
-                <LikeButton liked={liked} onClick={handleLike}>
-                  ♥
-                </LikeButton>
+                {post.bookTitle}
+                <LikeButton liked={liked} onClick={handleLike}>♥</LikeButton>
               </BookTitle>
-              <BookAuthor>{bookData.author}</BookAuthor>
+              <BookAuthor>{post.author}</BookAuthor>
             </div>
 
             <PriceSection>
               <PriceLabel>판매 가격</PriceLabel>
-              <Price>{bookData.price.toLocaleString()}원</Price>
-              <OriginalPrice>{bookData.originalPrice.toLocaleString()}원</OriginalPrice>
-              <DiscountRate>{bookData.discountRate}% 할인</DiscountRate>
+              <Price>{post.price.toLocaleString()}원</Price>
+              <OriginalPrice>{post.originalPrice.toLocaleString()}원</OriginalPrice>
+              <DiscountRate>{post.discountRate}% 할인</DiscountRate>
             </PriceSection>
 
             <OverallConditionSection>
@@ -787,16 +780,16 @@ const BookDetail = () => {
                 📊 전체 책 상태
               </OverallConditionTitle>
               <OverallConditionBadge 
-                $bgColor={getBookCondition(bookData.discountRate).bgColor}
-                $color={getBookCondition(bookData.discountRate).color}
+                $bgColor={getBookCondition(post.discountRate).bgColor}
+                $color={getBookCondition(post.discountRate).color}
               >
-                {getBookCondition(bookData.discountRate).text}
+                {getBookCondition(post.discountRate).text}
               </OverallConditionBadge>
               <OverallConditionDescription>
-                할인율 {bookData.discountRate}%에 따른 전체 상태 평가입니다.
-                {bookData.discountRate <= 20 && ' 책이 양호한 상태입니다.'}
-                {bookData.discountRate > 20 && bookData.discountRate <= 40 && ' 책이 보통 상태입니다.'}
-                {bookData.discountRate > 40 && ' 책에 일부 손상이 있습니다.'}
+                할인율 {post.discountRate}%에 따른 전체 상태 평가입니다.
+                {post.discountRate <= 20 && ' 책이 양호한 상태입니다.'}
+                {post.discountRate > 20 && post.discountRate <= 40 && ' 책이 보통 상태입니다.'}
+                {post.discountRate > 40 && ' 책에 일부 손상이 있습니다.'}
               </OverallConditionDescription>
             </OverallConditionSection>
 
@@ -805,15 +798,15 @@ const BookDetail = () => {
               <ConditionGrid>
                 <ConditionItem>
                   <ConditionLabel>필기 상태</ConditionLabel>
-                  <ConditionValue value={bookData.writingCondition}>{bookData.writingCondition}</ConditionValue>
+                  <ConditionValue value={conditionMap[post.writingCondition]}>{conditionMap[post.writingCondition]}</ConditionValue>
                 </ConditionItem>
                 <ConditionItem>
                   <ConditionLabel>찢어짐 정도</ConditionLabel>
-                  <ConditionValue value={bookData.tearCondition}>{bookData.tearCondition}</ConditionValue>
+                  <ConditionValue value={conditionMap[post.tearCondition]}>{conditionMap[post.tearCondition]}</ConditionValue>
                 </ConditionItem>
                 <ConditionItem>
                   <ConditionLabel>물흘림 정도</ConditionLabel>
-                  <ConditionValue value={bookData.waterCondition}>{bookData.waterCondition}</ConditionValue>
+                  <ConditionValue value={conditionMap[post.waterCondition]}>{conditionMap[post.waterCondition]}</ConditionValue>
                 </ConditionItem>
               </ConditionGrid>
             </ConditionSection>
@@ -822,58 +815,35 @@ const BookDetail = () => {
               <InfoTitle>책 정보</InfoTitle>
               <InfoGrid>
                 <InfoItem>
-                  <InfoLabel>책 종류</InfoLabel>
-                  <InfoValue>{bookData.bookType}</InfoValue>
-                </InfoItem>
-                <InfoItem>
                   <InfoLabel>카테고리</InfoLabel>
-                  <InfoValue>{bookData.major} - {bookData.subMajor}</InfoValue>
+                  <InfoValue>컴퓨터공학</InfoValue> {/* TODO: 카테고리 정보 DTO에 추가 필요 */}
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>거래 지역</InfoLabel>
-                  <InfoValue>{bookData.location}</InfoValue>
+                  <InfoValue>교내</InfoValue> {/* TODO: 거래 지역 정보 DTO에 추가 필요 */}
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>가격 협의</InfoLabel>
-                  <InfoValue>{bookData.negotiable ? '가능' : '불가능'}</InfoValue>
+                  <InfoValue>{post.negotiable ? '가능' : '불가능'}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>등록일</InfoLabel>
-                  <InfoValue>{bookData.createdAt}</InfoValue>
+                  <InfoValue>{new Date(post.createdAt).toLocaleDateString()}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>조회수</InfoLabel>
-                  <InfoValue>{bookData.views}</InfoValue>
+                  <InfoValue>{post.views}</InfoValue>
                 </InfoItem>
               </InfoGrid>
             </BookInfoSection>
 
             <SellerSection>
-              <SellerTitle>
-                <FaUser /> 판매자 정보
-              </SellerTitle>
+              <SellerTitle><FaUser /> 판매자 정보</SellerTitle>
               <SellerInfo>
-                <SellerAvatar>
-                  {bookData.seller.name.charAt(0)}
-                </SellerAvatar>
+                <SellerAvatar>{post.sellerNickname.charAt(0)}</SellerAvatar>
                 <SellerDetails>
-                  <SellerName>{bookData.seller.name}</SellerName>
-                  <SellerLocation>
-                    <FaMapMarkerAlt />
-                    {bookData.seller.location}
-                  </SellerLocation>
-                  <SellerRating>
-                    <Stars>
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Star 
-                          key={star} 
-                          filled={star <= Math.floor(bookData.seller.rating)} 
-                        />
-                      ))}
-                    </Stars>
-                    <RatingText>{bookData.seller.rating}</RatingText>
-                  </SellerRating>
-                  <SalesCount>판매 {bookData.seller.salesCount}회</SalesCount>
+                  <SellerName>{post.sellerNickname}</SellerName>
+                  {/* TODO: 판매자 위치, 평점, 판매횟수 등은 별도 기능 구현 후 DTO에 추가 필요 */}
                 </SellerDetails>
               </SellerInfo>
               <ActionButtons>

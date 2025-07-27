@@ -1,15 +1,11 @@
 package com.hongik.books.auth.jwt;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -27,7 +23,6 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final UserDetailsService userDetailsService;
 
     @Value("${jwt.token-validity-in-seconds}")
     private long accessTokenValiditySeconds;
@@ -36,20 +31,23 @@ public class JwtTokenProvider {
     private long refreshTokenValiditySeconds;
 
     // 생성자에서 비밀키 초기화 - 의존성 주입
-    public JwtTokenProvider(@Value("${jwt.secret}") String secret,
-                            UserDetailsService userDetailsService) {
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.userDetailsService = userDetailsService;
+
     }
 
-    // 주어진 Authentication 객체를 기반으로 Access JWT 토큰을 생성한다.
-    public String createAccessToken(Authentication authentication) {
-        return generateToken(authentication.getName(), accessTokenValiditySeconds * 1000L);
+    /**
+     * Authentication 객체 대신 사용자의 고유 ID(PK)를 직접 받아서 토큰을 생성
+     * 이 메서드는 OAuth2 로그인 성공 핸들러(OAuth2LoginSuccessHandler)에서 호출
+     */
+    // Access JWT 토큰을 생성
+    public String createAccessToken(Long userId) {
+        return generateToken(userId.toString(), accessTokenValiditySeconds * 1000L);
     }
 
-    // 주어진 Authentication 객체를 기반으로 Refresh JWT 토큰을 생성한다.
-    public String createRefreshToken(Authentication authentication) {
-        return generateToken(authentication.getName(), refreshTokenValiditySeconds * 1000L);
+    // Refresh JWT 토큰을 생성
+    public String createRefreshToken(Long userId) {
+        return generateToken(userId.toString(), refreshTokenValiditySeconds * 1000L);
     }
 
     // JWT 토큰의 유효성 검사
@@ -71,8 +69,19 @@ public class JwtTokenProvider {
         }
     }
 
-    // JWT 토큰에서 사용자 이름을 추출
-    public String getUsernameFromToken(String token) {
+    // 토큰에서 사용자 ID(PK)를 추출
+    public Long getUserIdFromToken(String token) {
+        String subject = getSubjectFromToken(token);
+        try {
+            return Long.parseLong(subject);
+        } catch (NumberFormatException e) {
+            log.error("토큰의 subject를 Long 타입으로 변환할 수 없습니다: {}", subject);
+            throw new IllegalArgumentException("유효하지 않은 토큰의 subject 입니다.", e);
+        }
+    }
+
+    // 토큰의 'subject' 클레임을 문자열 그대로 반환
+    public String getSubjectFromToken(String token) {
         if (token == null || token.trim().isEmpty()) {
             throw new IllegalArgumentException("토큰이 null이거나 비어 있습니다.");
         }
@@ -85,12 +94,12 @@ public class JwtTokenProvider {
                     .getPayload()
                     .getSubject();
         } catch (Exception e) {
-            log.error("토큰에서 아이디 추출 실패: {}", e.getMessage());
+            log.error("토큰에서 subject 추출 실패: {}", e.getMessage());
             throw new IllegalArgumentException("유효하지 않은 토큰입니다.", e);
         }
     }
 
-    // PasswordResetService에서 필요로 하는 메서드 추가
+    // 토큰 만료 시간 계산 (로그아웃 시 Redis에 TTL 설정할 때 필요)
     public long getExpiration(String token) {
         Date expirationDate = Jwts.parser()
                 .verifyWith(secretKey)
@@ -102,7 +111,7 @@ public class JwtTokenProvider {
         return expirationDate.getTime() - now;
     }
 
-    // HttpServletRequest에서 Authorization 헤더에서 JWT 토큰을 추출
+    // 요청 헤더에서 JWT 토큰을 추출
     public String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
@@ -111,50 +120,13 @@ public class JwtTokenProvider {
         return null;
     }
 
-    public Authentication getAuthentication(String token) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(this.getUsernameFromToken(token));
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
-    }
-
-    // 비밀번호 재설정용 토큰 생성 메서드 추가
-    public String createPasswordResetToken(String username) {
-        // 비밀번호 재설정 토큰 유효 시간 (예: 15분)
-        long passwordResetTokenValidityInMilliseconds = 15 * 60 * 1000L;
-
-        Date now = new Date();
-        Date validity = new Date(now.getTime() + passwordResetTokenValidityInMilliseconds);
-
-        return Jwts.builder()
-                .subject(username)
-                .claim("type", "password-reset")
-                .issuedAt(now)
-                .expiration(validity)
-                .signWith(this.secretKey)
-                .compact();
-    }
-
-    // ✨ 토큰 타입 검증 메서드 추가
-    public boolean isPasswordResetToken(String token) {
-        try {
-            String tokenType = (String) Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload()
-                    .get("type");
-            return "password-reset".equals(tokenType);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     // JWT 토큰 생성
-    private String generateToken(String username, long validityMilliseconds) {
+    private String generateToken(String subject, long validityMilliseconds) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityMilliseconds);
 
         return Jwts.builder()
-                .subject(username)
+                .subject(subject)
                 .issuedAt(now)
                 .expiration(validity)
                 .signWith(this.secretKey)

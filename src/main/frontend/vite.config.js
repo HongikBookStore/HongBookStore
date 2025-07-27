@@ -11,15 +11,15 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // [기존 설정] '/api'로 시작하는 요청은 백엔드 서버(8080)로 전달합니다.
+      // '/api'로 시작하는 요청은 백엔드 서버(8080)로 전달
       '/api': {
         target: 'http://localhost:8080',
-        changeOrigin: true, // CORS 문제를 해결하기 위해 오리진을 변경합니다.
+        changeOrigin: true, // CORS 문제를 해결하기 위해 오리진을 변경
       },
-      // [추가] '/oauth2'로 시작하는 소셜 로그인 요청도 백엔드 서버로 전달합니다.
+      // '/oauth2'로 시작하는 소셜 로그인 요청도 백엔드 서버로 전달
       '/oauth2': {
         target: 'http://localhost:8080',
-        changeOrigin: true, // 이 옵션이 아주 중요해요!
+        changeOrigin: true,
       }
     }
   }

@@ -1,12 +1,14 @@
 package com.hongik.books.domain.post.domain;
 
 import com.hongik.books.domain.book.domain.Book;
+import com.hongik.books.domain.post.dto.SalePostUpdateRequestDTO;
 import com.hongik.books.domain.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -46,6 +48,28 @@ public class SalePost {
     @Column(nullable = false, length = 20)
     private SaleStatus status;
 
+    // 책 상태 필드들
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Condition writingCondition;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Condition tearCondition;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Condition waterCondition;
+
+    // 가격 협의 가능 여부
+    @Column(nullable = false)
+    private boolean negotiable;
+
+    // 조회수
+    @Column(nullable = false)
+    @ColumnDefault("0") // DB 기본값을 0으로 설정
+    private int views = 0;
+
     private String locationName;
 
     @Column(precision = 10, scale = 8)
@@ -64,7 +88,8 @@ public class SalePost {
     @Builder
     public SalePost(User seller, Book book, String postTitle, String postContent,
                     Integer price, SaleStatus status, String locationName,
-                    BigDecimal latitude, BigDecimal longitude) {
+                    BigDecimal latitude, BigDecimal longitude,
+                    Condition writingCondition, Condition tearCondition, Condition waterCondition, boolean negotiable) {
         this.seller = seller;
         this.book = book;
         this.postTitle = postTitle;
@@ -74,9 +99,32 @@ public class SalePost {
         this.locationName = locationName;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.writingCondition = writingCondition;
+        this.tearCondition = tearCondition;
+        this.waterCondition = waterCondition;
+        this.negotiable = negotiable;
     }
 
     public enum SaleStatus {
         FOR_SALE, RESERVED, SOLD_OUT
+    }
+
+    /**
+     * 게시글 정보를 수정하는 메서드
+     * 엔티티의 비즈니스 로직을 내부에 캡슐화하여 객체지향적인 설계
+     * @param request 수정할 정보가 담긴 DTO
+     */
+    public void update(SalePostUpdateRequestDTO request) {
+        this.postTitle = request.getPostTitle();
+        this.postContent = request.getPostContent();
+        this.price = request.getPrice();
+        this.writingCondition = request.getWritingCondition();
+        this.tearCondition = request.getTearCondition();
+        this.waterCondition = request.getWaterCondition();
+        this.negotiable = request.isNegotiable();
+    }
+
+    public void increaseViewCount() {
+        this.views++;
     }
 }

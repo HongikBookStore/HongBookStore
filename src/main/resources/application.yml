@@ -113,6 +113,13 @@ jwt:
   token-validity-in-seconds: 3600 # 토큰 유효 기간
   refresh-token-validity-in-seconds: 86400 # 리프레시 토큰 유효 기간
 
+### Kakao Book ###
+kakao:
+  api:
+    book:
+      url: https://dapi.kakao.com/v3/search/book
+      rest-api-key: ${KAKAO_API_REST_KEY}
+
 ### Log ###
 logging:
   level:

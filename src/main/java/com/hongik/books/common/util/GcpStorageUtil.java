@@ -1,5 +1,6 @@
 package com.hongik.books.common.util;
 
+import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,5 +51,18 @@ public class GcpStorageUtil {
 
         // 4. 업로드된 파일의 공개 URL 반환
         return "https://storage.googleapis.com/" + bucketName + "/" + objectName;
+    }
+
+    /**
+     * GCP Cloud Storage에서 이미지를 삭제
+     * @param imageUrl 삭제할 이미지의 전체 URL
+     */
+    public void deleteImage(String imageUrl) {
+        // 전체 URL에서 객체 이름(파일 경로)만 추출
+        // 예: "https://storage.googleapis.com/버킷이름/book-covers/파일이름.jpg" -> "book-covers/파일이름.jpg"
+        String objectName = imageUrl.replace("https://storage.googleapis.com/" + bucketName + "/", "");
+
+        // BlobId를 사용하여 GCP에서 해당 객체를 삭제
+        storage.delete(BlobId.of(bucketName, objectName));
     }
 }

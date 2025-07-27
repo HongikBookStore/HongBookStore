@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback} from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaBook, FaUser, FaClock, FaMoneyBillWave, FaChartLine, FaHeart, FaSearch, FaHandPaper, FaArrowRight, FaRegEye, FaExchangeAlt } from 'react-icons/fa';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
+import axios from 'axios';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -203,9 +204,9 @@ const BookStatus = styled.span`
   
   ${props => {
     switch(props.$status) {
-      case 'SALE': return 'background: #d4edda; color: #155724;';
+      case 'FOR_SALE': return 'background: #d4edda; color: #155724;';
       case 'RESERVED': return 'background: #fff3cd; color: #856404;';
-      case 'SOLD': return 'background: #f8d7da; color: #721c24;';
+      case 'SOLD_OUT': return 'background: #f8d7da; color: #721c24;';
       default: return 'background: #e2e3e5; color: #383d41;';
     }
   }}
@@ -382,9 +383,9 @@ const CompactBookStatus = styled.span`
   
   ${props => {
     switch(props.$status) {
-      case 'SALE': return 'background: #d4edda; color: #155724;';
+      case 'FOR_SALE': return 'background: #d4edda; color: #155724;';
       case 'RESERVED': return 'background: #fff3cd; color: #856404;';
-      case 'SOLD': return 'background: #f8d7da; color: #721c24;';
+      case 'SOLD_OUT': return 'background: #f8d7da; color: #721c24;';
       default: return 'background: #e2e3e5; color: #383d41;';
     }
   }}
@@ -516,73 +517,42 @@ const CircleIconButton = styled.button`
   }
 `;
 
+// 인증 토큰을 가져오는 헬퍼 함수
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
+const statusMap = {
+  'FOR_SALE': '판매중',
+  'RESERVED': '예약중',
+  'SOLD_OUT': '판매완료'
+};
+
 const MyBookstore = () => {
-  const [activeTab, setActiveTab] = useState('selling');
-  const [books, setBooks] = useState([]);
+  const [activeTab, setActiveTab] = useState('all'); // 기본 탭을 '전체'로
+  const [myPosts, setMyPosts] = useState([]);
   const [showAllMyBooks, setShowAllMyBooks] = useState(false);
   const [showAllWishlist, setShowAllWishlist] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
   const [showAllWanted, setShowAllWanted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // 임시 데이터 - 내가 등록한 책
-  const mockMyBooks = [
-    {
-      id: 1,
-      title: '자바의 정석',
-      author: '남궁성',
-      subject: '프로그래밍',
-      price: 15000,
-      status: 'SALE',
-      createdAt: '2024-01-10',
-      views: 45,
-      image: null
-    },
-    {
-      id: 2,
-      title: '스프링 부트 실전 활용',
-      author: '김영한',
-      subject: '프로그래밍',
-      price: 20000,
-      status: 'RESERVED',
-      createdAt: '2024-01-08',
-      views: 32,
-      image: null
-    },
-    {
-      id: 3,
-      title: '알고리즘 문제 해결 전략',
-      author: '구종만',
-      subject: '알고리즘',
-      price: 18000,
-      status: 'SOLD',
-      createdAt: '2024-01-05',
-      views: 28,
-      image: null
-    },
-    {
-      id: 4,
-      title: '리액트를 다루는 기술',
-      author: '김민준',
-      subject: '프론트엔드',
-      price: 22000,
-      status: 'SALE',
-      createdAt: '2024-01-03',
-      views: 15,
-      image: null
-    },
-    {
-      id: 5,
-      title: 'Node.js 교과서',
-      author: '조현영',
-      subject: '백엔드',
-      price: 25000,
-      status: 'SALE',
-      createdAt: '2024-01-01',
-      views: 8,
-      image: null
+  // 내 판매글 목록을 불러오는 API 호출 함수
+  const fetchMyPosts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/posts/my', { headers: getAuthHeader() });
+      setMyPosts(response.data);
+    } catch (error) {
+      console.error("내 판매글 목록을 불러오는 데 실패했습니다.", error);
+      // TODO: 401 Unauthorized 에러 시 로그인 페이지로 리다이렉트 처리
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, []);
 
   // 임시 데이터 - 찜한 책
   const mockWishlist = [
@@ -704,30 +674,38 @@ const MyBookstore = () => {
     }
   ];
 
+  // 컴포넌트 마운트 시 API 호출
   useEffect(() => {
-    setBooks(mockMyBooks);
-  }, []);
+    fetchMyPosts();
+  }, [fetchMyPosts]);
 
+  // 탭에 따라 게시글을 필터링하는 함수
   const getFilteredBooks = () => {
-    switch(activeTab) {
-      case 'selling':
-        return books.filter(book => book.status === 'SALE');
-      case 'reserved':
-        return books.filter(book => book.status === 'RESERVED');
-      case 'sold':
-        return books.filter(book => book.status === 'SOLD');
-      default:
-        return books;
-    }
+    if (activeTab === 'all') return myPosts;
+    // 백엔드 status (FOR_SALE, RESERVED, SOLD_OUT)와 프론트엔드 탭(selling, reserved, sold)을 매핑
+    const statusMapping = {
+      selling: 'FOR_SALE',
+      reserved: 'RESERVED',
+      sold: 'SOLD_OUT'
+    };
+    return myPosts.filter(post => post.status === statusMapping[activeTab]);
   };
 
   const handleEditBook = (bookId) => {
     navigate(`/bookwrite/${bookId}`);
   };
 
-  const handleDeleteBook = (bookId) => {
-    if (window.confirm('이 책을 삭제하시겠습니까?')) {
-      setBooks(books.filter(book => book.id !== bookId));
+  // 게시글 삭제 핸들러
+  const handleDeleteBook = async (postId) => {
+    if (window.confirm('이 책을 정말 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
+      try {
+        await axios.delete(`/api/posts/${postId}`, { headers: getAuthHeader() });
+        alert("게시글이 삭제되었습니다.");
+        fetchMyPosts(); // 목록 새로고침
+      } catch (error) {
+        console.error("게시글 삭제에 실패했습니다.", error);
+        alert("게시글 삭제 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -803,7 +781,7 @@ const MyBookstore = () => {
             <SectionHeader>
               <SectionTitle>
                 <FaBook />
-                내가 등록한 책 ({mockMyBooks.length})
+                내가 등록한 책
               </SectionTitle>
               <ViewMoreButton onClick={() => setShowAllMyBooks(!showAllMyBooks)}>
                 {showAllMyBooks ? '접기' : '더보기'}
@@ -813,84 +791,59 @@ const MyBookstore = () => {
 
             <TabSection>
               <TabList>
-                <Tab 
-                  $active={activeTab === 'selling'} 
-                  onClick={() => setActiveTab('selling')}
-                >
-                  판매중 ({books.filter(book => book.status === 'SALE').length})
+                <Tab $active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
+                  전체 ({myPosts.length})
                 </Tab>
-                <Tab 
-                  $active={activeTab === 'reserved'} 
-                  onClick={() => setActiveTab('reserved')}
-                >
-                  예약중 ({books.filter(book => book.status === 'RESERVED').length})
+                <Tab $active={activeTab === 'selling'} onClick={() => setActiveTab('selling')}>
+                  판매중 ({myPosts.filter(p => p.status === 'FOR_SALE').length})
                 </Tab>
-                <Tab 
-                  $active={activeTab === 'sold'} 
-                  onClick={() => setActiveTab('sold')}
-                >
-                  판매완료 ({books.filter(book => book.status === 'SOLD').length})
+                <Tab $active={activeTab === 'reserved'} onClick={() => setActiveTab('reserved')}>
+                  예약중 ({myPosts.filter(p => p.status === 'RESERVED').length})
                 </Tab>
-                <Tab 
-                  $active={activeTab === 'all'} 
-                  onClick={() => setActiveTab('all')}
-                >
-                  전체 ({books.length})
+                <Tab $active={activeTab === 'sold'} onClick={() => setActiveTab('sold')}>
+                  판매완료 ({myPosts.filter(p => p.status === 'SOLD_OUT').length})
                 </Tab>
               </TabList>
 
-              {filteredBooks.length > 0 ? (
+              {loading ? (
+                <NoBooks><h3>목록을 불러오는 중...</h3></NoBooks>
+              ) : filteredBooks.length > 0 ? (
                 <BookGrid>
-                  {(showAllMyBooks ? filteredBooks : filteredBooks.slice(0, 3)).map(book => (
-                    <BookCard key={book.id}>
+                  {filteredBooks.map(post => (
+                    <BookCard key={post.postId}>
                       <BookImage>
-                        {book.image ? (
-                          <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        {post.thumbnailUrl ? (
+                          <BookImageImg src={post.thumbnailUrl} alt={post.bookTitle} />
                         ) : (
                           <FaBook size={40} />
                         )}
                       </BookImage>
                       
-                      <BookTitle>{book.title}</BookTitle>
+                      <BookCardTitle>{post.bookTitle}</BookCardTitle>
                       
                       <BookMeta>
                         <span>
-                          <FaUser size={12} /> {book.author}
+                          <FaClock size={12} /> {new Date(post.createdAt).toLocaleDateString()}
                         </span>
-                        <span>
-                          <FaClock size={12} /> {book.createdAt}
-                        </span>
-                        <span>
-                          <FaEye size={12} /> {book.views}
-                        </span>
+                        {/* <span><FaEye size={12} /> {post.views}</span> */}
                       </BookMeta>
                       
-                      <BookPrice>{book.price.toLocaleString()}원</BookPrice>
+                      <BookPrice>{post.price.toLocaleString()}원</BookPrice>
                       
-                      <BookStatus $status={book.status}>
-                        {book.status === 'SALE' ? '판매중' : 
-                         book.status === 'RESERVED' ? '예약중' : '판매완료'}
+                      <BookStatus $status={post.status}>
+                        {statusMap[post.status]}
                       </BookStatus>
                       
                       <BookActions>
-                        <ActionButton 
-                          onClick={() => handleViewBook(book.id)}
-                        >
+                        <ActionButton onClick={() => handleViewBook(post.postId)}>
                           <FaSearch /> 보기
                         </ActionButton>
-                        {book.status === 'SALE' && (
-                          <ActionButton 
-                            onClick={() => handleEditBook(book.id)}
-                          >
+                        {post.status === 'FOR_SALE' && (
+                          <ActionButton onClick={() => handleEditBook(post.postId)}>
                             <FaEdit /> 수정
                           </ActionButton>
                         )}
-                        <ActionButton 
-                          className="delete" 
-                          onClick={() => {
-                            if (window.confirm('삭제하시겠습니까?')) handleDeleteBook(book.id);
-                          }}
-                        >
+                        <ActionButton className="delete" onClick={() => handleDeleteBook(post.postId)}>
                           <FaTrash /> 삭제
                         </ActionButton>
                       </BookActions>
@@ -899,11 +852,8 @@ const MyBookstore = () => {
                 </BookGrid>
               ) : (
                 <NoBooks>
-                  <EmptyIcon>
-                    <FaBook />
-                  </EmptyIcon>
-                  <h3>등록된 책이 없습니다</h3>
-                  <p>첫 번째 책을 등록해보세요!</p>
+                  <EmptyIcon><FaBook /></EmptyIcon>
+                  <h3>{statusMap[activeTab]}인 책이 없습니다</h3>
                 </NoBooks>
               )}
             </TabSection>

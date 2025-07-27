@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
+import axios from 'axios';
 
 const shimmer = keyframes`
   0% { background-position: -200px 0; }
@@ -973,12 +974,9 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchInput, setSearchInput] = useState(''); // 실제 검색어 입력용
-  const [sortBy, setSortBy] = useState('createdAt');
   const [selectedMainCategory, setSelectedMainCategory] = useState('전공');
   const [selectedSubCategory, setSelectedSubCategory] = useState('경영대학');
   const [selectedDetailCategory, setSelectedDetailCategory] = useState('경영학과');
-  const [isLoading, setIsLoading] = useState(true);
   const [likedBooks, setLikedBooks] = useState(new Set());
   const [activeSubMenu, setActiveSubMenu] = useState('booksale');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -990,42 +988,47 @@ const Marketplace = () => {
   const [pendingSubCategory, setPendingSubCategory] = useState(selectedSubCategory);
   const [pendingDetailCategory, setPendingDetailCategory] = useState(selectedDetailCategory);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  // API 데이터를 저장할 상태
+  const [posts, setPosts] = useState([]);
+  const [pageInfo, setPageInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 검색 및 필터 상태
+  const [searchInput, setSearchInput] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt,desc'); // 백엔드 API와 정렬값 맞추기
+
+  // API 호출 로직
+  const fetchPosts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = {
+        page: 0, // TODO: 페이지네이션 UI 구현 시 현재 페이지 상태와 연결
+        size: 12, // 한 번에 12개씩
+        sort: sortBy,
+        // TODO: 백엔드에 검색 기능 추가 후, 검색어 파라미터도 추가
+        // query: searchInput, 
+      };
+      const response = await axios.get('/api/posts', { params });
+      setPosts(response.data.content);
+      setPageInfo({
+        totalPages: response.data.totalPages,
+        totalElements: response.data.totalElements,
+        currentPage: response.data.number,
+      });
+    } catch (error) {
+      console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
+    } finally {
       setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 필터 팝업 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (filterRef.current && !filterRef.current.contains(event.target)) {
-        setFilterOpen(false);
-      }
-    };
-    if (filterOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filterOpen]);
+  }, [sortBy]); // 정렬 기준이 바뀔 때마다 API를 다시 호출
 
-  const toggleLike = (bookId) => {
-    setLikedBooks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(bookId)) {
-        newSet.delete(bookId);
-      } else {
-        newSet.add(bookId);
-      }
-      return newSet;
-    });
-  };
+  // 컴포넌트가 처음 마운트되거나, 정렬 기준이 바뀔 때 API 호출
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
-  const handleBookClick = (bookId) => {
-    navigate(`/book/${bookId}`);
+  const handleBookClick = (postId) => {
+    navigate(`/posts/${postId}`);
   };
 
   const handleSubMenuClick = (menu) => {
@@ -1084,6 +1087,7 @@ const Marketplace = () => {
   };
 
   const handleSearch = () => {
+    // TODO: 백엔드에 검색 기능이 추가되면, 여기서 fetchPosts를 다시 호출
     setSearchQuery(searchInput);
   };
 
@@ -1093,12 +1097,8 @@ const Marketplace = () => {
     }
   };
 
-  const handleBackToMarketplace = () => {
-    setSearchQuery('');
-    setSearchInput('');
-  };
-
-  const renderSkeletonCards = (count = 6) => (
+  // 로딩 상태일 때 스켈레톤 UI를 보여주는 함수
+  const renderSkeletonCards = (count = 8) => (
     <LoadingGrid>
       {Array.from({ length: count }, (_, index) => (
         <SkeletonCard key={index}>
@@ -1111,36 +1111,20 @@ const Marketplace = () => {
     </LoadingGrid>
   );
 
-  const renderBookCard = (book) => (
-    <BookCard key={book.id} onClick={() => handleBookClick(book.id)}>
+  // 실제 데이터를 받아와서 책 카드를 그리는 함수
+  const renderBookCard = (post) => (
+    <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
       <BookImage className="book-image">
-        {book.title}
+        <img src={post.thumbnailUrl} alt={post.postTitle} />
       </BookImage>
-      <LikeButton
-        liked={likedBooks.has(book.id)}
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleLike(book.id);
-        }}
-      />
+      {/* <LikeButton /> */}
       <BookInfo>
-        <BookTitle>{book.title}</BookTitle>
-        <BookAuthor>{book.author}</BookAuthor>
+        <BookCardTitle>{post.postTitle}</BookCardTitle>
+        <BookSeller>{post.sellerNickname}</BookSeller>
         <BookPrice>
-          <CurrentPrice>{book.price.toLocaleString()}원</CurrentPrice>
-          {book.discountRate > 0 && (
-            <>
-              <OriginalPrice>{(book.price / (1 - book.discountRate / 100)).toLocaleString()}원</OriginalPrice>
-              <DiscountBadge>{book.discountRate}% 할인</DiscountBadge>
-            </>
-          )}
+          {post.price.toLocaleString()}원
         </BookPrice>
-        <BookMeta>
-          <Condition $bgColor={getBookCondition(book.discountRate).bgColor} $color={getBookCondition(book.discountRate).color}>
-            {getBookCondition(book.discountRate).text}
-          </Condition>
-          <Location>{book.location}</Location>
-        </BookMeta>
+        {/* TODO: 상세 DTO가 아니므로, 할인율, 책 상태 등은 표시할 수 없어. 필요하다면 목록 DTO에 추가해야 해. */}
       </BookInfo>
     </BookCard>
   );

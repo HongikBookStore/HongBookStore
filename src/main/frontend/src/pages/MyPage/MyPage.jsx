@@ -6,11 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useLocation } from '../../contexts/LocationContext';
 
-const UNIVCERT_API_KEY = '77ddffda-a3e8-4363-a31d-96e507f9b19c';
-const UNIVCERT_ENDPOINT = 'https://univcert.com/api/v1/certify';
-// (만약 인증 코드 검증용 별도 엔드포인트가 있다면 추가 정의)
-const VERIFY_ENDPOINT = "https://univcert.com/api/v1/certifycode";
-
 const MyPageContainer = styled.div`
   padding: 6rem 2vw 4rem;
   max-width: 1600px;
@@ -619,43 +614,63 @@ const SchoolRow = styled.div`
 const MyPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const [userInfo, setUserInfo] = useState(null); // 사용자 정보를 담을 상태
+  const [isVerified, setIsVerified] = useState(false); // 재학생 인증 여부
   const { locations, setDefaultLocation, addLocation, deleteLocation } = useLocation();
-  
-  const [isVerified, setIsVerified] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [verificationStatus, setVerificationStatus] = useState(null);
-  const [resendTimer, setResendTimer] = useState(0);
-  const [schoolEmail, setSchoolEmail] = useState('');
-  const [verificationStep, setVerificationStep] = useState('email');
+  const [schoolEmail, setSchoolEmail] = useState(''); // 사용자가 입력할 학교 이메일
+
+  // 인증 요청 후 서버 메시지를 담을 상태
+  const [verificationMessage, setVerificationMessage] = useState({ type: '', text: '' }); 
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fileInputRef = useRef();
   const [profileImage, setProfileImage] = useState(null);
   const [isDefaultImage, setIsDefaultImage] = useState(true);
   const [newLocation, setNewLocation] = useState({ name: '', address: '' });
   const [showAddForm, setShowAddForm] = useState(false);
-  const fileInputRef = useRef();
+
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const photoMenuRef = useRef();
   const [editingName, setEditingName] = useState(false);
   const [profileName, setProfileName] = useState(t('profileName', 'John Doe'));
   const nameInputRef = useRef();
 
-  // accessToken 체크
-  const token = localStorage.getItem('accessToken');
+  // 내 정보 불러오기 로직
   useEffect(() => {
-    const isVerified = localStorage.getItem('isVerified') === 'true';
-    const verifiedEmail = localStorage.getItem('verifiedEmail');
+    const fetchMyInfo = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login'); // 토큰 없으면 로그인 페이지로
+        return;
+      }
+      
+      try {
+        // 백엔드의 /api/users/me API를 호출해서 내 정보를 가져온다.
+        const response = await axios.get('/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-    if (isVerified && verifiedEmail) {
-      setIsVerified(true);
-      setVerificationStatus('success');
-      setSchoolEmail(verifiedEmail); // email input에도 자동 반영
-    }
-  }, []);
+        if (response.data.success) {
+          const userData = response.data.data;
+          setUserInfo(userData);
+          setProfileName(userData.username);
+          // 백엔드에서 받은 재학생 인증 여부를 상태에 반영!
+          setIsVerified(userData.studentVerified); 
+          if(userData.universityEmail) {
+            setSchoolEmail(userData.universityEmail);
+          }
+        }
+      } catch (error) {
+        console.error("내 정보 조회 실패:", error);
+        // 토큰이 만료되었거나 유효하지 않은 경우 등...
+        navigate('/login');
+      }
+    };
 
-  if (!token) {
-    // jwt 없으면 아무것도 렌더하지 않음(혹은 로딩 스피너 등)
-    return null;
-  }
+    fetchMyInfo();
+  }, [navigate]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -720,90 +735,43 @@ const MyPage = () => {
   };
 
   const handleSendVerification = async () => {
-    console.log('🧪 함수 시작됨');
-    console.log('🧪 schoolEmail 값:', schoolEmail);
+    setIsLoading(true);
+    setVerificationMessage({ type: '', text: '' });
 
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@g\.hongik\.ac\.kr$/;
+    // 이메일 형식 검증 (두 도메인 모두 허용)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(mail\.hongik\.ac\.kr|g\.hongik\.ac\.kr)$/;
     if (!emailRegex.test(schoolEmail)) {
-      setVerificationStatus('error');
+      setVerificationMessage({ type: 'error', text: '홍익대학교 메일 형식(@mail.hongik.ac.kr 또는 @g.hongik.ac.kr)이 올바르지 않습니다.' });
+      setIsLoading(false);
       return;
     }
 
     try {
-      const res = await axios.post(UNIVCERT_ENDPOINT, {
-        key: UNIVCERT_API_KEY,
-        email: schoolEmail,
-        univName: '홍익대학교',
-        univ_check: true
-      });
+      const token = localStorage.getItem('accessToken');
+      // 우리 백엔드의 API (POST /api/users/verify-student/request) 호출
+      const response = await axios.post('/api/users/verify-student/request', 
+        { universityEmail: schoolEmail },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      if (res.data.success) {
-        setVerificationStep('code');
-        setVerificationStatus(null);
-        setResendTimer(60);
-
-        const timer = setInterval(() => {
-          setResendTimer(prev => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+      if (response.data.success) {
+        setVerificationMessage({ type: 'success', text: response.data.message });
+        setShowVerificationForm(false); // 성공 시 폼을 다시 숨겨도 좋아
       } else {
-        setVerificationStatus('error');
+        setVerificationMessage({ type: 'error', text: response.data.message });
       }
     } catch (err) {
-      console.error(err);
-      setVerificationStatus('error');
+      const errorMessage = err.response?.data?.message || '오류가 발생했습니다. 다시 시도해주세요.';
+      setVerificationMessage({ type: 'error', text: errorMessage });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleVerifyCode = async () => {
-    console.log('🔍 handleVerifyCode 실행됨');
-    console.log('📧 이메일:', schoolEmail);
-    console.log('🔐 코드:', verificationCode);
-
-    try {
-      const res = await axios.post(VERIFY_ENDPOINT, {
-        key: UNIVCERT_API_KEY,
-        email: schoolEmail,
-        univName: '홍익대학교',
-        code: verificationCode
-      });
-
-      console.log('✅ 응답:', res.data);
-
-      if (res.data.success) {
-        setIsVerified(true);
-        setVerificationStatus('success');
-
-        localStorage.setItem('isVerified', 'true');
-        localStorage.setItem('verifiedEmail', schoolEmail);
-
-        console.log("📦 JWT 토큰:", localStorage.getItem("accessToken"));
-        // ⬇️ 인증 성공 시 서버에도 반영
-        const token = localStorage.getItem('accessToken');
-        axios.post('/api/users/verify-student', null, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-      } else {
-        setVerificationStatus('error');
-      }
-    } catch (err) {
-      console.error('❌ 인증 오류:', err);
-      setVerificationStatus('error');
-    }
-  };
-
-  const handleResendCode = () => {
-    if (resendTimer === 0) {
-      handleSendVerification();
-    }
-  };
+  if (!userInfo) {
+    // 사용자 정보를 불러오는 동안 로딩 상태
+    return <div>Loading...</div>;
+  }
 
   return (
     <MyPageContainer>
@@ -933,91 +901,43 @@ const MyPage = () => {
                 <i className={`fas fa-${isVerified ? 'check-circle' : 'exclamation-circle'}`}></i>
                 {isVerified ? t('verified') : t('notVerified')}
               </span>
+              {/* 인증 안됐을 때만 '인증하기' 버튼 표시 */}
               {!isVerified && !showVerificationForm && (
                 <SmallButton onClick={() => setShowVerificationForm(true)}>{t('verifySchoolEmail')}</SmallButton>
               )}
             </SettingsItem>
           </SettingsList>
+
           {showVerificationForm && !isVerified && (
             <VerificationForm style={{padding:'1rem 0.5rem', marginTop:'0.5rem'}}>
-              <VerificationSteps>
-                <StepIndicator>
-                  <div className={`step ${verificationStep === 'email' ? 'active' : 'completed'}`}>
-                    <i className={`fas fa-${verificationStep === 'email' ? 'envelope' : 'check-circle'}`}></i>
-                    {t('enterSchoolEmail')}
-                  </div>
-                  <div className="step-divider"></div>
-                  <div className={`step ${verificationStep === 'code' ? 'active' : ''}`}>
-                    <i className={`fas fa-${verificationStep === 'code' ? 'key' : 'key'}`}></i>
-                    {t('enterVerificationCode')}
-                  </div>
-                </StepIndicator>
-                {verificationStep === 'email' ? (
-                  <>
-                    <EmailInput
-                      type="email"
-                      placeholder={t('enterSchoolEmail')}
-                      value={schoolEmail}
-                      onChange={(e) => setSchoolEmail(e.target.value)}
-                    />
-                    <SmallButton onClick={handleSendVerification}>{t('sendVerificationCode')}</SmallButton>
-                    {verificationStatus === 'error' && (
-                      <VerificationMessage className="error">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {t('emailInvalid')}
-                      </VerificationMessage>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <InputGroup>
-                      <VerificationInput
-                        type="text"
-                        placeholder={t('enterVerificationCode')}
-                        maxLength={6}
-                        value={verificationCode}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, '');
-                          setVerificationCode(value);
-                          if (value.length === 6) {
-                            handleVerifyCode();
-                          }
-                        }}
-                      />
-
-                      <Button onClick={handleVerifyCode}>
-                        인증번호 확인
-                      </Button>
-                    </InputGroup>
-
-                    {verificationStatus === 'error' && (
-                      <VerificationMessage className="error">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {t('invalidVerificationCode')}
-                      </VerificationMessage>
-                    )}
-                    <VerificationMessage className="info">
-                      <i className="fas fa-info-circle"></i>
-                      {t('sendVerificationCode')} {schoolEmail}
-                    </VerificationMessage>
-                    <ResendButton 
-                      onClick={handleResendCode}
-                      disabled={resendTimer > 0}
-                    >
-                      <i className="fas fa-redo"></i>
-                      {resendTimer > 0 
-                        ? t('resendCodeIn', { sec: resendTimer })
-                        : t('resendCode')}
-                    </ResendButton>
-                  </>
-                )}
-              </VerificationSteps>
+              <p style={{fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '1rem'}}>
+                학교 이메일을 입력하고 '인증 메일 발송' 버튼을 누르세요. 메일함의 링크를 클릭하면 인증이 완료됩니다.
+              </p>
+              <EmailInput
+                type="email"
+                placeholder="id@hongik.ac.kr"
+                value={schoolEmail}
+                onChange={(e) => setSchoolEmail(e.target.value)}
+                disabled={isLoading}
+              />
+              <SmallButton onClick={handleSendVerification} disabled={isLoading}>
+                {isLoading ? '전송 중...' : '인증 메일 발송'}
+              </SmallButton>
             </VerificationForm>
           )}
+
+          {/* 서버 응답 메시지 표시 UI 수정 */}
+          {verificationMessage.text && (
+            <VerificationMessage className={verificationMessage.type}>
+              <i className={`fas fa-${verificationMessage.type === 'success' ? 'check-circle' : 'exclamation-circle'}`}></i>
+              {verificationMessage.text}
+            </VerificationMessage>
+          )}
+
           {isVerified && (
             <VerificationMessage className="success">
               <i className="fas fa-check-circle"></i>
-              {t('yourSchoolEmailVerified')}
+              {userInfo.universityEmail} 계정으로 재학생 인증이 완료되었습니다.
             </VerificationMessage>
           )}
         </SettingsSection>

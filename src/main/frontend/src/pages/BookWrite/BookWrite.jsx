@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle, FaHeart, FaClock, FaUser } from 'react-icons/fa';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import axios from 'axios';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
@@ -771,101 +772,55 @@ const CATEGORIES = {
   }
 };
 
+// [추가] 인증 토큰을 가져오는 헬퍼 함수 (실제 프로젝트에서는 context나 store에서 관리)
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
 const BookWrite = () => {
-  console.log('BookWrite 컴포넌트 렌더링 시작');
-  
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const { startWriting, stopWriting } = useWriting();
-  
-  // mock 데이터 (실제로는 API 호출)
-  const mockMyBooks = [
-    {
-      id: '1',
-      bookType: 'official',
-      title: '자바의 정석',
-      isbn: '9788966262472',
-      author: '남궁성',
-      mainCategory: '전공',
-      subCategory: '공과대학',
-      detailCategory: '컴퓨터공학과',
-      writingCondition: '상',
-      tearCondition: '상',
-      waterCondition: '상',
-      originalPrice: '30000',
-      price: '15000',
-      description: '자바 프로그래밍 기초부터 고급까지 다루는 책입니다.'
-    },
-    {
-      id: '2',
-      bookType: 'official',
-      title: '스프링 부트 실전 활용',
-      isbn: '9788966262489',
-      author: '김영한',
-      mainCategory: '전공',
-      subCategory: '공과대학',
-      detailCategory: '컴퓨터공학과',
-      writingCondition: '중',
-      tearCondition: '상',
-      waterCondition: '상',
-      originalPrice: '35000',
-      price: '20000',
-      description: '스프링 부트를 활용한 웹 개발 실전 가이드'
-    },
-    // ... 필요한 만큼 추가 ...
-  ];
 
   const [formData, setFormData] = useState({
-    bookType: 'official',
-    title: '',
+    // Book 정보
     isbn: '',
+    bookTitle: '',
     author: '',
-    mainCategory: '',
-    subCategory: '',
-    detailCategory: '',
-    writingCondition: '',
-    tearCondition: '',
-    waterCondition: '',
+    publisher: '',
+    coverImageUrl: '',
     originalPrice: '',
+
+    // SalePost 정보
+    postTitle: '',
+    postContent: '',
     price: '',
-    description: ''
+    writingCondition: 'HIGH',
+    tearCondition: 'HIGH',
+    waterCondition: 'HIGH',
+    negotiable: true,
   });
+
+  const [imageFile, setImageFile] = useState(null); // 이미지 파일은 별도 상태로 관리
+  const [imagePreview, setImagePreview] = useState(''); // 이미지 미리보기 URL
+
   const [errors, setErrors] = useState({});
-  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [inputType, setInputType] = useState('title'); // 'title' or 'isbn'
+
+  const [inputType, setInputType] = useState('search'); // 'search' or 'custom'
   const [showBookSearch, setShowBookSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
+
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // 컴포넌트 마운트 시 글쓰기 시작
-  useEffect(() => {
-    console.log('BookWrite 컴포넌트 마운트됨');
-    startWriting('sale');
-    
-    // 컴포넌트 언마운트 시 글쓰기 종료
-    return () => {
-      console.log('BookWrite 컴포넌트 언마운트됨');
-      stopWriting();
-    };
-  }, [startWriting, stopWriting]);
-
-  // 폼 데이터 변경 감지
-  useEffect(() => {
-    const hasChanges = Object.values(formData).some(value => 
-      value && value.toString().trim() !== ''
-    ) || images.length > 0;
-    setHasUnsavedChanges(hasChanges);
-  }, [formData, images]);
-
-  // 브라우저 뒤로가기/앞으로가기 감지
+  // 브라우저 뒤로 가기 / 앞으로 가기 감지
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
@@ -881,27 +836,41 @@ const BookWrite = () => {
   // 수정 모드일 때 기존 데이터 불러오기
   useEffect(() => {
     if (isEdit) {
-      // id 타입을 문자열로 변환해서 비교
-      const found = mockMyBooks.find(book => String(book.id) === String(id));
-      if (found) {
-        setFormData({
-          bookType: found.bookType || 'official',
-          title: found.title || '',
-          isbn: found.isbn || '',
-          author: found.author || '',
-          mainCategory: found.mainCategory || '',
-          subCategory: found.subCategory || '',
-          detailCategory: found.detailCategory || '',
-          writingCondition: found.writingCondition || '',
-          tearCondition: found.tearCondition || '',
-          waterCondition: found.waterCondition || '',
-          originalPrice: found.originalPrice || '',
-          price: found.price || '',
-          description: found.description || ''
-        });
-      }
+      const fetchPostForEdit = async () => {
+        setLoading(true);
+        try {
+          const response = await axios.get(`/api/posts/${id}`);
+          const postData = response.data;
+          
+          // API 응답 데이터를 formData 형태로 변환
+          setFormData({
+            isbn: postData.isbn || '',
+            bookTitle: postData.bookTitle || '',
+            author: postData.author || '',
+            publisher: postData.publisher || '',
+            coverImageUrl: postData.coverImageUrl || '',
+            originalPrice: postData.originalPrice || '',
+            postTitle: postData.postTitle || '',
+            postContent: postData.postContent || '',
+            price: postData.price || '',
+            writingCondition: postData.writingCondition || '',
+            tearCondition: postData.tearCondition || '',
+            waterCondition: postData.waterCondition || '',
+            negotiable: postData.negotiable || false,
+          });
+          setImagePreview(postData.coverImageUrl); // 기존 이미지 미리보기 설정
+          setInputType('search'); // 수정 모드는 항상 검색된 책 기반으로 시작
+        } catch (error) {
+          console.error("수정할 게시글 정보를 불러오는 데 실패했습니다.", error);
+          alert("게시글 정보를 불러올 수 없습니다.");
+          navigate('/');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchPostForEdit();
     }
-  }, [id, isEdit]);
+  }, [id, isEdit, navigate]);
 
   // 할인율 계산 함수
   const calculateDiscountRate = () => {
@@ -937,8 +906,7 @@ const BookWrite = () => {
   // - 물흘림 정도: 없음(0%) ~ 심함(10%)
   // - 최대 할인율: 35%
   //
-  // TODO: 실제 구현 시에는 시장 가격 데이터베이스나 
-  // 유사 책의 거래 이력을 참고하여 더 정확한 추천 가격을 제공해야 합니다.
+  // TODO: 실제 구현 시에는 시장 가격 데이터베이스나 유사 책의 거래 이력을 참고하여 더 정확한 추천 가격을 제공해야 합니다.
   const getRecommendedPrice = () => {
     if (!formData.originalPrice) return null;
     const discountRate = calculateDiscountRate();
@@ -972,30 +940,44 @@ const BookWrite = () => {
   };
 
   const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    
-    if (images.length + files.length > 3) {
-      alert('최대 3개까지만 업로드 가능합니다.');
-      return;
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
-    
-    const newImages = files.map(file => ({
-      id: Date.now() + Math.random(),
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    
-    setImages(prev => [...prev, ...newImages]);
   };
 
-  const handleRemoveImage = (imageId) => {
-    setImages(prev => {
-      const imageToRemove = prev.find(img => img.id === imageId);
-      if (imageToRemove) {
-        URL.revokeObjectURL(imageToRemove.preview);
-      }
-      return prev.filter(img => img.id !== imageId);
-    });
+  const handleRemoveImage = () => {
+    URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview('');
+  };
+
+  // 책 검색 함수
+  const handleBookSearch = async () => {
+    if (!searchQuery.trim()) return;
+    try {
+      const response = await axios.get('/api/search/books', { params: { query: searchQuery } });
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error("책 검색에 실패했습니다.", error);
+      alert("책 검색 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 책 선택 함수
+  const handleBookSelect = (book) => {
+    setSelectedBook(book);
+    // 선택한 책 정보를 formData에 채워넣기
+    setFormData(prev => ({
+      ...prev,
+      isbn: book.isbn,
+      bookTitle: book.title,
+      author: book.author,
+      publisher: book.publisher,
+      coverImageUrl: book.coverImageUrl,
+    }));
+    setShowBookSearch(false);
   };
 
   const validateForm = () => {
@@ -1043,20 +1025,63 @@ const BookWrite = () => {
     
     setLoading(true);
     try {
-      // 실제로는 API 호출
-      await new Promise(resolve => setTimeout(resolve, 1000));
       if (isEdit) {
-        alert('책이 성공적으로 수정되었습니다!');
-        stopWriting();
-        navigate('/mybookstore');
+        // --- 수정 로직 ---
+        const payload = {
+          postTitle: formData.postTitle,
+          postContent: formData.postContent,
+          price: parseInt(formData.price),
+          writingCondition: formData.writingCondition,
+          tearCondition: formData.tearCondition,
+          waterCondition: formData.waterCondition,
+          negotiable: formData.negotiable,
+        };
+        await axios.patch(`/api/posts/${id}`, payload, { headers: getAuthHeader() });
+        alert('게시글이 성공적으로 수정되었습니다!');
+        navigate(`/posts/${id}`);
+
       } else {
-        alert('책이 성공적으로 등록되었습니다!');
-        stopWriting();
-        navigate('/marketplace');
+        // --- 생성 로직 ---
+        if (inputType === 'search') {
+          // [검색해서 등록]
+          const payload = {
+            ...formData,
+            price: parseInt(formData.price),
+            originalPrice: parseInt(formData.originalPrice),
+          };
+          await axios.post('/api/posts', payload, { headers: getAuthHeader() });
+        } else {
+          // [직접 등록]
+          const customData = new FormData();
+          const requestJson = {
+            bookTitle: formData.bookTitle,
+            author: formData.author,
+            publisher: formData.publisher,
+            originalPrice: parseInt(formData.originalPrice),
+            postTitle: formData.postTitle,
+            postContent: formData.postContent,
+            price: parseInt(formData.price),
+            writingCondition: formData.writingCondition,
+            tearCondition: formData.tearCondition,
+            waterCondition: formData.waterCondition,
+            negotiable: formData.negotiable,
+          };
+          customData.append('request', new Blob([JSON.stringify(requestJson)], { type: 'application/json' }));
+          customData.append('image', imageFile);
+          
+          await axios.post('/api/posts/custom', customData, { 
+            headers: { 
+              ...getAuthHeader(),
+              'Content-Type': 'multipart/form-data',
+            } 
+          });
+        }
+        alert('게시글이 성공적으로 등록되었습니다!');
+        navigate('/'); // 또는 마켓플레이스 페이지로 이동
       }
     } catch (error) {
-      console.error(isEdit ? '수정 실패:' : '등록 실패:', error);
-      alert(isEdit ? '수정에 실패했습니다. 다시 시도해주세요.' : '등록에 실패했습니다. 다시 시도해주세요.');
+      console.error("게시글 처리 중 오류 발생:", error);
+      alert("오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setLoading(false);
     }
@@ -1066,7 +1091,7 @@ const BookWrite = () => {
     try {
       // 실제로는 API 호출
       await new Promise(resolve => setTimeout(resolve, 500));
-      alert('임시저장되었습니다!');
+      alert('임시저장 되었습니다!');
       stopWriting(); // 글쓰기 종료
     } catch (error) {
       console.error('임시저장 실패:', error);
@@ -1123,52 +1148,6 @@ const BookWrite = () => {
     safeNavigate('/marketplace');
   };
 
-  // 책 검색 함수
-  const handleBookSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
-    // 임시 검색 결과 (실제로는 API 호출)
-    const mockResults = [
-      {
-        isbn: '9788966262472',
-        title: '자바의 정석',
-        author: '남궁성',
-        publisher: '도우출판',
-        publishedDate: '2016-01-15'
-      },
-      {
-        isbn: '9788994492032',
-        title: '자바의 정석 (기초편)',
-        author: '남궁성',
-        publisher: '도우출판',
-        publishedDate: '2015-03-20'
-      },
-      {
-        isbn: '9788966262489',
-        title: '자바의 정석 (고급편)',
-        author: '남궁성',
-        publisher: '도우출판',
-        publishedDate: '2016-02-10'
-      }
-    ].filter(book => 
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.isbn.includes(searchQuery)
-    );
-    
-    setSearchResults(mockResults);
-  };
-
-  // 책 선택 함수
-  const handleBookSelect = (book) => {
-    setSelectedBook(book);
-    setFormData(prev => ({
-      ...prev,
-      title: book.title,
-      isbn: book.isbn,
-      author: book.author
-    }));
-  };
-
   // 책 검색 모달 닫기
   const handleCloseBookSearch = () => {
     setShowBookSearch(false);
@@ -1193,245 +1172,93 @@ const BookWrite = () => {
           <BackButton onClick={handleCancel}>
             <FaArrowLeft /> 뒤로가기
           </BackButton>
-          <WriteTitle>{isEdit ? '책 판매 수정' : '책 판매 등록'}</WriteTitle>
+          <WriteTitle>{isEdit ? '판매글 수정' : '판매글 등록'}</WriteTitle>
         </WriteHeader>
 
         <WriteForm onSubmit={handleSubmit}>
-          {/* 1. 책 종류 */}
-          <FormSection>
-            <SectionTitle>
-              <FaBook /> 책 종류
-            </SectionTitle>
-            <SwitchContainer>
-              <SwitchLabel>책 종류:</SwitchLabel>
-              <SwitchButton
-                type="button"
-                className={formData.bookType === 'official' ? 'active' : ''}
-                onClick={() => setFormData(prev => ({ ...prev, bookType: 'official' }))}
-              >
-                정식 도서
-              </SwitchButton>
-              <SwitchButton
-                type="button"
-                className={formData.bookType === 'printed' ? 'active' : ''}
-                onClick={() => setFormData(prev => ({ ...prev, bookType: 'printed' }))}
-              >
-                제본
-              </SwitchButton>
-            </SwitchContainer>
-          </FormSection>
-
-          {/* 2. 책 제목 또는 ISBN */}
-          <FormSection>
-            <SectionTitle>책 정보</SectionTitle>
-            
-            <InputTypeSelector>
-              <Label>입력 방식 선택 <Required>*</Required></Label>
+          {!isEdit && (
+            <FormSection>
+              <SectionTitle><FaBook /> 등록 방식</SectionTitle>
               <InputTypeButtons>
-                <InputTypeButton
-                  type="button"
-                  active={inputType === 'title'}
-                  onClick={() => setInputType('title')}
-                >
-                  책 제목으로 입력
-                </InputTypeButton>
-                <InputTypeButton
-                  type="button"
-                  active={inputType === 'isbn'}
-                  onClick={() => setInputType('isbn')}
-                >
-                  ISBN으로 검색
-                </InputTypeButton>
+                <InputTypeButton type="button" active={inputType === 'search'} onClick={() => setInputType('search')}>ISBN / 책 제목 검색</InputTypeButton>
+                <InputTypeButton type="button" active={inputType === 'custom'} onClick={() => setInputType('custom')}>직접 입력 (제본 등)</InputTypeButton>
               </InputTypeButtons>
-            </InputTypeSelector>
+            </FormSection>
+          )}
 
-            {inputType === 'title' ? (
-              <FormGroup>
-                <Label>
-                  책 제목 <Required>*</Required>
-                </Label>
-                <Input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="책 제목을 입력해주세요"
-                />
-                {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-              </FormGroup>
-            ) : (
-              <FormGroup>
-                <Label>
-                  ISBN 검색 <Required>*</Required>
-                </Label>
-                {selectedBook ? (
-                  <SelectedBookDisplay>
-                    <BookTitle>{selectedBook.title}</BookTitle>
-                    <BookInfo>
-                      저자: {selectedBook.author} | 출판사: {selectedBook.publisher} | ISBN: {selectedBook.isbn}
-                    </BookInfo>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBook(null)}
-                      style={{
-                        marginTop: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        background: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      다시 선택
-                    </button>
-                  </SelectedBookDisplay>
-                ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Input
-                      type="text"
-                      placeholder="ISBN 또는 책 제목으로 검색"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleOpenBookSearch}
-                      style={{
-                        padding: '0.75rem 1rem',
-                        background: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <FaSearch />
-                    </button>
-                  </div>
+          {/* --- 책 정보 섹션 --- */}
+          <FormSection>
+            <SectionTitle>📖 책 정보</SectionTitle>
+            {inputType === 'search' ? (
+              <>
+                {!isEdit && (
+                  <FormGroup>
+                    <Label>책 검색 <Required>*</Required></Label>
+                    <button type="button" onClick={() => setShowBookSearch(true)}>책 검색하기</button>
+                  </FormGroup>
                 )}
-                {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-              </FormGroup>
+                {/* 선택된 책 정보 표시 */}
+                {formData.bookTitle && (
+                  <SelectedBookDisplay>
+                    <BookItemTitle>{formData.bookTitle}</BookItemTitle>
+                    <BookInfo>저자: {formData.author} | 출판사: {formData.publisher}</BookInfo>
+                    <img src={formData.coverImageUrl} alt={formData.bookTitle} width="50" style={{marginTop: '0.5rem'}} />
+                  </SelectedBookDisplay>
+                )}
+              </>
+            ) : (
+              <>
+                {/* 직접 입력 폼 */}
+                <FormGroup>
+                  <Label>책 제목 <Required>*</Required></Label>
+                  <Input name="bookTitle" value={formData.bookTitle} onChange={handleInputChange} />
+                </FormGroup>
+                <FormGroup>
+                  <Label>저자 <Required>*</Required></Label>
+                  <Input name="author" value={formData.author} onChange={handleInputChange} />
+                </FormGroup>
+                <FormGroup>
+                  <Label>출판사</Label>
+                  <Input name="publisher" value={formData.publisher} onChange={handleInputChange} />
+                </FormGroup>
+                <FormGroup>
+                  <Label>책 표지 이미지 <Required>*</Required></Label>
+                  <input id="imageInput" type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                  {imagePreview ? (
+                    <ImagePreview>
+                      <ImagePreviewItem>
+                        <ImagePreviewImg src={imagePreview} alt="미리보기" />
+                        <RemoveImageButton onClick={handleRemoveImage}><FaTimes /></RemoveImageButton>
+                      </ImagePreviewItem>
+                    </ImagePreview>
+                  ) : (
+                    <ImageUploadArea onClick={() => document.getElementById('imageInput').click()}>
+                      <ImageUploadIcon><FaImage /></ImageUploadIcon>
+                      <ImageUploadText>클릭하여 사진을 업로드하세요</ImageUploadText>
+                      <ImageUploadButton type="button">사진 선택</ImageUploadButton>
+                    </ImageUploadArea>
+                  )}
+                </FormGroup>
+              </>
             )}
+          </FormSection>
 
+          {/* --- 판매글 정보 섹션 --- */}
+          <FormSection>
+            <SectionTitle>📝 판매글 정보</SectionTitle>
             <FormGroup>
-              <Label>
-                저자명 <Required>*</Required>
-              </Label>
-              <Input
-                type="text"
-                name="author"
-                value={formData.author}
-                onChange={handleInputChange}
-                placeholder="저자명을 입력해주세요"
-              />
-              {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
+              <Label>글 제목 <Required>*</Required></Label>
+              <Input name="postTitle" value={formData.postTitle} onChange={handleInputChange} />
             </FormGroup>
-          </FormSection>
-
-          {/* 3. 사진 등록 */}
-          <FormSection>
-            <SectionTitle>
-              <FaCamera /> 사진 등록
-            </SectionTitle>
-            
-            <ImageSection>
-              {images.length < 3 && (
-                <ImageUploadArea onClick={() => document.getElementById('imageInput').click()}>
-                  <ImageUploadIcon>
-                    <FaImage />
-                  </ImageUploadIcon>
-                  <ImageUploadText>클릭하여 사진을 업로드하세요 (최대 3개)</ImageUploadText>
-                  <ImageUploadButton type="button">
-                    사진 선택
-                  </ImageUploadButton>
-                </ImageUploadArea>
-              )}
-              
-              <input
-                id="imageInput"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: 'none' }}
-              />
-              
-              {images.length > 0 && (
-                <ImagePreview>
-                  {images.map(image => (
-                    <ImagePreviewItem key={image.id}>
-                      <ImagePreviewImg src={image.preview} alt="책 사진" />
-                      <RemoveImageButton onClick={() => handleRemoveImage(image.id)}>
-                        <FaTimes />
-                      </RemoveImageButton>
-                    </ImagePreviewItem>
-                  ))}
-                </ImagePreview>
-              )}
-            </ImageSection>
-          </FormSection>
-
-          {/* 4. 카테고리 */}
-          <FormSection>
-            <SectionTitle>카테고리</SectionTitle>
-            
             <FormGroup>
-              <Label>
-                대분류 <Required>*</Required>
-              </Label>
-              <Select
-                name="mainCategory"
-                value={formData.mainCategory}
-                onChange={handleInputChange}
-              >
-                <option value="">대분류를 선택해주세요</option>
-                {Object.keys(CATEGORIES).map(mainCategory => (
-                  <option key={mainCategory} value={mainCategory}>{mainCategory}</option>
-                ))}
-              </Select>
-              {errors.mainCategory && <ErrorMessage>{errors.mainCategory}</ErrorMessage>}
+              <Label>가격 <Required>*</Required></Label>
+              <Input type="number" name="price" value={formData.price} onChange={handleInputChange} />
             </FormGroup>
-
-            {formData.mainCategory && (
-              <FormGroup>
-                <Label>중분류</Label>
-                <Select
-                  name="subCategory"
-                  value={formData.subCategory}
-                  onChange={handleInputChange}
-                >
-                  <option value="">중분류를 선택해주세요</option>
-                  {Object.keys(CATEGORIES[formData.mainCategory]).map(subCategory => (
-                    <option key={subCategory} value={subCategory}>{subCategory}</option>
-                  ))}
-                </Select>
-              </FormGroup>
-            )}
-
-            {formData.mainCategory && formData.subCategory && (
-              <FormGroup>
-                <Label>소분류</Label>
-                <Select
-                  name="detailCategory"
-                  value={formData.detailCategory}
-                  onChange={handleInputChange}
-                >
-                  <option value="">소분류를 선택해주세요</option>
-                  {CATEGORIES[formData.mainCategory][formData.subCategory]?.map(detailCategory => (
-                    <option key={detailCategory} value={detailCategory}>{detailCategory}</option>
-                  ))}
-                </Select>
-              </FormGroup>
-            )}
-          </FormSection>
-
-          {/* 5. 책 상태 */}
-          <FormSection>
-            <SectionTitle>책 상태</SectionTitle>
-            
+            <FormGroup>
+              <Label>상세 설명</Label>
+              <TextArea name="postContent" value={formData.postContent} onChange={handleInputChange} />
+            </FormGroup>
+            {/* ... (책 상태, 가격 협의 등 다른 폼 그룹들) ... */}
             <FormGroup>
               <Label>
                 필기 상태 <Required>*</Required>
@@ -1470,7 +1297,6 @@ const BookWrite = () => {
               </ToggleContainer>
               {errors.writingCondition && <ErrorMessage>{errors.writingCondition}</ErrorMessage>}
             </FormGroup>
-
             <FormGroup>
               <Label>
                 찢어짐 정도 <Required>*</Required>
@@ -1509,7 +1335,6 @@ const BookWrite = () => {
               </ToggleContainer>
               {errors.tearCondition && <ErrorMessage>{errors.tearCondition}</ErrorMessage>}
             </FormGroup>
-
             <FormGroup>
               <Label>
                 물기 상태 <Required>*</Required>
@@ -1548,14 +1373,6 @@ const BookWrite = () => {
               </ToggleContainer>
               {errors.waterCondition && <ErrorMessage>{errors.waterCondition}</ErrorMessage>}
             </FormGroup>
-          </FormSection>
-
-          {/* 6. 가격 정보 */}
-          <FormSection>
-            <SectionTitle>
-              <FaMoneyBillWave /> 가격 정보
-            </SectionTitle>
-            
             <FormGroup>
               <Label>
                 원가 <Required>*</Required>
@@ -1603,12 +1420,6 @@ const BookWrite = () => {
                 </DiscountInfo>
               )}
             </FormGroup>
-          </FormSection>
-
-          {/* 7. 상세 설명 */}
-          <FormSection>
-            <SectionTitle>상세 설명</SectionTitle>
-            
             <FormGroup>
               <Label>상세 설명</Label>
               <TextArea
@@ -1644,63 +1455,22 @@ const BookWrite = () => {
             <h3>책 검색</h3>
             <SearchInput
               type="text"
-              placeholder="ISBN 또는 책 제목으로 검색하세요"
+              placeholder="ISBN 또는 책 제목으로 검색"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleBookSearch()}
             />
-            <button
-              onClick={handleBookSearch}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginBottom: '1rem'
-              }}
-            >
-              검색
-            </button>
-            
-            {searchResults.length > 0 && (
-              <BookList>
-                {searchResults.map((book, index) => (
-                  <BookItem
-                    key={index}
-                    onClick={() => handleBookSelect(book)}
-                    className={selectedBook?.isbn === book.isbn ? 'selected' : ''}
-                  >
-                    <BookTitle>{book.title}</BookTitle>
-                    <BookInfo>
-                      저자: {book.author} | 출판사: {book.publisher} | ISBN: {book.isbn}
-                    </BookInfo>
-                  </BookItem>
-                ))}
-              </BookList>
-            )}
-            
+            <button onClick={handleBookSearch}>검색</button>
+            <BookList>
+              {searchResults.map((book, index) => (
+                <BookItem key={index} onClick={() => handleBookSelect(book)}>
+                  <BookItemTitle>{book.title}</BookItemTitle>
+                  <BookInfo>저자: {book.author} | 출판사: {book.publisher}</BookInfo>
+                </BookItem>
+              ))}
+            </BookList>
             <ModalButtons>
-              <ModalButton
-                type="button"
-                className="secondary"
-                onClick={handleCloseBookSearch}
-              >
-                취소
-              </ModalButton>
-              <ModalButton
-                type="button"
-                className="primary"
-                onClick={() => {
-                  if (selectedBook) {
-                    handleCloseBookSearch();
-                  }
-                }}
-                disabled={!selectedBook}
-              >
-                선택 완료
-              </ModalButton>
+              <ModalButton type="button" className="secondary" onClick={() => setShowBookSearch(false)}>닫기</ModalButton>
             </ModalButtons>
           </BookSearchContent>
         </BookSearchModal>
