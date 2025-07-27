@@ -26,7 +26,7 @@ import { WritingProvider } from './contexts/WritingContext';
 import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
-import ChatBotPage from './pages/ChatBot/ChatBotPage.jsx';
+import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
 import i18n from './i18n.js';
 import VerificationConfirmPage from './pages/VerificationConfirmPage';
 
@@ -181,12 +181,6 @@ function App() {
                             <Route path="/register" element={<Register />} />
                             <Route path="/find-id" element={<FindId />} />
 							<Route path="/verify-student" element={<VerificationConfirmPage />} />
-                            <Route path="/ai-chat" element={
-                                <>
-                                    <Header />
-                                    <ChatBotPage />
-                                </>
-                            } />
                             <Route path="/marketplace/:id" element={
                                 <>
                                     <Header />
@@ -220,6 +214,7 @@ function App() {
                             <Route path="/oauth/callback" element={<OAuth2RedirectHandler />} />
                             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
                         </Routes>
+                        <FloatingChatBot />
                         <Footer />
                     </Router>
                 </WritingProvider>

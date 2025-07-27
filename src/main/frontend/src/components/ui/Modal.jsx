@@ -1,7 +1,17 @@
-import styled from 'styled-components';
+import React from 'react';
+import styled, { keyframes } from 'styled-components';
 
-// 모달 오버레이
-export const ModalOverlay = styled.div`
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const slideIn = keyframes`
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
@@ -12,119 +22,96 @@ export const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: ${fadeIn} 0.3s ease-out;
+  padding: 1rem;
 `;
 
-// 모달 박스
-export const ModalBox = styled.div`
-  background: #fff;
-  border-radius: 10px;
-  padding: 32px 24px 24px 24px;
-  min-width: 320px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+const ModalContent = styled.div`
+  background: var(--surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2xl);
   max-width: 90vw;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  animation: ${slideIn} 0.3s ease-out;
+  border: 1px solid var(--border-light);
+  
+  @media (max-width: 768px) {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
 `;
 
-// 모달 제목
-export const ModalTitle = styled.h3`
-  margin: 0 0 8px 0;
-  font-size: 1.2rem;
-  color: #333;
-`;
-
-// 모달 내용
-export const ModalContent = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 500px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-`;
-
-// 모달 텍스트 영역
-export const ModalTextarea = styled.textarea`
-  width: 100%;
-  min-height: 60px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 8px;
-  font-size: 1rem;
-  resize: vertical;
-`;
-
-// 모달 액션
-export const ModalActions = styled.div`
+const ModalHeader = styled.div`
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
 `;
 
-// 모달 버튼
-export const ModalButton = styled.button`
-  padding: 8px 18px;
+const ModalTitle = styled.h2`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+`;
+
+const CloseButton = styled.button`
+  background: none;
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
   cursor: pointer;
-  background: #007bff;
-  color: #fff;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
   
   &:hover {
-    background: #0056b3;
+    background: var(--gray-100);
+    color: var(--text-primary);
   }
   
-  &.cancel {
-    background: #ccc;
-    color: #333;
-    
-    &:hover {
-      background: #aaa;
-    }
-  }
-  
-  &.danger {
-    background: #dc3545;
-    color: #fff;
-    
-    &:hover {
-      background: #c82333;
-    }
-  }
-  
-  &.success {
-    background: #28a745;
-    color: #fff;
-    
-    &:hover {
-      background: #218838;
-    }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
   }
 `;
 
-// 모달 메시지
-export const ModalMessage = styled.p`
-  color: #666;
-  margin-bottom: 2rem;
-  line-height: 1.5;
+const ModalBody = styled.div`
+  padding: 2rem;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
+  
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+    max-height: calc(95vh - 120px);
+  }
 `;
 
-// 모달 아이콘
-export const ModalIcon = styled.div`
-  color: ${props => props.color || '#ffc107'};
-  font-size: 3rem;
-  margin-bottom: 1rem;
-`;
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
 
-// 버튼 그룹
-export const ButtonGroup = styled.div`
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-`; 
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <ModalOverlay onClick={handleOverlayClick}>
+      <ModalContent>
+        <ModalHeader>
+          <ModalTitle>{title}</ModalTitle>
+          <CloseButton onClick={onClose}>&times;</CloseButton>
+        </ModalHeader>
+        <ModalBody>
+          {children}
+        </ModalBody>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+export default Modal; 
