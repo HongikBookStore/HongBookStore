@@ -455,7 +455,7 @@ const WantedWrite = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { startWriting, stopWriting } = useWriting();
+  const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
   const { id } = useParams();
   const isEdit = Boolean(id);
 
@@ -491,7 +491,8 @@ const WantedWrite = () => {
       value && value.toString().trim() !== ''
     );
     setHasUnsavedChanges(hasChanges);
-  }, [formData]);
+    setUnsavedChanges(hasChanges);
+  }, [formData, setUnsavedChanges]);
 
   // 브라우저 뒤로가기/앞으로가기 감지
   useEffect(() => {
@@ -502,8 +503,35 @@ const WantedWrite = () => {
       }
     };
 
+    // 브라우저 뒤로가기/앞으로가기 감지
+    const handlePopState = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        setPendingNavigation('/wanted'); // 기본적으로 구해요 페이지로 이동
+        setShowWarningModal(true);
+        // 히스토리 상태를 다시 추가하여 뒤로가기 방지
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    // 임시저장 이벤트 처리 (구해요 글은 임시저장 기능이 없으므로 바로 나가기)
+    const handleSaveDraftEvent = async () => {
+      // 구해요 글은 임시저장 기능이 없으므로 바로 나가기
+      console.log('구해요 글은 임시저장 기능이 없습니다.');
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('saveDraft', handleSaveDraftEvent);
+    
+    // 페이지 로드 시 히스토리 상태 추가
+    window.history.pushState(null, '', window.location.pathname);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('saveDraft', handleSaveDraftEvent);
+    };
   }, [hasUnsavedChanges]);
 
   // 수정 모드일 때 기존 데이터 불러오기
@@ -599,6 +627,9 @@ const WantedWrite = () => {
     if (pendingNavigation) {
       navigate(pendingNavigation);
       setPendingNavigation(null);
+    } else {
+      // pendingNavigation이 없으면 기본적으로 구해요 페이지로 이동
+      navigate('/wanted');
     }
   };
 
@@ -691,14 +722,14 @@ const WantedWrite = () => {
               <InputTypeButtons>
                 <InputTypeButton
                   type="button"
-                  active={inputType === 'title'}
+                  $active={inputType === 'title'}
                   onClick={() => setInputType('title')}
                 >
                   책 제목으로 입력
                 </InputTypeButton>
                 <InputTypeButton
                   type="button"
-                  active={inputType === 'isbn'}
+                  $active={inputType === 'isbn'}
                   onClick={() => setInputType('isbn')}
                 >
                   ISBN으로 검색

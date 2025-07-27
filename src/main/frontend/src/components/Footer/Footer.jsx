@@ -331,12 +331,12 @@ const Footer = () => {
   return (
     <FooterContainer>
       <FooterNav>
-        <FooterNavLink to="/terms">이용약관</FooterNavLink>
-        <FooterNavLink to="/privacy">개인정보처리방침</FooterNavLink>
-        <FooterNavLink to="/cookies">쿠키 정책</FooterNavLink>
-        <FooterNavLink to="/accessibility">접근성</FooterNavLink>
+        <FooterNavLink to="/terms">{t('termsOfService')}</FooterNavLink>
+        <FooterNavLink to="/privacy">{t('privacyPolicy')}</FooterNavLink>
+        <FooterNavLink to="/cookies">{t('cookiePolicy')}</FooterNavLink>
+        <FooterNavLink to="/accessibility">{t('accessibility')}</FooterNavLink>
       </FooterNav>
-      <Copyright>© 2024 홍북스토어. 모든 권리 보유.</Copyright>
+      <Copyright>© {t('title')}. {t('allRightsReserved')}</Copyright>
     </FooterContainer>
   );
 };

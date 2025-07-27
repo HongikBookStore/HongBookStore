@@ -5,59 +5,80 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useLocation } from '../../contexts/LocationContext';
+import { getMyInfo, checkEmail, changePassword } from '../../api/auth';
 
 const MyPageContainer = styled.div`
-  padding: 6rem 2vw 4rem;
-  max-width: 1600px;
+  padding: 2rem 1rem 4rem;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  gap: 2rem;
   background: var(--background);
   min-height: 100vh;
+  
+  @media (min-width: 768px) {
+    padding: 3rem 2rem 4rem;
+    gap: 2.5rem;
+  }
+  
+  @media (min-width: 1024px) {
+    padding: 4rem 3rem 4rem;
+    gap: 3rem;
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    grid-template-rows: auto;
+    align-items: start;
+  }
 `;
 
 const ProfileCard = styled.div`
   background: var(--surface);
-  border-radius: 1.5rem;
-  box-shadow: 0 2px 16px 0 rgba(124,58,237,0.07);
-  padding: 2.2rem 2.5rem 1.5rem 2.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 2.2rem;
-  margin-bottom: 2.2rem;
-  @media (max-width: 900px) {
+  gap: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+  
+  @media (min-width: 1024px) {
     flex-direction: column;
-    padding: 1.2rem 0.7rem 1.2rem 0.7rem;
-    gap: 1.2rem;
+    text-align: center;
+    padding: 2.5rem;
+    gap: 2rem;
   }
 `;
 
 const ProfileInfoBox = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
+  width: 100%;
+  text-align: center;
 `;
 
 const ProfileNameRow = styled.div`
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 2.5rem;
-  width: auto;
-  @media (max-width: 600px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
 `;
 
 const ProfileNameLeft = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
 `;
 
 const ProfileNameRightCol = styled.div`
@@ -82,61 +103,101 @@ const ProfileEmail = styled.div`
   gap: 0.4rem;
 `;
 
-const ProfileRating = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 1.05rem;
-  color: var(--primary);
-  font-weight: 600;
-`;
+
 
 const ProfileImageBig = styled.div`
-  width: 96px;
-  height: 96px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   overflow: visible;
-  border: 3px solid var(--primary);
-  background: var(--background);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 12px 0 rgba(124,58,237,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   position: relative;
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      var(--score-color, #D97706) 0deg var(--score-percentage, 306deg),
+      #e5e7eb var(--score-percentage, 306deg) 360deg
+    );
+    z-index: 0;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: white;
+    z-index: 1;
+  }
+  
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 50%;
+    position: relative;
+    z-index: 2;
+  }
+  
+  i {
+    font-size: 48px;
+    color: var(--primary);
+    position: relative;
+    z-index: 2;
+  }
+  
+  @media (max-width: 1024px) {
+    width: 100px;
+    height: 100px;
+    
+    i {
+      font-size: 40px;
+    }
   }
 `;
 
 const StyledPhotoChangeButton = styled.button`
   position: absolute;
-  right: -12px;
-  bottom: -12px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  border: 2.5px solid #fff;
+  right: -5px;
+  bottom: -5px;
+  background: none;
+  color: var(--primary);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
-  box-shadow: 0 2px 10px 0 rgba(124,58,237,0.13);
-  z-index: 10;
-  transition: background 0.2s;
+  font-size: 0.05rem;
+  z-index: 5;
+  transition: all 0.2s;
+  cursor: pointer;
+  padding: 0;
   &:hover {
-    background: var(--primary-dark);
+    color: var(--primary-dark);
   }
   @media (max-width: 600px) {
-    right: -7px;
-    bottom: -7px;
-    width: 30px;
-    height: 30px;
-    font-size: 1rem;
+    right: -4px;
+    bottom: -4px;
+    font-size: 0.04rem;
   }
 `;
 
@@ -244,61 +305,90 @@ const TabButton = styled.button`
 
 const SettingsContainer = styled.div`
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2.5rem;
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  
+  @media (min-width: 1024px) {
+    gap: 2.5rem;
   }
 `;
 
 const SettingsSection = styled.div`
   background: var(--surface);
-  border-radius: var(--radius);
-  padding: 0.7rem 0.8rem;
-  box-shadow: none;
+  border-radius: 1.25rem;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   width: 100%;
-  min-width: 0;
-  margin-bottom: 0.3rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
+  }
+  
   h3 {
-    font-size: 0.98rem;
+    font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
     color: var(--text);
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
+  
   .verification-status {
     display: inline-flex;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.18rem 0.5rem;
-    border-radius: var(--radius);
-    font-size: 0.75rem;
+    gap: 0.3rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
     font-weight: 500;
     background: var(--background);
     border: 1px solid var(--border);
-    transition: var(--transition);
+    transition: all 0.2s ease;
+    
     &.verified {
       color: var(--primary);
-      background: rgba(124, 58, 237, 0.07);
-      border-color: rgba(124, 58, 237, 0.12);
+      background: rgba(124, 58, 237, 0.1);
+      border-color: rgba(124, 58, 237, 0.2);
     }
+    
     &.not-verified {
       color: var(--accent);
-      background: rgba(249, 115, 22, 0.07);
-      border-color: rgba(249, 115, 22, 0.12);
+      background: rgba(249, 115, 22, 0.1);
+      border-color: rgba(249, 115, 22, 0.2);
     }
+    
     i {
-      font-size: 0.8rem;
+      font-size: 0.9rem;
     }
   }
+  
   p {
     color: var(--text-light);
     margin-bottom: 0.5rem;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+    
+    h3 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    padding: 2.5rem;
+    
+    h3 {
+      font-size: 1.35rem;
+      margin-bottom: 2rem;
+    }
   }
 `;
 
@@ -309,20 +399,24 @@ const Button = styled.button`
   color: white;
   background: var(--primary);
   border: none;
-  border-radius: var(--radius);
+  border-radius: 0.75rem;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
 
   &:hover {
     background: var(--primary-dark);
     transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
   }
 
   &.danger {
     background: var(--accent);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
 
     &:hover {
       background: #ea580c;
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
     }
   }
 `;
@@ -336,14 +430,21 @@ const LocationSection = styled(SettingsSection)`
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    padding: 1.25rem;
+    padding: 1.5rem;
     background: var(--background);
-    border-radius: var(--radius);
+    border-radius: 1rem;
     border: 1px solid var(--border);
     margin-bottom: 1rem;
+    transition: all 0.2s ease;
 
     &:last-child {
       margin-bottom: 0;
+    }
+    
+    &:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
     }
 
     .location-info {
@@ -387,24 +488,33 @@ const LocationSection = styled(SettingsSection)`
   .button-group {
     display: flex;
     gap: 1rem;
+    
+    @media (max-width: 480px) {
+      flex-direction: column;
+    }
   }
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border-radius: 0.75rem;
+  background: var(--background);
   color: var(--text);
   font-size: 1rem;
   margin-bottom: 1rem;
-  transition: var(--transition);
+  transition: all 0.2s ease;
 
   &:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    background: var(--surface);
+  }
+  
+  &::placeholder {
+    color: var(--text-light);
   }
 `;
 
@@ -414,12 +524,13 @@ const IconButton = styled.button`
   color: var(--text-light);
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: var(--radius);
-  transition: var(--transition);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
 
   &:hover {
     color: var(--primary);
     background: rgba(124, 58, 237, 0.1);
+    transform: scale(1.1);
   }
 
   &.danger:hover {
@@ -566,36 +677,56 @@ const SettingsItem = styled.li`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0;
+  padding: 1rem 0;
   border-bottom: 1px solid var(--border);
-  font-size: 0.98rem;
-  &:last-child { border-bottom: none; }
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+  
+  &:last-child { 
+    border-bottom: none; 
+  }
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+    margin: 0 -1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
 `;
 
 const SmallButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
-  padding: 0.32em 1.1em;
-  font-size: 1rem;
+  padding: 0.5em 1.2em;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: var(--primary);
-  background: #fff;
-  border: 1.5px solid var(--primary);
-  border-radius: 999px;
+  color: #4B5563;
+  background: #F3F4F6;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border 0.15s;
+  transition: all 0.2s ease;
   box-shadow: none;
   outline: none;
+  
   &:hover {
-    background: rgba(0, 123, 255, 0.07);
-    color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background: #E5E7EB;
+    color: #374151;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
+  
   &.danger {
-    color: var(--accent);
-    border-color: var(--accent);
-    &:hover { background: rgba(249,115,22,0.07); color: #ea580c; border-color: #ea580c; }
+    color: #DC2626;
+    background: #FEF2F2;
+    border-color: #FCA5A5;
+    
+    &:hover { 
+      background: #DC2626;
+      color: white;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
   }
 `;
 
@@ -609,6 +740,107 @@ const SchoolRow = styled.div`
   display: flex;
   align-items: center;
   gap: 0.4rem;
+`;
+
+const PasswordChangeForm = styled.div`
+  background: var(--background);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`;
+
+const PasswordChangeTitle = styled.h4`
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+`;
+
+const PasswordInputGroup = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const PasswordLabel = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s ease;
+  
+  &:focus {
+    border-color: var(--primary);
+  }
+  
+  &::placeholder {
+    color: var(--text-light);
+  }
+`;
+
+const PasswordHint = styled.div`
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+`;
+
+const PasswordErrorMessage = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ef4444;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+`;
+
+const PasswordButtonGroup = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+`;
+
+const PasswordButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--primary);
+  color: white;
+  
+  &:hover {
+    background: var(--primary-dark);
+  }
+  
+  &.cancel {
+    background: var(--text-light);
+    color: var(--text);
+    
+    &:hover {
+      background: var(--border);
+    }
+  }
 `;
 
 const MyPage = () => {
@@ -636,6 +868,25 @@ const MyPage = () => {
   const [editingName, setEditingName] = useState(false);
   const [profileName, setProfileName] = useState(t('profileName', 'John Doe'));
   const nameInputRef = useRef();
+  const [userEmail, setUserEmail] = useState('');
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailInputRef] = useState(useRef());
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  
+  // 평점에 따른 색상 계산 함수
+  const getScoreColor = (score) => {
+    if (score <= 25) return '#FEF3C7'; // 연노랑
+    if (score <= 50) return '#FDE68A'; // 노랑
+    if (score <= 75) return '#F59E0B'; // 주황
+    return '#D97706'; // 진주황
+  };
+  
+  const userScore = 85; // 사용자 평점 (실제로는 API에서 가져올 값)
 
   // 내 정보 불러오기 로직
   useEffect(() => {
@@ -773,17 +1024,125 @@ const MyPage = () => {
     return <div>Loading...</div>;
   }
 
+  const handleEmailEdit = () => {
+    setEditingEmail(true);
+    setNewEmail(userEmail);
+    setTimeout(() => {
+      emailInputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleEmailSave = async () => {
+    if (!newEmail || newEmail === userEmail) {
+      setEditingEmail(false);
+      return;
+    }
+
+    try {
+      // 이메일 중복 확인
+      await checkEmail(newEmail);
+      
+      // TODO: 실제 이메일 업데이트 API 호출
+      // await updateEmail(newEmail);
+      
+      setUserEmail(newEmail);
+      setEditingEmail(false);
+      alert(t('emailUpdated', '이메일이 성공적으로 업데이트되었습니다.'));
+    } catch (error) {
+      if (error.message.includes('중복')) {
+        alert(t('emailAlreadyExists', '이미 사용 중인 이메일입니다.'));
+      } else {
+        alert(t('emailUpdateFailed', '이메일 업데이트에 실패했습니다.'));
+      }
+    }
+  };
+
+  const handleEmailCancel = () => {
+    setEditingEmail(false);
+    setNewEmail('');
+  };
+
+  const handlePasswordChangeClick = () => {
+    setShowPasswordChange(true);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const validatePassword = (password) => {
+    // 비밀번호 정규식: 영문 대소문자, 숫자, 특수문자 포함 8~16자
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/;
+    return passwordRegex.test(password);
+  };
+
+  const handlePasswordSubmit = async () => {
+    setPasswordError('');
+
+    // 입력값 검증
+    if (!currentPassword) {
+      setPasswordError(t('currentPasswordRequired', '현재 비밀번호를 입력해주세요.'));
+      return;
+    }
+
+    if (!newPassword) {
+      setPasswordError(t('newPasswordRequired', '새 비밀번호를 입력해주세요.'));
+      return;
+    }
+
+    if (!validatePassword(newPassword)) {
+      setPasswordError(t('passwordFormatError', '비밀번호는 영문 대소문자, 숫자, 특수문자를 포함하여 8~16자여야 합니다.'));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t('passwordMismatch', '새 비밀번호가 일치하지 않습니다.'));
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError(t('samePasswordError', '새 비밀번호는 현재 비밀번호와 달라야 합니다.'));
+      return;
+    }
+
+    try {
+      await changePassword(currentPassword, newPassword);
+      alert(t('passwordChangeSuccess', '비밀번호가 성공적으로 변경되었습니다.'));
+      setShowPasswordChange(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      if (error.message.includes('현재 비밀번호')) {
+        setPasswordError(t('currentPasswordIncorrect', '현재 비밀번호가 올바르지 않습니다.'));
+      } else {
+        setPasswordError(error.message || t('passwordChangeFailed', '비밀번호 변경에 실패했습니다.'));
+      }
+    }
+  };
+
+  const handlePasswordCancel = () => {
+    setShowPasswordChange(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
   return (
     <MyPageContainer>
       <ProfileCard>
-        <ProfileImageBig>
+        <ProfileImageBig style={{
+          '--score-color': getScoreColor(userScore),
+          '--score-percentage': `${userScore * 3.6}deg`
+        }}>
           {profileImage ? (
             <img src={profileImage} alt="Profile" />
           ) : (
             <i className="fas fa-user" style={{ fontSize: '48px', color: 'var(--primary)' }}></i>
           )}
           <StyledPhotoChangeButton type="button" onClick={handlePhotoMenuClick}>
-            <i className="fas fa-camera"></i>
+            <i className="fas fa-camera-retro" style={{ position: 'relative', zIndex: 6, fontSize: '16px' }}></i>
           </StyledPhotoChangeButton>
           {showPhotoMenu && (
             <div ref={photoMenuRef} style={{
@@ -792,41 +1151,55 @@ const MyPage = () => {
               right: 0,
               background: 'white',
               border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              boxShadow: 'var(--shadow)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
               zIndex: 10,
-              minWidth: '140px',
-              padding: '0.5rem 0',
+              minWidth: '160px',
+              padding: '0.75rem 0',
+              overflow: 'hidden',
             }}>
               <button style={{
                 width: '100%',
                 background: 'none',
                 border: 'none',
-                padding: '0.75rem 1rem',
+                padding: '0.75rem 1.25rem',
                 textAlign: 'left',
                 cursor: 'pointer',
                 color: 'var(--text)',
-                fontSize: '1rem',
+                fontSize: '0.9rem',
+                fontWeight: '500',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-              }} onClick={() => handlePhotoMenuSelect('default')}>
-                <i className="fas fa-user"></i> Default Icon
+                gap: '0.75rem',
+                transition: 'all 0.2s ease',
+                borderBottom: '1px solid #f1f5f9',
+              }} 
+              onMouseEnter={(e) => e.target.style.background = '#f8fafc'}
+              onMouseLeave={(e) => e.target.style.background = 'none'}
+              onClick={() => handlePhotoMenuSelect('default')}>
+                <i className="fas fa-user" style={{ color: 'var(--primary)', fontSize: '1rem' }}></i> 
+                기본 아이콘
               </button>
               <button style={{
                 width: '100%',
                 background: 'none',
                 border: 'none',
-                padding: '0.75rem 1rem',
+                padding: '0.75rem 1.25rem',
                 textAlign: 'left',
                 cursor: 'pointer',
                 color: 'var(--text)',
-                fontSize: '1rem',
+                fontSize: '0.9rem',
+                fontWeight: '500',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-              }} onClick={() => handlePhotoMenuSelect('upload')}>
-                <i className="fas fa-upload"></i> Upload Photo
+                gap: '0.75rem',
+                transition: 'all 0.2s ease',
+              }} 
+              onMouseEnter={(e) => e.target.style.background = '#f8fafc'}
+              onMouseLeave={(e) => e.target.style.background = 'none'}
+              onClick={() => handlePhotoMenuSelect('upload')}>
+                <i className="fas fa-upload" style={{ color: 'var(--primary)', fontSize: '1rem' }}></i> 
+                사진 업로드
               </button>
             </div>
           )}
@@ -873,22 +1246,58 @@ const MyPage = () => {
                   </>
                 )}
               </div>
-              <ProfileRating>
-                <i className="fas fa-star"></i>
-                <span>8.5</span>
-                <span style={{color:'var(--text-light)',fontWeight:400,fontSize:'0.98rem'}}>(24)</span>
-              </ProfileRating>
+
             </ProfileNameLeft>
           </ProfileNameRow>
         </ProfileInfoBox>
       </ProfileCard>
 
+      {/* 오른쪽 열 - 설정 섹션들 */}
       <SettingsContainer>
         <SettingsSection>
           <SettingsList>
             <SettingsItem>
-              <span><i className="fas fa-envelope" style={{marginRight:6}}></i>{t('profileEmail', 'john.doe@example.com')}</span>
-              <SmallButton>{t('change', '수정')}</SmallButton>
+              {editingEmail ? (
+                <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%'}}>
+                  <i className="fas fa-envelope" style={{marginRight:6}}></i>
+                  <input
+                    ref={emailInputRef}
+                    type="email"
+                    value={newEmail}
+                    onChange={e => setNewEmail(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleEmailSave();
+                      if (e.key === 'Escape') handleEmailCancel();
+                    }}
+                    style={{
+                      fontSize: '1rem',
+                      color: 'var(--text)',
+                      border: '1.5px solid var(--primary)',
+                      borderRadius: 6,
+                      padding: '0.2rem 0.5rem',
+                      outline: 'none',
+                      flex: 1,
+                      background: 'var(--surface)',
+                    }}
+                    placeholder={t('enterNewEmail', '새 이메일 입력')}
+                    autoFocus
+                  />
+                  <SmallButton onClick={handleEmailSave}>
+                    <i className="fas fa-check"></i>
+                  </SmallButton>
+                  <SmallButton onClick={handleEmailCancel}>
+                    <i className="fas fa-times"></i>
+                  </SmallButton>
+                </div>
+              ) : (
+                <>
+                  <span style={{ fontSize: '1rem', fontWeight: '500', color: '#1F2937' }}>
+                    <i className="fas fa-envelope" style={{marginRight:8, color: '#6B7280'}}></i>
+                    {userEmail || t('noEmail', '이메일 없음')}
+                  </span>
+                  <SmallButton onClick={handleEmailEdit}>{t('change', '수정')}</SmallButton>
+                </>
+              )}
             </SettingsItem>
           </SettingsList>
         </SettingsSection>
@@ -896,8 +1305,23 @@ const MyPage = () => {
         <SettingsSection>
           <SettingsList>
             <SettingsItem>
-              <span><i className="fas fa-university" style={{marginRight:6}}></i>{t('schoolVerification')}</span>
-              <span className={`verification-status ${isVerified ? 'verified' : 'not-verified'}`} style={{marginRight:8}}>
+              <span style={{ fontSize: '1rem', fontWeight: '500', color: '#1F2937' }}>
+                <i className="fas fa-university" style={{marginRight:8, color: '#6B7280'}}></i>
+                {t('schoolVerification')}
+              </span>
+              <span className={`verification-status ${isVerified ? 'verified' : 'not-verified'}`} style={{
+                marginRight: 8,
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '0.375rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: isVerified ? '#F0FDF4' : '#FEF2F2',
+                color: isVerified ? '#166534' : '#DC2626',
+                border: `1px solid ${isVerified ? '#BBF7D0' : '#FCA5A5'}`
+              }}>
                 <i className={`fas fa-${isVerified ? 'check-circle' : 'exclamation-circle'}`}></i>
                 {isVerified ? t('verified') : t('notVerified')}
               </span>
@@ -1002,9 +1426,76 @@ const MyPage = () => {
           <SettingsList>
             <SettingsItem>
               <span><i className="fas fa-lock" style={{marginRight:6}}></i>{t('changePassword')}</span>
-              <SmallButton>{t('changePassword')}</SmallButton>
+              <SmallButton onClick={handlePasswordChangeClick}>{t('changePassword')}</SmallButton>
             </SettingsItem>
           </SettingsList>
+          
+          {showPasswordChange && (
+            <PasswordChangeForm>
+              <PasswordChangeTitle>{t('changePasswordTitle', '비밀번호 변경')}</PasswordChangeTitle>
+              
+              <PasswordInputGroup>
+                <PasswordLabel>{t('currentPassword', '현재 비밀번호')}</PasswordLabel>
+                <PasswordInput
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder={t('enterCurrentPassword', '현재 비밀번호를 입력하세요')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handlePasswordSubmit();
+                    if (e.key === 'Escape') handlePasswordCancel();
+                  }}
+                />
+              </PasswordInputGroup>
+
+              <PasswordInputGroup>
+                <PasswordLabel>{t('newPassword', '새 비밀번호')}</PasswordLabel>
+                <PasswordInput
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={t('enterNewPassword', '새 비밀번호를 입력하세요')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handlePasswordSubmit();
+                    if (e.key === 'Escape') handlePasswordCancel();
+                  }}
+                />
+                <PasswordHint>{t('passwordHint', '영문 대소문자, 숫자, 특수문자 포함 8~16자')}</PasswordHint>
+              </PasswordInputGroup>
+
+              <PasswordInputGroup>
+                <PasswordLabel>{t('confirmNewPassword', '새 비밀번호 확인')}</PasswordLabel>
+                <PasswordInput
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={t('confirmNewPassword', '새 비밀번호를 다시 입력하세요')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handlePasswordSubmit();
+                    if (e.key === 'Escape') handlePasswordCancel();
+                  }}
+                />
+              </PasswordInputGroup>
+
+              {passwordError && (
+                <PasswordErrorMessage>
+                  <i className="fas fa-exclamation-circle"></i>
+                  {passwordError}
+                </PasswordErrorMessage>
+              )}
+
+              <PasswordButtonGroup>
+                <PasswordButton onClick={handlePasswordSubmit}>
+                  <i className="fas fa-check"></i>
+                  {t('confirm', '확인')}
+                </PasswordButton>
+                <PasswordButton onClick={handlePasswordCancel} className="cancel">
+                  <i className="fas fa-times"></i>
+                  {t('cancel', '취소')}
+                </PasswordButton>
+              </PasswordButtonGroup>
+            </PasswordChangeForm>
+          )}
         </SettingsSection>
 
         <SettingsSection>

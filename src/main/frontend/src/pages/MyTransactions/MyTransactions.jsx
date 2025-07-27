@@ -25,6 +25,7 @@ import wowBad from '../../assets/wow/wow_bad.png';
 import wowGood from '../../assets/wow/wow_good.png';
 import wowBest from '../../assets/wow/wow_best.png';
 import axios from 'axios';
+import { FilterButton } from '../../components/ui';
 
 const TransactionsContainer = styled.div`
   max-width: 1200px;
@@ -291,35 +292,7 @@ const FilterContainer = styled.div`
   flex-wrap: wrap;
 `;
 
-const FilterButton = styled.button`
-  padding: 8px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 20px;
-  background: white;
-  color: #666;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 
-  &.active {
-    border-color: #007bff;
-    background: #007bff;
-    color: white;
-  }
-
-  &:hover {
-    border-color: #007bff;
-    color: #007bff;
-    
-    &.active {
-      color: white;
-    }
-  }
-`;
 
 const FilterCount = styled.span`
   background: rgba(255, 255, 255, 0.2);
@@ -983,7 +956,7 @@ const MyTransactions = () => {
                   </CompactMeta>
                   <CompactPrice>{transaction.price.toLocaleString()}원</CompactPrice>
                 </CompactBookInfo>
-                <CompactStatus status={transaction.status}>
+                <CompactStatus $status={transaction.status}>
                   {transaction.status === 'RESERVED' && '예약됨'}
                   {transaction.status === 'COMPLETED' && '완료'}
                   {transaction.status === 'CANCELLED' && '취소됨'}

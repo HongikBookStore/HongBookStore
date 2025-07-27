@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { FaPlus, FaSearch, FaUser, FaClock, FaBook, FaGraduationCap, FaEye } from 'react-icons/fa';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
+import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton } from '../../components/ui';
 
 const WantedContainer = styled.div`
   width: 100%;
@@ -85,75 +86,9 @@ const SearchInput = styled.input`
   }
 `;
 
-const SearchButton = styled.button`
-  padding: 12px 20px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s;
 
-  &:hover {
-    background: #0056b3;
-  }
-`;
 
-const FilterSection = styled.div`
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-`;
 
-const FilterButton = styled.button`
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  background: ${props => props.active ? '#007bff' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background: ${props => props.active ? '#0056b3' : '#f8f9fa'};
-  }
-`;
-
-const WantedList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
-  width: 100%;
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 8px;
-  }
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-`;
-
-const WantedCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 20px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px;
-    font-size: 0.95rem;
-  }
-`;
 
 const WantedHeaderRow = styled.div`
   display: flex;
@@ -176,15 +111,7 @@ const MetaRow = styled.div`
   margin-bottom: 0.3rem;
 `;
 
-const MetaLabel = styled.span`
-  font-weight: 600;
-  color: #333;
-  min-width: 80px;
-`;
 
-const MetaValue = styled.span`
-  color: #444;
-`;
 
 const CategoryRow = styled.div`
   margin-top: 0.7rem;
@@ -365,31 +292,31 @@ const Wanted = () => {
 
           <FilterSection>
             <FilterButton 
-              active={activeFilter === 'all'} 
+              $active={activeFilter === 'all'} 
               onClick={() => handleFilter('all')}
             >
               전체
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'programming'} 
+              $active={activeFilter === 'programming'} 
               onClick={() => handleFilter('programming')}
             >
               프로그래밍
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'algorithm'} 
+              $active={activeFilter === 'algorithm'} 
               onClick={() => handleFilter('algorithm')}
             >
               알고리즘
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'math'} 
+              $active={activeFilter === 'math'} 
               onClick={() => handleFilter('math')}
             >
               수학
             </FilterButton>
             <FilterButton 
-              active={activeFilter === 'english'} 
+              $active={activeFilter === 'english'} 
               onClick={() => handleFilter('english')}
             >
               영어
@@ -399,32 +326,29 @@ const Wanted = () => {
           {loading ? (
             <NoWanted>검색 중...</NoWanted>
           ) : wantedPosts.length > 0 ? (
-            <WantedList>
+            <Grid>
               {wantedPosts.map(post => (
-                <WantedCard key={post.id}>
-                  <WantedHeaderRow>
-                    <div style={{flex: 1}}>
-                      <WantedTitleText>{post.title}</WantedTitleText>
-                      <MetaRow>
+                <Card key={post.id}>
+                  <CardTitle>{post.title}</CardTitle>
+                  <CardMeta>
                         <MetaLabel>저자</MetaLabel>
                         <MetaValue>{post.author}</MetaValue>
-                      </MetaRow>
-                      <MetaRow>
+                  </CardMeta>
+                  <CardMeta>
                         <MetaLabel>상태</MetaLabel>
                         <MetaValue>{post.condition}</MetaValue>
-                      </MetaRow>
-                      <MetaRow>
+                  </CardMeta>
+                  <CardMeta>
                         <MetaLabel>희망 가격</MetaLabel>
                         <MetaValue>{post.price.toLocaleString()}원</MetaValue>
-                      </MetaRow>
-                      <CategoryRow>
-                        <MetaLabel>카테고리</MetaLabel> <MetaValue>{post.category.split('>').pop().trim()}</MetaValue>
-                      </CategoryRow>
-                    </div>
-                  </WantedHeaderRow>
-                </WantedCard>
+                  </CardMeta>
+                  <CardMeta>
+                    <MetaLabel>카테고리</MetaLabel>
+                    <MetaValue>{post.category.split('>').pop().trim()}</MetaValue>
+                  </CardMeta>
+                </Card>
               ))}
-            </WantedList>
+            </Grid>
           ) : (
             <NoWanted>등록된 글이 없습니다.</NoWanted>
           )}

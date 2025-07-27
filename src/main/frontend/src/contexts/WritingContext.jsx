@@ -13,6 +13,7 @@ export const useWriting = () => {
 export const WritingProvider = ({ children }) => {
   const [isWriting, setIsWriting] = useState(false);
   const [writingType, setWritingType] = useState(null); // 'sale' or 'wanted'
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const startWriting = (type) => {
     setIsWriting(true);
@@ -22,13 +23,20 @@ export const WritingProvider = ({ children }) => {
   const stopWriting = () => {
     setIsWriting(false);
     setWritingType(null);
+    setHasUnsavedChanges(false);
+  };
+
+  const setUnsavedChanges = (hasChanges) => {
+    setHasUnsavedChanges(hasChanges);
   };
 
   const value = {
     isWriting,
     writingType,
+    hasUnsavedChanges,
     startWriting,
-    stopWriting
+    stopWriting,
+    setUnsavedChanges
   };
 
   return (

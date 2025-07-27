@@ -22,13 +22,13 @@ export const login = async (username, password) => {
     const response = await api.post('/auth/login', { username, password });
 
     // 백엔드 응답이 { success: true, data: { accessToken, ... } } 구조로 옵니다.
-    // axios는 실제 응답 데이터를 response.data에 담아줍니다.
+    // api 인터셉터에서 이미 response.data를 반환하므로 response가 실제 응답 데이터입니다.
     if (response && response.success) {
       // 성공 시, 토큰이 담긴 data 객체를 반환합니다.
       return response.data; // { accessToken, refreshToken }
     } else {
       // API 호출은 성공했지만, 백엔드에서 실패 응답을 보낸 경우
-      throw new Error(response.message || '아이디 또는 비밀번호가 일치하지 않습니다.');
+      throw new Error(response?.message || '아이디 또는 비밀번호가 일치하지 않습니다.');
     }
   } catch (error) {
     console.error('로그인 API 호출 중 에러 발생:', error);
@@ -55,13 +55,51 @@ export const getMyInfo = async () => {
     });
 
     // 백엔드 응답이 { success: true, data: { username, email } } 구조로 옵니다.
+    // api 인터셉터에서 이미 response.data를 반환하므로 response가 실제 응답 데이터입니다.
     if (response && response.success) {
       return response.data; // 성공 시 사용자 정보 객체 반환
     } else {
-      throw new Error(response.message || '내 정보 조회에 실패했습니다.');
+      throw new Error(response?.message || '내 정보 조회에 실패했습니다.');
     }
   } catch (error) {
     console.error('내 정보 조회 API 호출 실패:', error);
+    throw error;
+  }
+};
+
+// 비밀번호 변경
+export const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await api.put('/users/password', {
+      currentPassword,
+      newPassword
+    });
+
+    if (response && response.success) {
+      return response.data;
+    } else {
+      throw new Error(response?.message || '비밀번호 변경에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('비밀번호 변경 API 호출 실패:', error);
+    throw error;
+  }
+};
+
+// 계정 탈퇴
+export const deleteAccount = async (password) => {
+  try {
+    const response = await api.delete('/users/me', {
+      data: { password }
+    });
+
+    if (response && response.success) {
+      return response.data;
+    } else {
+      throw new Error(response?.message || '계정 탈퇴에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('계정 탈퇴 API 호출 실패:', error);
     throw error;
   }
 };

@@ -75,6 +75,7 @@ public class SecurityConfig {
                                 //"/api/users/verify/**",
                                 "/api/images/**",
                                 "/api/posts/**",
+ 								"/api/naver/**",
                                 "/api/search/**",
                                 "/actuator/health",
                                 "/", "/login", "/oauth2/**", "/error" // 소셜 로그인 관련 경로 유지
@@ -97,7 +98,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("http://localhost:5173"));
+        cfg.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "http://localhost:5175"));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

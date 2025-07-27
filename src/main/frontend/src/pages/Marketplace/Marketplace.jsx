@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
+import { SearchButton, FilterButton } from '../../components/ui';
 import axios from 'axios';
 
 const shimmer = keyframes`
@@ -122,38 +123,7 @@ const SearchBar = styled.div`
   }
 `;
 
-const SearchButton = styled.button`
-  padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: var(--shadow-sm);
-  min-width: 80px;
-  justify-content: center;
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
 
 const SearchIcon = styled.div`
   position: absolute;
@@ -191,24 +161,7 @@ const SearchIcon = styled.div`
   }
 `;
 
-const FilterButton = styled.button`
-  padding: 8px 16px;
-  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
-  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
-  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border-medium)'};
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  margin-right: 8px;
-  margin-bottom: 8px;
 
-  &:hover {
-    background: ${props => props.active ? 'var(--primary-dark)' : 'var(--gray-50)'};
-    border-color: var(--primary);
-    color: ${props => props.active ? 'white' : 'var(--primary)'};
-  }
-`;
 
 const SortButton = styled.button`
   padding: 8px 16px;
@@ -251,15 +204,16 @@ const FilterPopover = styled.div`
   top: 110%;
   right: 0;
   background: white;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid #E5E7EB;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   padding: 1.5rem;
   z-index: 10;
-  min-width: 220px;
+  min-width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.5rem;
+  animation: ${fadeIn} 0.3s ease-out;
 `;
 
 const FilterSection = styled.div`
@@ -271,29 +225,62 @@ const FilterSection = styled.div`
 const FilterLabel = styled.label`
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text);
+  color: #1F2937;
+  margin-bottom: 0.5rem;
 `;
 
 const FilterRadioGroup = styled.div`
   display: flex;
   gap: 1rem;
+  flex-direction: row;
+  align-items: center;
 `;
 
 const FilterRadio = styled.label`
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
   cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: #F9FAFB;
+  }
+
+  input[type="radio"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
 `;
 
 const FilterSelect = styled.select`
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  font-size: 1rem;
-  background: var(--surface);
-  color: var(--text);
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid #E5E7EB;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  &:hover {
+    border-color: #D1D5DB;
+  }
 `;
 
 const CategoryContainer = styled.div`
@@ -435,7 +422,7 @@ const LikeButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: ${props => props.liked ? '#ff4757' : '#666'};
+  color: ${props => props.$liked ? '#ff4757' : '#666'};
   box-shadow: var(--shadow);
   z-index: 2;
 
@@ -446,7 +433,7 @@ const LikeButton = styled.button`
   }
 
   &::before {
-    content: ${props => props.liked ? '"❤️"' : '"🤍"'};
+    content: ${props => props.$liked ? '"❤️"' : '"🤍"'};
     font-size: 1.2rem;
   }
 `;
@@ -844,19 +831,43 @@ const SectionHeader = styled.div`
 `;
 
 const ViewMoreButton = styled.button`
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: var(--radius-lg);
-  font-size: 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: var(--transition-normal);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     background: var(--primary-dark);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  &:hover::before {
+    left: 100%;
   }
 `;
 
@@ -974,9 +985,12 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMainCategory, setSelectedMainCategory] = useState('전공');
-  const [selectedSubCategory, setSelectedSubCategory] = useState('경영대학');
-  const [selectedDetailCategory, setSelectedDetailCategory] = useState('경영학과');
+  const [searchInput, setSearchInput] = useState(''); // 실제 검색어 입력용
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [selectedMainCategory, setSelectedMainCategory] = useState('전체');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('전체');
+  const [selectedDetailCategory, setSelectedDetailCategory] = useState('전체');
+  const [isLoading, setIsLoading] = useState(true);
   const [likedBooks, setLikedBooks] = useState(new Set());
   const [activeSubMenu, setActiveSubMenu] = useState('booksale');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -984,9 +998,9 @@ const Marketplace = () => {
   const [showAllPopularBooks, setShowAllPopularBooks] = useState(false);
   const [showAllRecentBooks, setShowAllRecentBooks] = useState(false);
   const filterRef = useRef();
-  const [pendingMainCategory, setPendingMainCategory] = useState(selectedMainCategory);
-  const [pendingSubCategory, setPendingSubCategory] = useState(selectedSubCategory);
-  const [pendingDetailCategory, setPendingDetailCategory] = useState(selectedDetailCategory);
+  const [pendingMainCategory, setPendingMainCategory] = useState('전체');
+  const [pendingSubCategory, setPendingSubCategory] = useState('전체');
+  const [pendingDetailCategory, setPendingDetailCategory] = useState('전체');
 
   // API 데이터를 저장할 상태
   const [posts, setPosts] = useState([]);
@@ -1326,13 +1340,15 @@ const Marketplace = () => {
                       </>
                     )}
                   </PopularSectionTitle>
-                  <ViewMoreButton onClick={() => setShowAllPopularBooks(prev => !prev)}>
-                    {showAllPopularBooks ? '더보기 취소' : '더보기'}
-                  </ViewMoreButton>
                 </SectionHeader>
                 <PopularBooksGrid>
                   {displayedPopularBooks.map(renderBookCard)}
                 </PopularBooksGrid>
+                <div style={{ textAlign: 'center', marginTop: '2rem', marginBottom: '3rem' }}>
+                  <ViewMoreButton onClick={() => setShowAllPopularBooks(prev => !prev)}>
+                    {showAllPopularBooks ? '더보기 취소' : '더보기'}
+                  </ViewMoreButton>
+                </div>
               </SectionContainer>
 
               {/* 최근 등록된 책 리스트 */}
@@ -1350,13 +1366,15 @@ const Marketplace = () => {
                       </>
                     )}
                   </SectionTitle>
-                  <ViewMoreButton onClick={() => setShowAllRecentBooks(prev => !prev)}>
-                    {showAllRecentBooks ? '더보기 취소' : '더보기'}
-                  </ViewMoreButton>
                 </SectionHeader>
                 <BookGrid>
                   {displayedRecentBooks.map(renderBookCard)}
                 </BookGrid>
+                <div style={{ textAlign: 'center', marginTop: '2rem', marginBottom: '3rem' }}>
+                  <ViewMoreButton onClick={() => setShowAllRecentBooks(prev => !prev)}>
+                    {showAllRecentBooks ? '더보기 취소' : '더보기'}
+                  </ViewMoreButton>
+                </div>
               </SectionContainer>
             </>
           )}

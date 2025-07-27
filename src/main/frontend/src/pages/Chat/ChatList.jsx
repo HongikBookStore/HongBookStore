@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaSearch, FaEllipsisV, FaBook, FaUser, FaExclamationCircle } from 'react-icons/fa';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getOrCreateChatRoom } from '../../api/chat';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -319,9 +320,35 @@ const EmptyIcon = styled(FaBook)`
 
 const ChatListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [chatRooms, setChatRooms] = useState([]);
+
+  // URL 파라미터에서 bookId 확인 및 처리
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const bookId = urlParams.get('bookId');
+    
+    if (bookId) {
+      // bookId가 있으면 해당 책에 대한 채팅방을 생성하거나 조회
+      const handleBookChat = async () => {
+        try {
+          const response = await getOrCreateChatRoom(bookId);
+          const chatRoom = await response.json();
+          
+          // 생성된 또는 기존 채팅방으로 이동
+          navigate(`/chat/${chatRoom.id}`, { replace: true });
+        } catch (error) {
+          console.error('채팅방 생성/조회 실패:', error);
+          // 에러 발생 시 URL에서 bookId 파라미터 제거
+          navigate('/chat', { replace: true });
+        }
+      };
+      
+      handleBookChat();
+    }
+  }, [location.search, navigate]);
 
   // 임시 데이터 - 실제로는 API에서 가져올 데이터
   useEffect(() => {
@@ -487,7 +514,7 @@ const ChatListPage = () => {
                       <FaBook style={{ color: '#666' }} />
                       {chat.bookTitle}
                     </BookTitle>
-                    <TradeStatus status={chat.tradeStatus}>
+                    <TradeStatus $status={chat.tradeStatus}>
                       {getStatusText(chat.tradeStatus)}
                     </TradeStatus>
                     <LastMessage>{chat.lastMessage}</LastMessage>

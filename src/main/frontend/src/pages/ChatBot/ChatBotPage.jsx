@@ -85,24 +85,24 @@ const ChatArea = styled.div`
 
 const MessageContainer = styled.div`
   margin: 1rem 0;
-  animation: ${props => props.sender === "bot" ? slideIn : slideInRight} 0.4s ease-out;
+  animation: ${props => props.$sender === "bot" ? slideIn : slideInRight} 0.4s ease-out;
 `;
 
 const Message = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: ${props => props.sender === "bot" ? "flex-start" : "flex-end"};
+  align-items: ${props => props.$sender === "bot" ? "flex-start" : "flex-end"};
   max-width: 80%;
-  margin: ${props => props.sender === "bot" ? "0 0 0 0" : "0 0 0 auto"};
+  margin: ${props => props.$sender === "bot" ? "0 0 0 0" : "0 0 0 auto"};
 `;
 
 const MessageBubble = styled.div`
-  background: ${props => props.sender === "bot" ? "var(--surface)" : "linear-gradient(135deg, var(--primary), var(--secondary))"};
-  color: ${props => props.sender === "bot" ? "var(--text-primary)" : "white"};
+  background: ${props => props.$sender === "bot" ? "var(--surface)" : "linear-gradient(135deg, var(--primary), var(--secondary))"};
+  color: ${props => props.$sender === "bot" ? "var(--text-primary)" : "white"};
   padding: 1rem 1.5rem;
-  border-radius: ${props => props.sender === "bot" ? "var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-sm)" : "var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl)"};
+  border-radius: ${props => props.$sender === "bot" ? "var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-sm)" : "var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl)"};
   box-shadow: var(--shadow-sm);
-  border: ${props => props.sender === "bot" ? "1px solid var(--border-light)" : "none"};
+  border: ${props => props.$sender === "bot" ? "1px solid var(--border-light)" : "none"};
   position: relative;
   word-break: keep-all;
   line-height: 1.6;
@@ -110,11 +110,11 @@ const MessageBubble = styled.div`
   &::before {
     content: '';
     position: absolute;
-    ${props => props.sender === "bot" ? "left: -8px; top: 12px;" : "right: -8px; top: 12px;"}
+    ${props => props.$sender === "bot" ? "left: -8px; top: 12px;" : "right: -8px; top: 12px;"}
     width: 0;
     height: 0;
     border: 8px solid transparent;
-    border-${props => props.sender === "bot" ? "right" : "left"}-color: ${props => props.sender === "bot" ? "var(--surface)" : "var(--primary)"};
+    border-${props => props.$sender === "bot" ? "right" : "left"}-color: ${props => props.$sender === "bot" ? "var(--surface)" : "var(--primary)"};
   }
 `;
 
@@ -122,7 +122,7 @@ const MessageSender = styled.span`
   font-weight: 600;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
-  color: ${props => props.sender === "bot" ? "var(--text-secondary)" : "var(--primary)"};
+  color: ${props => props.$sender === "bot" ? "var(--text-secondary)" : "var(--primary)"};
 `;
 
 const ImageContainer = styled.div`
@@ -282,12 +282,12 @@ function ChatBotPage() {
       
       <ChatArea>
         {messages.map((msg, idx) => (
-          <MessageContainer key={idx} sender={msg.sender}>
-            <Message sender={msg.sender}>
-              <MessageSender sender={msg.sender}>
-                {msg.sender === "bot" ? "챗봇" : "나"}
-              </MessageSender>
-              <MessageBubble sender={msg.sender}>
+                  <MessageContainer key={idx} $sender={msg.sender}>
+          <Message $sender={msg.sender}>
+            <MessageSender $sender={msg.sender}>
+              {msg.sender === "bot" ? "챗봇" : "나"}
+            </MessageSender>
+            <MessageBubble $sender={msg.sender}>
                 {msg.text}
               </MessageBubble>
               {msg.image && (

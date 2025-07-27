@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaSearch, FaFilter, FaBook, FaUser, FaGraduationCap } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Container, Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue } from '../../components/ui';
 
 const SearchContainer = styled.div`
   max-width: 1600px;
@@ -60,20 +61,7 @@ const SearchInput = styled.input`
   }
 `;
 
-const SearchButton = styled.button`
-  padding: 15px 25px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s;
 
-  &:hover {
-    background: #0056b3;
-  }
-`;
 
 const FilterSection = styled.div`
   background: #f8f9fa;
@@ -146,73 +134,7 @@ const SortSelect = styled.select`
   background: white;
 `;
 
-const BookGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-  width: 100%;
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-`;
 
-const BookCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 20px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px;
-    font-size: 0.95rem;
-  }
-`;
-
-const BookImage = styled.div`
-  width: 100%;
-  height: 200px;
-  background: #f0f0f0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 15px;
-  color: #999;
-`;
-
-const BookTitle = styled.h3`
-  font-size: 1.2rem;
-  margin-bottom: 8px;
-  color: #333;
-`;
-
-const BookAuthor = styled.p`
-  color: #666;
-  margin-bottom: 5px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-`;
-
-const BookSubject = styled.p`
-  color: #888;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-`;
 
 const BookPrice = styled.div`
   font-size: 1.3rem;
@@ -271,7 +193,7 @@ const Search = () => {
         size: 20, // 한 번에 20개씩
         sort: filters.sortBy,
         // TODO: 백엔드에 검색 기능 추가 후, searchTerm 파라미터도 추가
-        // query: searchTerm, 
+        // query: searchTerm,
       };
 
       const response = await axios.get('/api/posts', { params });
@@ -311,14 +233,14 @@ const Search = () => {
       <div className="header-spacer" />
       <SearchContainer>
         <SearchHeader>
-          <SearchTitle>책 마켓플레이스</SearchTitle>
-          <SearchSubtitle>선배들의 지식을 저렴하게 얻어보세요!</SearchSubtitle>
+          <SearchTitle>책 검색</SearchTitle>
+          <SearchSubtitle>원하는 책을 찾아보세요</SearchSubtitle>
         </SearchHeader>
 
         <SearchForm onSubmit={handleSearch}>
           <SearchInput
             type="text"
-            placeholder="책 제목, 저자를 검색해보세요..."
+            placeholder="책 제목, 저자, 과목을 검색해보세요..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -345,35 +267,41 @@ const Search = () => {
           </ResultsHeader>
 
           {loading ? (
-            <NoResults>게시글을 불러오는 중...</NoResults>
+            <NoResults>검색 중...</NoResults>
           ) : posts.length > 0 ? (
-            <BookGrid>
+            <Grid>
               {posts.map(post => (
-                <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
-                  <BookImage>
+                <Card key={post.postId} onClick={() => handleBookClick(post.postId)}>
+                  <Card.Image>
                     {post.thumbnailUrl ? (
                       <BookImageImg src={post.thumbnailUrl} alt={post.postTitle} />
                     ) : (
                       <FaBook size={40} />
                     )}
-                  </BookImage>
-                  <BookCardTitle>{post.postTitle}</BookCardTitle>
-                  <BookSeller>
+                  </Card.Image>
+                  <CardTitle>{post.postTitle}</CardTitle>
+                  <CardMeta>
+                    <MetaLabel>
                     <FaUser size={12} />
-                    {post.sellerNickname}
-                  </BookSeller>
+                    {post.author}
+                    </MetaLabel>
+                    <MetaValue>
+                    <FaGraduationCap size={12} />
+                    {post.subject}
+                    </MetaValue>
+                  </CardMeta>
                   <BookPrice>{post.price.toLocaleString()}원</BookPrice>
-                  <BookStatus status={post.status}>
+                  <BookStatus $status={post.status}>
                     {statusMap[post.status]}
                   </BookStatus>
-                </BookCard>
+                </Card>
               ))}
-            </BookGrid>
+            </Grid>
           ) : (
             <NoResults>
               <FaBook size={60} style={{marginBottom: '20px', opacity: 0.5}} />
-              <h3>등록된 게시글이 없습니다</h3>
-              <p>첫 번째 판매글을 등록해보세요!</p>
+              <h3>검색 결과가 없습니다</h3>
+              <p>다른 검색어를 시도해보세요</p>
             </NoResults>
           )}
         </ResultsSection>

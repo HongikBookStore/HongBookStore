@@ -325,6 +325,8 @@ const LoginButton = styled(Link)`
   gap: var(--space-2);
   position: relative;
   overflow: hidden;
+  z-index: 10;
+  pointer-events: auto;
 
   &::before {
     content: '';
@@ -367,6 +369,8 @@ const RegisterButton = styled(Link)`
   gap: var(--space-2);
   position: relative;
   overflow: hidden;
+  z-index: 10;
+  pointer-events: auto;
 
   &::before {
     content: '';
@@ -440,7 +444,7 @@ const UserDropdown = styled.div`
   transition: var(--transition-normal);
   z-index: var(--z-dropdown);
 
-  ${({ isOpen }) => isOpen && `
+  ${({ $isOpen }) => $isOpen && `
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -521,7 +525,7 @@ const MobileMenu = styled.div`
   visibility: hidden;
   transition: var(--transition-normal);
 
-  ${({ isOpen }) => isOpen && `
+  ${({ $isOpen }) => $isOpen && `
     opacity: 1;
     visibility: visible;
   `}
@@ -539,7 +543,7 @@ const MobileMenuContent = styled.div`
   transition: var(--transition-normal);
   overflow-y: auto;
 
-  ${({ isOpen }) => isOpen && `
+  ${({ $isOpen }) => $isOpen && `
     transform: translateX(0);
   `}
 `;
@@ -822,12 +826,12 @@ const Header = () => {
   const [notifications, setNotifications] = useState([]); // 빈 배열로 시작하여 알림 없음 상태 테스트
   
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   
   // Context API를 사용하여 로그인 상태와 로그아웃 함수를 가져옵니다.
   const { isLoggedIn, user, logout } = useContext(AuthCtx);
-  const { isWriting, writingType } = useWriting();
+  const { isWriting, writingType, hasUnsavedChanges } = useWriting();
 
   const userMenuRef = useRef(null); // 드롭다운 외부 클릭 감지를 위한 ref
   const isHome = location.pathname === '/';
@@ -847,7 +851,9 @@ const Header = () => {
 
 
   const handleLangChange = (e) => {
-    i18n.changeLanguage(e.target.value);
+    const newLang = e.target.value;
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('lang', newLang);
   };
 
   const handleLogout = async () => {
@@ -875,10 +881,13 @@ const Header = () => {
 
   // 안전한 네비게이션 함수
   const safeNavigate = (path) => {
+    console.log('safeNavigate 호출됨:', path, 'isWriting:', isWriting, 'hasUnsavedChanges:', hasUnsavedChanges);
     if (isWriting) {
+      console.log('작성 중이므로 경고 모달 표시');
       setPendingNavigation(path);
       setShowWarningModal(true);
     } else {
+      console.log('네비게이션 실행:', path);
       navigate(path);
     }
     // 메뉴가 열려있다면 닫기
@@ -892,6 +901,9 @@ const Header = () => {
     if (pendingNavigation) {
       navigate(pendingNavigation);
       setPendingNavigation(null);
+    } else {
+      // pendingNavigation이 없으면 기본적으로 마켓플레이스로 이동
+      navigate('/marketplace');
     }
   };
 
@@ -899,6 +911,29 @@ const Header = () => {
   const handleCancelExit = () => {
     setShowWarningModal(false);
     setPendingNavigation(null);
+  };
+
+  // 임시저장 후 나가기
+  const handleSaveDraftAndExit = async () => {
+    try {
+      // 임시저장 로직은 각 페이지에서 처리하도록 이벤트 발생
+      window.dispatchEvent(new CustomEvent('saveDraft'));
+      
+      // 임시저장 완료 후 바로 나가기
+      setShowWarningModal(false);
+      if (pendingNavigation) {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }
+    } catch (error) {
+      console.error('임시저장 실패:', error);
+      // 임시저장 실패 시에도 나가기
+      setShowWarningModal(false);
+      if (pendingNavigation) {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }
+    }
   };
 
   // 기본 아바타 생성 함수
@@ -1006,32 +1041,28 @@ const Header = () => {
                 </LangSelect>
               </LangSelectBox>
               <Logo to="/" onClick={(e) => {
-                if (isWriting) {
-                  e.preventDefault();
-                  safeNavigate('/');
-                }
+                e.preventDefault();
+                safeNavigate('/');
               }}>
-                홍책방
+                {t('title')}
               </Logo>
             </LeftBox>
 
-            {!isHome && (
-              <NavLinks>
-                {/* NavLinkItem들은 safeNavigate를 사용하도록 onClick을 추가 */}
-                <NavLinkItem to="/marketplace" className={location.pathname === '/marketplace' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}>
-                  책 거래 게시판
-                </NavLinkItem>
-                <NavLinkItem to="/my-transactions" className={location.pathname === '/my-transactions' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
-                  나의 거래
-                </NavLinkItem>
-                <NavLinkItem to="/hongikmap" className={location.pathname === '/hongikmap' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}>
-                  지도
-                </NavLinkItem>
-                <NavLinkItem to="/ai-chat" className={location.pathname === '/ai-chat' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/ai-chat'); }}>
-                  AI 챗봇
-                </NavLinkItem>
-              </NavLinks>
-            )}
+            <NavLinks>
+              {/* NavLinkItem들은 safeNavigate를 사용하도록 onClick을 추가 */}
+              <NavLinkItem to="/marketplace" className={location.pathname === '/marketplace' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}>
+                {t('marketplace')}
+              </NavLinkItem>
+              <NavLinkItem to="/my-transactions" className={location.pathname === '/my-transactions' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
+                {t('myTransactions')}
+              </NavLinkItem>
+              <NavLinkItem to="/hongikmap" className={location.pathname === '/hongikmap' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}>
+                {t('map')}
+              </NavLinkItem>
+              <NavLinkItem to="/ai-chat" className={location.pathname === '/ai-chat' ? 'active' : ''} onClick={(e) => { e.preventDefault(); safeNavigate('/ai-chat'); }}>
+                {t('aiChat')}
+              </NavLinkItem>
+            </NavLinks>
 
                         <RightBox>
               {isLoggedIn && (
@@ -1048,13 +1079,13 @@ const Header = () => {
                 {showNotifications && (
                   <NotificationDropdown>
                     <NotificationHeader>
-                      <NotificationTitle>알림</NotificationTitle>
+                      <NotificationTitle>{t('notifications')}</NotificationTitle>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <ClearAllButton onClick={addTestNotification}>
-                          테스트
+                          {t('test')}
                         </ClearAllButton>
                         <ClearAllButton onClick={clearAllNotifications}>
-                          모두 삭제
+                          {t('clearAll')}
                         </ClearAllButton>
                       </div>
                     </NotificationHeader>
@@ -1082,8 +1113,8 @@ const Header = () => {
                       ) : (
                         <NotificationEmpty>
                           <div style={{ fontSize: '2rem', marginBottom: '1rem', opacity: 0.5 }}>🔔</div>
-                          <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>알림이 없습니다</div>
-                          <div style={{ fontSize: '0.8rem' }}>새로운 메시지나 가격 변동이 있을 때 알려드립니다</div>
+                          <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>{t('noNotifications')}</div>
+                          <div style={{ fontSize: '0.8rem' }}>{t('notificationDesc')}</div>
                         </NotificationEmpty>
                       )}
                     </NotificationList>
@@ -1106,33 +1137,49 @@ const Header = () => {
                       </div>
                     )}
                   </UserAvatar>
-                  <UserDropdown isOpen={isDropdownOpen}>
-                    <DropdownItem to="/mypage" onClick={() => safeNavigate('/mypage')}>
-                      마이페이지
+                  <UserDropdown $isOpen={isDropdownOpen}>
+                    <DropdownItem to="/mypage" onClick={(e) => {
+                      e.preventDefault();
+                      safeNavigate('/mypage');
+                    }}>
+                      {t('mypage')}
                     </DropdownItem>
-                    <DropdownItem to="/my-transactions" onClick={() => safeNavigate('/my-transactions')}>
-                      나의 거래
+                    <DropdownItem to="/my-transactions" onClick={(e) => {
+                      e.preventDefault();
+                      safeNavigate('/my-transactions');
+                    }}>
+                      {t('myTransactions')}
                     </DropdownItem>
                     <LogoutButton onClick={handleLogout}>
-                      로그아웃
+                      {t('logout')}
                     </LogoutButton>
                   </UserDropdown>
                 </UserMenu>
               ) : (
                 <AuthButtons>
-                  <LoginButton onClick={() => safeNavigate('/login')}>
-                    로그인
+                  <LoginButton 
+                    to="/login" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('로그인 버튼 클릭됨');
+                      safeNavigate('/login');
+                    }}
+                  >
+                    {t('login')}
                   </LoginButton>
-                  <RegisterButton onClick={() => safeNavigate('/register')}>
-                    회원가입
+                  <RegisterButton 
+                    to="/register" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('회원가입 버튼 클릭됨');
+                      safeNavigate('/register');
+                    }}
+                  >
+                    {t('signup')}
                   </RegisterButton>
                 </AuthButtons>
               )}
-              {isWriting && (
-                <WritingIndicator>
-                  초안 저장 중
-                </WritingIndicator>
-              )}
+
             </RightBox>
 
             <MobileMenuButton onClick={toggleMobileMenu}>
@@ -1142,35 +1189,50 @@ const Header = () => {
         </NavContainer>
       </HeaderContainer>
 
-          <MobileMenu isOpen={isMobileMenuOpen} onClick={toggleMobileMenu}>
-        <MobileMenuContent isOpen={isMobileMenuOpen} onClick={(e) => e.stopPropagation()}>
+          <MobileMenu $isOpen={isMobileMenuOpen} onClick={toggleMobileMenu}>
+        <MobileMenuContent $isOpen={isMobileMenuOpen} onClick={(e) => e.stopPropagation()}>
           <MobileMenuHeader>
-            <h3>메뉴</h3>
+            <h3>{t('menu')}</h3>
             <MobileMenuClose onClick={toggleMobileMenu}>×</MobileMenuClose>
           </MobileMenuHeader>
           <MobileNavLinks>
-            <MobileNavLink to="/marketplace" onClick={() => safeNavigate('/marketplace')} style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
-              지금 시작하기 <span style={{marginLeft: 4}}>→</span>
+            <MobileNavLink to="/marketplace" onClick={(e) => {
+              e.preventDefault();
+              safeNavigate('/marketplace');
+            }} style={{fontWeight: '700', color: 'var(--primary)', justifyContent: 'center', fontSize: '1.1rem', background: 'var(--primary-50)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-4)'}}>
+              {t('getStarted')} <span style={{marginLeft: 4}}>→</span>
             </MobileNavLink>
             {isLoggedIn ? (
               <>
-                <MobileNavLink to="/mypage" onClick={() => safeNavigate('/mypage')}>
-                  마이페이지
+                <MobileNavLink to="/mypage" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/mypage');
+                }}>
+                  {t('mypage')}
                 </MobileNavLink>
-                <MobileNavLink to="/my-transactions" onClick={() => safeNavigate('/my-transactions')}>
-                  나의 거래
+                <MobileNavLink to="/my-transactions" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/my-transactions');
+                }}>
+                  {t('myTransactions')}
                 </MobileNavLink>
                 <MobileNavLink as="button" onClick={handleLogout}>
-                  로그아웃
+                  {t('logout')}
                 </MobileNavLink>
               </>
             ) : (
               <>
-                <MobileNavLink to="/login" onClick={() => safeNavigate('/login')}>
-                  로그인
+                <MobileNavLink to="/login" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/login');
+                }}>
+                  {t('login')}
                 </MobileNavLink>
-                <MobileNavLink to="/register" onClick={() => safeNavigate('/register')}>
-                  회원가입
+                <MobileNavLink to="/register" onClick={(e) => {
+                  e.preventDefault();
+                  safeNavigate('/register');
+                }}>
+                  {t('signup')}
                 </MobileNavLink>
               </>
             )}
@@ -1180,10 +1242,11 @@ const Header = () => {
 
       {/* 경고 모달 */}
       <WarningModal
-        isOpen={showWarningModal}
+        $isOpen={showWarningModal}
         onClose={handleCancelExit}
         onConfirm={handleConfirmExit}
         onCancel={handleCancelExit}
+        onSaveDraft={handleSaveDraftAndExit}
         type={writingType}
         showSaveDraft={writingType === 'sale'}
       />
