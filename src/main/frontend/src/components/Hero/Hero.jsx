@@ -391,13 +391,6 @@ const Hero = () => {
       buttonText: '지도 보기',
       backgroundImage: 'url("/images/onboarding-map.png")',
       background: '#f8f0f8'
-    },
-    {
-      title: 'AI 챗봇',
-      description: 'AI 챗봇에게 여러 학교 정보들을 확인하세요',
-      buttonText: 'AI 챗봇 시작하기',
-      backgroundImage: 'url("/images/onboarding-chatbot.png")',
-      background: '#f0f0f8'
     }
   ];
 
