@@ -456,6 +456,25 @@ const BookTitle = styled.h3`
   overflow: hidden;
 `;
 
+const BookCardTitle = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const BookSeller = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  font-weight: 500;
+`;
+
 const BookAuthor = styled.p`
   margin: 0;
   font-size: 0.9rem;
