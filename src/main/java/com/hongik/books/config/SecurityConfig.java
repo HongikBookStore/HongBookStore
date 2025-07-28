@@ -78,7 +78,8 @@ public class SecurityConfig {
  								"/api/naver/**",
                                 "/api/search/**",
                                 "/actuator/health",
-                                "/", "/login", "/oauth2/**", "/error" // 소셜 로그인 관련 경로 유지
+                                "/", "/login", "/oauth2/**", "/error", // 소셜 로그인 관련 경로 유지
+                                "/api/users/verify-student/**"
                         ).permitAll()
                         .anyRequest().authenticated()) // 그 외 요청은 인증 필요
                 // OAuth 로그인 설정

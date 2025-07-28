@@ -908,9 +908,9 @@ const MyPage = () => {
           setUserInfo(userData);
           setProfileName(userData.username);
           // 백엔드에서 받은 재학생 인증 여부를 상태에 반영!
-          setIsVerified(userData.studentVerified); 
-          if(userData.universityEmail) {
-            setSchoolEmail(userData.universityEmail);
+          setIsVerified(userData.studentVerified);
+          if (userData.univEmail) {
+            setSchoolEmail(userData.univEmail);
           }
         }
       } catch (error) {
@@ -1001,7 +1001,7 @@ const MyPage = () => {
       const token = localStorage.getItem('accessToken');
       // 우리 백엔드의 API (POST /api/users/verify-student/request) 호출
       const response = await axios.post('/api/users/verify-student/request', 
-        { universityEmail: schoolEmail },
+        { univEmail: schoolEmail },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

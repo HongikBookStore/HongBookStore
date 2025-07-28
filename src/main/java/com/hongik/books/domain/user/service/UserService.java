@@ -1,7 +1,9 @@
 package com.hongik.books.domain.user.service;
 
+import com.hongik.books.auth.jwt.JwtTokenProvider;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.common.dto.ApiResponse;
+import com.hongik.books.domain.user.dto.LoginResponseDTO;
 import com.hongik.books.domain.user.dto.StudentVerificationRequestDTO;
 import com.hongik.books.domain.user.dto.UserResponseDTO;
 import com.hongik.books.domain.user.dto.UserRequestDTO;
@@ -93,7 +95,11 @@ public class UserService {
 
         // userRepository.save(user); // @Transactional 어노테이션 덕분에 명시적으로 save 호출 안 해도 돼 (더티 체킹)
 
-        UserResponseDTO userResponse = new UserResponseDTO(user.getUsername(), user.getEmail());
+        UserResponseDTO userResponse = new UserResponseDTO(
+                user.getUsername(),
+                user.getEmail(),
+                user.isStudentVerified(),
+                user.getUnivEmail());
         return new ApiResponse<>(true, "사용자 정보가 성공적으로 수정되었습니다.", userResponse);
     }
 
@@ -120,7 +126,11 @@ public class UserService {
     public ApiResponse<UserResponseDTO> getUserById(Long userId) {
         return userRepository.findById(userId)
                 .map(user -> {
-                    UserResponseDTO userResponse = new UserResponseDTO(user.getUsername(), user.getEmail());
+                    UserResponseDTO userResponse = new UserResponseDTO(
+                            user.getUsername(),
+                            user.getEmail(),
+                            user.isStudentVerified(),
+                            user.getUnivEmail());
                     return new ApiResponse<>(true, "사용자 조회 성공", userResponse);
                 })
                 .orElse(new ApiResponse<>(false, "사용자를 찾을 수 없습니다.", null));
@@ -180,16 +190,17 @@ public class UserService {
     }
 
     /**
-     * 이메일 링크의 토큰을 검증하여 재학생 인증을 완료
+     * 이메일 링크의 토큰을 검증, 인증 성공 시 새로운 JWT 발급
      */
-    public ApiResponse<String> confirmStudentVerification(String token) {
+    public ApiResponse<User> confirmStudentVerification(String token) {
         // 토큰으로 사용자 조회
         User user = userRepository.findByEmailVerificationToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 토큰입니다."));
 
         // 인증 완료 처리
         user.completeStudentVerification();
+        user.upgradeToStudentRole();
 
-        return new ApiResponse<>(true, "재학생 인증이 성공적으로 완료되었습니다.", user.getUsername());
+        return new ApiResponse<>(true, "재학생 인증이 성공적으로 완료되었습니다.", user);
     }
 }

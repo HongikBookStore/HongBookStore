@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import styled, { keyframes } from 'styled-components';
 
@@ -92,6 +92,8 @@ function VerificationConfirmPage() {
   // 사용자에게 보여줄 메시지
   const [message, setMessage] = useState('재학생 인증 정보를 확인하고 있습니다...');
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     // 1. URL에서 'token' 값을 꺼내온다.
     const token = searchParams.get('token');
@@ -113,6 +115,17 @@ function VerificationConfirmPage() {
         if (response.data.success) {
           setStatus('success');
           setMessage(response.data.message);
+
+           // 새 토큰 저장 및 리다이렉트 로직
+          const newTokens = response.data.data;
+          localStorage.setItem('accessToken', newTokens.accessToken);
+          localStorage.setItem('refreshToken', newTokens.refreshToken);
+
+          // 2초 후에 마이페이지로 자동 이동
+          setTimeout(() => {
+            window.location.href = '/mypage';
+          }, 2000);
+
         } else {
           setStatus('error');
           setMessage(response.data.message || '알 수 없는 오류로 인증에 실패했습니다.');
@@ -127,7 +140,7 @@ function VerificationConfirmPage() {
 
     // 페이지가 로드될 때 검증 함수를 실행
     confirmVerification();
-  }, [searchParams]); // 이 effect는 searchParams가 변경될 때만 다시 실행 (사실상 한번만 실행)
+  }, [searchParams, navigate]); // 이 effect는 searchParams가 변경될 때만 다시 실행 (사실상 한번만 실행)
 
   // 3. 현재 상태(status)에 따라 다른 UI를 보여준다.
   const renderContent = () => {
@@ -139,8 +152,21 @@ function VerificationConfirmPage() {
               <i className="fas fa-check-circle"></i>
             </StatusIcon>
             <Title>인증 완료!</Title>
-            <Message>{message}</Message>
-            <StyledLink to="/login">로그인 하러 가기</StyledLink>
+            <Message>
+              {message}<br />
+              이제부터 재학생 전용 서비스를 이용할 수 있습니다.
+              잠시 후 마이페이지로 이동합니다.
+            </Message>
+            {/* 2초의 리다이렉트 시간을 시각적으로 보여주는 프로그레스 바 */}
+            <div style={{ width: '100%', background: '#e9ecef', borderRadius: '4px', height: '4px', marginTop: '1rem', overflow: 'hidden' }}>
+              <div style={{ width: '100%', background: '#7c3aed', height: '100%', borderRadius: '4px', animation: 'progress 2s linear forwards' }}></div>
+            </div>
+            <style>{`
+              @keyframes progress {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(0); }
+              }
+            `}</style>
           </>
         );
       case 'error':
@@ -150,8 +176,11 @@ function VerificationConfirmPage() {
               <i className="fas fa-times-circle"></i>
             </StatusIcon>
             <Title>인증 실패</Title>
-            <Message>{message}</Message>
-            <StyledLink to="/mypage">마이페이지로 돌아가기</StyledLink>
+            <Message>
+              {message}<br />
+              이메일의 인증 링크가 만료되었거나 올바르지 않을 수 있습니다.
+            </Message>
+            <StyledLink to="/mypage">마이페이지에서 다시 시도하기</StyledLink>
           </>
         );
       default: // 'verifying' 상태
@@ -159,7 +188,10 @@ function VerificationConfirmPage() {
           <>
             <Loader />
             <Title>인증 확인 중</Title>
-            <Message>{message}</Message>
+            <Message>
+              이메일 링크의 유효성을 확인하고 있습니다. <br />
+              페이지를 닫지 말고 잠시만 기다려주세요.
+            </Message>
           </>
         );
     }

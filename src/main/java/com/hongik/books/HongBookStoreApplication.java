@@ -11,9 +11,4 @@ public class HongBookStoreApplication {
     public static void main(String[] args) {
         SpringApplication.run(HongBookStoreApplication.class, args);
     }
-
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
 }

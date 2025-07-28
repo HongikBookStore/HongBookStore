@@ -459,22 +459,6 @@ const WantedWrite = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  // mock 데이터 (실제로는 API 호출)
-  const mockWantedPosts = [
-    {
-      id: '301',
-      title: '자바의 정석 구합니다',
-      isbn: '',
-      author: '김학생',
-      condition: '상',
-      price: '15000',
-      mainCategory: '전공',
-      subCategory: '공과대학',
-      detailCategory: '컴퓨터공학과',
-    },
-    // ... 필요한 만큼 추가 ...
-  ];
-
   // 컴포넌트 마운트 시 글쓰기 시작
   useEffect(() => {
     startWriting('wanted');
@@ -533,26 +517,6 @@ const WantedWrite = () => {
       window.removeEventListener('saveDraft', handleSaveDraftEvent);
     };
   }, [hasUnsavedChanges]);
-
-  // 수정 모드일 때 기존 데이터 불러오기
-  useEffect(() => {
-    if (isEdit) {
-      // 실제로는 API 호출
-      const found = mockWantedPosts.find(post => post.id === id);
-      if (found) {
-        setFormData({
-          title: found.title || '',
-          isbn: found.isbn || '',
-          author: found.author || '',
-          condition: found.condition || '',
-          price: found.price || '',
-          mainCategory: found.mainCategory || '',
-          subCategory: found.subCategory || '',
-          detailCategory: found.detailCategory || '',
-        });
-      }
-    }
-  }, [id, isEdit]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

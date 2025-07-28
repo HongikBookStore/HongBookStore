@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import GlobalStyles from './styles/GlobalStyles.js';
-import './i18n.js';
 import Header from './components/Header/Header.jsx';
+import i18n from './i18n.js';
 import Hero from './components/Hero/Hero.jsx';
 import Footer from './components/Footer/Footer.jsx';
 import { Loading } from './components/ui';
@@ -27,8 +27,7 @@ import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
-import i18n from './i18n.js';
-import VerificationConfirmPage from './pages/VerificationConfirmPage';
+import VerificationConfirmPage from './pages/VerificationConfirmPage/VerificationConfirmPage.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;

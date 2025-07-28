@@ -985,12 +985,9 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchInput, setSearchInput] = useState(''); // 실제 검색어 입력용
-  const [sortBy, setSortBy] = useState('createdAt');
   const [selectedMainCategory, setSelectedMainCategory] = useState('전체');
   const [selectedSubCategory, setSelectedSubCategory] = useState('전체');
   const [selectedDetailCategory, setSelectedDetailCategory] = useState('전체');
-  const [isLoading, setIsLoading] = useState(true);
   const [likedBooks, setLikedBooks] = useState(new Set());
   const [activeSubMenu, setActiveSubMenu] = useState('booksale');
   const [filterOpen, setFilterOpen] = useState(false);

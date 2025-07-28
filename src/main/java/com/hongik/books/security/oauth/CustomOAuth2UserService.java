@@ -42,7 +42,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         OAuth2UserInfo userInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, oAuth2User.getAttributes());
 
         // UserInfo를 바탕으로 DB에서 사용자를 찾거나, 없으면 새로 생성(회원가입)하고, 그 결과를 User 객체로
-        User user = saveOrUpdateUser(userInfo, registrationId);
+        User user = saveOrUpdateUser(userInfo);
 
         // 최종적으로 우리 서비스의 User 엔티티를 담은 CustomOAuth2User 객체를 생성하여 반환
         // 이 객체가 Spring Security의 인증 객체(Authentication)에 담겨 SuccessHandler로 전달
@@ -54,27 +54,35 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         );
     }
 
-    private User saveOrUpdateUser(OAuth2UserInfo userInfo, String registrationId) {
-        // 소셜 ID로 사용자를 찾기
-        User user = userRepository.findBySocialId(userInfo.getId())
+    /**
+     * 소셜 로그인 정보를 바탕으로 사용자를 저장하거나 업데이트
+     * @param userInfo 소셜 서비스에서 받아온 사용자 정보
+     * @return 저장되거나 업데이트된 User 엔티티
+     */
+    private User saveOrUpdateUser(OAuth2UserInfo userInfo) {
+        // 이메일로 사용자를 찾기
+        User user = userRepository.findByEmail(userInfo.getEmail())
                 // 이미 가입된 회원이면, 이름이나 프로필 사진 등이 변경되었을 수 있으므로 업데이트합니다.
-                .map(entity -> entity.updateOAuthUser(userInfo.getName()))
+                .map(entity -> entity.updateOAuthInfo(userInfo.getName(), userInfo.getPicture()))
                 // 가입되지 않은 회원이면, 새로 User 엔티티를 생성합니다.
-                .orElseGet(() -> createNewUser(userInfo, registrationId));
+                .orElseGet(() -> createNewUser(userInfo));
 
         return userRepository.save(user); // 저장 후 User 엔티티를 반환
     }
 
-    private User createNewUser(OAuth2UserInfo userInfo, String registrationId) {
-        log.info("{} ({}) 를 통해 신규 회원가입을 시작합니다.", userInfo.getEmail(), registrationId);
+    /**
+     * 소셜 로그인 정보를 바탕으로 새로운 사용자를 생성
+     * @param userInfo 소셜 서비스에서 받아온 사용자 정보
+     * @return 새로 생성된 User 엔티티
+     */
+    private User createNewUser(OAuth2UserInfo userInfo) {
+        log.info("신규 회원가입을 시작합니다: {}", userInfo.getEmail());
         return User.builder()
                 .username(userInfo.getName())
                 .email(userInfo.getEmail())
-                .socialId(userInfo.getId())
-                .socialType(registrationId)
-                .socialUser(true) // 소셜 로그인 사용자임을 표시
+                .profileImagePath(userInfo.getPicture())
                 .role(UserRole.USER) // 기본 역할
-                .password("")
+                .studentVerified(false) // 재학생 인증은 아직 안 된 상태
                 .build();
     }
 }

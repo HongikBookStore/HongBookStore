@@ -1152,7 +1152,7 @@ const ChatRoom = () => {
       amount: parseInt(price),
       currency: 'KRW',
       merchantId: 'hongbookstore',
-      orderId: `order_${chatId}_${Date.now()}`,
+      orderId: `order_${id}_${Date.now()}`,
       description: `책 구매: ${bookTitle}`,
       timestamp: new Date().toISOString()
     };

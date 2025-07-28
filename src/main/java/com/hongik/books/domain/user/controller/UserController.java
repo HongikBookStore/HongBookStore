@@ -1,7 +1,10 @@
 package com.hongik.books.domain.user.controller;
 
 import com.hongik.books.auth.dto.LoginUserDTO;
+import com.hongik.books.auth.jwt.JwtTokenProvider;
 import com.hongik.books.common.dto.ApiResponse;
+import com.hongik.books.domain.user.domain.User;
+import com.hongik.books.domain.user.dto.LoginResponseDTO;
 import com.hongik.books.domain.user.dto.StudentVerificationRequestDTO;
 import com.hongik.books.domain.user.dto.UserResponseDTO;
 import com.hongik.books.domain.user.dto.UserRequestDTO;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
     // private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
 //    @PostMapping("/signup")
 //    // @Valid 어노테이션을 사용해 유효성 검사를 활성화, 통과한 경우 서비스 코드 호출
@@ -196,13 +200,32 @@ public class UserController {
     }
 
     /**
-     * 사용자가 이메일에서 링크를 클릭했을 때, 토큰을 검증하고 인증을 완료하는 API
+     * 사용자가 이메일에서 링크를 클릭했을 때, 토큰을 검증하고 새 JWT를 반환하는 API
      */
     @GetMapping("/verify-student/confirm")
-    public ResponseEntity<ApiResponse<String>> confirmVerification(@RequestParam("token") String token) {
-        ApiResponse<String> response = userService.confirmStudentVerification(token);
-        // 실제 서비스에서는 성공 시, "인증 완료" 페이지로 리다이렉트 시키는 것이 더 좋아.
-        // 예: return ResponseEntity.status(HttpStatus.FOUND).location(URI.create("http://localhost:5173/verification-success")).build();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> confirmVerification(@RequestParam("token") String token) {
+        // 1. 서비스 호출: DB에 역할 변경을 요청하고, 최신 User 정보를 받는다.
+        ApiResponse<User> verificationResponse = userService.confirmStudentVerification(token);
+
+        if (!verificationResponse.success()) {
+            // 인증 실패 시, 실패 응답을 그대로 전달
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, verificationResponse.message(), null));
+        }
+
+        // 2. 토큰 생성: 서비스로부터 받은 '최신' User 정보로 새 토큰을 만든다.
+        User verifiedUser = verificationResponse.data();
+        String newAccessToken = jwtTokenProvider.createAccessToken(verifiedUser.getId());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(verifiedUser.getId());
+
+        LoginResponseDTO newTokens = new LoginResponseDTO(newAccessToken, newRefreshToken);
+
+        // 3. 최종 성공 응답: 새 토큰을 담아서 클라이언트에게 전달!
+        ApiResponse<LoginResponseDTO> finalResponse = new ApiResponse<>(
+                true,
+                verificationResponse.message(), // 서비스가 전달한 성공 메시지 사용
+                newTokens
+        );
+
+        return ResponseEntity.ok(finalResponse);
     }
 }

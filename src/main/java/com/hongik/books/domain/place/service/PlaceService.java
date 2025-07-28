@@ -33,7 +33,7 @@ public class PlaceService {
     public String searchPlaces(String query) {
         String apiUrl = "https://openapi.naver.com/v1/search/local.json";
 
-        URI uri = UriComponentsBuilder.fromHttpUrl(apiUrl)
+        URI uri = UriComponentsBuilder.fromUriString(apiUrl)
                 .queryParam("query", query)
                 .queryParam("display", 10)
                 .queryParam("start", 1)

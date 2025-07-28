@@ -442,40 +442,14 @@ const Hero = () => {
 
   return (
     <HeroSection>
-      <FloatingElement />
-      <FloatingElement />
-      <FloatingElement />
-      <BookIcon>📚</BookIcon>
-      <BookIcon>📖</BookIcon>
-      
-      <HeroContent>
-        <Title>홍북스토어</Title>
-        <Description>
-          홍익대학교 학생들을 위한 중고책 거래 플랫폼
-        </Description>
-        
-        <MainGrid>
-          <MainCard to="/marketplace">
-            <CardIcon>
-              <FaBookOpen />
-            </CardIcon>
-            <CardTitle>책거래게시판</CardTitle>
-          </MainCard>
-          
-          <MainCard to="/wanted">
-            <CardIcon>
-              <FaExchangeAlt />
-            </CardIcon>
-            <CardTitle>구해요</CardTitle>
-          </MainCard>
-          
-          <MainCard to="/hongikmap">
-            <CardIcon>
-              <FaMapMarkedAlt />
-            </CardIcon>
-            <CardTitle>지도</CardTitle>
-          </MainCard>
-        </MainGrid>
+      {/* 배경 일러스트레이션들 */}
+      {slides.map((slide, index) => (
+        <BackgroundIllustration
+          key={index}
+          $bgImage={slide.backgroundImage}
+          $active={currentSlide === index}
+        />
+      ))}
 
       <OnboardingSection $background={slides[currentSlide].background}>
         <OnboardingContainer>

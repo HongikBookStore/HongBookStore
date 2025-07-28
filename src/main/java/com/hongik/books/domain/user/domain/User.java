@@ -40,6 +40,7 @@ public class User {
     @Column(unique = true) // 한 학교 이메일로 한 계정만 인증 가능하도록 unique 설정
     private String univEmail; // 인증받을 대학교 이메일
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean studentVerified = false;
 
@@ -85,6 +86,16 @@ public class User {
     public void completeStudentVerification() {
         this.studentVerified = true;
         this.emailVerificationToken = null;
+    }
+
+    /**
+     * 사용자의 역할을 USER에서 STUDENT로 업그레이드
+     * 이미 학생이거나 관리자인 경우엔 변경하지 않습니다.
+     */
+    public void upgradeToStudentRole() {
+        if (this.role == UserRole.USER) {
+            this.role = UserRole.STUDENT;
+        }
     }
 
 //    public void verifyEmail() {
