@@ -157,5 +157,5 @@ naver:
   place:
     api:
       key:
-        id: ${NAVER_CLIENT_ID}
-      secret: ${NAVER_CLIENT_SECRET}
+        id: ${NAVER_SEARCH_ID}
+      secret: ${NAVER_SEARCH_SECRET}
