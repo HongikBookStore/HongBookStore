@@ -751,9 +751,13 @@ const MyTransactions = () => {
   const handleCancelReservation = (transactionId) => { openReasonModal('reserve-cancel', transactionId); };
 
   // 필터링 및 정렬 로직
-  const allTransactions = transactions.length > 0 ? transactions : mockTransactions;
+  const allTransactions = transactions;
   
   const getFilteredTransactions = () => {
+    if (!allTransactions || allTransactions.length === 0) {
+      return [];
+    }
+    
     let filtered = [];
     
     switch (activeFilter) {
@@ -795,6 +799,9 @@ const MyTransactions = () => {
   
   // 필터별 개수 계산
   const getFilterCounts = () => {
+    if (!allTransactions || allTransactions.length === 0) {
+      return { reserved: 0, completed: 0, all: 0 };
+    }
     const reserved = allTransactions.filter(t => t.status === 'RESERVED').length;
     const completed = allTransactions.filter(t => t.status === 'COMPLETED').length;
     const all = allTransactions.length;

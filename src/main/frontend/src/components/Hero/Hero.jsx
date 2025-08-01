@@ -422,14 +422,21 @@ const Hero = () => {
   };
 
   const handleSlideButtonClick = (slideIndex) => {
-    // 첫 번째 슬라이드(환영 메시지)인 경우 회원가입으로 이동
-    if (slideIndex === 0) {
-      localStorage.setItem('onboardingCompleted', 'true');
-      navigate('/register');
-    } else {
-      // 다른 슬라이드들은 마켓플레이스로 이동
-      localStorage.setItem('onboardingCompleted', 'true');
-      navigate('/marketplace');
+    localStorage.setItem('onboardingCompleted', 'true');
+    
+    // 슬라이드별로 다른 페이지로 이동
+    switch (slideIndex) {
+      case 0: // 홍책방 (환영 메시지)
+        navigate('/register');
+        break;
+      case 1: // 북마켓
+        navigate('/marketplace');
+        break;
+      case 2: // 홍익지도
+        navigate('/hongikmap');
+        break;
+      default:
+        navigate('/marketplace');
     }
   };
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef, memo } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, memo, useState } from 'react';
+import styled from 'styled-components';
 
 // 스크립트가 중복 로드되는 것을 방지하기 위한 전역 플래그
 let isNaverMapScriptLoaded = false;
@@ -19,6 +20,7 @@ const NaverMapComponent = forwardRef(({
     const userMarkerRef = useRef(null);
     const routeLineRef = useRef(null);
     const routeMarkersRef = useRef([]);
+
 
     const getCategoryIcon = (categoryId) => {
         switch (categoryId) {
@@ -65,6 +67,7 @@ const NaverMapComponent = forwardRef(({
         }
 
         const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+        console.log('Naver Maps Client ID:', clientId); // 디버깅용
         if (!clientId) {
             console.error("Naver Maps Client ID가 .env 파일에 설정되지 않았습니다.");
             return;
@@ -73,10 +76,14 @@ const NaverMapComponent = forwardRef(({
         isNaverMapScriptLoaded = true;
 
         const script = document.createElement('script');
-        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
+        // 서브모듈 추가 및 타임아웃 설정
+        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
         script.async = true;
-        script.onerror = () => {
-            console.error('네이버 지도 스크립트 로드에 실패했습니다.');
+        
+        script.onerror = (error) => {
+            console.error('네이버 지도 스크립트 로드에 실패했습니다:', error);
+            console.error('Client ID:', clientId);
+            console.error('현재 도메인:', window.location.hostname);
             isNaverMapScriptLoaded = false;
         };
         script.onload = () => {
@@ -162,8 +169,11 @@ const NaverMapComponent = forwardRef(({
         }
     }, [mapClickMode]);
 
+
+
     return <div id="map" ref={mapElementRef} style={{ width: '100%', height: '100%' }} />;
 });
 
 const MemoizedNaverMap = memo(NaverMapComponent);
+
 export default MemoizedNaverMap;
