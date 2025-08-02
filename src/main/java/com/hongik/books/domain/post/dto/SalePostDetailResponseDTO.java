@@ -1,81 +1,84 @@
 package com.hongik.books.domain.post.dto;
 
 import com.hongik.books.domain.post.domain.Condition;
+import com.hongik.books.domain.post.domain.PostImage;
 import com.hongik.books.domain.post.domain.SalePost;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 판매 게시글 상세 조회를 위한 응답 DTO
+ * 게시글 정보, 책 정보, 판매자 정보, 그리고 여러 장의 이미지 URL을 모두 포함
  */
-public record SalePostDetailResponseDTO(
-        // SalePost 정보
-        Long postId,
-        String postTitle,
-        String postContent,
-        int price,
-        SalePost.SaleStatus status,
-        LocalDateTime createdAt,
-        Condition writingCondition,
-        Condition tearCondition,
-        Condition waterCondition,
-        boolean negotiable,
-        int views,
+@Getter
+public class SalePostDetailResponseDTO {
 
-        // Book 정보
-        Long bookId,
-        String bookTitle,
-        String author,
-        String publisher,
-        String coverImageUrl,
-        Integer originalPrice,
+    // SalePost 정보
+    private final Long postId;
+    private final String postTitle;
+    private final String postContent;
+    private final int price;
+    private final SalePost.SaleStatus status;
+    private final LocalDateTime createdAt;
+    private final Condition writingCondition;
+    private final Condition tearCondition;
+    private final Condition waterCondition;
+    private final boolean negotiable;
+    private final int views;
 
-        // User 정보 (판매자)
-        Long sellerId,
-        String sellerNickname,
-        String sellerProfileImageUrl // 판매자 프로필 이미지
-) {
+    // Book 정보
+    private final Long bookId;
+    private final String bookTitle;
+    private final String author;
+    private final String publisher;
+    private final Integer originalPrice;
+
+    // User 정보 (판매자)
+    private final Long sellerId;
+    private final String sellerNickname;
+    private final String sellerProfileImageUrl;
+
+    // PostImage 정보 (여러 장의 이미지 URL)
+    private final List<String> postImageUrls;
+
     // Entity를 DTO로 변환하는 정적 팩토리 메서드
     public static SalePostDetailResponseDTO fromEntity(SalePost salePost) {
-        Objects.requireNonNull(salePost, "SalePost cannot be null");
-        return new SalePostDetailResponseDTO(
-                salePost.getId(),
-                salePost.getPostTitle(),
-                salePost.getPostContent(),
-                salePost.getPrice(),
-                salePost.getStatus(),
-                salePost.getCreatedAt(),
-                salePost.getWritingCondition(),
-                salePost.getTearCondition(),
-                salePost.getWaterCondition(),
-                salePost.isNegotiable(),
-                salePost.getViews(),
-
-                // 연관된 Book 정보 매핑
-                salePost.getBook() != null ? salePost.getBook().getId() : null,
-                salePost.getBook() != null ? salePost.getBook().getTitle() : "정보 없음",
-                salePost.getBook() != null ? salePost.getBook().getAuthor() : "정보 없음",
-                salePost.getBook() != null ? salePost.getBook().getPublisher() : "정보 없음",
-                salePost.getBook() != null ? salePost.getBook().getCoverImageUrl() : null,
-                salePost.getBook() != null ? salePost.getBook().getOriginalPrice(): null,
-
-                // 연관된 User(Seller) 정보 매핑 (비밀번호 등 민감 정보는 제외)
-                salePost.getSeller() != null ? salePost.getSeller().getId() : null,
-                salePost.getSeller() != null ? salePost.getSeller().getUsername() : "알 수 없음", // User Entity의 username을 닉네임으로 사용
-                salePost.getSeller() != null ? salePost.getSeller().getProfileImagePath() : null
-        );
+        return new SalePostDetailResponseDTO(salePost);
     }
 
-    // 필요시 편의 메서드 추가
-    public boolean hasDiscount() {
-        return originalPrice != null && price < originalPrice;
-    }
+    // 생성자를 private으로 선언하여 정적 팩토리 메서드 사용을 유도
+    private SalePostDetailResponseDTO(SalePost salePost) {
+        // SalePost 정보 매핑
+        this.postId = salePost.getId();
+        this.postTitle = salePost.getPostTitle();
+        this.postContent = salePost.getPostContent();
+        this.price = salePost.getPrice();
+        this.status = salePost.getStatus();
+        this.createdAt = salePost.getCreatedAt();
+        this.writingCondition = salePost.getWritingCondition();
+        this.tearCondition = salePost.getTearCondition();
+        this.waterCondition = salePost.getWaterCondition();
+        this.negotiable = salePost.isNegotiable();
+        this.views = salePost.getViews();
 
-    public double getDiscountRate() {
-        if (originalPrice == null || originalPrice <= 0) {
-            return 0.0;
-        }
-        return ((double) (originalPrice - price) / originalPrice) * 100;
+        // 연관된 Book 정보 매핑
+        this.bookId = salePost.getBook().getId();
+        this.bookTitle = salePost.getBook().getTitle();
+        this.author = salePost.getBook().getAuthor();
+        this.publisher = salePost.getBook().getPublisher();
+        this.originalPrice = salePost.getBook().getOriginalPrice();
+
+        // 연관된 User(Seller) 정보 매핑
+        this.sellerId = salePost.getSeller().getId();
+        this.sellerNickname = salePost.getSeller().getUsername();
+        this.sellerProfileImageUrl = salePost.getSeller().getProfileImagePath();
+
+        // 연관된 PostImage 정보 매핑
+        this.postImageUrls = salePost.getPostImages().stream()
+                .map(PostImage::getImageUrl)
+                .collect(Collectors.toList());
     }
 }

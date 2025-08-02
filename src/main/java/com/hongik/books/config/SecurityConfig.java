@@ -7,16 +7,13 @@ import com.hongik.books.security.oauth.handler.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -36,19 +33,6 @@ public class SecurityConfig {
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
 
-    /*
-    // 모든 서비스·컨트롤러에서 주입해 쓰는 PasswordEncoder
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean // AuthenticationManager 빈을 생성 (인증 요청 처리)
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
-    */
-
     @Bean // 필터 체인 구성
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -62,26 +46,32 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // HTTP 요청에 대한 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
+                        // --- 누구나 접근 가능한 API ---
                         .requestMatchers(
-								"/api/places/**",
+                                "/api/places/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                //"/api/auth/password/**",
-                                //"/api/auth/login",
-                                //"/api/users/signup",
-                                //"/api/users/id-check",
-                                //"/api/users/email-check",
-                                //"/api/users/find-id",
-                                //"/api/users/verify/**",
                                 "/api/images/**",
-                                "/api/posts/**",
- 								"/api/naver/**",
-                                "/api/search/**",
+                                "/api/naver/**",
                                 "/actuator/health",
-                                "/", "/login", "/oauth2/**", "/error", // 소셜 로그인 관련 경로 유지
-                                "/api/users/verify-student/**"
+                                "/", "/login", "/oauth2/**", "/error"
                         ).permitAll()
-                        .anyRequest().authenticated()) // 그 외 요청은 인증 필요
+                        // 인증 관련 API는 모두 허용
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // 학생 인증 확인 링크는 허용
+                        .requestMatchers("/api/users/verify-student/confirm").permitAll()
+                        // 게시글 조회(GET)와 책 검색 API는 모두 허용
+                        .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
+                        .requestMatchers("/api/search/**").permitAll()
+
+                        // --- 로그인이 필요한 API ---
+                        // [추가] '나의' 정보와 관련된 모든 API는 인증 필요
+                        .requestMatchers("/api/my/**").authenticated()
+                        // [추가] 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
+                        .requestMatchers("/api/posts/**").authenticated()
+
+                        // 그 외 요청은 인증 필요
+                        .anyRequest().authenticated())
                 // OAuth 로그인 설정
                 .oauth2Login(o -> o
                         .successHandler(oAuth2LoginSuccessHandler)

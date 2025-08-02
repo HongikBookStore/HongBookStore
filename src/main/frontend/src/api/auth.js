@@ -15,28 +15,6 @@ export const checkEmail = (email) =>
 export const findIdByEmail = (email) =>
   api.get(`/users/find-id?email=${encodeURIComponent(email)}`);
 
-// 일반 로그인
-// 성공 시 토큰 객체를 반환하여 Context가 상태를 관리
-export const login = async (username, password) => {
-  try {
-    const response = await api.post('/auth/login', { username, password });
-
-    // 백엔드 응답이 { success: true, data: { accessToken, ... } } 구조로 옵니다.
-    // api 인터셉터에서 이미 response.data를 반환하므로 response가 실제 응답 데이터입니다.
-    if (response && response.success) {
-      // 성공 시, 토큰이 담긴 data 객체를 반환합니다.
-      return response.data; // { accessToken, refreshToken }
-    } else {
-      // API 호출은 성공했지만, 백엔드에서 실패 응답을 보낸 경우
-      throw new Error(response?.message || '아이디 또는 비밀번호가 일치하지 않습니다.');
-    }
-  } catch (error) {
-    console.error('로그인 API 호출 중 에러 발생:', error);
-    // 컴포넌트에서 에러 메시지를 표시할 수 있도록 에러를 다시 던집니다.
-    throw error;
-  }
-};
-
 // 내 정보 조회 (토큰 기반)
 // 소셜 로그인 성공 후, 또는 페이지 새로고침 시 사용자 정보를 가져올 때 사용됩니다.
 export const getMyInfo = async () => {
@@ -63,25 +41,6 @@ export const getMyInfo = async () => {
     }
   } catch (error) {
     console.error('내 정보 조회 API 호출 실패:', error);
-    throw error;
-  }
-};
-
-// 비밀번호 변경
-export const changePassword = async (currentPassword, newPassword) => {
-  try {
-    const response = await api.put('/users/password', {
-      currentPassword,
-      newPassword
-    });
-
-    if (response && response.success) {
-      return response.data;
-    } else {
-      throw new Error(response?.message || '비밀번호 변경에 실패했습니다.');
-    }
-  } catch (error) {
-    console.error('비밀번호 변경 API 호출 실패:', error);
     throw error;
   }
 };

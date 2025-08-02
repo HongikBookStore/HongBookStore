@@ -35,9 +35,6 @@ public class Book {
     @Column(nullable = false)
     private String publisher;
 
-    @Column(nullable = false, length = 2048)
-    private String coverImageUrl;
-
     @Column(nullable = false)
     private boolean isCustom = false;
 
@@ -54,12 +51,11 @@ public class Book {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Book(String isbn, String title, String author, String publisher, String coverImageUrl, boolean isCustom, Integer originalPrice) {
+    public Book(String isbn, String title, String author, String publisher, boolean isCustom, Integer originalPrice) {
         this.isbn = isbn;
         this.title = title;
         this.author = author;
         this.publisher = publisher;
-        this.coverImageUrl = coverImageUrl;
         this.isCustom = isCustom;
         this.originalPrice = originalPrice;
     }
