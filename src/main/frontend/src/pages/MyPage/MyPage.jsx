@@ -757,12 +757,12 @@ const MyPage = () => {
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [showVerificationForm, setShowVerificationForm] = useState(false);
   const [schoolEmail, setSchoolEmail] = useState(''); // 사용자가 입력할 학교 이메일
-
   // 인증 요청 후 서버 메시지를 담을 상태
   const [verificationMessage, setVerificationMessage] = useState({ type: '', text: '' }); 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // API 호출 중복 방지
 
   const { locations, setDefaultLocation, addLocation, deleteLocation } = useLocation();
 
@@ -789,16 +789,26 @@ const MyPage = () => {
   const userScore = 85; // 사용자 평점 (실제로는 API에서 가져올 값)
 
   const fetchProfile = useCallback(async () => {
+    // 페이지가 로드될 때마다 항상 최신 정보를 가져오도록 setLoading(true) 추가
+    setLoading(true); 
     try {
       const response = await axios.get('/api/my/profile', { headers: getAuthHeader() });
-      setProfile(response.data.data);
+      if (response.data.success) {
+        const userProfile = response.data.data;
+        setProfile(userProfile);
+        setProfileName(userProfile.username); // 닉네임 수정용 상태에도 반영
+        if (userProfile.universityEmail) {
+          setSchoolEmail(userProfile.universityEmail);
+        }
+      }
     } catch (error) {
       console.error("프로필 정보를 불러오는 데 실패했습니다.", error);
-      // navigate('/login');
+      // 토큰 만료 등의 이유로 실패 시 로그인 페이지로 이동
+      navigate('/login');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     fetchProfile();
@@ -861,23 +871,26 @@ const MyPage = () => {
   };
 
   const handleSendVerification = async () => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     setVerificationMessage({ type: '', text: '' });
 
     // 이메일 형식 검증 (두 도메인 모두 허용)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@(mail\.hongik\.ac\.kr|g\.hongik\.ac\.kr)$/;
     if (!emailRegex.test(schoolEmail)) {
       setVerificationMessage({ type: 'error', text: '홍익대학교 메일 형식(@mail.hongik.ac.kr 또는 @g.hongik.ac.kr)이 올바르지 않습니다.' });
-      setIsLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
     try {
       await axios.post('/api/my/verification/request-code', { schoolEmail }, { headers: getAuthHeader() });
       setVerificationMessage({ type: 'info', text: `${schoolEmail}로 인증 메일을 보냈습니다. 메일함을 확인해주세요.` });
+      setShowVerificationForm(false); // 성공 시 폼 숨기기
     } catch (error) {
       const message = error.response?.data?.message || "인증 메일 발송 중 오류가 발생했습니다.";
       setVerificationMessage({ type: 'error', text: message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1044,10 +1057,10 @@ const MyPage = () => {
                 placeholder="id@g.hongik.ac.kr / id@mail.hongik.ac.kr"
                 value={schoolEmail}
                 onChange={(e) => setSchoolEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
-              <SmallButton onClick={handleSendVerification} disabled={isLoading}>
-                {isLoading ? '전송 중...' : '인증 메일 발송'}
+              <SmallButton onClick={handleSendVerification} disabled={isSubmitting}>
+                {isSubmitting ? '전송 중...' : '인증 메일 발송'}
               </SmallButton>
             </VerificationForm>
           )}
@@ -1060,10 +1073,10 @@ const MyPage = () => {
             </VerificationMessage>
           )}
 
-          {isVerified && (
+          {profile.studentVerified && (
             <VerificationMessage className="success">
               <i className="fas fa-check-circle"></i>
-              {userInfo.universityEmail} 계정으로 재학생 인증이 완료되었습니다.
+              {profile.universityEmail} 계정으로 재학생 인증이 완료되었습니다.
             </VerificationMessage>
           )}
         </SettingsSection>
