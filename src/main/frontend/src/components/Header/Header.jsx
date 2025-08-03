@@ -7,7 +7,6 @@ import bookIcon from '../../assets/book.svg';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { useWriting } from '../../contexts/WritingContext';
 import WarningModal from '../WarningModal/WarningModal';
-import { logout as apiLogout } from '../../api/auth';
 import { FaBell, FaTimes, FaComment, FaHeart, FaTag } from 'react-icons/fa';
 
 const slideDown = keyframes`

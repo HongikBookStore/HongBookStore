@@ -1,44 +1,68 @@
-import { createContext, useState, useEffect } from 'react';
-import { logout as apiLogout } from '../api/auth'; // api/auth.js의 logout 함수 import
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { getMyInfo, logout as apiLogout } from '../api/auth';
+import api from '../lib/api';
 
-// Context의 기본 모양을 정의합니다. 자동완성 등 개발 편의성을 높여줍니다.
+// Context의 기본 모양을 정의
 export const AuthCtx = createContext({
   token: null,
   user: null,
   isLoggedIn: false,
-  save: (token, user) => {},
+  isLoading: true, // 사용자 정보를 불러오는 중인지 확인하는 상태
+  login: (token) => {},
   logout: async () => {},
 });
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('accessToken'));
-  const [user, setUser] = useState(() => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      return storedUser ? JSON.parse(storedUser) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isLoggedIn = !!token;
+  // 토큰이 있으면 서버에 내 정보를 물어보는 useEffect
+  useEffect(() => {
+    // axios 인터셉터를 설정해서, 모든 요청에 토큰을 자동으로 담아주도록 설정
+    const setAuthHeader = (token) => {
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } else {
+        delete api.defaults.headers.common['Authorization'];
+      }
+    };
 
-  const save = (newToken, newUser) => {
+    const fetchUser = async () => {
+      if (token) {
+        setAuthHeader(token); // 헤더 설정
+        try {
+          const userData = await getMyInfo(); // 서버에 내 정보 요청
+          setUser(userData); // 성공 시 사용자 정보 설정
+        } catch (error) {
+          // 토큰이 유효하지 않은 경우 등...
+          console.error("자동 로그인 실패. 토큰을 삭제합니다.", error);
+          // 실패 시 토큰을 지우고 로그아웃 처리
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          setToken(null);
+          setUser(null);
+          setAuthHeader(null);
+        }
+      }
+      setIsLoading(false); // 정보 조회가 끝나면 로딩 상태 해제
+    };
+
+    fetchUser();
+  }, [token]); // 이 effect는 'token' 상태가 바뀔 때마다 실행
+
+  const isLoggedIn = !!token && !!user;
+
+  // 소셜 로그인 콜백 페이지에서 토큰을 저장할 때 사용할 함수
+  const login = (newToken) => {
     localStorage.setItem('accessToken', newToken);
-    if (newUser) {
-      localStorage.setItem('user', JSON.stringify(newUser));
-    }
-    setToken(newToken);
-    setUser(newUser);
+    setToken(newToken); // 토큰 상태를 업데이트하면, 위의 useEffect가 자동으로 실행
   };
 
   const logout = async () => {
     try {
-      // api/auth.js의 logout을 호출하여 서버와 통신하고 로컬 스토리지를 정리합니다.
-      await apiLogout();
+      await apiLogout(); // 서버와 통신하고 로컬 스토리지를 정리
     } finally {
-      // React에게 상태가 변했음을 알려 UI를 다시 그리도록 합니다.
-      // 이 부분이 바로 UI가 즉시 바뀌는 마법의 코드입니다!
       setToken(null);
       setUser(null);
     }
@@ -47,14 +71,16 @@ export function AuthProvider({ children }) {
   const contextValue = {
     token,
     user,
-    isLoggedIn, // isLoggedIn 추가
-    save,
-    logout,     // logout 함수 추가
+    isLoggedIn,
+    isLoading,
+    login,
+    logout,
   };
 
   return (
       <AuthCtx.Provider value={contextValue}>
-        {children}
+        {/* 로딩 중일 때는 아무것도 안 보여주거나 로딩 스피너 */}
+        {!isLoading && children}
       </AuthCtx.Provider>
   );
 }

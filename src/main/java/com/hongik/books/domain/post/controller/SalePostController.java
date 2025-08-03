@@ -26,31 +26,16 @@ public class SalePostController {
     private final SalePostService salePostService;
 
     /**
-     * [검색된 책]으로 새 판매 게시글을 생성하는 API
-     * [POST] /api/posts
-     * @AuthenticationPrincipal 어노테이션으로 로그인한 사용자 정보를 직접 받아옵니다.
-     * @param request JSON 형식의 게시글 데이터
+     * 판매 게시글 목록을 페이지네이션및 동적 조건으로 조회하는 API
+     * [GET] /api/posts?query=자바&page=0&size=10&sort=createdAt,desc
      */
-    @PostMapping
-    public ResponseEntity<Void> createSalePostFromSearch(
-            @RequestBody SalePostCreateRequestDTO request,
-            @AuthenticationPrincipal LoginUserDTO loginUser) {
-        // 실제 로그인한 사용자의 ID를 서비스에 전달
-        Long postId = salePostService.createSalePostFromSearch(request, loginUser.id());
-        return ResponseEntity.created(URI.create("/api/posts/" + postId)).build();
-    }
+    @GetMapping
+    public ResponseEntity<Page<SalePostSummaryResponseDTO>> getSalePosts(
+            @ModelAttribute PostSearchCondition condition, // @ModelAttribute로 검색 조건 DTO를 받음
+            @PageableDefault(size = 10, sort = "createdAt,desc") Pageable pageable) {
 
-    /**
-     * [직접 등록]으로 새 판매 게시글을 생성하는 API (이미지 포함)
-     * [POST] /api/posts/custom
-     */
-    @PostMapping("/custom")
-    public ResponseEntity<Void> createSalePostCustom(
-            @RequestPart("request") SalePostCustomCreateRequestDTO request,
-            @RequestPart("image") MultipartFile image,
-            @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException {
-        Long postId = salePostService.createSalePostCustom(request, image, loginUser.id());
-        return ResponseEntity.created(URI.create("/api/posts/" + postId)).build();
+        Page<SalePostSummaryResponseDTO> posts = salePostService.getSalePosts(condition, pageable);
+        return ResponseEntity.ok(posts);
     }
 
     /**
@@ -65,16 +50,41 @@ public class SalePostController {
     }
 
     /**
-     * 판매 게시글 목록을 페이지네이션하여 조회하는 API
-     * [GET] /api/posts?page=0&size=10&sort=createdAt,desc
+     * [ISBN 조회된 책]으로 새 판매 게시글을 생성하는 API
+     * [POST] /api/posts
      */
-    @GetMapping
-    public ResponseEntity<Page<SalePostSummaryResponseDTO>> getSalePosts(
-            // @PageableDefault: 기본 페이지 크기, 정렬 기준 등을 설정
-            @PageableDefault(size = 10, sort = "createdAt,desc") Pageable pageable) {
+    @PostMapping
+    public ResponseEntity<Void> createSalePostFromSearch(
+            @RequestPart("request") SalePostCreateRequestDTO request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException{
+        // 실제 로그인한 사용자의 ID를 서비스에 전달
+        Long postId = salePostService.createSalePostFromSearch(request, images, loginUser.id());
+        return ResponseEntity.created(URI.create("/api/posts/" + postId)).build();
+    }
 
-        Page<SalePostSummaryResponseDTO> posts = salePostService.getSalePosts(pageable);
-        return ResponseEntity.ok(posts);
+    /**
+     * ISBN 없는 경우 (프린트물 교재 등)
+     * [직접 등록]으로 새 판매 게시글을 생성하는 API
+     * [POST] /api/posts/custom
+     */
+    @PostMapping("/custom")
+    public ResponseEntity<Void> createSalePostCustom(
+            @RequestPart("request") SalePostCustomCreateRequestDTO request,
+            @RequestPart("images") List<MultipartFile> images,
+            @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException {
+        Long postId = salePostService.createSalePostCustom(request, images, loginUser.id());
+        return ResponseEntity.created(URI.create("/api/posts/" + postId)).build();
+    }
+
+    /**
+     * 내 판매글 목록을 조회하는 API
+     * [GET] /api/my/posts
+     */
+    @GetMapping("/my")
+    public ResponseEntity<List<MyPostSummaryResponseDTO>> getMySalePosts(@AuthenticationPrincipal LoginUserDTO loginUser) {
+        List<MyPostSummaryResponseDTO> myPosts = salePostService.getMySalePosts(loginUser.id());
+        return ResponseEntity.ok(myPosts);
     }
 
     /**
@@ -86,7 +96,6 @@ public class SalePostController {
             @PathVariable Long postId,
             @RequestBody SalePostUpdateRequestDTO request,
             @AuthenticationPrincipal LoginUserDTO loginUser) {
-
         salePostService.updateSalePost(postId, request, loginUser.id());
         return ResponseEntity.ok().build();
     }
@@ -102,16 +111,6 @@ public class SalePostController {
 
         salePostService.deleteSalePost(postId, loginUser.id());
         return ResponseEntity.noContent().build(); // 내용 없이 성공(204 No Content) 응답
-    }
-
-    /**
-     * 내 판매글 목록을 조회하는 API
-     * [GET] /api/my/posts
-     */
-    @GetMapping("/my")
-    public ResponseEntity<List<MyPostSummaryResponseDTO>> getMySalePosts(@AuthenticationPrincipal LoginUserDTO loginUser) {
-        List<MyPostSummaryResponseDTO> myPosts = salePostService.getMySalePosts(loginUser.id());
-        return ResponseEntity.ok(myPosts);
     }
 
     /**

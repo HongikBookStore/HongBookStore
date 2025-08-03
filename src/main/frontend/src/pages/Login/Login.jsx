@@ -1,16 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
 import Header from '../../components/Header/Header.jsx';
 import naverLogo from '../../assets/naver.png';
 import kakaoLogo from '../../assets/kakao.png';
 import googleLogo from '../../assets/google.png';
-
-import { login, getMyInfo } from '../../api/auth';      // ① 로그인 API
-import { AuthCtx } from '../../contexts/AuthContext'; // ② 전역 저장소
 
 const LoginContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -35,46 +31,27 @@ const Title = styled.h2`
   letter-spacing: -1px;
 `;
 
-const StyledForm = styled.form`
-  width: 100%;
+const Subtitle = styled.p`
+  font-size: 1.1rem;
+  color: var(--text-light);
+  margin-bottom: 3rem;
+  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
+  line-height: 1.6;
+`;
+
+const SocialButtonContainer = styled.div`
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   gap: 1.5rem;
+  margin-top: 1rem;
 `;
 
-const InputGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const Input = styled.input`
-  flex: 1;
-  padding: 1rem 1.2rem;
-  border: 1.5px solid var(--border);
-  border-radius: 1.2rem;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 1.15rem;
-  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
-  font-weight: 600;
-  transition: var(--transition);
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-  }
-`;
-
-const SubmitButton = styled.button`
-  padding: 0.9rem 1.7rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
-  color: white;
-  background: var(--primary);
-  border: none;
-  border-radius: 1.5rem;
+const SocialButton = styled.button`
+  width: 60px;
+  height: 60px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: white;
   cursor: pointer;
   transition: var(--transition);
   letter-spacing: -0.5px;
@@ -175,211 +152,64 @@ const SocialBtnText = styled.span`
   font-weight: 600;
 `;
 
-const RememberMeGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 1rem 0;
-  font-size: 0.95rem;
-  color: var(--text);
-`;
-
-const Checkbox = styled.input`
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--primary);
-`;
-
-const LinkGroup = styled.div`
-  margin-top: 1.5rem;
-  text-align: center;
-  font-size: 1rem;
-  color: var(--primary);
-  span {
-    cursor: pointer;
-    color: var(--primary);
-    margin: 0 0.5rem;
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-`;
-
-const Message = styled.div`
-  color: ${({ color }) => color || 'var(--primary)'};
-  font-size: 1rem;
-  margin: 1rem 0 0 2px;
-  text-align: center;
+const ErrorMessage = styled.div`
+  color: #ef4444;
+  font-size: 0.9rem;
+  margin-top: 2rem;
+  padding: 0.75rem 1.25rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 `;
 
 function Login() {
   const { t, i18n } = useTranslation();
-  const { save } = useContext(AuthCtx);
-  const [form, setForm] = useState({
-    username: '',
-    password: '',
-  });
-  const [msg, setMsg] = useState('');
-  const [msgColor, setMsgColor] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [lang, setLang] = useState(i18n.language || 'ko');
-  
-  useEffect(() => {
-    setLang(i18n.language);
-    // 저장된 로그인 정보 불러오기
-    const savedUsername = localStorage.getItem('rememberedUsername');
-    const savedPassword = localStorage.getItem('rememberedPassword');
-    const remembered = localStorage.getItem('rememberMe') === 'true';
-    
-    if (remembered && savedUsername && savedPassword) {
-      setForm({
-        username: savedUsername,
-        password: savedPassword,
-      });
-      setRememberMe(true);
-    }
-  }, [i18n.language]);
-  const navigate = useNavigate();
+  const [errorMsg, setErrorMsg] = useState('');
   const [searchParams] = useSearchParams(); // URL 파라미터 읽기
-  // 소셜 로그인 실패 시 메시지를 보여주기 위한 useEffect
+
+  const [lang, setLang] = useState(i18n.language || 'ko');
+
+  // 소셜 로그인 실패 시, URL에 담겨온 에러 메시지를 화면에 표시
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
-      setMsg('소셜 로그인에 실패했습니다. 다시 시도해주세요.');
-      setMsgColor('red');
+      setErrorMsg('소셜 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   }, [searchParams]);
 
-  const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setMsg('');
+  // 소셜 로그인 버튼 클릭 시, 백엔드의 인증 URL로 이동시키는 함수
+  const handleSocialLogin = (provider) => {
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
 
+  // 언어 변경 핸들러
   const handleLangChange = e => {
     setLang(e.target.value);
     i18n.changeLanguage(e.target.value);
-  };
-
-  const handleSubmit = async e => {
-    e.preventDefault();
-    if (!form.username.trim() || !form.password) {
-      setMsg(t('loginRequired'));
-      setMsgColor('red');
-      return;
-    }
-
-    try {
-      // 1. 일반 로그인 API를 호출하여 토큰들을 받습니다.
-      const { accessToken, refreshToken } = await login(form.username.trim(), form.password);
-      
-      // 2. 받아온 토큰들을 즉시 로컬 스토리지에 저장합니다.
-      //    (getMyInfo가 이 토큰을 사용해서 요청을 보내야 하니까요!)
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-
-      // 3. 새로 받은 accessToken으로 '내 정보'를 조회합니다.
-      const userInfo = await getMyInfo();
-
-      // 4. "관리인(AuthContext)"에게 토큰과 사용자 정보를 전달하여 최종 로그인 처리를 합니다.
-      save(accessToken, userInfo);
-
-      // 5. 아이디/비밀번호 기억하기 처리
-      if (rememberMe) {
-        localStorage.setItem('rememberedUsername', form.username);
-        localStorage.setItem('rememberedPassword', form.password);
-        localStorage.setItem('rememberMe', 'true');
-      } else {
-        localStorage.removeItem('rememberedUsername');
-        localStorage.removeItem('rememberedPassword');
-        localStorage.removeItem('rememberMe');
-      }
-
-      // 6. 사용자에게 성공 메시지를 보여주고 홈페이지로 이동합니다.
-      setMsg(t('loginSuccess'));
-      setMsgColor('green');
-      setTimeout(() => navigate('/'), 500);
-
-    } catch (err) {
-      setMsg(err.message || t('loginFail'));
-      setMsgColor('red');
-    }
-  };
-
-  // 소셜 로그인 리다이렉트
-  const handleSocialLogin = provider => {
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
 
   return (
     <>
       <Header lang={lang} onLangChange={handleLangChange} />
       <LoginContainer>
-        <Title>{t('login')}</Title>
-        <StyledForm onSubmit={handleSubmit}>
-          <InputGroup>
-            <Input
-              name="username"
-              placeholder={t('idPlaceholder')}
-              value={form.username}
-              onChange={handleChange}
-            />
-          </InputGroup>
-          <InputGroup>
-            <Input
-              name="password"
-              type={showPw ? 'text' : 'password'}
-              placeholder={t('pwPlaceholder')}
-              value={form.password}
-              onChange={handleChange}
-            />
-            <button
-              type="button"
-              tabIndex={-1}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, marginLeft: 4, display: 'flex', alignItems: 'center' }}
-              onClick={() => setShowPw(v => !v)}
-              aria-label={showPw ? t('hidePw') : t('showPw')}
-            >
-              {showPw ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </InputGroup>
-          <SubmitButton type="submit">{t('login')}</SubmitButton>
-        </StyledForm>
-        <RememberMeGroup>
-          <Checkbox
-            type="checkbox"
-            id="rememberMe"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-          />
-          <label htmlFor="rememberMe">{t('rememberMe')}</label>
-        </RememberMeGroup>
-        {msg && <Message color={msgColor}>{msg}</Message>}
-        <LinkGroup>
-          <span onClick={() => navigate('/register')}>{t('signup')}</span>
-          |
-          <span onClick={() => navigate('/find-id')}>{t('findId')}</span>
-          |
-          <span onClick={() => navigate('/find-pw')}>{t('findPw')}</span>
-        </LinkGroup>
-        <SocialSection>
-          <SocialTitle>{t('socialLogin')}</SocialTitle>
-          <SocialButtonsContainer>
-            <SocialBtn type="naver" aria-label="Naver Login" onClick={() => handleSocialLogin('naver')}>
-              <img src={naverLogo} alt="Naver" />
-              <SocialBtnText>Naver</SocialBtnText>
-            </SocialBtn>
-            <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => handleSocialLogin('kakao')}>
-              <img src={kakaoLogo} alt="Kakao" />
-              <SocialBtnText>Kakao</SocialBtnText>
-            </SocialBtn>
-            <SocialBtn type="google" aria-label="Google Login" onClick={() => handleSocialLogin('google')}>
-              <img src={googleLogo} alt="Google" />
-              <SocialBtnText>Google</SocialBtnText>
-            </SocialBtn>
-          </SocialButtonsContainer>
-        </SocialSection>
+        <Title>{t('socialLoginTitle', 'SNS 계정으로 시작하기')}</Title>
+        <Subtitle>
+          {t('socialLoginDesc', '복잡한 가입 절차 없이, 사용하던 계정으로 바로 로그인하고 서비스를 이용해보세요.')}
+        </Subtitle>
+
+        {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
+        
+        <SocialButtonContainer>
+          <SocialButton aria-label="네이버로 로그인" onClick={() => handleSocialLogin('naver')}>
+            <img src={naverLogo} alt="Naver" style={{width:40, height:40}}/>
+          </SocialButton>
+          <SocialButton aria-label="카카오로 로그인" onClick={() => handleSocialLogin('kakao')}>
+            <img src={kakaoLogo} alt="Kakao" style={{width:40, height:40}}/>
+          </SocialButton>
+          <SocialButton aria-label="구글로 로그인" onClick={() => handleSocialLogin('google')}>
+            <img src={googleLogo} alt="Google" style={{width:40, height:40}}/>
+          </SocialButton>
+        </SocialButtonContainer>
       </LoginContainer>
     </>
   );

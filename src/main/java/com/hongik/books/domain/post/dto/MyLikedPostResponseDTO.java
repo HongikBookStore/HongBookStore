@@ -1,31 +1,35 @@
 package com.hongik.books.domain.post.dto;
 
+import com.hongik.books.domain.post.domain.PostLike;
 import com.hongik.books.domain.post.domain.SalePost;
 
 import java.time.LocalDateTime;
 
 /**
- * '내 판매글 목록' 조회를 위한 요약 정보 응답 DTO
+ * '내가 찜한 글 목록' 조회를 위한 응답 DTO
  */
-public record MyPostSummaryResponseDTO(
+public record MyLikedPostResponseDTO(
         Long postId,
-        String bookTitle,
+        String postTitle,
         int price,
         SalePost.SaleStatus status,
         String thumbnailUrl,
+        String sellerNickname,
         LocalDateTime createdAt
 ) {
-    public static MyPostSummaryResponseDTO fromEntity(SalePost salePost) {
+    public static MyLikedPostResponseDTO from(PostLike postLike) {
+        SalePost salePost = postLike.getSalePost();
         String thumbnailUrl = salePost.getPostImages().isEmpty()
-                ? null // 이미지가 없으면 null
+                ? null
                 : salePost.getPostImages().getFirst().getImageUrl();
 
-        return new MyPostSummaryResponseDTO(
+        return new MyLikedPostResponseDTO(
                 salePost.getId(),
-                salePost.getBook().getTitle(),
+                salePost.getPostTitle(),
                 salePost.getPrice(),
                 salePost.getStatus(),
                 thumbnailUrl,
+                salePost.getSeller().getUsername(),
                 salePost.getCreatedAt()
         );
     }
