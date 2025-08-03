@@ -34,6 +34,7 @@ dependencies {
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+    // web-socket
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // Security, OAuth
@@ -77,10 +78,6 @@ dependencies {
     // GCP Cloud Storage
     implementation platform('com.google.cloud:libraries-bom:26.61.0')
     implementation 'com.google.cloud:google-cloud-storage'
-
-    //web-socket
-    implementation 'org.springframework.boot:spring-boot-starter-websocket'
-
 }
 
 tasks.named('test') {
