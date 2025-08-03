@@ -19,8 +19,13 @@ export default defineConfig({
       // '/oauth2'로 시작하는 소셜 로그인 요청도 백엔드 서버로 전달
       '/oauth2': {
         target: 'http://localhost:8080',
+        changeOrigin: true, // 이 옵션이 아주 중요해요!
+      },
+      '/ws-stomp': {
+        target: 'ws://localhost:8080',
+        ws: true,          // 반드시 있어야 함!
         changeOrigin: true,
-      }
+      },
     }
   }
 })

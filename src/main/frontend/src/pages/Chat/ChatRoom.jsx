@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle, FaMapMarkerAlt, FaRoute, FaQrcode, FaCloudSun, FaDownload } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import Stomp from 'stompjs';
+import { useContext } from 'react';
+import { AuthCtx } from '../../contexts/AuthContext';
 import QRCode from 'react-qr-code';
 
 const ChatContainer = styled.div`
@@ -733,49 +736,8 @@ function useWindowWidth() {
   return width;
 }
 
-const ChatRoom = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'message',
-      content: '안녕하세요! 책에 대해 문의드립니다.',
-      sender: 'other',
-      timestamp: '2024-01-15 14:30:00',
-      status: 'read'
-    },
-    {
-      id: 2,
-      type: 'message',
-      content: '네, 어떤 점이 궁금하신가요?',
-      sender: 'own',
-      timestamp: '2024-01-15 14:32:00',
-      status: 'read'
-    },
-    {
-      id: 3,
-      type: 'message',
-      content: '책 상태가 어떤가요?',
-      sender: 'other',
-      timestamp: '2024-01-15 14:33:00',
-      status: 'read'
-    },
-    {
-      id: 4,
-      type: 'message',
-      content: '거의 새책 상태입니다!',
-      sender: 'own',
-      timestamp: '2024-01-15 14:35:00',
-      status: 'read'
-    },
-    {
-      id: 5,
-      type: 'message',
-      content: '네트워크 오류로 전송 실패한 메시지 예시입니다.',
-      sender: 'own',
-      timestamp: '2024-01-15 14:36:00',
-      status: 'failed'
-    }
-  ]);
+const ChatRoom = ({ roomId, username, myId }) => {
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -802,6 +764,12 @@ const ChatRoom = () => {
   const [showQRQuestion, setShowQRQuestion] = useState(false);
   const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
   const width = useWindowWidth();
+  const [receiverId, setReceiverId] = useState(null);
+  const [senderId, setSenderId] = useState(null);
+  const [salePostId, setSalePostId] = useState(null);
+  const stompClient = useRef(null); // ✅ 이 줄을 추가
+  const { user } = useContext(AuthCtx);
+  const currentUserId = user?.id;
 
   // 채팅방 ID에 따른 사용자 정보 매핑
   const getChatUserInfo = (chatId) => {
@@ -865,86 +833,150 @@ const ChatRoom = () => {
   };
 
   useEffect(() => {
+    async function loadRoomInfo() {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          console.error('❌ accessToken 없음!');
+          return;
+        }
+
+        // 1️⃣ 채팅방 정보 불러오기
+        const res = await fetch(`/api/chat/rooms/${chatId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) throw new Error('채팅방 정보 불러오기 실패');
+
+        const room = await res.json();
+        console.log('✅ 불러온 채팅방:', room);
+
+        // 2️⃣ 내 user 정보 확인
+        const userJson = localStorage.getItem('user');
+        const myUsername = userJson ? JSON.parse(userJson).username : null;
+        const myId = userJson ? JSON.parse(userJson).id : null;
+
+        if (!myUsername || !myId) {
+          console.error('❌ 내 username 또는 id 없음!');
+          return;
+        }
+
+        console.log('✅ 내 username:', myUsername, '| 내 id:', myId);
+
+        // 3️⃣ sender/receiver 판단
+        let senderId = null;
+        let receiverId = null;
+
+        if (myId === room.buyerId) {
+          senderId = room.buyerId;
+          receiverId = room.sellerId;
+        } else if (myId === room.sellerId) {
+          senderId = room.sellerId;
+          receiverId = room.buyerId;
+        } else {
+          console.error('❌ 현재 사용자가 buyer/seller 중 누구도 아님!');
+          return;
+        }
+
+        setSenderId(senderId);
+        setReceiverId(receiverId);
+        setSalePostId(room.salePostId); // salePostId도 필요 시
+
+        console.log('✅ senderId:', senderId);
+        console.log('✅ receiverId:', receiverId);
+        console.log('✅ salePostId:', room.salePostId);
+
+      } catch (err) {
+        console.error('❌ 채팅방 정보 불러오기 실패:', err);
+      }
+    }
+
+    loadRoomInfo();
+  }, [chatId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!salePostId || !token) return;
+
+    const loadPreviousMessages = async () => {
+      try {
+        const res = await fetch(`/api/chat/room/${salePostId}/messages`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) throw new Error('이전 메시지 불러오기 실패');
+
+        const data = await res.json();
+        console.log("📜 이전 메시지:", data);
+
+        setMessages(data);
+      } catch (err) {
+        console.error("❌ 이전 메시지 로딩 실패:", err);
+      }
+    };
+
+    loadPreviousMessages();
+  }, [salePostId]);
+
+
+  // ✅ STOMP 연결
+  useEffect(() => {
+    console.log(`🔥 [${username}] ChatRoom mounted`);
+
+    const stomp = Stomp.over(new WebSocket("ws://localhost:8080/ws-stomp/websocket"));
+    stomp.debug = (str) => console.log('[STOMP DEBUG]', str);
+
+    stomp.connect({}, () => {
+      console.log(`✅ [${username}] STOMP 연결 성공`);
+
+      stomp.subscribe(`/sub/chat/room/${chatId}`, (message) => {
+        const newMessage = JSON.parse(message.body);
+        console.log("📥 받은 메시지:", message.body);
+        setMessages(prev => [...prev, newMessage]);
+      });
+
+      stompClient.current = stomp;
+    });
+
+    return () => {
+      stomp.disconnect(() => console.log(`❌ [${username}] 연결 종료`));
+    };
+  }, [chatId, username]);
+
+  // ✅ 메시지 전송
+  const handleSendMessage = () => {
+    console.log("🟢 handleSendMessage 호출됨");
+
+    if (!newMessage.trim() || !receiverId || !stompClient.current?.connected) {
+      console.log("❌ 전송 조건 불충족", { newMessage, receiverId, connected: stompClient.current?.connected });
+      return;
+    }
+
+    const msgPayload = {
+      roomId: chatId,
+      salePostId,
+      senderId,
+      receiverId,
+      message: newMessage.trim(),
+      sentAt: new Date().toISOString()
+    };
+
+    console.log("📤 전송할 메시지:", msgPayload);
+
+    stompClient.current.send("/pub/chat.sendMessage", {}, JSON.stringify(msgPayload));
+    setNewMessage('');
+  };
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || hasProfanity) return;
-
-    const messageId = Date.now();
-    const message = {
-      id: messageId,
-      type: 'message',
-      content: newMessage.trim(),
-      sender: 'own',
-      timestamp: new Date().toLocaleString('ko-KR'),
-      status: 'sending'
-    };
-
-    // 메시지를 즉시 추가 (전송 중 상태)
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-    setLoading(true);
-
-    try {
-      // 실제로는 API 호출하여 메시지 전송
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // 전송 성공 시 바로 읽음 상태로 변경
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'read' }
-          : msg
-      ));
-
-    } catch (error) {
-      console.error('메시지 전송 실패:', error);
-      // 전송 실패 시 상태 업데이트
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRetryMessage = async (messageId) => {
-    const message = messages.find(msg => msg.id === messageId);
-    if (!message) return;
-
-    // 메시지 상태를 전송 중으로 변경
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, status: 'sending' }
-        : msg
-    ));
-
-    try {
-      // 재전송 시도
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // 재전송 성공 시 바로 읽음 상태로 변경
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'read' }
-          : msg
-      ));
-
-    } catch (error) {
-      console.error('메시지 재전송 실패:', error);
-      // 재전송 실패
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
-    }
   };
 
   const handleRetryClick = (messageId) => {
@@ -1240,10 +1272,10 @@ const ChatRoom = () => {
                 {chatUserInfo.avatar}
               </UserAvatar>
               <UserInfo>
-                <UserName>{chatUserInfo.name}</UserName>
+                <UserName>{messages.length > 0 && messages[0].sender === 'other' ? '김학생' : '학생'}</UserName>
                 <BookTitle>
                   <FaBook size={12} />
-                  {chatUserInfo.bookTitle} - {chatUserInfo.price}원
+                  {messages.length > 0 && messages[0].message ? messages[0].message.split(' - ')[0] : ''}
                 </BookTitle>
               </UserInfo>
             </ChatInfo>
@@ -1492,22 +1524,24 @@ const ChatRoom = () => {
         <ChatMessages>
           {messages.length > 0 ? (
             messages.map(message => (
-              <MessageGroup key={message.id}>
+              <MessageGroup key={message.messageId}>
                 {message.type === 'system' ? (
-                  <SystemMessage className={message.cancel ? 'cancel' : ''}>{message.content}</SystemMessage>
+                  <SystemMessage className={message.cancel ? 'cancel' : ''}>
+                    {message.message}
+                  </SystemMessage>
                 ) : (
                   <>
-                    <Message isOwn={message.sender === 'own'}>
-                      {message.content}
+                    <Message isOwn={message.senderId === currentUserId}>
+                      {message.message}
                     </Message>
-                    <MessageTime isOwn={message.sender === 'own'}>
-                      {formatTime(message.timestamp)}
+                    <MessageTime isOwn={message.senderId === currentUserId}>
+                      {formatTime(message.sentAt)}
                     </MessageTime>
-                    {message.sender === 'own' && message.status && (
-                      <MessageStatusIndicator 
-                        status={message.status} 
+                    {message.senderId === currentUserId && message.status && (
+                      <MessageStatusIndicator
+                        status={message.status}
                         isOwn={true}
-                        onRetry={() => handleRetryClick(message.id)}
+                        onRetry={() => handleRetryClick(message.messageId)}
                       />
                     )}
                   </>
@@ -1516,9 +1550,9 @@ const ChatRoom = () => {
             ))
           ) : (
             <NoMessages>
-              <FaUser size={40} style={{marginBottom: '15px', opacity: 0.5}} />
+              {/*<FaUser size={40} style={{ marginBottom: '15px', opacity: 0.5 }} />
               <h3>아직 메시지가 없습니다</h3>
-              <p>첫 번째 메시지를 보내보세요!</p>
+              <p>첫 번째 메시지를 보내보세요!</p>*/}
             </NoMessages>
           )}
           <div ref={messagesEndRef} />

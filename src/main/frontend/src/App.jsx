@@ -24,6 +24,7 @@ import { WritingProvider } from './contexts/WritingContext';
 import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import ChatRoomWrapper from './pages/Chat/ChatRoomWrapper.jsx'
 import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
 import VerificationConfirmPage from './pages/VerificationConfirmPage/VerificationConfirmPage.jsx';
 
@@ -150,7 +151,7 @@ function App() {
                                     <ChatList />
                                 </>
                             } />
-                            <Route path="/chat/:id" element={
+                            <Route path="/chat/:chatId" element={
                                 <>
                                     <Header />
                                     <ChatRoom />
