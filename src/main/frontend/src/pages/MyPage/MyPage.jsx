@@ -3,13 +3,13 @@ import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useLocation } from '../../contexts/LocationContext';
+import { useLocation } from '../../contexts/LocationContext'; // TODO: 위치 관리 기능 구현
 import axios from 'axios';
 
 const MyPageContainer = styled.div`
   padding: 2rem 1rem 4rem;
   max-width: 1200px;
-  width: 100%;
+  width: 100%;  
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -628,10 +628,6 @@ const ResendButton = styled.button`
   }
 `;
 
-const EmailInput = styled(Input)`
-  margin-bottom: 1rem;
-`;
-
 const VerificationSteps = styled.div`
   display: flex;
   flex-direction: column;
@@ -866,7 +862,7 @@ const MyPage = () => {
   };
 
   const handlePhotoChange = (e) => {
-    // [수정] 기능 보류
+    // 기능 보류
     alert('프로필 사진 변경 기능은 현재 준비 중입니다.');
   };
 
@@ -884,7 +880,7 @@ const MyPage = () => {
 
     try {
       await axios.post('/api/my/verification/request-code', { schoolEmail }, { headers: getAuthHeader() });
-      setVerificationMessage({ type: 'info', text: `${schoolEmail}로 인증 메일을 보냈습니다. 메일함을 확인해주세요.` });
+      setVerificationMessage({ type: 'info', text: `${schoolEmail}로 인증 메일을 보냈습니다. 메일함의 링크를 클릭하면 인증이 완료됩니다.` });
       setShowVerificationForm(false); // 성공 시 폼 숨기기
     } catch (error) {
       const message = error.response?.data?.message || "인증 메일 발송 중 오류가 발생했습니다.";
@@ -905,12 +901,12 @@ const MyPage = () => {
           '--score-color': getScoreColor(userScore),
           '--score-percentage': `${userScore * 3.6}deg`
         }}>
-          {profileImage ? (
-            <img src={profileImage} alt="Profile" />
+          {profile.profileImageUrl ? (
+            <img src={profile.profileImageUrl} alt="Profile" />
           ) : (
             <i className="fas fa-user" style={{ fontSize: '48px', color: 'var(--primary)' }}></i>
           )}
-          <StyledPhotoChangeButton type="button" onClick={handlePhotoMenuClick}>
+          <StyledPhotoChangeButton type="button" onClick={() => fileInputRef.current.click()}>
             <i className="fas fa-camera-retro" style={{ position: 'relative', zIndex: 6, fontSize: '16px' }}></i>
           </StyledPhotoChangeButton>
           {showPhotoMenu && (

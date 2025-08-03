@@ -61,7 +61,19 @@ const SearchInput = styled.input`
   }
 `;
 
-
+const SearchButton = styled.button`
+  padding: 15px 25px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+  &:hover {
+    background: #0056b3;
+  }
+`;
 
 const FilterSection = styled.div`
   background: #f8f9fa;
@@ -134,7 +146,11 @@ const SortSelect = styled.select`
   background: white;
 `;
 
-
+const BookImageImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
 
 const BookPrice = styled.div`
   font-size: 1.3rem;
@@ -150,7 +166,7 @@ const BookStatus = styled.span`
   font-weight: 600;
   
   ${props => {
-    switch(props.status) {
+    switch(props.$status) {
       case 'FOR_SALE': return 'background: #d4edda; color: #155724;';
       case 'RESERVED': return 'background: #fff3cd; color: #856404;';
       case 'SOLD_OUT': return 'background: #f8d7da; color: #721c24;';
@@ -163,6 +179,27 @@ const NoResults = styled.div`
   text-align: center;
   padding: 60px 20px;
   color: #666;
+`;
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 3rem;
+  gap: 0.5rem;
+`;
+const PageButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  background: ${props => props.$active ? '#007bff' : 'white'};
+  color: ${props => props.$active ? 'white' : '#333'};
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: ${props => props.$active ? '600' : '400'};
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 `;
 
 // 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
@@ -178,54 +215,92 @@ const Search = () => {
     // TODO: 필터 기능은 백엔드 API에 해당 파라미터가 추가된 후 구현
     sortBy: 'createdAt,desc' // 기본 정렬: 최신순
   });
-  const [posts, setPosts] = useState([]); // [수정] books -> posts
-  const [pageInfo, setPageInfo] = useState(null); // [추가] 페이지네이션 정보
-  const [loading, setLoading] = useState(false);
+
+
   const navigate = useNavigate();
 
-  // [수정] API 호출 로직
-  const fetchPosts = useCallback(async () => {
+  // API 데이터를 저장할 상태
+  const [posts, setPosts] = useState([]);
+  const [pageInfo, setPageInfo] = useState({ totalElements: 0, totalPages: 1, number: 0 }); // 페이지네이션 정보
+  const [loading, setLoading] = useState(false);
+  
+  // 검색 및 필터 조건을 하나의 상태 객체로 관리
+  const [searchParams, setSearchParams] = useState({
+    query: '',
+    sort: 'createdAt,desc',
+    page: 0,
+  });
+  const [searchInput, setSearchInput] = useState(''); // 사용자가 입력하는 검색어
+
+  // API 호출 로직
+  const fetchPosts = useCallback(async (params) => {
     setLoading(true);
     try {
-      // API에 보낼 파라미터 구성
-      const params = {
-        page: 0, // TODO: 페이지네이션 UI 구현 시 현재 페이지 상태와 연결
-        size: 20, // 한 번에 20개씩
-        sort: filters.sortBy,
-        // TODO: 백엔드에 검색 기능 추가 후, searchTerm 파라미터도 추가
-        // query: searchTerm,
+      const activeParams = {
+        page: params.page,
+        size: 20,
+        sort: params.sort,
       };
-
-      const response = await axios.get('/api/posts', { params });
-      setPosts(response.data.content); // 실제 데이터는 content 배열에 담겨있음
-      setPageInfo({ // 페이지 정보 저장
+      if (params.query) activeParams.query = params.query;
+      
+      const response = await axios.get('/api/posts', { params: activeParams });
+      setPosts(response.data.content);
+      setPageInfo({
         totalPages: response.data.totalPages,
         totalElements: response.data.totalElements,
         currentPage: response.data.number,
       });
     } catch (error) {
       console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
-      alert("게시글을 불러올 수 없습니다.");
     } finally {
       setLoading(false);
     }
-  }, [filters.sortBy]); // 정렬 기준이 바뀔 때마다 함수를 새로 만듦
+  }, []);
 
-  // 컴포넌트가 처음 마운트될 때 게시글 목록을 불러옴
+  // 검색 조건(searchParams)이 바뀔 때마다 API를 다시 호출
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]); // fetchPosts 함수가 변경될 때마다 실행
+    fetchPosts(searchParams);
+  }, [fetchPosts, searchParams]);
 
-  // 검색 버튼 클릭 시 동작
   const handleSearch = (e) => {
     e.preventDefault();
-    // TODO: 현재 백엔드 API는 검색어(query) 파라미터를 지원하지 않음.
-    // 백엔드에 검색 기능이 추가되면, 이 함수에서 fetchPosts를 다시 호출하도록 구현해야 함.
-    alert('검색 기능은 현재 준비 중입니다!');
+    setSearchParams(prev => ({ ...prev, query: searchInput, page: 0 }));
+  };
+  
+  const handleSortChange = (e) => {
+    setSearchParams(prev => ({ ...prev, sort: e.target.value, page: 0 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < pageInfo.totalPages) {
+      setSearchParams(prev => ({ ...prev, page: newPage }));
+    }
   };
 
   const handleBookClick = (postId) => {
     navigate(`/posts/${postId}`);
+  };
+
+  // 페이지네이션 버튼들을 동적으로 생성하는 함수
+  const renderPaginationButtons = () => {
+    if (!pageInfo || pageInfo.totalPages <= 1) return null;
+
+    const buttons = [];
+    const startPage = Math.floor(pageInfo.currentPage / 5) * 5;
+    const endPage = Math.min(startPage + 5, pageInfo.totalPages);
+
+    for (let i = startPage; i < endPage; i++) {
+      buttons.push(
+        <PageButton
+          key={i}
+          $active={pageInfo.currentPage === i}
+          onClick={() => handlePageChange(i)}
+        >
+          {i + 1}
+        </PageButton>
+      );
+    }
+    return buttons;
   };
 
   return (
@@ -240,25 +315,19 @@ const Search = () => {
         <SearchForm onSubmit={handleSearch}>
           <SearchInput
             type="text"
-            placeholder="책 제목, 저자, 과목을 검색해보세요..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="책 제목, 저자, 글 제목으로 검색..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
           <SearchButton type="submit">
             <FaSearch />
           </SearchButton>
         </SearchForm>
 
-        {/* TODO: 필터 기능은 백엔드 API가 준비되면 활성화 */}
-        {/* <FilterSection> ... </FilterSection> */}
-
         <ResultsSection>
           <ResultsHeader>
-            <ResultsCount>총 {pageInfo ? pageInfo.totalElements : 0}개의 게시글</ResultsCount>
-            <SortSelect
-              value={filters.sortBy}
-              onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
-            >
+            <ResultsCount>총 {pageInfo.totalElements}개의 게시글</ResultsCount>
+            <SortSelect value={searchParams.sort} onChange={handleSortChange}>
               <option value="createdAt,desc">최신순</option>
               <option value="price,asc">낮은 가격순</option>
               <option value="price,desc">높은 가격순</option>
@@ -286,8 +355,8 @@ const Search = () => {
                     {post.author}
                     </MetaLabel>
                     <MetaValue>
-                    <FaGraduationCap size={12} />
-                    {post.subject}
+                      <FaUser size={12} />
+                      판매자: {post.sellerNickname}
                     </MetaValue>
                   </CardMeta>
                   <BookPrice>{post.price.toLocaleString()}원</BookPrice>
@@ -305,7 +374,12 @@ const Search = () => {
             </NoResults>
           )}
         </ResultsSection>
-        {/* TODO: 여기에 페이지네이션 버튼 UI를 추가 (예: 1, 2, 3, 다음 >) */}
+        
+        <PaginationContainer>
+          <PageButton onClick={() => handlePageChange(pageInfo.currentPage - 1)} disabled={pageInfo.currentPage <= 0}>이전</PageButton>
+          {renderPaginationButtons()}
+          <PageButton onClick={() => handlePageChange(pageInfo.currentPage + 1)} disabled={pageInfo.currentPage >= pageInfo.totalPages - 1}>다음</PageButton>
+        </PaginationContainer>
       </SearchContainer>
     </>
   );

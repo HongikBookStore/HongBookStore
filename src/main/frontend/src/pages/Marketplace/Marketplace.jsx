@@ -796,20 +796,23 @@ const BackButton = styled.button`
   }
 `;
 
+// 인증 토큰을 가져오는 헬퍼 함수
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
 
 const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  // API 데이터를 저장할 상태
+  // API 데이터 상태
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(0); // 현재 페이지 번호 상태
   const [hasMore, setHasMore] = useState(true); // 더 불러올 데이터가 있는지 여부
   const [isLoading, setIsLoading] = useState(true);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const filterRef = useRef();
-  const observerRef = useRef(); // Intersection Observer를 위한 ref
 
+  // 검색 및 필터 상태
   const [searchParams, setSearchParams] = useState({
     query: '',
     category: '',
@@ -817,48 +820,69 @@ const Marketplace = () => {
     maxPrice: '',
     sort: 'createdAt,desc',
   });
-
   const [tempFilters, setTempFilters] = useState({
     minPrice: '',
     maxPrice: '',
   });
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef();
+  const observerRef = useRef(); // Intersection Observer를 위한 ref
+
+  const [likedPostIds, setLikedPostIds] = useState(new Set()); // 찜한 게시글 ID를 저장할 Set
+
+  // 내가 찜한 글 목록을 불러와서 Set에 저장하는 함수
+  const fetchMyLikes = useCallback(async () => {
+    // 로그인 상태가 아니면 실행하지 않음
+    if (!localStorage.getItem('accessToken')) return;
+    try {
+      const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
+      const likedIds = new Set(response.data.map(post => post.postId));
+      setLikedPostIds(likedIds);
+    } catch (error) {
+      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
+    }
+  }, []);
 
   // API 호출 로직
-  const fetchPosts = useCallback(async (isNewSearch) => {
+  const fetchPosts = useCallback(async (params, isNewSearch) => {
     setIsLoading(true);
     try {
-      const currentPage = isNewSearch ? 0 : page;
       const activeParams = {
-        page: currentPage,
+        page: isNewSearch ? 0 : page,
         size: 12,
-        sort: searchParams.sort,
+        sort: params.sort,
       };
-      if (searchParams.query) activeParams.query = searchParams.query;
-      if (searchParams.category) activeParams.category = searchParams.category;
-      if (searchParams.minPrice) activeParams.minPrice = searchParams.minPrice;
-      if (searchParams.maxPrice) activeParams.maxPrice = searchParams.maxPrice;
+      if (params.query) activeParams.query = params.query;
+      if (params.category) activeParams.category = params.category;
+      if (params.minPrice) activeParams.minPrice = params.minPrice;
+      if (params.maxPrice) activeParams.maxPrice = params.maxPrice;
 
       const response = await axios.get('/api/posts', { params: activeParams });
       
       // 새 검색이면 데이터를 교체하고, 아니면 기존 데이터에 추가
       setPosts(prev => isNewSearch ? response.data.content : [...prev, ...response.data.content]);
       setHasMore(!response.data.last); // 마지막 페이지인지 확인
-      setPage(currentPage + 1); // 다음 페이지 번호 준비
+      setPage(isNewSearch ? 1 : prev => prev + 1);
 
     } catch (error) {
       console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchParams]);
+  }, [page]);
 
   // 검색 조건이 바뀔 때마다, 데이터를 초기화하고 첫 페이지부터 다시 로드
   useEffect(() => {
     setPosts([]); // 기존 목록 비우기
     setPage(0);   // 페이지 번호 0으로 초기화
     setHasMore(true); // 더 불러올 데이터가 있다고 가정
-    fetchPosts(true); // 새 검색으로 API 호출
-  }, [searchParams.query, searchParams.category, searchParams.minPrice, searchParams.maxPrice, searchParams.sort]);
+    fetchPosts(searchParams, true); // 새 검색으로 API 호출
+  }, [searchParams, fetchPosts]);
+
+  // 컴포넌트가 처음 마운트될 때 찜 목록도 함께 불러옴
+  useEffect(() => {
+    fetchMyLikes();
+  }, [fetchMyLikes]);
 
   // 무한 스크롤을 위한 Intersection Observer 설정
   useEffect(() => {
@@ -871,16 +895,55 @@ const Marketplace = () => {
       { threshold: 1.0 }
     );
 
-    if (observerRef.current) {
-      observer.observe(observerRef.current);
+    const currentRef = observerRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (observerRef.current) {
-        observer.unobserve(observerRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
   }, [hasMore, isLoading, fetchPosts]);
+
+  // 찜하기/찜취소 핸들러
+  const handleLikeToggle = async (e, postId) => {
+    e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
+    if (!localStorage.getItem('accessToken')) {
+      alert("로그인이 필요한 기능입니다.");
+      navigate('/login');
+      return;
+    }
+
+    const isLiked = likedPostIds.has(postId);
+    
+    // UI 낙관적 업데이트
+    setLikedPostIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) newSet.delete(postId);
+      else newSet.add(postId);
+      return newSet;
+    });
+
+    try {
+      if (isLiked) {
+        await axios.delete(`/api/posts/${postId}/like`, { headers: getAuthHeader() });
+      } else {
+        await axios.post(`/api/posts/${postId}/like`, null, { headers: getAuthHeader() });
+      }
+    } catch (error) {
+      console.error("찜 처리 실패:", error);
+      // API 실패 시 UI 원상 복구
+      setLikedPostIds(prev => {
+        const newSet = new Set(prev);
+        if (isLiked) newSet.add(postId);
+        else newSet.delete(postId);
+        return newSet;
+      });
+      alert("오류가 발생했습니다.");
+    }
+  };
 
   const handleBookClick = (postId) => navigate(`/posts/${postId}`);
   
@@ -919,6 +982,12 @@ const Marketplace = () => {
       <BookImage className="book-image">
         <img src={post.thumbnailUrl} alt={post.postTitle} />
       </BookImage>
+      <LikeButton
+        $liked={likedPostIds.has(post.postId)}
+        onClick={(e) => handleLikeToggle(e, post.postId)}
+      >
+        ♥
+      </LikeButton>
       <BookInfo>
         <BookCardTitle>{post.postTitle}</BookCardTitle>
         <BookAuthor>{post.author}</BookAuthor>
