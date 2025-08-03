@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/places")
@@ -33,6 +34,15 @@ public class PlaceController {
     public ResponseEntity<PlaceDto.Response> savePlace(@RequestBody PlaceDto.SaveRequest request) {
         PlaceDto.Response saved = placeService.savePlace(request);
         return ResponseEntity.ok(saved);
+    }
+
+    // 🗺️ 좌표를 도로명 주소로 변환
+    @GetMapping("/geocode")
+    public ResponseEntity<Map<String, String>> getAddressFromCoordinates(
+            @RequestParam double lat,
+            @RequestParam double lng) {
+        Map<String, String> addressData = placeService.getAddressFromCoordinates(lat, lng);
+        return ResponseEntity.ok(addressData);
     }
 }
 

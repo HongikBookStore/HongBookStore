@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styled from 'styled-components';
-import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMarkerAlt, FaHeart, FaTimes, FaPlus } from 'react-icons/fa';
+import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMarkerAlt, FaHeart, FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle } from 'react-icons/fa';
 
 const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCategory, userLocation }) => {
   const [activeTab, setActiveTab] = useState('info');
@@ -8,8 +8,28 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [expandedReview, setExpandedReview] = useState(null);
   const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] });
   const [selectedCategory, setSelectedCategory] = useState('');
+  const fileInputRef = useRef(null);
 
   if (!isOpen || !place) return null;
+
+  // 평균 평점 계산
+  const averageRating = place.reviews && place.reviews.length > 0 
+    ? (place.reviews.reduce((sum, review) => sum + review.rating, 0) / place.reviews.length).toFixed(1)
+    : 0;
+
+  // 경로 시간 계산 (간단한 예시)
+  const calculateRouteTime = () => {
+    if (!userLocation) return '위치를 설정해주세요';
+    
+    // 실제로는 네이버 지도 API를 사용하여 정확한 시간 계산
+    const distance = Math.sqrt(
+      Math.pow(place.lat - userLocation.lat, 2) + 
+      Math.pow(place.lng - userLocation.lng, 2)
+    ) * 111000; // 대략적인 거리 계산 (미터)
+    
+    const timeInMinutes = Math.round(distance / 1000 * 15); // 1km당 15분 가정
+    return `${timeInMinutes}분`;
+  };
 
   const handleAddToCategory = () => {
     if (selectedCategory) {
@@ -19,6 +39,11 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   };
 
   const handleSubmitReview = () => {
+    if (!newReview.content.trim()) {
+      alert('리뷰 내용을 입력해주세요.');
+      return;
+    }
+    
     // 리뷰 제출 로직
     console.log('Submit review:', newReview);
     setNewReview({ rating: 5, content: '', photos: [] });
@@ -34,27 +59,34 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     console.log('Dislike review:', reviewId);
   };
 
+  const handlePhotoUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const newPhotos = files.map(file => URL.createObjectURL(file));
+    setNewReview({ ...newReview, photos: [...newReview.photos, ...newPhotos] });
+  };
+
+  const handleRemovePhoto = (index) => {
+    const newPhotos = newReview.photos.filter((_, i) => i !== index);
+    setNewReview({ ...newReview, photos: newPhotos });
+  };
+
   const getTypeIcon = (type) => {
     const icons = {
       restaurant: '🍽️',
       cafe: '☕',
       partner: '🤝',
-      print: '🖨️',
-      bookstore: '📚',
-      entertainment: '🎮',
-      other: '📌'
+      convenience: '🛍️',
+      other: '📍'
     };
     return icons[type] || '📍';
   };
 
   const getTypeName = (type) => {
     const names = {
-      restaurant: '식당',
+      restaurant: '음식점',
       cafe: '카페',
-      partner: '홍익대 제휴',
-      print: '인쇄',
-      bookstore: '서점',
-      entertainment: '놀거리',
+      partner: '제휴업체',
+      convenience: '편의점',
       other: '기타'
     };
     return names[type] || '기타';
@@ -69,6 +101,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
             <PlaceDetails>
               <PlaceName>{place.name}</PlaceName>
               <PlaceType>{getTypeName(place.category)}</PlaceType>
+              <PlaceRating>
+                <Stars>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star key={star} $isFilled={star <= averageRating}>
+                      <FaStar />
+                    </Star>
+                  ))}
+                </Stars>
+                <RatingText>{averageRating} ({place.reviews?.length || 0}개 리뷰)</RatingText>
+              </PlaceRating>
             </PlaceDetails>
           </PlaceInfo>
           <CloseButton onClick={onClose}>
@@ -101,7 +143,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           {activeTab === 'info' && (
             <InfoTab>
               <InfoSection>
-                <InfoTitle>주소</InfoTitle>
+                <InfoTitle>
+                  <FaMapMarkerAlt /> 주소
+                </InfoTitle>
                 <InfoContent>
                   <FaMapMarkerAlt /> {place.address}
                 </InfoContent>
@@ -109,13 +153,17 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
               
               {place.description && (
                 <InfoSection>
-                  <InfoTitle>설명</InfoTitle>
+                  <InfoTitle>
+                    <FaInfoCircle /> 설명
+                  </InfoTitle>
                   <InfoContent>{place.description}</InfoContent>
                 </InfoSection>
               )}
 
               <InfoSection>
-                <InfoTitle>내 카테고리에 추가</InfoTitle>
+                <InfoTitle>
+                  <FaPlus /> 내 카테고리에 추가
+                </InfoTitle>
                 <CategorySelectContainer>
                   <CategorySelect 
                     value={selectedCategory} 
@@ -156,6 +204,37 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                   value={newReview.content}
                   onChange={(e) => setNewReview({ ...newReview, content: e.target.value })}
                 />
+                
+                {/* 사진 업로드 섹션 */}
+                <PhotoUploadSection>
+                  <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
+                  <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>
+                    <FaUpload />
+                    <span>사진을 선택하거나 클릭하여 업로드</span>
+                  </PhotoUploadArea>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    style={{ display: 'none' }}
+                  />
+                  
+                  {newReview.photos.length > 0 && (
+                    <PhotoPreviewContainer>
+                      {newReview.photos.map((photo, index) => (
+                        <PhotoPreview key={index}>
+                          <PhotoPreviewImage src={photo} alt="업로드된 사진" />
+                          <RemovePhotoButton onClick={() => handleRemovePhoto(index)}>
+                            <FaTrash />
+                          </RemovePhotoButton>
+                        </PhotoPreview>
+                      ))}
+                    </PhotoPreviewContainer>
+                  )}
+                </PhotoUploadSection>
+                
                 <ReviewSubmitButton onClick={handleSubmitReview}>
                   리뷰 등록
                 </ReviewSubmitButton>
@@ -196,11 +275,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                     
                     <ReviewContent>
                       {expandedReview === review.id ? (
-                        review.content
+                        <>
+                          {review.content}
+                          <CollapseButton onClick={() => setExpandedReview(null)}>
+                            접기
+                          </CollapseButton>
+                        </>
                       ) : (
                         <>
-                          {review.content.slice(0, 15)}
-                          {review.content.length > 15 && (
+                          {review.content.slice(0, 100)}
+                          {review.content.length > 100 && (
                             <ExpandButton onClick={() => setExpandedReview(review.id)}>
                               ...더보기
                             </ExpandButton>
@@ -237,14 +321,14 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                   </RouteItem>
                   <RouteItem>
                     <FaClock />
-                    <span>예상 소요시간: 약 15분</span>
+                    <span>예상 소요시간: {calculateRouteTime()}</span>
                   </RouteItem>
                 </RouteDetails>
               </RouteInfo>
               <RouteMap>
-                {/* 여기에 경로 지도가 표시됩니다 */}
                 <RouteMapPlaceholder>
-                  경로 지도가 여기에 표시됩니다
+                  <FaRoute />
+                  <span>경로 지도가 여기에 표시됩니다</span>
                 </RouteMapPlaceholder>
               </RouteMap>
             </RouteTab>
@@ -261,132 +345,210 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
 `;
 
 const ModalContent = styled.div`
   background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 `;
 
 const ModalHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
+  padding: 24px 24px 0 24px;
+  border-bottom: 1px solid #f0f0f0;
 `;
 
 const PlaceInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  flex: 1;
 `;
 
 const PlaceIcon = styled.span`
-  font-size: 32px;
+  font-size: 40px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 12px;
 `;
 
-const PlaceDetails = styled.div``;
+const PlaceDetails = styled.div`
+  flex: 1;
+`;
 
 const PlaceName = styled.h2`
-  margin: 0 0 4px 0;
-  font-size: 20px;
-  font-weight: 600;
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
 `;
 
 const PlaceType = styled.span`
   color: #666;
   font-size: 14px;
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+`;
+
+const PlaceRating = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Stars = styled.div`
+  display: flex;
+  gap: 2px;
+`;
+
+const Star = styled.span`
+  color: ${props => props.$isFilled ? '#ffc107' : '#e0e0e0'};
+  font-size: 16px;
+`;
+
+const RatingText = styled.span`
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: #999;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
   
   &:hover {
     color: #333;
+    background: #f8f9fa;
   }
 `;
 
 const TabContainer = styled.div`
   display: flex;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
 `;
 
 const TabButton = styled.button`
   flex: 1;
-  padding: 12px;
-  background: ${props => props.$isActive ? '#007bff' : 'white'};
-  color: ${props => props.$isActive ? 'white' : '#333'};
+  padding: 16px 20px;
+  background: ${props => props.$isActive ? 'white' : 'transparent'};
+  color: ${props => props.$isActive ? '#007bff' : '#666'};
   border: none;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  position: relative;
   
   &:hover {
-    background: ${props => props.$isActive ? '#007bff' : '#f8f9fa'};
+    background: ${props => props.$isActive ? 'white' : '#f0f0f0'};
   }
+  
+  ${props => props.$isActive && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #007bff;
+    }
+  `}
 `;
 
 const ModalBody = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px;
 `;
 
 const InfoTab = styled.div``;
 
 const InfoSection = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
 `;
 
 const InfoTitle = styled.h4`
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
   color: #333;
-`;
-
-const InfoContent = styled.div`
-  color: #666;
   display: flex;
   align-items: center;
   gap: 8px;
 `;
 
+const InfoContent = styled.div`
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
 const CategorySelectContainer = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 12px;
+  align-items: center;
 `;
 
 const CategorySelect = styled.select`
   flex: 1;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
+  background: white;
+  transition: border-color 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
 `;
 
 const AddToCategoryButton = styled.button`
-  padding: 8px 12px;
+  padding: 12px 16px;
   background: #007bff;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s ease;
   
   &:hover {
     background: #0056b3;
@@ -396,64 +558,148 @@ const AddToCategoryButton = styled.button`
 const ReviewsTab = styled.div``;
 
 const ReviewForm = styled.div`
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  border: 1px solid #e9ecef;
 `;
 
 const ReviewFormTitle = styled.h4`
-  margin: 0 0 12px 0;
-  font-size: 16px;
+  margin: 0 0 16px 0;
+  font-size: 18px;
   font-weight: 600;
+  color: #333;
 `;
 
 const RatingContainer = styled.div`
   display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 16px;
 `;
 
 const StarButton = styled.button`
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   color: ${props => props.$isSelected ? '#ffc107' : '#ddd'};
   cursor: pointer;
+  transition: all 0.2s ease;
   
   &:hover {
     color: #ffc107;
+    transform: scale(1.1);
   }
 `;
 
 const ReviewTextarea = styled.textarea`
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 14px;
-  min-height: 80px;
+  min-height: 100px;
   resize: vertical;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
   
   &:focus {
     outline: none;
     border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  }
+`;
+
+const PhotoUploadSection = styled.div`
+  margin-bottom: 16px;
+`;
+
+const PhotoUploadTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+`;
+
+const PhotoUploadArea = styled.div`
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: #007bff;
+    color: #007bff;
+    background: rgba(0, 123, 255, 0.05);
+  }
+`;
+
+const PhotoPreviewContainer = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding: 4px;
+`;
+
+const PhotoPreview = styled.div`
+  position: relative;
+  flex-shrink: 0;
+`;
+
+const PhotoPreviewImage = styled.img`
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+`;
+
+const RemovePhotoButton = styled.button`
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  
+  &:hover {
+    background: #c82333;
   }
 `;
 
 const ReviewSubmitButton = styled.button`
   width: 100%;
-  padding: 10px;
-  background: #007bff;
+  padding: 14px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s ease;
   
   &:hover {
-    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
   }
 `;
 
@@ -463,13 +709,16 @@ const ReviewsHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
 `;
 
 const ReviewsTitle = styled.h4`
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
+  color: #333;
 `;
 
 const ShowMoreButton = styled.button`
@@ -478,31 +727,45 @@ const ShowMoreButton = styled.button`
   color: #007bff;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
   
   &:hover {
-    text-decoration: underline;
+    background: rgba(0, 123, 255, 0.1);
+    text-decoration: none;
   }
 `;
 
 const ReviewItem = styled.div`
-  padding: 16px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  background: white;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
 `;
 
 const ReviewHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 `;
 
 const ReviewerInfo = styled.div``;
 
 const ReviewerName = styled.div`
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+  font-size: 14px;
 `;
 
 const ReviewRating = styled.div`
@@ -510,35 +773,36 @@ const ReviewRating = styled.div`
   gap: 2px;
 `;
 
-const Star = styled.span`
-  color: ${props => props.$isFilled ? '#ffc107' : '#ddd'};
-  font-size: 14px;
-`;
-
 const ReviewActions = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 12px;
 `;
 
 const ActionButton = styled.button`
   background: none;
-  border: none;
+  border: 1px solid #e0e0e0;
   color: #666;
   cursor: pointer;
   font-size: 12px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
   
   &:hover {
     color: #333;
+    border-color: #ccc;
+    background: #f8f9fa;
   }
 `;
 
 const ReviewContent = styled.div`
   color: #333;
-  line-height: 1.5;
-  margin-bottom: 8px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  font-size: 14px;
 `;
 
 const ExpandButton = styled.button`
@@ -547,62 +811,109 @@ const ExpandButton = styled.button`
   color: #007bff;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
   
   &:hover {
-    text-decoration: underline;
+    background: rgba(0, 123, 255, 0.1);
+    text-decoration: none;
+  }
+`;
+
+const CollapseButton = styled.button`
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 123, 255, 0.1);
+    text-decoration: none;
   }
 `;
 
 const ReviewPhotos = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 12px;
   overflow-x: auto;
+  padding: 4px;
 `;
 
 const ReviewPhoto = styled.img`
-  width: 80px;
-  height: 80px;
+  width: 90px;
+  height: 90px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
 `;
 
 const RouteTab = styled.div``;
 
 const RouteInfo = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  border: 1px solid #e9ecef;
 `;
 
 const RouteTitle = styled.h4`
-  margin: 0 0 12px 0;
-  font-size: 16px;
+  margin: 0 0 16px 0;
+  font-size: 18px;
   font-weight: 600;
+  color: #333;
 `;
 
 const RouteDetails = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 `;
 
 const RouteItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #666;
+  gap: 12px;
+  color: #555;
+  font-size: 14px;
+  padding: 8px 0;
 `;
 
 const RouteMap = styled.div`
   height: 300px;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #fafafa;
 `;
 
 const RouteMapPlaceholder = styled.div`
   color: #999;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  
+  svg {
+    font-size: 32px;
+    color: #ccc;
+  }
 `;
 
 export default PlaceDetailModal; 

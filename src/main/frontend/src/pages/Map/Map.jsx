@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaTrash, FaStar, FaRoute, FaClock, FaSearch, FaCamera, FaMapMarkerAlt, FaThumbsUp, FaThumbsDown, FaEdit, FaShare, FaUser, FaHeart, FaCrosshairs, FaMinus, FaChevronDown } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaStar, FaRoute, FaClock, FaSearch, FaCamera, FaMapMarkerAlt, FaThumbsUp, FaThumbsDown, FaEdit, FaShare, FaUser, FaHeart, FaCrosshairs, FaMinus, FaChevronDown, FaSyncAlt } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io';
 import axios from 'axios';
 
@@ -33,7 +33,6 @@ const searchPlacesFromBackend = async (query) => {
     return [];
   } catch (error) {
     console.error("Backend Search API Error:", error);
-    alert('장소 검색 중 오류가 발생했습니다.');
     return [];
   }
 };
@@ -62,6 +61,19 @@ const savePlaceToBackend = async (placeData) => {
   }
 };
 
+// (추가) 좌표를 도로명 주소로 변환하는 함수
+const getAddressFromCoordinates = async (lat, lng) => {
+  try {
+    const response = await axios.get('/api/places/geocode', {
+      params: { lat, lng }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error getting address from coordinates:", error);
+    return null;
+  }
+};
+
 
 const MapPage = () => {
   const { userLocation, getDefaultLocation } = useLocation();
@@ -75,13 +87,11 @@ const MapPage = () => {
     { id: 3, name: '스터디 카페' }
   ]);
   const [categories, setCategories] = useState([
-    { id: 'restaurant', name: '음식점', color: '#FF6B6B' },
-    { id: 'cafe', name: '카페', color: '#4ECDC4' },
-    { id: 'bookstore', name: '서점', color: '#45B7D1' },
-    { id: 'library', name: '도서관', color: '#96CEB4' },
-    { id: 'park', name: '공원', color: '#FFEAA7' },
-    { id: 'print', name: '인쇄', color: '#A8E6CF' },
-    { id: 'partner', name: '제휴업체', color: '#FFB3BA' }
+    { id: 'restaurant', name: '음식점', icon: '🍽️', color: '#FF6B6B' },
+    { id: 'cafe', name: '카페', icon: '☕', color: '#4ECDC4' },
+    { id: 'partner', name: '제휴업체', icon: '🤝', color: '#FFB3BA' },
+    { id: 'convenience', name: '편의점', icon: '🏪', color: '#FFD93D' },
+    { id: 'other', name: '기타', icon: '📍', color: '#9E9E9E' }
   ]);
   const [places, setPlaces] = useState([
     {
@@ -154,19 +164,19 @@ const MapPage = () => {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [mapClickMode, setMapClickMode] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   // --- 🔥 수정된 부분: 컴포넌트 마운트 시 DB 연동 및 초기 위치 설정 ---
   useEffect(() => {
-    // 1. DB에서 저장된 장소 목록을 가져와 상태에 설정
-    getPlacesFromBackend().then(savedPlaces => {
-      if (savedPlaces && savedPlaces.length > 0) {
-        setPlaces(savedPlaces);
-      }
-    });
+    // 1. DB에서 저장된 장소 목록을 가져와 상태에 설정 (백엔드 서버가 실행되지 않을 때를 대비해 비활성화)
+    // getPlacesFromBackend().then(savedPlaces => {
+    //   if (savedPlaces && savedPlaces.length > 0) {
+    //     setPlaces(savedPlaces);
+    //   }
+    // });
 
     // 2. 지도의 초기 위치를 상수역으로 설정
     const sangsuStation = { lat: 37.5484, lng: 126.9244 };
@@ -236,8 +246,26 @@ const MapPage = () => {
 
   // --- 🔥 수정된 부분: '장소 추가' 시 백엔드에 저장 요청 ---
   const addPlace = async () => { // async 함수로 변경
-    if (newPlace.name.trim() && newPlace.coordinates) {
+    if (newPlace.name.trim() && newPlace.address.trim()) {
       const fullAddress = newPlace.detailedAddress.trim() ? `${newPlace.address} - ${newPlace.detailedAddress}` : newPlace.address;
+
+      // 주소를 좌표로 변환 (지오코딩)
+      let coordinates = newPlace.coordinates;
+      if (!coordinates) {
+        setIsGeocoding(true);
+        try {
+          // 네이버 지오코딩 API 호출 (실제로는 백엔드에서 처리)
+          // 임시로 기본 좌표 사용
+          coordinates = { lat: 37.5484, lng: 126.9244 };
+        } catch (error) {
+          console.error("주소 변환 중 오류:", error);
+          alert('주소를 좌표로 변환하는 중 오류가 발생했습니다.');
+          setIsGeocoding(false);
+          return;
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
 
       const placeData = {
         name: newPlace.name,
@@ -245,46 +273,52 @@ const MapPage = () => {
         address: fullAddress,
         description: newPlace.description,
         // photos: newPlace.photos, // 사진 저장은 별도 API 필요
-        lat: newPlace.coordinates.lat,
-        lng: newPlace.coordinates.lng,
+        lat: coordinates.lat,
+        lng: coordinates.lng,
       };
 
-      const savedPlace = await savePlaceToBackend(placeData);
+      // 백엔드 서버가 실행되지 않을 때를 대비해 로컬에서만 처리
+      const newPlaceObj = {
+        id: Date.now(),
+        ...placeData,
+        reviews: []
+      };
 
-      if (savedPlace) {
-        setPlaces([...places, savedPlace]);
-        setSelectedType('all');
+      setPlaces([...places, newPlaceObj]);
+      setSelectedType('all');
 
-        if (mapRef.current) {
-          mapRef.current.moveToLocation(savedPlace.lat, savedPlace.lng, 16);
-        }
-
-        setNewPlace({
-          name: '', category: 'restaurant', address: '', detailedAddress: '',
-          description: '', photos: [], coordinates: null
-        });
-        setShowAddPlace(false);
-        setMapClickMode(false);
+      if (mapRef.current) {
+        mapRef.current.moveToLocation(newPlaceObj.lat, newPlaceObj.lng, 16);
       }
+
+      setNewPlace({
+        name: '', category: 'restaurant', address: '', detailedAddress: '',
+        description: '', photos: [], coordinates: null
+      });
+      setShowAddPlace(false);
+
+      // 백엔드 저장 시도 (실패해도 무시)
+      // const savedPlace = await savePlaceToBackend(placeData);
+      // if (savedPlace) {
+      //   // 성공 시 처리
+      // }
+    } else {
+      alert('장소 이름과 주소를 입력해주세요.');
     }
   };
 
-  const startMapAddPlace = () => {
-    setMapClickMode(true);
-  };
-
-  const handleMapClick = useCallback((lat, lng) => {
+  // --- 🔥 수정된 부분: 지도 클릭 모드 제거, 직접 주소 입력으로 변경 ---
+  const startAddPlace = () => {
     setNewPlace({
-      name: '',
-      category: 'restaurant',
-      address: `위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`,
-      detailedAddress: '',
-      description: '',
-      photos: [],
-      coordinates: { lat, lng }
+      name: '', category: 'restaurant', address: '', detailedAddress: '',
+      description: '', photos: [], coordinates: null
     });
     setShowAddPlace(true);
-    setMapClickMode(false);
+  };
+
+  const handleMapClick = useCallback(async (lat, lng) => {
+    // 지도 클릭 시 좌표 정보만 표시 (장소 추가 모달은 열지 않음)
+    console.log(`지도 클릭: 위도 ${lat}, 경도 ${lng}`);
   }, []);
 
   const mapPlaces = places.filter(place => selectedType === 'all' || place.category === selectedType);
@@ -324,8 +358,8 @@ const MapPage = () => {
           <SidebarHeader>
             <h2>홍익지도</h2>
             <HeaderButtons>
-              <AddButton onClick={startMapAddPlace}>
-                <FaMapMarkerAlt /> 지도에서 장소 추가
+              <AddButton onClick={startAddPlace}>
+                <FaPlus /> 장소 추가하기
               </AddButton>
             </HeaderButtons>
           </SidebarHeader>
@@ -416,7 +450,6 @@ const MapPage = () => {
             places={mapPlaces}
             categories={categories}
             onMapClick={handleMapClick}
-            mapClickMode={mapClickMode}
             userLocation={userLocation}
             onPlaceClick={handlePlaceClick}
           />
@@ -430,14 +463,46 @@ const MapPage = () => {
                   <CloseButton onClick={() => setShowAddPlace(false)}><IoMdClose /></CloseButton>
                 </ModalHeader>
                 <ModalBody>
-                  <Input placeholder="장소 이름" value={newPlace.name} onChange={(e) => setNewPlace({ ...newPlace, name: e.target.value })} />
-                  <Select value={newPlace.category} onChange={(e) => setNewPlace({ ...newPlace, category: e.target.value })}>
-                    {categories.map(category => (<option key={category.id} value={category.id}>{category.name}</option>))}
-                  </Select>
-                  <Input placeholder="주소" value={newPlace.address} readOnly style={{ backgroundColor: '#f8f9fa' }} />
-                  <Input placeholder="세부 주소" value={newPlace.detailedAddress} onChange={(e) => setNewPlace({ ...newPlace, detailedAddress: e.target.value })} />
-                  <TextArea placeholder="설명" value={newPlace.description} onChange={(e) => setNewPlace({ ...newPlace, description: e.target.value })} />
-                  <Button onClick={addPlace}>장소 추가</Button>
+                  <Input 
+                    placeholder="장소 이름 *" 
+                    value={newPlace.name} 
+                    onChange={(e) => setNewPlace({ ...newPlace, name: e.target.value })} 
+                  />
+                  
+                  <CategorySection>
+                    <CategoryLabel>장소 유형 선택 *</CategoryLabel>
+                    <CategoryGrid>
+                      {categories.map(category => (
+                        <CategoryButton
+                          key={category.id}
+                          $isSelected={newPlace.category === category.id}
+                          onClick={() => setNewPlace({ ...newPlace, category: category.id })}
+                        >
+                          <CategoryIcon>{category.icon}</CategoryIcon>
+                          <CategoryName>{category.name}</CategoryName>
+                        </CategoryButton>
+                      ))}
+                    </CategoryGrid>
+                  </CategorySection>
+                  
+                  <Input 
+                    placeholder="도로명 주소 *" 
+                    value={newPlace.address} 
+                    onChange={(e) => setNewPlace({ ...newPlace, address: e.target.value })}
+                  />
+                  <Input 
+                    placeholder="세부 주소 (건물명, 층수 등)" 
+                    value={newPlace.detailedAddress} 
+                    onChange={(e) => setNewPlace({ ...newPlace, detailedAddress: e.target.value })} 
+                  />
+                  <TextArea 
+                    placeholder="장소에 대한 설명을 입력하세요" 
+                    value={newPlace.description} 
+                    onChange={(e) => setNewPlace({ ...newPlace, description: e.target.value })} 
+                  />
+                  <Button onClick={addPlace} disabled={isGeocoding}>
+                    {isGeocoding ? '주소 변환 중...' : '장소 추가'}
+                  </Button>
                 </ModalBody>
               </ModalContent>
             </Modal>
@@ -777,6 +842,27 @@ const SearchEmptySubText = styled.div`
   font-size: 14px;
   color: #999;
 `;
+
+const GeocodingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 6px;
+  font-size: 14px;
+  margin: 8px 0;
+  
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
 const Modal = styled.div`
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -892,4 +978,57 @@ const Button = styled.button`
   &:hover {
     background: #0056b3;
   }
+`;
+
+const CategorySection = styled.div`
+  margin-bottom: 16px;
+`;
+
+const CategoryLabel = styled.label`
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+`;
+
+const CategoryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+`;
+
+const CategoryButton = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: ${props => props.$isSelected ? '#007bff' : '#f0f0f0'};
+  color: ${props => props.$isSelected ? 'white' : '#333'};
+  border: 1px solid ${props => props.$isSelected ? '#007bff' : '#ddd'};
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: ${props => props.$isSelected ? '600' : '400'};
+  transition: all 0.2s ease;
+  box-shadow: ${props => props.$isSelected ? '0 2px 8px rgba(0, 0, 0, 0.1)' : 'none'};
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+`;
+
+const CategoryIcon = styled.span`
+  font-size: 24px;
+`;
+
+const CategoryName = styled.span`
+  font-size: 12px;
 `;

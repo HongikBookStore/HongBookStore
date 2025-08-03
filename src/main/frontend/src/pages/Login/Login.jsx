@@ -86,28 +86,93 @@ const SubmitButton = styled.button`
 `;
 
 const SocialSection = styled.div`
-  margin-top: 2rem;
+  margin-top: 2.5rem;
   text-align: center;
+  width: 100%;
+`;
+
+const SocialTitle = styled.p`
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+`;
+
+const SocialButtonsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 1rem;
 `;
 
 const SocialBtn = styled.button`
-  margin: 0 0.5rem;
-  width: 56px;
-  height: 56px;
+  width: 100%;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  gap: 12px;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+  overflow: hidden;
+  
   &:hover {
-    box-shadow: 0 4px 16px rgba(35,81,233,0.10);
-    border-color: #2351e9;
-    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  img {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.2s ease;
+  }
+  
+  &:hover img {
+    transform: scale(1.1);
+  }
+  
+  /* 네이버 버튼 스타일 */
+  &[type="naver"] {
+    background: #03C75A;
+    color: white;
+    &:hover {
+      background: #02A94A;
+    }
+  }
+  
+  /* 카카오 버튼 스타일 */
+  &[type="kakao"] {
+    background: #FEE500;
+    color: #3C1E1E;
+    &:hover {
+      background: #FDD835;
+    }
+  }
+  
+  /* 구글 버튼 스타일 */
+  &[type="google"] {
+    background: white;
+    color: #757575;
+    border: 1px solid #dadce0;
+    &:hover {
+      background: #f8f9fa;
+      border-color: #c6c6c6;
+    }
+  }
+`;
+
+const SocialBtnText = styled.span`
+  font-family: 'Pretendard', 'Noto Sans', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 600;
 `;
 
 const RememberMeGroup = styled.div`
@@ -299,18 +364,21 @@ function Login() {
           <span onClick={() => navigate('/find-pw')}>{t('findPw')}</span>
         </LinkGroup>
         <SocialSection>
-          <p>{t('socialLogin')}</p>
-          <div style={{display:'flex', justifyContent:'center', gap:'1.5rem', marginTop:'1rem'}}>
+          <SocialTitle>{t('socialLogin')}</SocialTitle>
+          <SocialButtonsContainer>
             <SocialBtn type="naver" aria-label="Naver Login" onClick={() => handleSocialLogin('naver')}>
-              <img src={naverLogo} alt="Naver" style={{width:40, height:40}} />
+              <img src={naverLogo} alt="Naver" />
+              <SocialBtnText>Naver</SocialBtnText>
             </SocialBtn>
             <SocialBtn type="kakao" aria-label="Kakao Login" onClick={() => handleSocialLogin('kakao')}>
-              <img src={kakaoLogo} alt="Kakao" style={{width:40, height:40}} />
+              <img src={kakaoLogo} alt="Kakao" />
+              <SocialBtnText>Kakao</SocialBtnText>
             </SocialBtn>
             <SocialBtn type="google" aria-label="Google Login" onClick={() => handleSocialLogin('google')}>
-              <img src={googleLogo} alt="Google" style={{width:40, height:40}} />
+              <img src={googleLogo} alt="Google" />
+              <SocialBtnText>Google</SocialBtnText>
             </SocialBtn>
-          </div>
+          </SocialButtonsContainer>
         </SocialSection>
       </LoginContainer>
     </>
