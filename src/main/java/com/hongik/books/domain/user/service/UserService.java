@@ -37,6 +37,7 @@ public class UserService {
         user.updateProfile(userRequestDTO.username(), userRequestDTO.profileImagePath());
 
         UserResponseDTO userResponse = new UserResponseDTO(
+                user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.isStudentVerified(),
@@ -50,6 +51,7 @@ public class UserService {
         return userRepository.findById(userId)
                 .map(user -> {
                     UserResponseDTO userResponse = new UserResponseDTO(
+                            user.getId(),
                             user.getUsername(),
                             user.getEmail(),
                             user.isStudentVerified(),
