@@ -13,18 +13,21 @@ export const getMyInfo = async () => {
   try {
     const response = await api.get('/my/profile');
 
-    // 백엔드 응답이 { success: true, data: { username, email } } 구조로 옵니다.
-    // api 인터셉터에서 이미 response.data를 반환하므로 response가 실제 응답 데이터입니다.
+    console.log("getMyInfo() response:", response);
+
     if (response && response.success) {
-      return response.data; // 성공 시 사용자 정보 객체 반환
+      return response.data;  // 이게 이미 UserResponseDTO면 OK!
+    } else if (response && response.data && response.data.data) {
+      // 혹시 axios 기본구조면 이렇게:
+      return response.data.data;
     } else {
       throw new Error(response?.message || '내 정보 조회에 실패했습니다.');
     }
   } catch (error) {
     console.error('내 정보 조회 API 호출 실패:', error);
-    // 여기서 에러를 다시 던져서, 이 함수를 호출한 컴포넌트(예: MyPage)에서 에러 상황(ex: 로그인 페이지로 리다이렉트)을 처리
     throw error;
   }
+
 };
 
 /**
