@@ -3,8 +3,6 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import styled, { keyframes } from 'styled-components';
 
-// --- 스타일 정의 (styled-components) ---
-
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -78,9 +76,6 @@ const StyledLink = styled(Link)`
     background-color: #6d28d9;
   }
 `;
-
-
-// --- 컴포넌트 본문 ---
 
 function VerificationConfirmPage() {
   // URL의 쿼리 파라미터(?token=...)를 쉽게 다루기 위한 훅

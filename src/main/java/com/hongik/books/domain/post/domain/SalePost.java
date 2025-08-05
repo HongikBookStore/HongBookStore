@@ -14,6 +14,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 판매 게시글 정보를 담는 SalePost Entity
@@ -25,6 +27,10 @@ public class SalePost {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "post_id")
     private Long id;
+
+    // PostImage와의 1:N 관계 설정
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostImage> postImages = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false)
@@ -126,5 +132,20 @@ public class SalePost {
 
     public void increaseViewCount() {
         this.views++;
+    }
+
+    // 연관관계 편의 메서드: 게시글에 이미지를 추가할 때 사용
+    public void addPostImage(PostImage postImage) {
+        this.postImages.add(postImage);
+    }
+
+    /**
+     * 게시글의 상태를 변경하는 메서드
+     * 서비스 레이어에서 직접 status 필드를 변경하는 대신, 이 메서드를 통해 상태 변경을 요청
+     * @param newStatus 새로운 판매 상태
+     */
+    public void changeStatus(SaleStatus newStatus) {
+        // TODO: 나중에 여기에 상태 변경에 대한 복잡한 비즈니스 규칙(예: SOLD_OUT 상태에서는 다른 상태로 변경 불가)을 추가
+        this.status = newStatus;
     }
 }

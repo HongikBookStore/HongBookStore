@@ -174,7 +174,7 @@ const BookImage = styled.div`
   color: #999;
 `;
 
-const BookTitle = styled.h3`
+const BookCardTitle = styled.h3`
   font-size: 1.2rem;
   margin-bottom: 8px;
   color: #333;
@@ -533,66 +533,39 @@ const statusMap = {
 const MyBookstore = () => {
   const [activeTab, setActiveTab] = useState('all'); // 기본 탭을 '전체'로
   const [myPosts, setMyPosts] = useState([]);
+
   const [showAllMyBooks, setShowAllMyBooks] = useState(false);
-  const [showAllWishlist, setShowAllWishlist] = useState(false);
+  const [wishlist, setWishlist] = useState(false); // 찜 목록 상태
   const [showAllRecent, setShowAllRecent] = useState(false);
   const [showAllWanted, setShowAllWanted] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState({ myPosts: true, wishlist: true });
   const navigate = useNavigate();
 
   // 내 판매글 목록을 불러오는 API 호출 함수
   const fetchMyPosts = useCallback(async () => {
-    setLoading(true);
+    setLoading(prev => ({ ...prev, myPosts: true }));
     try {
-      const response = await axios.get('/api/posts/my', { headers: getAuthHeader() });
+      const response = await axios.get('/api/my/posts', { headers: getAuthHeader() });
       setMyPosts(response.data);
     } catch (error) {
       console.error("내 판매글 목록을 불러오는 데 실패했습니다.", error);
-      // TODO: 401 Unauthorized 에러 시 로그인 페이지로 리다이렉트 처리
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, myPosts: false }));
     }
   }, []);
 
-  // 임시 데이터 - 찜한 책
-  const [wishlist, setWishlist] = useState([
-    {
-      id: 101,
-      title: '클린 코드',
-      author: '로버트 C. 마틴',
-      price: 30000,
-      status: 'SALE',
-      createdAt: '2024-01-12',
-      image: null
-    },
-    {
-      id: 102,
-      title: '함께 자라기',
-      author: '김창준',
-      price: 18000,
-      status: 'SALE',
-      createdAt: '2024-01-11',
-      image: null
-    },
-    {
-      id: 103,
-      title: '객체지향의 사실과 오해',
-      author: '조영호',
-      price: 22000,
-      status: 'SALE',
-      createdAt: '2024-01-10',
-      image: null
-    },
-    {
-      id: 104,
-      title: '테스트 주도 개발',
-      author: '켄트 벡',
-      price: 28000,
-      status: 'SALE',
-      createdAt: '2024-01-09',
-      image: null
+  // 내 찜 목록을 불러오는 API 호출 함수
+  const fetchWishlist = useCallback(async () => {
+    setLoading(prev => ({ ...prev, wishlist: true }));
+    try {
+      const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
+      setWishlist(response.data);
+    } catch (error) {
+      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
+    } finally {
+      setLoading(prev => ({ ...prev, wishlist: false }));
     }
-  ]);
+  }, []);
 
   // 임시 데이터 - 최근 본 책
   const mockRecentBooks = [
@@ -677,7 +650,8 @@ const MyBookstore = () => {
   // 컴포넌트 마운트 시 API 호출
   useEffect(() => {
     fetchMyPosts();
-  }, [fetchMyPosts]);
+    fetchWishlist();
+  }, [fetchMyPosts, fetchWishlist]);
 
   // 탭에 따라 게시글을 필터링하는 함수
   const getFilteredBooks = () => {
@@ -709,9 +683,7 @@ const MyBookstore = () => {
     }
   };
 
-  const handleViewBook = (bookId) => {
-    navigate(`/marketplace/${bookId}`);
-  };
+  const handleViewBook = (postId) => navigate(`/posts/${postId}`);
 
   const handleAddBook = () => {
     navigate('/book-write');
@@ -721,12 +693,17 @@ const MyBookstore = () => {
     navigate('/my-transactions');
   };
 
-  const handleRemoveFromWishlist = (bookId) => {
+  // 찜 해제 핸들러
+  const handleRemoveFromWishlist = async (postId) => {
     if (window.confirm('찜을 해제하시겠습니까?')) {
-      // 실제로는 API 호출
-      console.log('찜 목록에서 제거:', bookId);
-      // 상태에서 제거
-      setWishlist(prev => prev.filter(book => book.id !== bookId));
+      try {
+        await axios.delete(`/api/posts/${postId}/like`, { headers: getAuthHeader() });
+        alert("찜이 해제되었습니다.");
+        fetchWishlist(); // 찜 목록 새로고침
+      } catch (error) {
+        console.error("찜 해제에 실패했습니다.", error);
+        alert("찜 해제 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -781,10 +758,7 @@ const MyBookstore = () => {
           {/* 1. 내가 등록한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle>
-                <FaBook />
-                내가 등록한 책
-              </SectionTitle>
+              <SectionTitle><FaBook /> 내가 등록한 책</SectionTitle>
               <ViewMoreButton onClick={() => setShowAllMyBooks(!showAllMyBooks)}>
                 {showAllMyBooks ? '접기' : '더보기'}
                 <FaArrowRight style={{ transform: showAllMyBooks ? 'rotate(90deg)' : 'none' }} />
@@ -864,59 +838,34 @@ const MyBookstore = () => {
           {/* 2. 찜한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle>
-                <FaHeart />
-                찜한 책 ({wishlist.length})
-              </SectionTitle>
-              <ViewMoreButton onClick={() => setShowAllWishlist(!showAllWishlist)}>
-                {showAllWishlist ? '접기' : '더보기'}
-                <FaArrowRight style={{ transform: showAllWishlist ? 'rotate(90deg)' : 'none' }} />
-              </ViewMoreButton>
+              <SectionTitle><FaHeart /> 찜한 책 ({wishlist.length})</SectionTitle>
             </SectionHeader>
-
-            {wishlist.length > 0 ? (
+            {loading.wishlist ? <p>로딩 중...</p> : wishlist.length > 0 ? (
               <CompactList>
-                {(showAllWishlist ? wishlist : wishlist.slice(0, 3)).map(book => (
-                  <CompactBookCard key={book.id}>
+                {wishlist.map(item => (
+                  <CompactBookCard key={item.postId}>
                     <CompactBookImage>
-                      {book.image ? (
-                        <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                      ) : (
-                        <FaBook size={20} />
-                      )}
+                      {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.postTitle} /> : <FaBook size={20} />}
                     </CompactBookImage>
                     <CompactBookInfo>
-                      <CompactBookTitle>{book.title}</CompactBookTitle>
+                      <CompactBookTitle>{item.postTitle}</CompactBookTitle>
                       <CompactBookMeta>
-                        <span><FaUser size={10} /> {book.author}</span>
-                        <span><FaClock size={10} /> {book.createdAt}</span>
+                        <span><FaUser size={10} /> {item.sellerNickname}</span>
+                        <span><FaClock size={10} /> {new Date(item.createdAt).toLocaleDateString()}</span>
                       </CompactBookMeta>
-                      <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
+                      <CompactBookPrice>{item.price.toLocaleString()}원</CompactBookPrice>
                     </CompactBookInfo>
-                    <CompactBookStatus $status={book.status}>
-                      {book.status === 'SALE' ? '판매중' : '예약중'}
-                    </CompactBookStatus>
-                    <CompactBookActions>
-                      <ActionButton onClick={() => handleViewBook(book.id)}>
-                        <FaSearch /> 보기
-                      </ActionButton>
-                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(book.id)}>
-                        <FaHeart /> 찜 해제
-                      </ActionButton>
-                    </CompactBookActions>
+                    <BookActions>
+                      <ActionButton onClick={() => handleViewBook(item.postId)}><FaEye /> 보기</ActionButton>
+                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)}><FaHeart /> 찜 해제</ActionButton>
+                    </BookActions>
                   </CompactBookCard>
                 ))}
               </CompactList>
-            ) : (
-              <EmptyState>
-                <EmptyIcon>
-                  <FaHeart />
-                </EmptyIcon>
-                <h3>찜한 책이 없습니다</h3>
-                <p>마켓플레이스에서 책을 찜해보세요!</p>
-              </EmptyState>
-            )}
+            ) : <EmptyState><EmptyIcon><FaHeart /></EmptyIcon><h3>찜한 책이 없습니다</h3></EmptyState>}
           </SectionContainer>
+
+          {/* TODO: 최근 본 책, 구해요 글 섹션은 각각의 API가 만들어진 후에 연동 */}
 
           {/* 3. 최근 본 책 */}
           <SectionContainer>

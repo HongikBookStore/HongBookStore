@@ -14,15 +14,18 @@ public record MyPostSummaryResponseDTO(
         SalePost.SaleStatus status,
         String thumbnailUrl,
         LocalDateTime createdAt
-        // TODO: 예약 기능 구현 시, 구매자 정보(buyerNickname)도 추가하면 좋습니다.
 ) {
-    public MyPostSummaryResponseDTO(SalePost salePost) {
-        this(
+    public static MyPostSummaryResponseDTO fromEntity(SalePost salePost) {
+        String thumbnailUrl = salePost.getPostImages().isEmpty()
+                ? null // 이미지가 없으면 null
+                : salePost.getPostImages().getFirst().getImageUrl();
+
+        return new MyPostSummaryResponseDTO(
                 salePost.getId(),
                 salePost.getBook().getTitle(),
                 salePost.getPrice(),
                 salePost.getStatus(),
-                salePost.getBook().getCoverImageUrl(),
+                thumbnailUrl,
                 salePost.getCreatedAt()
         );
     }

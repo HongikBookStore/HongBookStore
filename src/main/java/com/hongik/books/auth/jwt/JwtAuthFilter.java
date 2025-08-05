@@ -26,7 +26,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtTokenRedisRepository jwtTokenRedisRepository;
     private final UserRepository userRepository;
-    // private final CustomUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -42,19 +41,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "사용할 수 없는 토큰입니다.");
                     return;
                 }
-
-//                // 2. 토큰이 비밀번호 재설정용 토큰인지 확인 (API 접근에 사용 불가)
-//                if (jwtTokenProvider.isPasswordResetToken(token)) {
-//                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "API 접근에 사용할 수 없는 토큰입니다.");
-//                    return;
-//                }
-//
-//                // 토큰이 유효하면 인증 정보 설정
-//                // 토큰에서 사용자 정보 추출
-//                String username = jwtTokenProvider.getUsernameFromToken(token);
-//
-//                // 사용자 정보로부터 UserDetails 로드
-//                CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(username);
 
                 // 토큰에서 사용자 ID (Primary Key)를 직접 추출
                 Long userId = jwtTokenProvider.getUserIdFromToken(token); // (❗️ JwtTokenProvider에 이 메서드 추가 필요)

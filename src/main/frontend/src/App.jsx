@@ -9,8 +9,6 @@ import { Loading } from './components/ui';
 import Marketplace from './pages/Marketplace/Marketplace.jsx';
 import MyPage from './pages/MyPage/MyPage.jsx';
 import Login from './pages/Login/Login.jsx';
-import Register from './pages/Register/Register.jsx';
-import FindId from './pages/FindId/FindId.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
@@ -26,6 +24,7 @@ import { WritingProvider } from './contexts/WritingContext';
 import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import ChatRoomWrapper from './pages/Chat/ChatRoomWrapper.jsx'
 import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
 import VerificationConfirmPage from './pages/VerificationConfirmPage/VerificationConfirmPage.jsx';
 
@@ -152,7 +151,7 @@ function App() {
                                     <ChatList />
                                 </>
                             } />
-                            <Route path="/chat/:id" element={
+                            <Route path="/chat/:chatId" element={
                                 <>
                                     <Header />
                                     <ChatRoom />
@@ -177,8 +176,7 @@ function App() {
                                 </>
                             } />
                             <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
-                            <Route path="/find-id" element={<FindId />} />
+                            <Route path="/register" element={<Navigate to="/login" replace />} /> {/* 리다이렉트 처리 */}
 							<Route path="/verify-student" element={<VerificationConfirmPage />} />
                             <Route path="/marketplace/:id" element={
                                 <>

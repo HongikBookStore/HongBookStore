@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthCtx } from '../../contexts/AuthContext'; // ✅ 너 AuthContext 경로 맞춰서!
 import { getOrCreateChatRoom } from '../../api/chat';
 import axios from 'axios';
 
@@ -710,22 +712,42 @@ const BookDetail = () => {
     setLiked(!liked);
   };
 
+  const { user } = useContext(AuthCtx);
+
   const handleChat = async () => {
     try {
-      console.log('채팅하기 버튼 클릭됨, 책 ID:', id);
-      
-      // 해당 책에 대한 채팅방을 조회하거나 생성
-      const response = await getOrCreateChatRoom(id);
-      const chatRoom = await response.json();
-      
-      console.log('생성된/조회된 채팅방:', chatRoom);
-      
-      // 생성된 또는 기존 채팅방으로 이동
+      const salePostId = id;           // 책 게시글 ID
+      const buyerId = user?.id;        // ✅ 현재 로그인 사용자 ID 가져오기
+
+      if (!buyerId) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const token = localStorage.getItem('accessToken');
+      console.log("🔥 accessToken:", token);
+      console.log("✅ 현재 buyerId:", buyerId);
+
+      const res = await fetch(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log("🔥 fetch status:", res.status);
+      const text = await res.text();
+      console.log("🔥 response body:", text);
+
+      if (!res.ok) throw new Error('채팅방 생성 실패!');
+      const chatRoom = JSON.parse(text);
+
       navigate(`/chat/${chatRoom.id}`);
-    } catch (error) {
-      console.error('채팅방 생성/조회 실패:', error);
-      // 에러 발생 시 채팅 목록으로 이동
-      navigate('/chat');
+
+    } catch (err) {
+      console.error(err);
+      alert('채팅방 생성 실패!');
     }
   };
 

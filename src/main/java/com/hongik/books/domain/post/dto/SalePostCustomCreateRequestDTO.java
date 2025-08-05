@@ -10,11 +10,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class SalePostCustomCreateRequestDTO {
-    // Book 정보 (ISBN, coverImageUrl 없음)
+    // Book 정보
     private String bookTitle;
     private String author;
     private String publisher;
     private int originalPrice;
+
     // SalePost 정보
     private String postTitle;
     private String postContent;
