@@ -742,7 +742,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { chatId } = useParams();
   const [isReserved, setIsReserved] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -770,38 +770,6 @@ const ChatRoom = ({ roomId, username, myId }) => {
   const stompClient = useRef(null); // ✅ 이 줄을 추가
   const { user } = useContext(AuthCtx);
   const currentUserId = user?.id;
-
-  // 채팅방 ID에 따른 사용자 정보 매핑
-  const getChatUserInfo = (chatId) => {
-    // chatId가 유효한 숫자인지 확인
-    const numericChatId = parseInt(chatId);
-    if (isNaN(numericChatId)) {
-      console.log('유효하지 않은 chatId:', chatId);
-      return { name: '사용자', avatar: '사', bookTitle: '책 제목', price: '0' };
-    }
-    
-    const userInfoMap = {
-      1: { name: '김철수', avatar: '김', bookTitle: '자바의 정석', price: '15,000' },
-      2: { name: '이영희', avatar: '이', bookTitle: '알고리즘 문제 해결 전략', price: '18,000' },
-      3: { name: '박민수', avatar: '박', bookTitle: '스프링 부트 실전 활용', price: '20,000' },
-      4: { name: '최지영', avatar: '최', bookTitle: '데이터베이스 시스템', price: '22,000' }
-    };
-    
-    const userInfo = userInfoMap[numericChatId];
-    if (!userInfo) {
-      console.log('매핑되지 않은 chatId:', numericChatId);
-    }
-    
-    return userInfo || { name: '사용자', avatar: '사', bookTitle: '책 제목', price: '0' };
-  };
-
-  // chatId 디버깅
-  console.log('현재 chatId:', id, '타입:', typeof id);
-  
-  const chatUserInfo = getChatUserInfo(id);
-  
-  // 사용자 정보 디버깅
-  console.log('사용자 정보:', chatUserInfo);
 
   // 버튼 텍스트 반응형
   const getLabel = (type) => {
@@ -1184,7 +1152,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
       amount: parseInt(price),
       currency: 'KRW',
       merchantId: 'hongbookstore',
-      orderId: `order_${id}_${Date.now()}`,
+      orderId: `order_${chatId}_${Date.now()}`,
       description: `책 구매: ${bookTitle}`,
       timestamp: new Date().toISOString()
     };
@@ -1269,7 +1237,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
             </BackButton>
             <ChatInfo>
               <UserAvatar>
-                {chatUserInfo.avatar}
+                <FaUser />
               </UserAvatar>
               <UserInfo>
                 <UserName>{messages.length > 0 && messages[0].sender === 'other' ? '김학생' : '학생'}</UserName>
