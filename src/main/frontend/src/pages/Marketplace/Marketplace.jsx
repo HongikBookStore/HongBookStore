@@ -809,6 +809,16 @@ const getAuthHeader = () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+// 에러 메시지 컴포넌트 추가
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: var(--error, #ff4757);
+  background: var(--error-bg, #ffe8e8);
+  border-radius: 1rem;
+  margin: 2rem 0;
+`;
+
 const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -818,6 +828,8 @@ const Marketplace = () => {
   const [page, setPage] = useState(0); // 현재 페이지 번호 상태
   const [hasMore, setHasMore] = useState(true); // 더 불러올 데이터가 있는지 여부
   const [isLoading, setIsLoading] = useState(true);
+  const [likedPostIds, setLikedPostIds] = useState(new Set()); // 찜한 게시글 ID Set
+  const [error, setError] = useState(''); // 에러 상태
 
   // 검색 및 필터 상태
   const [searchParams, setSearchParams] = useState({
@@ -827,15 +839,15 @@ const Marketplace = () => {
     maxPrice: '',
     sort: 'createdAt,desc',
   });
+
   const [tempFilters, setTempFilters] = useState({
     minPrice: '',
     maxPrice: '',
   });
+  
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef();
   const observerRef = useRef(); // Intersection Observer를 위한 ref
-
-  const [likedPostIds, setLikedPostIds] = useState(new Set()); // 찜한 게시글 ID를 저장할 Set
 
   // 내가 찜한 글 목록을 불러와서 Set에 저장하는 함수
   const fetchMyLikes = useCallback(async () => {
@@ -851,11 +863,12 @@ const Marketplace = () => {
   }, []);
 
   // API 호출 로직
-  const fetchPosts = useCallback(async (params, isNewSearch) => {
+  const fetchPosts = useCallback(async (params, pageToFetch = 0) => {
     setIsLoading(true);
+    setError(''); // 새로운 요청 시 에러 초기화
     try {
       const activeParams = {
-        page: isNewSearch ? 0 : page,
+        page: pageToFetch,
         size: 12,
         sort: params.sort,
       };
@@ -866,24 +879,25 @@ const Marketplace = () => {
 
       const response = await axios.get('/api/posts', { params: activeParams });
       
-      // 새 검색이면 데이터를 교체하고, 아니면 기존 데이터에 추가
-      setPosts(prev => isNewSearch ? response.data.content : [...prev, ...response.data.content]);
+      // 첫 페이지인지 추가 페이지인지에 따라 다르게 처리
+      setPosts(prev => pageToFetch === 0 ? response.data.content : [...prev, ...response.data.content]);
       setHasMore(!response.data.last); // 마지막 페이지인지 확인
-      setPage(isNewSearch ? 1 : prev => prev + 1);
+      setPage(pageToFetch + 1); // 다음에 로드할 페이지 번호 설정
 
     } catch (error) {
       console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
+      setError('게시글을 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
-  }, [page]);
+  }, []);
 
   // 검색 조건이 바뀔 때마다, 데이터를 초기화하고 첫 페이지부터 다시 로드
   useEffect(() => {
     setPosts([]); // 기존 목록 비우기
     setPage(0);   // 페이지 번호 0으로 초기화
     setHasMore(true); // 더 불러올 데이터가 있다고 가정
-    fetchPosts(searchParams, true); // 새 검색으로 API 호출
+    fetchPosts(searchParams, 0); // 새 검색으로 API 호출
   }, [searchParams, fetchPosts]);
 
   // 컴포넌트가 처음 마운트될 때 찜 목록도 함께 불러옴
@@ -893,32 +907,31 @@ const Marketplace = () => {
 
   // 무한 스크롤을 위한 Intersection Observer 설정
   useEffect(() => {
+    const currentObserverRef = observerRef.current; // cleanup을 위한 ref 저장
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoading) {
-          fetchPosts(false); // 다음 페이지 데이터 불러오기
+          fetchPosts(searchParams, page); // 현재 page 사용
         }
       },
       { threshold: 1.0 }
     );
 
-    const currentRef = observerRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
+    if (currentObserverRef) observer.observe(currentObserverRef);
+    
     return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
+      // [수정] cleanup 시 저장된 ref 사용
+      if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasMore, isLoading, fetchPosts]);
+
+  }, [hasMore, isLoading, fetchPosts, searchParams, page]);
 
   // 찜하기/찜취소 핸들러
   const handleLikeToggle = async (e, postId) => {
     e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
     if (!localStorage.getItem('accessToken')) {
-      alert("로그인이 필요한 기능입니다.");
+      alert("로그인이 필요한 기능이에요! 😊");
       navigate('/login');
       return;
     }
@@ -948,7 +961,7 @@ const Marketplace = () => {
         else newSet.delete(postId);
         return newSet;
       });
-      alert("오류가 발생했습니다.");
+      alert("찜하기 처리 중 오류가 발생했어요. 다시 시도해주세요! 😅");
     }
   };
 
@@ -983,6 +996,23 @@ const Marketplace = () => {
       ))}
     </LoadingGrid>
   );
+
+  // 카테고리 옵션 생성 함수 추가
+  const renderCategoryOptions = () => {
+    const options = [];
+    Object.keys(CATEGORIES).forEach(majorCategory => {
+      Object.keys(CATEGORIES[majorCategory]).forEach(college => {
+        CATEGORIES[majorCategory][college].forEach(department => {
+          options.push(
+            <option key={`${majorCategory}-${college}-${department}`} value={department}>
+              {majorCategory} &gt; {college} &gt; {department}
+            </option>
+          );
+        });
+      });
+    });
+    return options;
+  };
 
   const renderBookCard = (post) => (
     <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
@@ -1050,22 +1080,19 @@ const Marketplace = () => {
           <CategoryContainer>
             <CategorySelect onChange={handleCategoryChange} value={searchParams.category}>
               <option value="">전체 카테고리</option>
-              {Object.keys(CATEGORIES['전공']['공과대학']).map(subCategory => (
-                <option key={CATEGORIES['전공']['공과대학'][subCategory]} value={CATEGORIES['전공']['공과대학'][subCategory]}>
-                  {CATEGORIES['전공']['공과대학'][subCategory]}
-                </option>
-              ))}
+              {/* 카테고리 옵션 동적 생성 - 실제로 렌더링되도록 함수 호출 */}
+              {renderCategoryOptions()}
             </CategorySelect>
           </CategoryContainer>
 
-          {posts.length > 0 && (
-            <BookGrid>
-              {posts.map(renderBookCard)}
-            </BookGrid>
-          )}
+          {/* 에러 메시지 표시 */}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+
+          {posts.length > 0 && <BookGrid>{posts.map(renderBookCard)}</BookGrid>}
 
           {/* 로딩 중이거나, 결과가 없을 때 메시지 표시 */}
-          {isLoading && posts.length === 0 && renderSkeletonCards()}
+          {isLoading && posts.length === 0 && <p>로딩 중...</p>}
+
           {!isLoading && posts.length === 0 && (
             <NoResultsMessage>
               <div className="icon">🔍</div>
@@ -1077,7 +1104,7 @@ const Marketplace = () => {
           {/* 무한 스크롤을 위한 감시병(trigger)과 추가 로딩 스켈레톤 */}
           {isLoading && posts.length > 0 && renderSkeletonCards(4)}
           <div ref={observerRef} style={{ height: '50px' }} />
-
+            {isLoading && posts.length > 0 && <p>더 많은 글을 불러오는 중...</p>}
         </div>
       </PageWrapper>
     </MarketplaceContainer>
