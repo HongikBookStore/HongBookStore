@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle, FaHeart, FaClock, FaUser } from 'react-icons/fa';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -170,21 +170,17 @@ const ToggleOption = styled.label`
   input[type="radio"] {
     display: none;
   }
-
-  input[type="radio"]:checked + span {
-    color: #007bff;
-    font-weight: 600;
-  }
-
-  input[type="radio"]:checked ~ & {
-    border-color: #007bff;
-    background: #f8f9ff;
-  }
 `;
 
 const ToggleText = styled.span`
   font-size: 0.9rem;
   color: #666;
+
+  /* 체크 시 텍스트 강조 */
+  input[type="radio"]:checked + & {
+    color: #007bff;
+    font-weight: 600;
+  }
 `;
 
 const ImageSection = styled.div`
@@ -557,7 +553,7 @@ const BookItem = styled.div`
   }
 `;
 
-const BookTitle = styled.div`
+const BookItemTitle = styled.div`
   font-weight: 600;
   font-size: 1.1rem;
   margin-bottom: 0.25rem;
@@ -772,17 +768,31 @@ const CATEGORIES = {
   }
 };
 
-// [추가] 인증 토큰을 가져오는 헬퍼 함수 (실제 프로젝트에서는 context나 store에서 관리)
+// 인증 토큰을 가져오는 헬퍼 함수
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
-const BookWrite = () => {
+// 프론트엔드 상태값 -> 백엔드 Enum 값으로 변환
+const conditionMap = {
+  '상': 'HIGH',
+  '중': 'MEDIUM',
+  '하': 'LOW'
+};
+
+const PostWrite = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
   const isEdit = Boolean(id);
+
+  /* WritingContext 사용 */
+  const { startWriting, stopWriting, setUnsavedChanges } = useWriting() || {
+    startWriting: () => {},
+    stopWriting: () => {},
+    setUnsavedChanges: () => {},
+  };
 
   const [formData, setFormData] = useState({
     // Book 정보
@@ -790,22 +800,19 @@ const BookWrite = () => {
     bookTitle: '',
     author: '',
     publisher: '',
-    coverImageUrl: '',
     originalPrice: '',
 
     // SalePost 정보
     postTitle: '',
     postContent: '',
     price: '',
-    writingCondition: 'HIGH',
-    tearCondition: 'HIGH',
-    waterCondition: 'HIGH',
+    writingCondition: '상',
+    tearCondition: '상',
+    waterCondition: '상',
     negotiable: true,
   });
 
-  const [imageFile, setImageFile] = useState(null); // 이미지 파일은 별도 상태로 관리
-  const [imagePreview, setImagePreview] = useState(''); // 이미지 미리보기 URL
-
+  const [images, setImages] = useState([]); // 다중 이미지 파일 관리
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -813,7 +820,6 @@ const BookWrite = () => {
   const [showBookSearch, setShowBookSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedBook, setSelectedBook] = useState(null);
 
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
@@ -822,11 +828,11 @@ const BookWrite = () => {
 
   // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
-    console.log('BookWrite 컴포넌트 마운트됨');
+    console.log('PostWrite 컴포넌트 마운트됨');
     startWriting('sale');
     
     // 임시저장된 데이터 불러오기
-    const savedDraft = localStorage.getItem('bookSaleDraft');
+    const savedDraft = localStorage.getItem('postWriteDraft');
     if (savedDraft && !isEdit) {
       try {
         const draftData = JSON.parse(savedDraft);
@@ -848,21 +854,21 @@ const BookWrite = () => {
             console.log('임시저장된 데이터 불러옴');
           } else {
             // 불러오지 않으면 임시저장 삭제
-            localStorage.removeItem('bookSaleDraft');
+            localStorage.removeItem('postWriteDraft');
           }
         } else {
-          // 24시간이 지난 임시저장은 삭제
-          localStorage.removeItem('bookSaleDraft');
+          // 24시간이 지난 임시 저장 게시글 삭제
+          localStorage.removeItem('postWriteDraft');
         }
       } catch (error) {
         console.error('임시저장 데이터 파싱 오류:', error);
-        localStorage.removeItem('bookSaleDraft');
+        localStorage.removeItem('postWriteDraft');
       }
     }
     
     // 컴포넌트 언마운트 시 글쓰기 종료
     return () => {
-      console.log('BookWrite 컴포넌트 언마운트됨');
+      console.log('PostWrite 컴포넌트 언마운트됨');
       stopWriting();
     };
   }, [startWriting, stopWriting, isEdit]);
@@ -876,7 +882,7 @@ const BookWrite = () => {
     setUnsavedChanges(hasChanges);
   }, [formData, images, setUnsavedChanges]);
 
-  // 브라우저 뒤로가기/앞으로가기 감지
+  // 브라우저 뒤로 가기/앞으로 가기 감지
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
@@ -885,13 +891,13 @@ const BookWrite = () => {
       }
     };
 
-    // 브라우저 뒤로가기/앞으로가기 감지
+    // 브라우저 뒤로 가기/앞으로 가기 감지
     const handlePopState = (e) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
         setPendingNavigation('/marketplace'); // 기본적으로 마켓플레이스로 이동
         setShowWarningModal(true);
-        // 히스토리 상태를 다시 추가하여 뒤로가기 방지
+        // 히스토리 상태를 다시 추가하여 뒤로 가기 방지
         window.history.pushState(null, '', window.location.pathname);
       }
     };
@@ -905,9 +911,10 @@ const BookWrite = () => {
           images: images,
           timestamp: new Date().toISOString()
         };
-        localStorage.setItem('bookSaleDraft', JSON.stringify(draftData));
-        
-        // 실제로는 API 호출
+        localStorage.setItem('postWriteDraft', JSON.stringify(draftData));
+        console.log('임시저장 완료:', draftData);
+
+        // TODO: 게시글 임시 저장 API 구현
         await new Promise(resolve => setTimeout(resolve, 500));
         setHasUnsavedChanges(false);
         setUnsavedChanges(false);
@@ -946,18 +953,18 @@ const BookWrite = () => {
             bookTitle: postData.bookTitle || '',
             author: postData.author || '',
             publisher: postData.publisher || '',
-            coverImageUrl: postData.coverImageUrl || '',
             originalPrice: postData.originalPrice || '',
+
             postTitle: postData.postTitle || '',
             postContent: postData.postContent || '',
             price: postData.price || '',
-            writingCondition: postData.writingCondition || '',
-            tearCondition: postData.tearCondition || '',
-            waterCondition: postData.waterCondition || '',
+            writingCondition: Object.keys(conditionMap).find(key => conditionMap[key] === postData.writingCondition) || '상',
+            tearCondition: Object.keys(conditionMap).find(key => conditionMap[key] === postData.tearCondition) || '상',
+            waterCondition: Object.keys(conditionMap).find(key => conditionMap[key] === postData.waterCondition) || '상',
             negotiable: postData.negotiable || false,
           });
-          setImagePreview(postData.coverImageUrl); // 기존 이미지 미리보기 설정
-          setInputType('search'); // 수정 모드는 항상 검색된 책 기반으로 시작
+          setImages((postData.postImageUrls || []).map(url => ({ id: url, preview: url, isUploaded: true })));
+          setInputType(postData.isbn ? 'search' : 'custom');
         } catch (error) {
           console.error("수정할 게시글 정보를 불러오는 데 실패했습니다.", error);
           alert("게시글 정보를 불러올 수 없습니다.");
@@ -1002,13 +1009,13 @@ const BookWrite = () => {
   // - 필기 상태: 없음(0%) ~ 많음(15%)
   // - 찢어짐 정도: 없음(0%) ~ 심함(10%)
   // - 물흘림 정도: 없음(0%) ~ 심함(10%)
-  // - 최대 할인율: 35%
   //
-  // TODO: 실제 구현 시에는 시장 가격 데이터베이스나 유사 책의 거래 이력을 참고하여 더 정확한 추천 가격을 제공해야 합니다.
+  // TODO: 실제 구현 시에는 시장 가격 데이터베이스나 유사 책의 거래 이력을 참고하여 더 정확한 추천 가격을 제공
   const getRecommendedPrice = () => {
     if (!formData.originalPrice) return null;
     const discountRate = calculateDiscountRate();
-    const originalPrice = parseInt(formData.originalPrice);
+    const originalPrice = parseInt(formData.originalPrice, 10);
+    if (Number.isNaN(originalPrice)) return null; // NaN 방지
     const recommendedPrice = Math.round(originalPrice * (1 - discountRate / 100));
     return { discountRate, recommendedPrice };
   };
@@ -1038,17 +1045,21 @@ const BookWrite = () => {
   };
 
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (images.length + files.length > 3) {
+      alert('이미지는 최대 3개까지 업로드할 수 있습니다.');
+      return;
     }
+    const newImages = files.map(file => ({
+      id: `${Date.now()}_${file.name}`,
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    setImages(prev => [...prev, ...newImages]);
   };
 
-  const handleRemoveImage = () => {
-    URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
-    setImagePreview('');
+  const handleRemoveImage = (imageId) => {
+    setImages(prev => prev.filter(img => img.id !== imageId));
   };
 
   // 책 검색 함수
@@ -1056,7 +1067,7 @@ const BookWrite = () => {
     if (!searchQuery.trim()) return;
     try {
       const response = await axios.get('/api/search/books', { params: { query: searchQuery } });
-      setSearchResults(response.data);
+      setSearchResults(response.data || []);
     } catch (error) {
       console.error("책 검색에 실패했습니다.", error);
       alert("책 검색 중 오류가 발생했습니다.");
@@ -1065,15 +1076,12 @@ const BookWrite = () => {
 
   // 책 선택 함수
   const handleBookSelect = (book) => {
-    setSelectedBook(book);
-    // 선택한 책 정보를 formData에 채워넣기
     setFormData(prev => ({
       ...prev,
       isbn: book.isbn,
       bookTitle: book.title,
       author: book.author,
       publisher: book.publisher,
-      coverImageUrl: book.coverImageUrl,
     }));
     setShowBookSearch(false);
   };
@@ -1105,12 +1113,16 @@ const BookWrite = () => {
       newErrors.waterCondition = '물흘림 정도를 선택해주세요';
     }
 
-    if (!formData.originalPrice || parseInt(formData.originalPrice) <= 0) {
-      newErrors.originalPrice = '원가를 입력해주세요';
+    if (!formData.originalPrice || parseInt(formData.originalPrice, 10) <= 0) {
+      newErrors.originalPrice = '원가를 0보다 크게 입력해주세요';
     }
 
-    if (!formData.price || parseInt(formData.price) <= 0) {
-      newErrors.price = '희망 가격을 입력해주세요';
+    if (!formData.price || parseInt(formData.price, 10) <= 0) {
+      newErrors.price = '판매가를 0보다 크게 입력해주세요';
+    }
+
+    if (!formData.postTitle.trim()) {
+      newErrors.postTitle = '글 제목을 입력해주세요';
     }
 
     setErrors(newErrors);
@@ -1120,18 +1132,21 @@ const BookWrite = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
     setLoading(true);
+
+    const apiData = new FormData();
+
     try {
       if (isEdit) {
         // --- 수정 로직 ---
         const payload = {
           postTitle: formData.postTitle,
           postContent: formData.postContent,
-          price: parseInt(formData.price),
-          writingCondition: formData.writingCondition,
-          tearCondition: formData.tearCondition,
-          waterCondition: formData.waterCondition,
+          price: parseInt(formData.price, 10),
+
+          writingCondition: conditionMap[formData.writingCondition],
+          tearCondition: conditionMap[formData.tearCondition],
+          waterCondition: conditionMap[formData.waterCondition],
           negotiable: formData.negotiable,
         };
         await axios.patch(`/api/posts/${id}`, payload, { headers: getAuthHeader() });
@@ -1140,42 +1155,58 @@ const BookWrite = () => {
 
       } else {
         // --- 생성 로직 ---
+        let endpoint = '';
+        let requestJson = {};
+
+        // [ISBN 검색해서 등록]
         if (inputType === 'search') {
-          // [검색해서 등록]
-          const payload = {
-            ...formData,
-            price: parseInt(formData.price),
-            originalPrice: parseInt(formData.originalPrice),
-          };
-          await axios.post('/api/posts', payload, { headers: getAuthHeader() });
-        } else {
-          // [직접 등록]
-          const customData = new FormData();
-          const requestJson = {
+          endpoint = '/api/posts';
+          requestJson = {
+            isbn: formData.isbn,
             bookTitle: formData.bookTitle,
             author: formData.author,
             publisher: formData.publisher,
-            originalPrice: parseInt(formData.originalPrice),
+            originalPrice: parseInt(formData.originalPrice, 10),
+
             postTitle: formData.postTitle,
             postContent: formData.postContent,
-            price: parseInt(formData.price),
-            writingCondition: formData.writingCondition,
-            tearCondition: formData.tearCondition,
-            waterCondition: formData.waterCondition,
+            price: parseInt(formData.price, 10),
+            writingCondition: conditionMap[formData.writingCondition],
+            tearCondition: conditionMap[formData.tearCondition],
+            waterCondition: conditionMap[formData.waterCondition],
             negotiable: formData.negotiable,
           };
-          customData.append('request', new Blob([JSON.stringify(requestJson)], { type: 'application/json' }));
-          customData.append('image', imageFile);
-          
-          await axios.post('/api/posts/custom', customData, { 
-            headers: { 
-              ...getAuthHeader(),
-              'Content-Type': 'multipart/form-data',
-            } 
-          });
+        } else {
+          // [직접 등록]
+          endpoint = '/api/posts/custom';
+          requestJson = {
+            bookTitle: formData.bookTitle,
+            author: formData.author,
+            publisher: formData.publisher,
+            originalPrice: parseInt(formData.originalPrice, 10),
+
+            postTitle: formData.postTitle,
+            postContent: formData.postContent,
+            price: parseInt(formData.price, 10),
+            writingCondition: conditionMap[formData.writingCondition],
+            tearCondition: conditionMap[formData.tearCondition],
+            waterCondition: conditionMap[formData.waterCondition],
+            negotiable: formData.negotiable,
+          };
         }
+
+        apiData.append('request', new Blob([JSON.stringify(requestJson)], { type: 'application/json' }));
+        images.forEach(img => {
+          if (img.file) { // 새로 추가된 파일만 전송
+            apiData.append('images', img.file);
+          }
+        });
+
+        await axios.post(endpoint, apiData, { 
+          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' } 
+        });
         alert('게시글이 성공적으로 등록되었습니다!');
-        navigate('/'); // 또는 마켓플레이스 페이지로 이동
+        navigate('/');
       }
     } catch (error) {
       console.error("게시글 처리 중 오류 발생:", error);
@@ -1187,18 +1218,20 @@ const BookWrite = () => {
 
   const handleSaveDraft = async () => {
     try {
-      // localStorage에 임시저장
+      // localStorage에 임시 저장
       const draftData = {
         ...formData,
         images: images,
         timestamp: new Date().toISOString()
       };
-      localStorage.setItem('bookSaleDraft', JSON.stringify(draftData));
-      
-      // 실제로는 API 호출
+      localStorage.setItem('postWriteDraft', JSON.stringify(draftData));
+      console.log('임시저장 완료:', draftData);
+
+      // TODO: 임시저장 API 구현
       await new Promise(resolve => setTimeout(resolve, 500));
       setHasUnsavedChanges(false);
       setUnsavedChanges(false);
+      alert('게시글을 성공적으로 임시저장 했습니다.');
     } catch (error) {
       console.error('임시저장 실패:', error);
       alert('임시저장에 실패했습니다.');
@@ -1238,7 +1271,7 @@ const BookWrite = () => {
     try {
       await handleSaveDraft();
       // 임시저장 완료 후 localStorage에서 데이터 삭제
-      localStorage.removeItem('bookSaleDraft');
+      localStorage.removeItem('postWriteDraft ');
       setShowWarningModal(false);
       if (pendingNavigation) {
         navigate(pendingNavigation);
@@ -1282,7 +1315,7 @@ const BookWrite = () => {
     setShowBookSearch(true);
   };
 
-  console.log('BookWrite 컴포넌트 렌더링 완료');
+  console.log('PostWrite 컴포넌트 렌더링 완료');
 
   const recommended = getRecommendedPrice();
 
@@ -1307,8 +1340,8 @@ const BookWrite = () => {
             <FormSection>
               <SectionTitle><FaBook /> 등록 방식</SectionTitle>
               <InputTypeButtons>
-                <InputTypeButton type="button" active={inputType === 'search'} onClick={() => setInputType('search')}>ISBN / 책 제목 검색</InputTypeButton>
-                <InputTypeButton type="button" active={inputType === 'custom'} onClick={() => setInputType('custom')}>직접 입력 (제본 등)</InputTypeButton>
+                <InputTypeButton type="button" $active={inputType === 'search'} onClick={() => setInputType('search')}>ISBN / 책 제목 검색</InputTypeButton>
+                <InputTypeButton type="button" $active={inputType === 'custom'} onClick={() => setInputType('custom')}>직접 입력 (제본 등)</InputTypeButton>
               </InputTypeButtons>
             </FormSection>
           )}
@@ -1329,7 +1362,6 @@ const BookWrite = () => {
                   <SelectedBookDisplay>
                     <BookItemTitle>{formData.bookTitle}</BookItemTitle>
                     <BookInfo>저자: {formData.author} | 출판사: {formData.publisher}</BookInfo>
-                    <img src={formData.coverImageUrl} alt={formData.bookTitle} width="50" style={{marginTop: '0.5rem'}} />
                   </SelectedBookDisplay>
                 )}
               </>
@@ -1348,25 +1380,28 @@ const BookWrite = () => {
                   <Label>출판사</Label>
                   <Input name="publisher" value={formData.publisher} onChange={handleInputChange} />
                 </FormGroup>
-                <FormGroup>
-                  <Label>책 표지 이미지 <Required>*</Required></Label>
-                  <input id="imageInput" type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                  {imagePreview ? (
-                    <ImagePreview>
-                      <ImagePreviewItem>
-                        <ImagePreviewImg src={imagePreview} alt="미리보기" />
-                        <RemoveImageButton onClick={handleRemoveImage}><FaTimes /></RemoveImageButton>
-                      </ImagePreviewItem>
-                    </ImagePreview>
-                  ) : (
-                    <ImageUploadArea onClick={() => document.getElementById('imageInput').click()}>
-                      <ImageUploadIcon><FaImage /></ImageUploadIcon>
-                      <ImageUploadText>클릭하여 사진을 업로드하세요</ImageUploadText>
-                      <ImageUploadButton type="button">사진 선택</ImageUploadButton>
-                    </ImageUploadArea>
-                  )}
-                </FormGroup>
               </>
+            )}
+          </FormSection>
+
+          <FormSection>
+            <SectionTitle><FaCamera /> 실물 사진 등록 (최대 3장)</SectionTitle>
+            <input id="imageInput" type="file" multiple accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+            {images.length < 3 && (
+              <ImageUploadArea onClick={() => document.getElementById('imageInput').click()}>
+                <ImageUploadIcon><FaImage /></ImageUploadIcon>
+                <ImageUploadText>클릭하여 사진을 업로드하세요</ImageUploadText>
+              </ImageUploadArea>
+            )}
+            {images.length > 0 && (
+              <ImagePreview>
+                {images.map(image => (
+                  <ImagePreviewItem key={image.id}>
+                    <ImagePreviewImg src={image.preview} alt="미리보기" />
+                    <RemoveImageButton onClick={() => handleRemoveImage(image.id)}><FaTimes /></RemoveImageButton>
+                  </ImagePreviewItem>
+                ))}
+              </ImagePreview>
             )}
           </FormSection>
 
@@ -1377,15 +1412,9 @@ const BookWrite = () => {
               <Label>글 제목 <Required>*</Required></Label>
               <Input name="postTitle" value={formData.postTitle} onChange={handleInputChange} />
             </FormGroup>
-            <FormGroup>
-              <Label>가격 <Required>*</Required></Label>
-              <Input type="number" name="price" value={formData.price} onChange={handleInputChange} />
-            </FormGroup>
-            <FormGroup>
-              <Label>상세 설명</Label>
-              <TextArea name="postContent" value={formData.postContent} onChange={handleInputChange} />
-            </FormGroup>
+
             {/* ... (책 상태, 가격 협의 등 다른 폼 그룹들) ... */}
+
             <FormGroup>
               <Label>
                 필기 상태 <Required>*</Required>
@@ -1500,6 +1529,34 @@ const BookWrite = () => {
               </ToggleContainer>
               {errors.waterCondition && <ErrorMessage>{errors.waterCondition}</ErrorMessage>}
             </FormGroup>
+
+            <FormGroup>
+              <Label>
+                네고 가능 여부
+              </Label>
+              <ToggleContainer>
+                <ToggleOption>
+                  <input
+                    type="checkbox"
+                    name="negotiable"
+                    checked={formData.negotiable}
+                    onChange={handleInputChange}
+                  />
+                  <ToggleText>네고 가능</ToggleText>
+                </ToggleOption>
+                <ToggleOption>
+                  <input
+                    type="checkbox"
+                    name="negotiable"
+                    checked={!formData.negotiable}
+                    onChange={handleInputChange}
+                  />
+                  <ToggleText>네고 불가</ToggleText>
+                </ToggleOption>
+              </ToggleContainer>
+              {errors.negotiable && <ErrorMessage>{errors.negotiable}</ErrorMessage>}
+            </FormGroup>
+
             <FormGroup>
               <Label>
                 원가 <Required>*</Required>
@@ -1550,10 +1607,10 @@ const BookWrite = () => {
             <FormGroup>
               <Label>상세 설명</Label>
               <TextArea
-                name="description"
-                value={formData.description}
+                name="postContent"
+                value={formData.postContent}
                 onChange={handleInputChange}
-                placeholder="책에 대한 상세한 설명을 입력해주세요 (선택사항)"
+                placeholder="상세한 설명을 입력해주세요. (예) 책 상태, 특징, 거래 방법 등"
               />
             </FormGroup>
           </FormSection>
@@ -1569,14 +1626,15 @@ const BookWrite = () => {
               }}>
                 취소
               </CancelButton>
-              <SaveDraftButton type="button" onClick={(e) => {
+
+              <SaveDraftButton type="button" onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setPendingNavigation('/marketplace');
-                setShowWarningModal(true);
+                await handleSaveDraft();
               }}>
                 <FaSave /> 임시저장
               </SaveDraftButton>
+
               <SubmitButton type="submit" disabled={loading}>
                 {loading ? (isEdit ? '수정 중...' : '등록 중...') : (isEdit ? '수정하기' : '등록하기')}
               </SubmitButton>
@@ -1595,7 +1653,7 @@ const BookWrite = () => {
               placeholder="ISBN 또는 책 제목으로 검색"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleBookSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleBookSearch()}
             />
             <button onClick={handleBookSearch}>검색</button>
             <BookList>
@@ -1690,4 +1748,4 @@ const BookWrite = () => {
   );
 };
 
-export default BookWrite; 
+export default PostWrite; 

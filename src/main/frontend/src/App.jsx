@@ -14,8 +14,8 @@ import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
 import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
 import MyTransactions from './pages/MyTransactions/MyTransactions.jsx';
-import BookWrite from './pages/BookWrite/BookWrite.jsx';
-import BookDetail from './pages/BookDetail/BookDetail';
+import PostWrite from './pages/PostWrite/PostWrite.jsx';
+import PostDetail from './pages/PostDetail/PostDetail';
 import ChatList from './pages/Chat/ChatList.jsx';
 import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import MapPage from './pages/Map/Map.jsx';
@@ -121,7 +121,7 @@ function App() {
                                     <MyBookstore />
                                 </>
                             } />
-                            <Route path="/my-bookstore" element={
+                            <Route path="/mybookstore" element={
                                 <>
                                     <Header />
                                     <MyBookstore />
@@ -136,13 +136,13 @@ function App() {
                             <Route path="/bookstore/add" element={
                                 <>
                                     <Header />
-                                    <BookWrite />
+                                    <PostWrite />
                                 </>
                             } />
-                            <Route path="/book/:id" element={
+                            <Route path="/posts/:id" element={
                                 <>
                                     <Header />
-                                    <BookDetail />
+                                    <PostDetail />
                                 </>
                             } />
                             <Route path="/chat" element={
@@ -181,19 +181,19 @@ function App() {
                             <Route path="/marketplace/:id" element={
                                 <>
                                     <Header />
-                                    <BookDetail />
+                                    <PostDetail />
                                 </>
                             } />
-                            <Route path="/bookwrite/:id" element={
+                            <Route path="/postwrite/:id" element={
                                 <>
                                     <Header />
-                                    <BookWrite />
+                                    <PostWrite />
                                 </>
                             } />
-                            <Route path="/book-write" element={
+                            <Route path="/post-write" element={
                                 <>
                                     <Header />
-                                    <BookWrite />
+                                    <PostWrite />
                                 </>
                             } />
                             <Route path="/wanted/:id" element={

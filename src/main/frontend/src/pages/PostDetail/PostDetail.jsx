@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useContext } from 'react';
-import { AuthCtx } from '../../contexts/AuthContext'; // ✅ 너 AuthContext 경로 맞춰서!
+import { AuthCtx } from '../../contexts/AuthContext';
 import { getOrCreateChatRoom } from '../../api/chat';
 import axios from 'axios';
 
@@ -45,7 +45,7 @@ const BackButton = styled.button`
   }
 `;
 
-const BookDetailGrid = styled.div`
+const PostDetailGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
@@ -63,31 +63,14 @@ const ImageSection = styled.div`
   gap: 1rem;
 `;
 
-const BookImage = styled.div`
+const MainImage = styled.div`
   width: 100%;
-  height: 300px;
-  background: #667eea;
+  max-width: 400px;
+  aspect-ratio: 1;
+  background: #eee;
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 2rem;
-  margin-bottom: 20px;
-`;
-
-const BookImageLarge = styled.div`
-  width: 100%;
-  height: 400px;
-  background: #667eea;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 3rem;
-  margin-bottom: 20px;
   overflow: hidden;
+  margin: 0 auto;
 `;
 
 const MainImageImg = styled.img`
@@ -98,7 +81,7 @@ const MainImageImg = styled.img`
 
 const ThumbnailGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 0.5rem;
   max-width: 400px;
   margin: 0 auto;
@@ -106,17 +89,10 @@ const ThumbnailGrid = styled.div`
 
 const Thumbnail = styled.div`
   aspect-ratio: 1;
-  background: #f8f9fa;
   border-radius: 8px;
   cursor: pointer;
-  border: 2px solid ${props => props.active ? '#007bff' : 'transparent'};
+  border: 2px solid ${props => props.$active ? '#007bff' : 'transparent'};
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 1.5rem;
-  max-width: 120px;
 `;
 
 const ThumbnailImg = styled.img`
@@ -152,7 +128,6 @@ const PriceSection = styled.div`
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   padding: 1.5rem;
-  border-left: 4px solid #007bff;
 `;
 
 const PriceLabel = styled.div`
@@ -165,14 +140,12 @@ const Price = styled.div`
   font-size: 2rem;
   font-weight: 700;
   color: #007bff;
-  margin-bottom: 0.5rem;
 `;
 
 const OriginalPrice = styled.div`
   font-size: 1rem;
   color: #999;
   text-decoration: line-through;
-  margin-bottom: 0.5rem;
 `;
 
 const DiscountRate = styled.div`
@@ -220,7 +193,6 @@ const ConditionTitle = styled.h3`
   font-size: 1.2rem;
   color: #333;
   margin: 0;
-  margin-bottom: 0.5rem;
 `;
 
 const ConditionGrid = styled.div`
@@ -257,7 +229,6 @@ const BookInfoSection = styled.div`
   background: #fff;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   padding: 1.5rem;
 `;
 
@@ -265,7 +236,6 @@ const InfoTitle = styled.h3`
   font-size: 1.2rem;
   color: #333;
   margin: 0;
-  margin-bottom: 1rem;
 `;
 
 const InfoGrid = styled.div`
@@ -323,13 +293,18 @@ const SellerInfo = styled.div`
 const SellerAvatar = styled.div`
   width: 50px;
   height: 50px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ddd;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   font-weight: 600;
+  overflow: hidden;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 `;
 
 const SellerDetails = styled.div`
@@ -482,11 +457,24 @@ const LikeButton = styled.button`
   }
 `;
 
+// 인증 토큰을 가져오는 헬퍼 함수
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
 // 백엔드 Enum(HIGH, MEDIUM, LOW)을 프론트엔드 텍스트(상, 중, 하)로 변환하는 헬퍼
 const conditionMap = {
   'HIGH': '상',
   'MEDIUM': '중',
   'LOW': '하'
+};
+
+// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
+const statusMap = {
+  'FOR_SALE': '판매중',
+  'RESERVED': '예약중',
+  'SOLD_OUT': '판매완료'
 };
 
 // 팝업 모달 스타일 컴포넌트들
@@ -619,7 +607,7 @@ const getBookCondition = (discountRate) => {
   return { text: conditionMap.LOW, color: '#dc3545', bgColor: '#f8d7da' };
 };
 
-const BookDetail = () => {
+const PostDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -630,19 +618,12 @@ const BookDetail = () => {
   const [liked, setLiked] = useState(false);
   const [showOtherBooks, setShowOtherBooks] = useState(false);
 
-  // URL 파라미터가 변경될 때마다 상태 초기화
-  useEffect(() => {
-    setSelectedImage(0);
-    setLiked(false);
-    setShowOtherBooks(false);
-    console.log('BookDetail 컴포넌트 마운트/업데이트, ID:', id);
-  }, [id]);
-
   // 컴포넌트가 처음 렌더링될 때 API를 호출하는 로직
   useEffect(() => {
     const fetchPost = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
         const response = await axios.get(`/api/posts/${id}`);
         setPost(response.data);
       } catch (err) {
@@ -653,63 +634,43 @@ const BookDetail = () => {
       }
     };
 
+      const fetchMyLikes = async () => {
+      if (!localStorage.getItem('accessToken')) return;
+      try {
+        const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
+        const likedIds = new Set(response.data.map(p => p.postId));
+        setLiked(likedIds.has(parseInt(id)));
+      } catch (error) {
+        console.error("찜 목록을 불러오는 데 실패했습니다.", error);
+      }
+    };
+
     fetchPost();
+    fetchMyLikes();
   }, [id]);
 
-  // 판매자의 다른 책들 Mock 데이터
-  const sellerOtherBooks = [
-    {
-      id: 101,
-      title: "알고리즘 문제해결전략",
-      author: "구종만",
-      price: 20000,
-      discountRate: 25,
-      image: "https://via.placeholder.com/200x200/667eea/ffffff?text=알고리즘"
-    },
-    {
-      id: 102,
-      title: "데이터구조론",
-      author: "이석호",
-      price: 18000,
-      discountRate: 30,
-      image: "https://via.placeholder.com/200x200/764ba2/ffffff?text=데이터구조"
-    },
-    {
-      id: 103,
-      title: "운영체제",
-      author: "Abraham Silberschatz",
-      price: 22000,
-      discountRate: 15,
-      image: "https://via.placeholder.com/200x200/f093fb/ffffff?text=운영체제"
-    },
-    {
-      id: 104,
-      title: "네트워크 프로그래밍",
-      author: "김성우",
-      price: 16000,
-      discountRate: 35,
-      image: "https://via.placeholder.com/200x200/4facfe/ffffff?text=네트워크"
-    },
-    {
-      id: 105,
-      title: "데이터베이스 시스템",
-      author: "Ramez Elmasri",
-      price: 25000,
-      discountRate: 20,
-      image: "https://via.placeholder.com/200x200/667eea/ffffff?text=데이터베이스"
-    },
-    {
-      id: 106,
-      title: "소프트웨어 공학",
-      author: "Roger S. Pressman",
-      price: 19000,
-      discountRate: 40,
-      image: "https://via.placeholder.com/200x200/764ba2/ffffff?text=소프트웨어공학"
+  // 찜하기/찜취소 핸들러
+  const handleLikeToggle = async () => {
+    if (!localStorage.getItem('accessToken')) {
+      alert("로그인이 필요한 기능입니다.");
+      navigate('/login');
+      return;
     }
-  ];
 
-  const handleLike = () => {
-    setLiked(!liked);
+    const newLikedState = !liked;
+    setLiked(newLikedState); // UI 낙관적 업데이트
+
+    try {
+      if (newLikedState) {
+        await axios.post(`/api/posts/${id}/like`, null, { headers: getAuthHeader() });
+      } else {
+        await axios.delete(`/api/posts/${id}/like`, { headers: getAuthHeader() });
+      }
+    } catch (error) {
+      console.error("찜 처리 실패:", error);
+      setLiked(!newLikedState); // API 실패 시 UI 원상 복구
+      alert("오류가 발생했습니다.");
+    }
   };
 
   const { user } = useContext(AuthCtx);
@@ -789,19 +750,35 @@ const BookDetail = () => {
           <FaArrowLeft /> 뒤로가기
         </BackButton>
 
-        <BookDetailGrid>
+        <PostDetailGrid>
           <ImageSection>
             <MainImage>
-              <MainImageImg src={post.coverImageUrl} alt={post.bookTitle} />
+              {post.postImageUrls && post.postImageUrls.length > 0 ? (
+                <MainImageImg src={post.postImageUrls[selectedImageIndex]} alt={post.bookTitle} />
+              ) : (
+                <span>이미지 없음</span>
+              )}
             </MainImage>
-            {/* 현재는 이미지가 하나지만, 나중에 여러 개가 되면 썸네일 로직을 여기에 추가 */}
+            {post.postImageUrls && post.postImageUrls.length > 1 && (
+              <ThumbnailGrid>
+                {post.postImageUrls.map((imageUrl, index) => (
+                  <Thumbnail 
+                    key={index} 
+                    $active={selectedImageIndex === index}
+                    onClick={() => setSelectedImageIndex(index)}
+                  >
+                    <ThumbnailImg src={imageUrl} alt={`${post.bookTitle} ${index + 1}`} />
+                  </Thumbnail>
+                ))}
+              </ThumbnailGrid>
+            )}
           </ImageSection>
 
           <InfoSection>
             <div>
               <BookTitle>
                 {post.bookTitle}
-                <LikeButton liked={liked} onClick={handleLike}>♥</LikeButton>
+                <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
               </BookTitle>
               <BookAuthor>{post.author}</BookAuthor>
             </div>
@@ -809,8 +786,12 @@ const BookDetail = () => {
             <PriceSection>
               <PriceLabel>판매 가격</PriceLabel>
               <Price>{post.price.toLocaleString()}원</Price>
-              <OriginalPrice>{post.originalPrice.toLocaleString()}원</OriginalPrice>
-              <DiscountRate>{post.discountRate}% 할인</DiscountRate>
+              {post.originalPrice && (
+                <>
+                  <OriginalPrice>{post.originalPrice.toLocaleString()}원</OriginalPrice>
+                  <DiscountRate>{discountRate}% 할인</DiscountRate>
+                </>
+              )}
             </PriceSection>
 
             <OverallConditionSection>
@@ -850,6 +831,24 @@ const BookDetail = () => {
             </ConditionSection>
 
             <BookInfoSection>
+              <InfoTitle>추가 정보</InfoTitle>
+              <InfoGrid>
+                <InfoItem>
+                  <InfoLabel>가격 협의</InfoLabel>
+                  <InfoValue>{post.negotiable ? '가능' : '불가능'}</InfoValue>
+                </InfoItem>
+                <InfoItem>
+                  <InfoLabel>등록일</InfoLabel>
+                  <InfoValue>{new Date(post.createdAt).toLocaleDateString()}</InfoValue>
+                </InfoItem>
+                <InfoItem>
+                  <InfoLabel>조회수</InfoLabel>
+                  <InfoValue>{post.views}</InfoValue>
+                </InfoItem>
+              </InfoGrid>
+            </BookInfoSection>
+
+            <BookInfoSection>
               <InfoTitle>책 정보</InfoTitle>
               <InfoGrid>
                 <InfoItem>
@@ -878,10 +877,16 @@ const BookDetail = () => {
             <SellerSection>
               <SellerTitle><FaUser /> 판매자 정보</SellerTitle>
               <SellerInfo>
-                <SellerAvatar>{post.sellerNickname.charAt(0)}</SellerAvatar>
+                <SellerAvatar>
+                  {post.sellerProfileImageUrl ? (
+                    <img src={post.sellerProfileImageUrl} alt={post.sellerNickname} />
+                  ) : (
+                    post.sellerNickname.charAt(0)
+                  )}
+                </SellerAvatar>
                 <SellerDetails>
                   <SellerName>{post.sellerNickname}</SellerName>
-                  {/* TODO: 판매자 위치, 평점, 판매횟수 등은 별도 기능 구현 후 DTO에 추가 필요 */}
+                  {/* TODO: 판매자 위치, 평점, 판매횟수, 다른 책 등은 별도 기능 구현 후 DTO에 추가 필요 */}
                 </SellerDetails>
               </SellerInfo>
               <ActionButtons>
@@ -898,7 +903,7 @@ const BookDetail = () => {
 
 
           </InfoSection>
-        </BookDetailGrid>
+        </PostDetailGrid>
       </DetailContainer>
 
       {/* 팝업 모달 */}
@@ -965,4 +970,4 @@ const BookDetail = () => {
   );
 };
 
-export default BookDetail; 
+export default PostDetail; 
