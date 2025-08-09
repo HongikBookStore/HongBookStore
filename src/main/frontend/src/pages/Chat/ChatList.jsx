@@ -320,10 +320,12 @@ const EmptyIcon = styled(FaBook)`
 
 const ChatListPage = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);   // ✅ 추가
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [chatRooms, setChatRooms] = useState([]);
+  const [error, setError] = useState(null);  // ✅ 이거 추가
 
   // URL 파라미터에서 bookId 확인 및 처리
   useEffect(() => {
@@ -350,63 +352,25 @@ const ChatListPage = () => {
     }
   }, [location.search, navigate]);
 
-  // 임시 데이터 - 실제로는 API에서 가져올 데이터
   useEffect(() => {
-    const mockChatRooms = [
-      {
-        id: 1,
-        userId: 'user123',
-        userName: '김철수',
-        userAvatar: '김',
-        bookTitle: '자바의 정석',
-        lastMessage: '안녕하세요! 책 상태가 어떤가요?',
-        lastTime: '14:30',
-        unreadCount: 2,
-        tradeStatus: 'reserved',
-        isReserved: true,
-        type: 'buyer' // 내가 구매자
-      },
-      {
-        id: 2,
-        userId: 'user456',
-        userName: '이영희',
-        userAvatar: '이',
-        bookTitle: '알고리즘 문제 해결 전략',
-        lastMessage: '네, 거래 완료되었습니다.',
-        lastTime: '12:15',
-        unreadCount: 0,
-        tradeStatus: 'completed',
-        isReserved: false,
-        type: 'seller' // 내가 판매자
-      },
-      {
-        id: 3,
-        userId: 'user789',
-        userName: '박민수',
-        userAvatar: '박',
-        bookTitle: '스프링 부트 실전 활용',
-        lastMessage: '가격 흥정 가능한가요?',
-        lastTime: '09:45',
-        unreadCount: 1,
-        tradeStatus: 'in_progress',
-        isReserved: false,
-        type: 'buyer'
-      },
-      {
-        id: 4,
-        userId: 'user101',
-        userName: '최지영',
-        userAvatar: '최',
-        bookTitle: '데이터베이스 시스템',
-        lastMessage: '오늘 오후에 만나서 거래하시죠',
-        lastTime: '08:20',
-        unreadCount: 0,
-        tradeStatus: 'reserved',
-        isReserved: true,
-        type: 'seller'
+    const fetchChatRooms = async () => {
+      setError(null);              // ✅ 시작 시 초기화(선택)
+      try {
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch("/api/chat/rooms/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("채팅방 조회 실패");
+        const data = await res.json();
+        setChatRooms(data);
+      } catch (err) {
+        console.error("❌ 채팅방 불러오기 실패:", err);
+        setError(err);             // ✅ 여기서 상태에 저장
+      } finally {
+        setLoading(false);
       }
-    ];
-    setChatRooms(mockChatRooms);
+    };
+    fetchChatRooms();
   }, []);
 
   const handleBack = () => {
@@ -444,25 +408,26 @@ const ChatListPage = () => {
   };
 
   const filteredChatRooms = chatRooms
-    .filter(chat => {
-      if (activeTab === 'seller') return chat.type === 'seller';
-      if (activeTab === 'buyer') return chat.type === 'buyer';
-      return true;
-    })
-    .filter(chat => 
-      chat.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chat.bookTitle.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      // 예약된 채팅방을 상단에 고정
-      if (a.isReserved && !b.isReserved) return -1;
-      if (!a.isReserved && b.isReserved) return 1;
-      
-      // 최근 메시지 순으로 정렬 (시간 기준)
-      const timeA = new Date(`2024-01-01 ${a.lastTime}`);
-      const timeB = new Date(`2024-01-01 ${b.lastTime}`);
-      return timeB - timeA;
-    });
+      .filter(chat => {
+        if (activeTab === 'seller') return chat.type === 'seller';
+        if (activeTab === 'buyer') return chat.type === 'buyer';
+        return true;
+      })
+      .filter(chat =>
+          (chat.userName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (chat.bookTitle || '').toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        // 예약된 채팅방을 상단에 고정
+        if (a.isReserved && !b.isReserved) return -1;
+        if (!a.isReserved && b.isReserved) return 1;
+
+        // 최근 메시지 순으로 정렬 (시간 기준)
+        const timeA = new Date(`2024-01-01 ${a.lastTime}`);
+        const timeB = new Date(`2024-01-01 ${b.lastTime}`);
+        return timeB - timeA;
+      });
+
 
   return (
     <PageWrapper>
@@ -493,46 +458,48 @@ const ChatListPage = () => {
             <TabButton active={activeTab === 'seller'} onClick={() => setActiveTab('seller')}>판매자</TabButton>
             <TabButton active={activeTab === 'buyer'} onClick={() => setActiveTab('buyer')}>구매자</TabButton>
           </TabButtonGroup>
-
           <ChatList>
-            {filteredChatRooms.length > 0 ? (
-              filteredChatRooms.map((chat) => (
-                <ChatItem
-                  key={chat.id}
-                  onClick={() => handleChatClick(chat.id)}
-                  isReserved={chat.isReserved}
-                  hasUnread={chat.unreadCount > 0}
-                >
-                  <UserAvatar>
-                    {chat.userAvatar}
-                  </UserAvatar>
-                  <ChatInfo>
-                    <UserName>
-                      {chat.userName}
-                    </UserName>
-                    <BookTitle>
-                      <FaBook style={{ color: '#666' }} />
-                      {chat.bookTitle}
-                    </BookTitle>
-                    <TradeStatus $status={chat.tradeStatus}>
-                      {getStatusText(chat.tradeStatus)}
-                    </TradeStatus>
-                    <LastMessage>{chat.lastMessage}</LastMessage>
-                  </ChatInfo>
-                  <ChatMeta>
-                    <LastTime>{chat.lastTime}</LastTime>
-                    {chat.unreadCount > 0 && (
-                      <UnreadCount>{chat.unreadCount}</UnreadCount>
-                    )}
-                  </ChatMeta>
-                </ChatItem>
-              ))
+            {loading ? (
+                <div style={{ padding: 24, color: '#888' }}>불러오는 중...</div>
+            ) : error ? (
+                // (선택) 에러 처리
+                <EmptyState>
+                  <FaExclamationCircle style={{ color: '#f66', fontSize: '2rem', marginBottom: 12 }} />
+                  <h3>채팅방을 불러오지 못했습니다</h3>
+                  <p>잠시 후 다시 시도해 주세요.</p>
+                </EmptyState>
+            ) : filteredChatRooms.length > 0 ? (
+                filteredChatRooms.map((chat) => (
+                    <ChatItem
+                        key={chat.id}
+                        onClick={() => handleChatClick(chat.id)}
+                        isReserved={chat.isReserved}
+                        hasUnread={chat.unreadCount > 0}
+                    >
+                      <UserAvatar>{chat.userAvatar}</UserAvatar>
+                      <ChatInfo>
+                        <UserName>{chat.userName}</UserName>
+                        <BookTitle>
+                          <FaBook style={{ color: '#666' }} />
+                          {chat.bookTitle}
+                        </BookTitle>
+                        <TradeStatus $status={chat.tradeStatus}>{getStatusText(chat.tradeStatus)}</TradeStatus>
+                        <LastMessage>{chat.lastMessage}</LastMessage>
+                      </ChatInfo>
+                      <ChatMeta>
+                        <LastTime>{chat.lastTime || ''}</LastTime>
+                        <div style={{ fontSize: '0.75rem', color: '#ccc' }}>{chat.salePostId}번포스트</div>
+                        {chat.unreadCount > 0 && <UnreadCount>{chat.unreadCount}</UnreadCount>}
+                      </ChatMeta>
+                    </ChatItem>
+                ))
             ) : (
-              <EmptyState>
-                <EmptyIcon />
-                <h3>채팅방이 없습니다</h3>
-                <p>책 거래를 시작하면 채팅방이 생성됩니다.</p>
-              </EmptyState>
+                // ✅ 로딩이 끝났고, 정말로 0개일 때만 빈 상태 표시
+                <EmptyState>
+                  <EmptyIcon />
+                  <h3>채팅방이 없습니다</h3>
+                  <p>책 거래를 시작하면 채팅방이 생성됩니다.</p>
+                </EmptyState>
             )}
           </ChatList>
         </ChatListContainer>

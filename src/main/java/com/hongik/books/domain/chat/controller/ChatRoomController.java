@@ -1,15 +1,22 @@
 package com.hongik.books.domain.chat.controller;
 
+import com.hongik.books.auth.dto.LoginUserDTO;
 import com.hongik.books.domain.chat.domain.ChatRoom;
 import com.hongik.books.domain.chat.dto.ChatRoomResponse;
 import com.hongik.books.domain.chat.repository.ChatRoomRepository;
 import com.hongik.books.domain.post.domain.SalePost;
 import com.hongik.books.domain.post.repository.SalePostRepository;
+import com.hongik.books.domain.user.domain.CustomUserDetails;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -76,4 +83,23 @@ public class ChatRoomController {
                 .build();
     }
 
+    @GetMapping("/me")
+    @Transactional(readOnly = true) // Lazy 로딩 방지
+    public ResponseEntity<List<ChatRoomResponse>> getMyChatRooms(@AuthenticationPrincipal LoginUserDTO user) {
+        Long myId = user.id();
+
+        List<ChatRoom> myRooms = chatRoomRepository.findAllByBuyerIdOrSellerId(myId, myId);
+
+        List<ChatRoomResponse> result = myRooms.stream()
+                .map(room -> ChatRoomResponse.builder()
+                        .id(room.getId())
+                        .salePostId(room.getSalePost().getId())
+                        .buyerId(room.getBuyer().getId())
+                        .sellerId(room.getSeller().getId())
+                        .bookTitle(room.getSalePost().getPostTitle()) // ✅ 책 제목 추가
+                        .build())
+                .toList();
+
+        return ResponseEntity.ok(result);
+    }
 }
