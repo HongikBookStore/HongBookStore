@@ -1,6 +1,36 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMarkerAlt, FaHeart, FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle } from 'react-icons/fa';
+
+const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+const SEARCH_ENDPOINT = '/api/places/search'; // 너의 백엔드 검색 엔드포인트
+
+// 네이버 로컬검색 item에서 위경도 추출 (mapx/mapy는 1e7 스케일된 WGS84)
+function extractLatLngFromNaverItem(item) {
+  const toNum = (v) => (v == null ? NaN : Number(v));
+  // 우선 lat/lng가 있으면 그대로
+  let lat = toNum(item.lat), lng = toNum(item.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+
+  // mapx/mapy 문자열(또는 숫자) → 1e7 스케일 해제
+  const mapx = toNum(item.mapx ?? item.mapX);
+  const mapy = toNum(item.mapy ?? item.mapY);
+  if (Number.isFinite(mapx) && Number.isFinite(mapy)) {
+    const lngScaled = mapx / 1e7;
+    const latScaled = mapy / 1e7;
+    if (Math.abs(latScaled) <= 90 && Math.abs(lngScaled) <= 180) {
+      return { lat: latScaled, lng: lngScaled };
+    }
+  }
+
+  // x/y(lng/lat) 형식이 올 수도 있으니 보조 처리
+  const x = toNum(item.x), y = toNum(item.y);
+  if (Number.isFinite(x) && Number.isFinite(y) && Math.abs(y) <= 90 && Math.abs(x) <= 180) {
+    return { lat: y, lng: x };
+  }
+  return null;
+}
+
 
 const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCategory, userLocation }) => {
   const [activeTab, setActiveTab] = useState('info');
@@ -10,27 +40,30 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [selectedCategory, setSelectedCategory] = useState('');
   const fileInputRef = useRef(null);
 
+  // 지도 refs
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+  const polylineRef = useRef(null);
+
+  // 출발지(장소검색으로 선택)
+  const [startPoint, setStartPoint] = useState(null); // {lat,lng}
+  const [startQuery, setStartQuery] = useState('');
+  const [startResults, setStartResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [startLabel, setStartLabel] = useState('');
+
   if (!isOpen || !place) return null;
 
-  // 평균 평점 계산
-  const averageRating = place.reviews && place.reviews.length > 0 
-    ? (place.reviews.reduce((sum, review) => sum + review.rating, 0) / place.reviews.length).toFixed(1)
-    : 0;
+  // 평균 평점
+  const averageRating = place.reviews && place.reviews.length > 0
+      ? (place.reviews.reduce((sum, r) => sum + r.rating, 0) / place.reviews.length).toFixed(1)
+      : 0;
 
-  // 경로 시간 계산 (간단한 예시)
-  const calculateRouteTime = () => {
-    if (!userLocation) return '위치를 설정해주세요';
-    
-    // 실제로는 네이버 지도 API를 사용하여 정확한 시간 계산
-    const distance = Math.sqrt(
-      Math.pow(place.lat - userLocation.lat, 2) + 
-      Math.pow(place.lng - userLocation.lng, 2)
-    ) * 111000; // 대략적인 거리 계산 (미터)
-    
-    const timeInMinutes = Math.round(distance / 1000 * 15); // 1km당 15분 가정
-    return `${timeInMinutes}분`;
-  };
+  // 간단 표시용
+  const calculateRouteTime = () => (startPoint ? '직선 경로 표시 중' : '출발지를 검색해서 선택하세요');
 
+  // 카테고리 추가
   const handleAddToCategory = () => {
     if (selectedCategory) {
       onAddToCategory(place.id, selectedCategory);
@@ -38,304 +71,369 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
+  // 리뷰/사진
   const handleSubmitReview = () => {
-    if (!newReview.content.trim()) {
-      alert('리뷰 내용을 입력해주세요.');
-      return;
-    }
-    
-    // 리뷰 제출 로직
+    if (!newReview.content.trim()) return alert('리뷰 내용을 입력해주세요.');
     console.log('Submit review:', newReview);
     setNewReview({ rating: 5, content: '', photos: [] });
   };
-
-  const handleLikeReview = (reviewId) => {
-    // 리뷰 좋아요 로직
-    console.log('Like review:', reviewId);
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    setNewReview(p => ({ ...p, photos: [...p.photos, ...files.map(f => URL.createObjectURL(f))] }));
   };
+  const handleRemovePhoto = (idx) => setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
+  const handleLikeReview = (id) => console.log('Like review:', id);
+  const handleDislikeReview = (id) => console.log('Dislike review:', id);
 
-  const handleDislikeReview = (reviewId) => {
-    // 리뷰 싫어요 로직
-    console.log('Dislike review:', reviewId);
-  };
+  const getTypeIcon = (type) => ({ restaurant: '🍽️', cafe: '☕', partner: '🤝', convenience: '🛍️', other: '📍' }[type] || '📍');
+  const getTypeName = (type) => ({ restaurant: '음식점', cafe: '카페', partner: '제휴업체', convenience: '편의점', other: '기타' }[type] || '기타');
 
-  const handlePhotoUpload = (event) => {
-    const files = Array.from(event.target.files);
-    const newPhotos = files.map(file => URL.createObjectURL(file));
-    setNewReview({ ...newReview, photos: [...newReview.photos, ...newPhotos] });
-  };
+  // 태그 제거
+  const stripTags = (s) => (s || '').replace(/<[^>]+>/g, '');
 
-  const handleRemovePhoto = (index) => {
-    const newPhotos = newReview.photos.filter((_, i) => i !== index);
-    setNewReview({ ...newReview, photos: newPhotos });
-  };
+  // 네이버 스크립트 로더
+  const loadNaverMapScript = () =>
+      new Promise((resolve, reject) => {
+        if (window.naver?.maps) return resolve();
+        let s = document.getElementById('naver-map-script');
+        if (s) {
+          s.addEventListener('load', resolve, { once: true });
+          s.addEventListener('error', reject, { once: true });
+          return;
+        }
+        s = document.createElement('script');
+        s.id = 'naver-map-script';
+        s.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
+        s.defer = true;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
 
-  const getTypeIcon = (type) => {
-    const icons = {
-      restaurant: '🍽️',
-      cafe: '☕',
-      partner: '🤝',
-      convenience: '🛍️',
-      other: '📍'
+  // 지도 초기화 (경로 탭 들어올 때)
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await loadNaverMapScript();
+        if (!mapRef.current || !place) return;
+        const { naver } = window;
+
+        if (!mapInstanceRef.current) {
+          mapInstanceRef.current = new naver.maps.Map(mapRef.current, {
+            center: new naver.maps.LatLng(place.lat, place.lng),
+            zoom: 16,
+            minZoom: 6,
+            mapDataControl: false,
+            logoControl: false,
+            scaleControl: true,
+          });
+        }
+
+        // 기존 오버레이 정리
+        markersRef.current.forEach(m => m.setMap(null));
+        markersRef.current = [];
+        if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
+
+        // 도착지 마커
+        const dest = new naver.maps.LatLng(place.lat, place.lng);
+        const destMarker = new naver.maps.Marker({ position: dest, map: mapInstanceRef.current, title: place.name });
+        markersRef.current.push(destMarker);
+
+        // 현재 위치(선택) 있으면 보여주기
+        const bounds = new naver.maps.LatLngBounds();
+        bounds.extend(dest);
+        let hasStart = false;
+        if (userLocation?.lat && userLocation?.lng) {
+          const start = new naver.maps.LatLng(userLocation.lat, userLocation.lng);
+          const startMarker = new naver.maps.Marker({
+            position: start,
+            map: mapInstanceRef.current,
+            title: '현재 위치',
+            icon: {
+              content: '<div style="width:12px;height:12px;border-radius:50%;background:#2b8a3e;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.4)"></div>',
+              anchor: new naver.maps.Point(6, 6),
+            },
+          });
+          markersRef.current.push(startMarker);
+          bounds.extend(start);
+          hasStart = true;
+        }
+
+        if (hasStart) {
+          mapInstanceRef.current.fitBounds(bounds);
+        } else {
+          mapInstanceRef.current.setCenter(dest);
+          mapInstanceRef.current.setZoom(16);
+        }
+      } catch (e) {
+        console.error('네이버 지도 로드 실패:', e);
+      }
     };
-    return icons[type] || '📍';
+    if (isOpen && activeTab === 'route') init();
+  }, [isOpen, activeTab, place, userLocation]);
+
+  // 출발지 선택되면: 출발/도착 마커 + 직선 표시
+  useEffect(() => {
+    if (!(isOpen && activeTab === 'route')) return;
+    if (!window.naver?.maps || !mapInstanceRef.current) return;
+
+    const { naver } = window;
+    const map = mapInstanceRef.current;
+
+    // 오버레이 초기화
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+    if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
+
+    // 도착지
+    const dest = new naver.maps.LatLng(place.lat, place.lng);
+    const destMarker = new naver.maps.Marker({ position: dest, map, title: place.name });
+    markersRef.current.push(destMarker);
+
+    const bounds = new naver.maps.LatLngBounds();
+    bounds.extend(dest);
+
+    if (startPoint?.lat && startPoint?.lng) {
+      const start = new naver.maps.LatLng(startPoint.lat, startPoint.lng);
+      const startMarker = new naver.maps.Marker({
+        position: start, map, title: '출발지',
+        icon: {
+          content: '<div style="width:12px;height:12px;border-radius:50%;background:#2b8a3e;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.4)"></div>',
+          anchor: new naver.maps.Point(6, 6),
+        },
+      });
+      markersRef.current.push(startMarker);
+
+      polylineRef.current = new naver.maps.Polyline({
+        path: [start, dest],
+        map,
+        strokeColor: '#007bff',
+        strokeWeight: 4,
+        strokeOpacity: 0.9,
+        strokeStyle: 'solid',
+      });
+
+      bounds.extend(start);
+      map.fitBounds(bounds);
+    } else {
+      map.setCenter(dest);
+      map.setZoom(16);
+    }
+  }, [startPoint, isOpen, activeTab, place]);
+
+  // 출발지 검색
+  const searchStartPlaces = async () => {
+    const q = startQuery.trim();
+    if (!q) return;
+    setSearching(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${SEARCH_ENDPOINT}?query=${encodeURIComponent(q)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      // data가 [{lat,lng,name,address}, ...] 또는 {items:[...]}(네이버 원본) 둘 다 처리
+      const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+      setStartResults(items);
+    } catch (e) {
+      console.error('출발지 검색 실패:', e);
+      alert('검색에 실패했습니다.');
+    } finally {
+      setSearching(false);
+    }
   };
 
-  const getTypeName = (type) => {
-    const names = {
-      restaurant: '음식점',
-      cafe: '카페',
-      partner: '제휴업체',
-      convenience: '편의점',
-      other: '기타'
-    };
-    return names[type] || '기타';
+  // 검색 결과에서 출발지 선택
+  const pickStartFromResult = (item) => {
+    const ll = extractLatLngFromNaverItem(item);
+    if (!ll) return alert('이 결과에서 좌표를 읽을 수 없습니다.');
+
+    setStartPoint(ll);
+
+    // ✅ 제목/이름 + (선택) 도로명주소
+    const title = stripTags(item.title || item.name || '');
+    const addr  = stripTags(item.roadAddress || item.address || '');
+    setStartLabel(addr ? `${title} · ${addr}` : title);
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
-        <ModalHeader>
-          <PlaceInfo>
-            <PlaceIcon>{getTypeIcon(place.category)}</PlaceIcon>
-            <PlaceDetails>
-              <PlaceName>{place.name}</PlaceName>
-              <PlaceType>{getTypeName(place.category)}</PlaceType>
-              <PlaceRating>
-                <Stars>
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} $isFilled={star <= averageRating}>
-                      <FaStar />
-                    </Star>
-                  ))}
-                </Stars>
-                <RatingText>{averageRating} ({place.reviews?.length || 0}개 리뷰)</RatingText>
-              </PlaceRating>
-            </PlaceDetails>
-          </PlaceInfo>
-          <CloseButton onClick={onClose}>
-            <FaTimes />
-          </CloseButton>
-        </ModalHeader>
-
-        <TabContainer>
-          <TabButton 
-            $isActive={activeTab === 'info'} 
-            onClick={() => setActiveTab('info')}
-          >
-            정보
-          </TabButton>
-          <TabButton 
-            $isActive={activeTab === 'reviews'} 
-            onClick={() => setActiveTab('reviews')}
-          >
-            리뷰
-          </TabButton>
-          <TabButton 
-            $isActive={activeTab === 'route'} 
-            onClick={() => setActiveTab('route')}
-          >
-            경로
-          </TabButton>
-        </TabContainer>
-
-        <ModalBody>
-          {activeTab === 'info' && (
-            <InfoTab>
-              <InfoSection>
-                <InfoTitle>
-                  <FaMapMarkerAlt /> 주소
-                </InfoTitle>
-                <InfoContent>
-                  <FaMapMarkerAlt /> {place.address}
-                </InfoContent>
-              </InfoSection>
-              
-              {place.description && (
-                <InfoSection>
-                  <InfoTitle>
-                    <FaInfoCircle /> 설명
-                  </InfoTitle>
-                  <InfoContent>{place.description}</InfoContent>
-                </InfoSection>
-              )}
-
-              <InfoSection>
-                <InfoTitle>
-                  <FaPlus /> 내 카테고리에 추가
-                </InfoTitle>
-                <CategorySelectContainer>
-                  <CategorySelect 
-                    value={selectedCategory} 
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="">카테고리 선택</option>
-                    {userCategories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
+      <ModalOverlay onClick={onClose}>
+        <ModalContent onClick={(e) => e.stopPropagation()}>
+          <ModalHeader>
+            <PlaceInfo>
+              <PlaceIcon>{getTypeIcon(place.category)}</PlaceIcon>
+              <PlaceDetails>
+                <PlaceName>{place.name}</PlaceName>
+                <PlaceType>{getTypeName(place.category)}</PlaceType>
+                <PlaceRating>
+                  <Stars>
+                    {[1, 2, 3, 4, 5].map(star => (
+                        <Star key={star} $isFilled={star <= averageRating}><FaStar /></Star>
                     ))}
-                  </CategorySelect>
-                  <AddToCategoryButton onClick={handleAddToCategory}>
-                    <FaPlus />
-                  </AddToCategoryButton>
-                </CategorySelectContainer>
-              </InfoSection>
-            </InfoTab>
-          )}
+                  </Stars>
+                  <RatingText>{averageRating} ({place.reviews?.length || 0}개 리뷰)</RatingText>
+                </PlaceRating>
+              </PlaceDetails>
+            </PlaceInfo>
+            <CloseButton onClick={onClose}><FaTimes /></CloseButton>
+          </ModalHeader>
 
-          {activeTab === 'reviews' && (
-            <ReviewsTab>
-              <ReviewForm>
-                <ReviewFormTitle>리뷰 작성</ReviewFormTitle>
-                <RatingContainer>
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <StarButton
-                      key={star}
-                      $isSelected={newReview.rating >= star}
-                      onClick={() => setNewReview({ ...newReview, rating: star })}
-                    >
-                      <FaStar />
-                    </StarButton>
-                  ))}
-                </RatingContainer>
-                <ReviewTextarea
-                  placeholder="리뷰를 작성해주세요..."
-                  value={newReview.content}
-                  onChange={(e) => setNewReview({ ...newReview, content: e.target.value })}
-                />
-                
-                {/* 사진 업로드 섹션 */}
-                <PhotoUploadSection>
-                  <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
-                  <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>
-                    <FaUpload />
-                    <span>사진을 선택하거나 클릭하여 업로드</span>
-                  </PhotoUploadArea>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    style={{ display: 'none' }}
-                  />
-                  
-                  {newReview.photos.length > 0 && (
-                    <PhotoPreviewContainer>
-                      {newReview.photos.map((photo, index) => (
-                        <PhotoPreview key={index}>
-                          <PhotoPreviewImage src={photo} alt="업로드된 사진" />
-                          <RemovePhotoButton onClick={() => handleRemovePhoto(index)}>
-                            <FaTrash />
-                          </RemovePhotoButton>
-                        </PhotoPreview>
+          <TabContainer>
+            <TabButton $isActive={activeTab === 'info'} onClick={() => setActiveTab('info')}>정보</TabButton>
+            <TabButton $isActive={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>리뷰</TabButton>
+            <TabButton $isActive={activeTab === 'route'} onClick={() => setActiveTab('route')}>경로</TabButton>
+          </TabContainer>
+
+          <ModalBody>
+            {activeTab === 'info' && (
+                <InfoTab>
+                  <InfoSection>
+                    <InfoTitle><FaMapMarkerAlt /> 주소</InfoTitle>
+                    <InfoContent><FaMapMarkerAlt /> {place.address}</InfoContent>
+                  </InfoSection>
+
+                  {place.description && (
+                      <InfoSection>
+                        <InfoTitle><FaInfoCircle /> 설명</InfoTitle>
+                        <InfoContent>{place.description}</InfoContent>
+                      </InfoSection>
+                  )}
+
+                  <InfoSection>
+                    <InfoTitle><FaPlus /> 내 카테고리에 추가</InfoTitle>
+                    <CategorySelectContainer>
+                      <CategorySelect value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                        <option value="">카테고리 선택</option>
+                        {userCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </CategorySelect>
+                      <AddToCategoryButton onClick={handleAddToCategory}><FaPlus /></AddToCategoryButton>
+                    </CategorySelectContainer>
+                  </InfoSection>
+                </InfoTab>
+            )}
+
+            {activeTab === 'reviews' && (
+                <ReviewsTab>
+                  <ReviewForm>
+                    <ReviewFormTitle>리뷰 작성</ReviewFormTitle>
+                    <RatingContainer>
+                      {[1, 2, 3, 4, 5].map(star => (
+                          <StarButton key={star} $isSelected={newReview.rating >= star} onClick={() => setNewReview({ ...newReview, rating: star })}><FaStar /></StarButton>
                       ))}
-                    </PhotoPreviewContainer>
-                  )}
-                </PhotoUploadSection>
-                
-                <ReviewSubmitButton onClick={handleSubmitReview}>
-                  리뷰 등록
-                </ReviewSubmitButton>
-              </ReviewForm>
-
-              <ReviewsList>
-                <ReviewsHeader>
-                  <ReviewsTitle>리뷰 ({place.reviews?.length || 0})</ReviewsTitle>
-                  {place.reviews && place.reviews.length > 3 && (
-                    <ShowMoreButton onClick={() => setShowAllReviews(!showAllReviews)}>
-                      {showAllReviews ? '접기' : '더보기'}
-                    </ShowMoreButton>
-                  )}
-                </ReviewsHeader>
-                
-                {(place.reviews || []).slice(0, showAllReviews ? undefined : 3).map((review, index) => (
-                  <ReviewItem key={review.id || index}>
-                    <ReviewHeader>
-                      <ReviewerInfo>
-                        <ReviewerName>{review.userName}</ReviewerName>
-                        <ReviewRating>
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} $isFilled={i < review.rating}>
-                              <FaStar />
-                            </Star>
-                          ))}
-                        </ReviewRating>
-                      </ReviewerInfo>
-                      <ReviewActions>
-                        <ActionButton onClick={() => handleLikeReview(review.id)}>
-                          <FaThumbsUp /> {review.likes || 0}
-                        </ActionButton>
-                        <ActionButton onClick={() => handleDislikeReview(review.id)}>
-                          <FaThumbsDown /> {review.dislikes || 0}
-                        </ActionButton>
-                      </ReviewActions>
-                    </ReviewHeader>
-                    
-                    <ReviewContent>
-                      {expandedReview === review.id ? (
-                        <>
-                          {review.content}
-                          <CollapseButton onClick={() => setExpandedReview(null)}>
-                            접기
-                          </CollapseButton>
-                        </>
-                      ) : (
-                        <>
-                          {review.content.slice(0, 100)}
-                          {review.content.length > 100 && (
-                            <ExpandButton onClick={() => setExpandedReview(review.id)}>
-                              ...더보기
-                            </ExpandButton>
-                          )}
-                        </>
+                    </RatingContainer>
+                    <ReviewTextarea placeholder="리뷰를 작성해주세요..." value={newReview.content} onChange={(e) => setNewReview({ ...newReview, content: e.target.value })} />
+                    <PhotoUploadSection>
+                      <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
+                      <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>
+                        <FaUpload /><span>사진을 선택하거나 클릭하여 업로드</span>
+                      </PhotoUploadArea>
+                      <input ref={fileInputRef} type="file" multiple accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                      {newReview.photos.length > 0 && (
+                          <PhotoPreviewContainer>
+                            {newReview.photos.map((photo, index) => (
+                                <PhotoPreview key={index}>
+                                  <PhotoPreviewImage src={photo} alt="업로드된 사진" />
+                                  <RemovePhotoButton onClick={() => handleRemovePhoto(index)}><FaTrash /></RemovePhotoButton>
+                                </PhotoPreview>
+                            ))}
+                          </PhotoPreviewContainer>
                       )}
-                    </ReviewContent>
-                    
-                    {review.photos && review.photos.length > 0 && (
-                      <ReviewPhotos>
-                        {review.photos.map((photo, photoIndex) => (
-                          <ReviewPhoto key={photoIndex} src={photo} alt="리뷰 사진" />
-                        ))}
-                      </ReviewPhotos>
-                    )}
-                  </ReviewItem>
-                ))}
-              </ReviewsList>
-            </ReviewsTab>
-          )}
+                    </PhotoUploadSection>
+                    <ReviewSubmitButton onClick={handleSubmitReview}>리뷰 등록</ReviewSubmitButton>
+                  </ReviewForm>
 
-          {activeTab === 'route' && (
-            <RouteTab>
-              <RouteInfo>
-                <RouteTitle>경로 안내</RouteTitle>
-                <RouteDetails>
-                  <RouteItem>
-                    <FaMapMarkerAlt />
-                    <span>출발지: {userLocation ? '현재 위치' : '위치를 설정해주세요'}</span>
-                  </RouteItem>
-                  <RouteItem>
-                    <FaMapMarkerAlt />
-                    <span>도착지: {place.name}</span>
-                  </RouteItem>
-                  <RouteItem>
-                    <FaClock />
-                    <span>예상 소요시간: {calculateRouteTime()}</span>
-                  </RouteItem>
-                </RouteDetails>
-              </RouteInfo>
-              <RouteMap>
-                <RouteMapPlaceholder>
-                  <FaRoute />
-                  <span>경로 지도가 여기에 표시됩니다</span>
-                </RouteMapPlaceholder>
-              </RouteMap>
-            </RouteTab>
-          )}
-        </ModalBody>
-      </ModalContent>
-    </ModalOverlay>
+                  <ReviewsList>
+                    <ReviewsHeader>
+                      <ReviewsTitle>리뷰 ({place.reviews?.length || 0})</ReviewsTitle>
+                      {place.reviews && place.reviews.length > 3 && (
+                          <ShowMoreButton onClick={() => setShowAllReviews(!showAllReviews)}>{showAllReviews ? '접기' : '더보기'}</ShowMoreButton>
+                      )}
+                    </ReviewsHeader>
+
+                    {(place.reviews || []).slice(0, showAllReviews ? undefined : 3).map((review, index) => (
+                        <ReviewItem key={review.id || index}>
+                          <ReviewHeader>
+                            <ReviewerInfo>
+                              <ReviewerName>{review.userName}</ReviewerName>
+                              <ReviewRating>
+                                {[...Array(5)].map((_, i) => (<Star key={i} $isFilled={i < review.rating}><FaStar /></Star>))}
+                              </ReviewRating>
+                            </ReviewerInfo>
+                            <ReviewActions>
+                              <ActionButton onClick={() => handleLikeReview(review.id)}><FaThumbsUp /> {review.likes || 0}</ActionButton>
+                              <ActionButton onClick={() => handleDislikeReview(review.id)}><FaThumbsDown /> {review.dislikes || 0}</ActionButton>
+                            </ReviewActions>
+                          </ReviewHeader>
+
+                          <ReviewContent>
+                            {expandedReview === review.id ? (
+                                <>
+                                  {review.content}
+                                  <CollapseButton onClick={() => setExpandedReview(null)}>접기</CollapseButton>
+                                </>
+                            ) : (
+                                <>
+                                  {review.content.slice(0, 100)}
+                                  {review.content.length > 100 && <ExpandButton onClick={() => setExpandedReview(review.id)}>...더보기</ExpandButton>}
+                                </>
+                            )}
+                          </ReviewContent>
+
+                          {review.photos && review.photos.length > 0 && (
+                              <ReviewPhotos>
+                                {review.photos.map((photo, i) => <ReviewPhoto key={i} src={photo} alt="리뷰 사진" />)}
+                              </ReviewPhotos>
+                          )}
+                        </ReviewItem>
+                    ))}
+                  </ReviewsList>
+                </ReviewsTab>
+            )}
+
+            {activeTab === 'route' && (
+                <RouteTab>
+                  <RouteInfo>
+                    <RouteTitle>경로 안내</RouteTitle>
+                    <RouteDetails>
+                      <RouteItem><FaMapMarkerAlt /><span>출발지: {startLabel || '미설정 (아래에서 검색)'}</span></RouteItem>
+                      <RouteItem><FaMapMarkerAlt /><span>도착지: {place.name}</span></RouteItem>
+                      <RouteItem><FaClock /><span>상태: {calculateRouteTime()}</span></RouteItem>
+                    </RouteDetails>
+
+                    {/* ✅ 출발지 장소검색 UI */}
+                    <SearchRow>
+                      <label>출발지 검색</label>
+                      <SearchControls>
+                        <SearchInput
+                            value={startQuery}
+                            onChange={(e) => setStartQuery(e.target.value)}
+                            placeholder="예) 홍대입구역 2번출구, 스타벅스 상수역"
+                            onKeyDown={(e) => { if (e.key === 'Enter') searchStartPlaces(); }}
+                        />
+                        <SearchBtn onClick={searchStartPlaces} disabled={searching}>{searching ? '검색 중...' : '검색'}</SearchBtn>
+                      </SearchControls>
+                    </SearchRow>
+
+                    {startResults.length > 0 && (
+                        <ResultsList>
+                          {startResults.slice(0, 10).map((r, idx) => (
+                              <ResultItem key={r.id ?? `${r.mapx ?? r.x}-${r.mapy ?? r.y}-${idx}`} onClick={() => pickStartFromResult(r)}>
+                                <ResultTitle>{stripTags(r.title || r.name)}</ResultTitle>
+                                <ResultAddr>{stripTags(r.roadAddress || r.address || r.roadAddress || r.addr || '')}</ResultAddr>
+                              </ResultItem>
+                          ))}
+                        </ResultsList>
+                    )}
+                  </RouteInfo>
+
+                  <RouteMap>
+                    <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+                  </RouteMap>
+                </RouteTab>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </ModalOverlay>
   );
 };
 
@@ -914,6 +1012,73 @@ const RouteMapPlaceholder = styled.div`
     font-size: 32px;
     color: #ccc;
   }
+`;
+
+const SearchRow = styled.div`
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+`;
+
+const SearchControls = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  &:focus { outline: none; border-color: #007bff; }
+`;
+
+const SearchBtn = styled.button`
+  padding: 10px 14px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  &:disabled { opacity: .6; cursor: default; }
+  &:hover:not(:disabled) { background: #0056b3; }
+`;
+
+const ResultsList = styled.div`
+  margin-top: 10px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+`;
+
+const ResultItem = styled.button`
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: none;
+  border-bottom: 1px solid #f3f3f3;
+  padding: 10px 12px;
+  cursor: pointer;
+  &:hover { background: #f8faff; }
+  &:last-child { border-bottom: none; }
+`;
+
+const ResultTitle = styled.div`
+  font-weight: 600;
+  color: #222;
+  font-size: 14px;
+`;
+
+const ResultAddr = styled.div`
+  color: #666;
+  font-size: 12px;
+  margin-top: 2px;
 `;
 
 export default PlaceDetailModal; 
