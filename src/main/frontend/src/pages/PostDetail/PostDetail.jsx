@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useContext } from 'react';
 import { AuthCtx } from '../../contexts/AuthContext';
-import { getOrCreateChatRoom } from '../../api/chat';
 import axios from 'axios';
 
 const DetailContainer = styled.div`
@@ -235,7 +233,7 @@ const BookInfoSection = styled.div`
 const InfoTitle = styled.h3`
   font-size: 1.2rem;
   color: #333;
-  margin: 0;
+  margin: 0 0 1rem 0;
 `;
 
 const InfoGrid = styled.div`
@@ -401,7 +399,43 @@ const OtherBooksTitle = styled.h3`
   gap: 0.5rem;
 `;
 
+// 로딩 컴포넌트
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #666;
+`;
 
+// 에러 컴포넌트
+const ErrorContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  gap: 1rem;
+  
+  h2 {
+    color: #dc3545;
+    margin: 0;
+  }
+  
+  button {
+    padding: 0.5rem 1rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    
+    &:hover {
+      background: #0056b3;
+    }
+  }
+`;
 
 const ActionButton = styled.button`
   flex: 1;
@@ -456,26 +490,6 @@ const LikeButton = styled.button`
     border-color: #ff4757;
   }
 `;
-
-// 인증 토큰을 가져오는 헬퍼 함수
-const getAuthHeader = () => {
-  const token = localStorage.getItem('accessToken');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-};
-
-// 백엔드 Enum(HIGH, MEDIUM, LOW)을 프론트엔드 텍스트(상, 중, 하)로 변환하는 헬퍼
-const conditionMap = {
-  'HIGH': '상',
-  'MEDIUM': '중',
-  'LOW': '하'
-};
-
-// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
-const statusMap = {
-  'FOR_SALE': '판매중',
-  'RESERVED': '예약중',
-  'SOLD_OUT': '판매완료'
-};
 
 // 팝업 모달 스타일 컴포넌트들
 const ModalOverlay = styled.div`
@@ -600,6 +614,26 @@ const OtherBookCondition = styled.div`
   display: inline-block;
 `;
 
+// 인증 토큰을 가져오는 헬퍼 함수
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+// 백엔드 Enum(HIGH, MEDIUM, LOW)을 프론트엔드 텍스트(상, 중, 하)로 변환하는 헬퍼
+const conditionMap = {
+  'HIGH': '상',
+  'MEDIUM': '중',
+  'LOW': '하'
+};
+
+// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
+const statusMap = {
+  'FOR_SALE': '판매중',
+  'RESERVED': '예약중',
+  'SOLD_OUT': '판매완료'
+};
+
 // 할인율에 따른 책 상태 반환 함수
 const getBookCondition = (discountRate) => {
   if (discountRate <= 20) return { text: conditionMap.HIGH, color: '#28a745', bgColor: '#d4edda' };
@@ -610,47 +644,87 @@ const getBookCondition = (discountRate) => {
 const PostDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useContext(AuthCtx);
 
+  // --- 상태 관리 ---
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [liked, setLiked] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0); // 이미지 선택 상태
+
+  // '다른 책 보기' 모달 관련 상태
   const [showOtherBooks, setShowOtherBooks] = useState(false);
+  const [sellerOtherBooks, setSellerOtherBooks] = useState([]); // 판매자 다른 책들
+  const [loadingOtherBooks, setLoadingOtherBooks] = useState(false); // 추가 로딩 상태
 
-  // 컴포넌트가 처음 렌더링될 때 API를 호출하는 로직
-  useEffect(() => {
-    const fetchPost = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get(`/api/posts/${id}`);
-        setPost(response.data);
-      } catch (err) {
-        setError(err);
-        console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-      const fetchMyLikes = async () => {
-      if (!localStorage.getItem('accessToken')) return;
-      try {
-        const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
-        const likedIds = new Set(response.data.map(p => p.postId));
-        setLiked(likedIds.has(parseInt(id)));
-      } catch (error) {
-        console.error("찜 목록을 불러오는 데 실패했습니다.", error);
-      }
-    };
-
-    fetchPost();
-    fetchMyLikes();
+  // useCallback으로 함수 메모이제이션
+  const fetchPost = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`/api/posts/${id}`);
+      setPost(response.data);
+      setSelectedImageIndex(0); // ✅ 이미지 인덱스 초기화
+    } catch (err) {
+      setError(err);
+      console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
+  const fetchMyLikes = useCallback(async () => {
+    if (!localStorage.getItem('accessToken')) return;
+    try {
+      const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
+      const likedIds = new Set(response.data.map(p => p.postId));
+      setLiked(likedIds.has(parseInt(id)));
+    } catch (error) {
+      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
+    }
+  }, [id]);
+
+  // 판매자의 다른 책들을 가져오는 함수
+  const fetchSellerOtherBooks = useCallback(async (sellerId) => {
+    if (!sellerId) return;
+    
+    setLoadingOtherBooks(true);
+    try {
+      // TODO: 실제 API 엔드포인트에 맞게 수정 필요
+      const response = await axios.get(`/api/posts/seller/${sellerId}`);
+      setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id))); // 현재 책 제외
+    } catch (error) {
+      console.error("판매자의 다른 책들을 불러오는 데 실패했습니다.", error);
+      // 임시 더미 데이터 (실제 구현 시 제거)
+      setSellerOtherBooks([
+        {
+          id: parseInt(id) + 1,
+          title: "알고리즘 문제해결 전략",
+          author: "구종만",
+          price: 25000,
+          discountRate: 30
+        },
+        {
+          id: parseInt(id) + 2,
+          title: "Clean Code",
+          author: "Robert C. Martin",
+          price: 20000,
+          discountRate: 15
+        }
+      ]);
+    } finally {
+      setLoadingOtherBooks(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchPost();
+    fetchMyLikes();
+  }, [fetchPost, fetchMyLikes]);
+
   // 찜하기/찜취소 핸들러
-  const handleLikeToggle = async () => {
+  const handleLikeToggle = useCallback(async () => {
     if (!localStorage.getItem('accessToken')) {
       alert("로그인이 필요한 기능입니다.");
       navigate('/login');
@@ -658,7 +732,7 @@ const PostDetail = () => {
     }
 
     const newLikedState = !liked;
-    setLiked(newLikedState); // UI 낙관적 업데이트
+    setLiked(newLikedState);
 
     try {
       if (newLikedState) {
@@ -668,79 +742,102 @@ const PostDetail = () => {
       }
     } catch (error) {
       console.error("찜 처리 실패:", error);
-      setLiked(!newLikedState); // API 실패 시 UI 원상 복구
+      setLiked(!newLikedState);
       alert("오류가 발생했습니다.");
     }
-  };
+  }, [liked, id, navigate]);
 
-  const { user } = useContext(AuthCtx);
+  // 채팅 시작 핸들러
+  const handleChat = useCallback(async () => {
+    const salePostId = id;           // 책 게시글 ID
+    const buyerId = user.id;        // 현재 로그인 사용자 ID 가져오기
 
-  const handleChat = async () => {
-    try {
-      const salePostId = id;           // 책 게시글 ID
-      const buyerId = user?.id;        // ✅ 현재 로그인 사용자 ID 가져오기
-
-      if (!buyerId) {
-        alert('로그인이 필요합니다.');
-        return;
-      }
-
-      const token = localStorage.getItem('accessToken');
-      console.log("🔥 accessToken:", token);
-      console.log("✅ 현재 buyerId:", buyerId);
-
-      const res = await fetch(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log("🔥 fetch status:", res.status);
-      const text = await res.text();
-      console.log("🔥 response body:", text);
-
-      if (!res.ok) throw new Error('채팅방 생성 실패!');
-      const chatRoom = JSON.parse(text);
-
-      navigate(`/chat/${chatRoom.id}`);
-
-    } catch (err) {
-      console.error(err);
-      alert('채팅방 생성 실패!');
+    if (!buyerId) {
+      alert('로그인이 필요합니다.');
+      navigate('/login');
+      return;
     }
-  };
 
-  const handleCall = () => {
+    try {
+      // fetch 대신 axios를 사용하여 일관성을 유지하고 에러 처리를 개선
+      const response = await axios.post(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {}, {
+        headers: getAuthHeader()
+      });
+      const chatRoom = response.data;
+      navigate(`/chat/${chatRoom.id}`);
+      
+    } catch (err) {
+      console.error("채팅방 생성/입장 실패", err);
+      const errorMessage = err.response?.data?.message || '채팅방을 열 수 없습니다. 잠시 후 다시 시도해주세요.';
+      alert(errorMessage);
+    }
+  }, [id, user, navigate]);
+
+  const handleCall = useCallback(() => {
     // 실제로는 전화 연결 로직
     alert('전화 연결 기능은 준비 중입니다.');
-  };
+  }, []);
 
-  // 로딩 및 에러 처리
-  if (loading) return <DetailContainer><h2>로딩 중...</h2></DetailContainer>;
-  if (error || !post) return <DetailContainer><h2>게시글 정보를 불러올 수 없습니다.</h2></DetailContainer>;
-
-  // 할인율 계산 로직
-  const discountRate = post.originalPrice > 0 
-    ? Math.round(((post.originalPrice - post.price) / post.originalPrice) * 100)
-    : 0;
-
-  const handleViewOtherBooks = () => {
+  // '다른 책 보기' 버튼 클릭 핸들러
+  const handleViewOtherBooks = useCallback(() => {
     setShowOtherBooks(!showOtherBooks);
-  };
+  }, [showOtherBooks]);
 
-  const handleOtherBookClick = (bookId) => {
+  const handleOtherBookClick = useCallback((bookId) => {
     console.log('다른 책 클릭:', bookId, '현재 ID:', id);
     // 현재 URL의 id와 다른 경우에만 네비게이션
     if (bookId !== parseInt(id)) {
       console.log('페이지 이동:', `/book/${bookId}`);
       // replace: true로 현재 페이지를 대체
       navigate(`/book/${bookId}`, { replace: true });
+      setShowOtherBooks(false); // ✅ 모달 닫기
     } else {
       console.log('현재 책과 동일하므로 이동하지 않음');
     }
-  };
+  }, [id, navigate]);
+
+  const handleRetry = useCallback(() => {
+    fetchPost();
+    fetchMyLikes();
+  }, [fetchPost, fetchMyLikes]);
+
+  // 할인율 계산
+  const discountRate = useMemo(() => {
+    if (!post) return 0;
+    return post.originalPrice > 0 
+      ? Math.round(((post.originalPrice - post.price) / post.originalPrice) * 100)
+      : 0;
+  }, [post]);
+
+  // 책 상태 계산
+  const bookCondition = useMemo(() => {
+    if (!post) return null;
+    return getBookCondition(post.discountRate || discountRate);
+  }, [post, discountRate]);
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <DetailContainer>
+        <LoadingContainer>
+          <div>📚 게시글을 불러오는 중...</div>
+        </LoadingContainer>
+      </DetailContainer>
+    );
+  }
+
+  // 에러 상태
+  if (error || !post) {
+    return (
+      <DetailContainer>
+        <ErrorContainer>
+          <h2>😅 게시글을 불러올 수 없어요</h2>
+          <p>네트워크 연결을 확인하고 다시 시도해주세요.</p>
+          <button onClick={handleRetry}>다시 시도</button>
+        </ErrorContainer>
+      </DetailContainer>
+    );
+  }
 
   return (
     <>
@@ -831,45 +928,31 @@ const PostDetail = () => {
             </ConditionSection>
 
             <BookInfoSection>
-              <InfoTitle>추가 정보</InfoTitle>
-              <InfoGrid>
-                <InfoItem>
-                  <InfoLabel>가격 협의</InfoLabel>
-                  <InfoValue>{post.negotiable ? '가능' : '불가능'}</InfoValue>
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>등록일</InfoLabel>
-                  <InfoValue>{new Date(post.createdAt).toLocaleDateString()}</InfoValue>
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>조회수</InfoLabel>
-                  <InfoValue>{post.views}</InfoValue>
-                </InfoItem>
-              </InfoGrid>
-            </BookInfoSection>
-
-            <BookInfoSection>
               <InfoTitle>책 정보</InfoTitle>
               <InfoGrid>
                 <InfoItem>
                   <InfoLabel>카테고리</InfoLabel>
-                  <InfoValue>컴퓨터공학</InfoValue> {/* TODO: 카테고리 정보 DTO에 추가 필요 */}
+                  <InfoValue>{post.category || '컴퓨터공학'}</InfoValue> {/* TODO: 카테고리 정보 추가 예정 */}
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>거래 지역</InfoLabel>
-                  <InfoValue>교내</InfoValue> {/* TODO: 거래 지역 정보 DTO에 추가 필요 */}
+                  <InfoValue>{post.tradeLocation || '교내'}</InfoValue> {/* TODO: 거래 지역 정보 추가 예정 */}
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>가격 협의</InfoLabel>
                   <InfoValue>{post.negotiable ? '가능' : '불가능'}</InfoValue>
                 </InfoItem>
                 <InfoItem>
+                  <InfoLabel>판매 상태</InfoLabel>
+                  <InfoValue>{statusMap[post.status] || '판매중'}</InfoValue> {/* 판매 상태 추가 */}
+                </InfoItem>
+                <InfoItem>
                   <InfoLabel>등록일</InfoLabel>
-                  <InfoValue>{new Date(post.createdAt).toLocaleDateString()}</InfoValue>
+                  <InfoValue>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</InfoValue> {/* 한국 날짜 형식 */}
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>조회수</InfoLabel>
-                  <InfoValue>{post.views}</InfoValue>
+                  <InfoValue>{post.views?.toLocaleString() || 0}</InfoValue> {/* 조회수 포맷팅 및 기본값 */}
                 </InfoItem>
               </InfoGrid>
             </BookInfoSection>
@@ -881,12 +964,29 @@ const PostDetail = () => {
                   {post.sellerProfileImageUrl ? (
                     <img src={post.sellerProfileImageUrl} alt={post.sellerNickname} />
                   ) : (
-                    post.sellerNickname.charAt(0)
+                    post.sellerNickname.charAt(0) || '?'
                   )}
                 </SellerAvatar>
                 <SellerDetails>
-                  <SellerName>{post.sellerNickname}</SellerName>
-                  {/* TODO: 판매자 위치, 평점, 판매횟수, 다른 책 등은 별도 기능 구현 후 DTO에 추가 필요 */}
+                  <SellerName>{post.sellerNickname || '익명 사용자'}</SellerName>
+                  {/* ✅ 판매자 추가 정보들 (향후 DTO에 추가 예정) */}
+                  <SellerLocation>
+                    <FaMapMarkerAlt />
+                    {post.sellerLocation || '위치 정보 없음'}
+                  </SellerLocation>
+                  {post.sellerRating && (
+                    <SellerRating>
+                      <Stars>
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} filled={i < Math.floor(post.sellerRating)} />
+                        ))}
+                      </Stars>
+                      <RatingText>{post.sellerRating.toFixed(1)}</RatingText>
+                    </SellerRating>
+                  )}
+                  {post.sellerSalesCount && (
+                    <SalesCount>판매 {post.sellerSalesCount}회</SalesCount>
+                  )}
                 </SellerDetails>
               </SellerInfo>
               <ActionButtons>
@@ -896,12 +996,10 @@ const PostDetail = () => {
                 </ChatButton>
                 <ViewOtherBooksButton onClick={handleViewOtherBooks}>
                   <FaUser />
-                  다른 책 보기
+                  다른 책 보기 {sellerOtherBooks.length > 0 && `(${sellerOtherBooks.length})`}
                 </ViewOtherBooksButton>
               </ActionButtons>
             </SellerSection>
-
-
           </InfoSection>
         </PostDetailGrid>
       </DetailContainer>
@@ -912,57 +1010,81 @@ const PostDetail = () => {
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>
-                <FaUser /> {bookData.seller.name}님이 판매하는 다른 책들
+                <FaUser /> {post.sellerNickname || '판매자'}님이 판매하는 다른 책들
               </ModalTitle>
               <CloseButton onClick={() => setShowOtherBooks(false)}>
                 <FaTimes />
               </CloseButton>
             </ModalHeader>
             
-            <OtherBooksGrid>
-              {sellerOtherBooks.map(book => (
-                <OtherBookCard 
-                  key={book.id} 
-                  onClick={() => handleOtherBookClick(book.id)}
-                  style={{ 
-                    borderColor: book.id === parseInt(id) ? '#007bff' : '#e0e0e0',
-                    backgroundColor: book.id === parseInt(id) ? '#f8f9fa' : 'white',
-                    position: 'relative'
-                  }}
-                >
-                  {book.id === parseInt(id) && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '0.5rem',
-                      right: '0.5rem',
-                      background: '#007bff',
-                      color: 'white',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      zIndex: 1
-                    }}>
-                      현재
-                    </div>
-                  )}
-                  <OtherBookImage>
-                    {book.title}
-                  </OtherBookImage>
-                  <OtherBookTitle>{book.title}</OtherBookTitle>
-                  <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
-                    {book.author}
-                  </div>
-                  <OtherBookPrice>{book.price.toLocaleString()}원</OtherBookPrice>
-                  <OtherBookCondition 
-                    $bgColor={getBookCondition(book.discountRate).bgColor}
-                    $color={getBookCondition(book.discountRate).color}
-                  >
-                    {getBookCondition(book.discountRate).text}
-                  </OtherBookCondition>
-                </OtherBookCard>
-              ))}
-            </OtherBooksGrid>
+            {loadingOtherBooks ? (
+              <LoadingContainer>
+                <div>📚 다른 책들을 불러오는 중...</div>
+              </LoadingContainer>
+            ) : sellerOtherBooks.length > 0 ? (
+              <OtherBooksGrid>
+                {sellerOtherBooks.map(book => {
+                  const bookConditionInfo = getBookCondition(book.discountRate);
+                  return (
+                    <OtherBookCard 
+                      key={book.id} 
+                      onClick={() => handleOtherBookClick(book.id)}
+                      style={{ 
+                        borderColor: book.id === parseInt(id) ? '#007bff' : '#e0e0e0',
+                        backgroundColor: book.id === parseInt(id) ? '#f8f9fa' : 'white',
+                      }}
+                    >
+                      {book.id === parseInt(id) && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          background: '#007bff',
+                          color: 'white',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          zIndex: 1
+                        }}>
+                          현재
+                        </div>
+                      )}
+                      <OtherBookImage>
+                        {book.postImageUrls && book.postImageUrls.length > 0 ? (
+                          <img 
+                            src={book.postImageUrls[0]} 
+                            alt={book.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
+                          />
+                        ) : (
+                          book.title
+                        )}
+                      </OtherBookImage>
+                      <OtherBookTitle>{book.title}</OtherBookTitle>
+                      <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
+                        {book.author}
+                      </div>
+                      <OtherBookPrice>{book.price.toLocaleString()}원</OtherBookPrice>
+                      <OtherBookCondition 
+                        $bgColor={bookConditionInfo.bgColor}
+                        $color={bookConditionInfo.color}
+                      >
+                        {bookConditionInfo.text}
+                      </OtherBookCondition>
+                    </OtherBookCard>
+                  );
+                })}
+              </OtherBooksGrid>
+            ) : (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '2rem', 
+                color: '#666' 
+              }}>
+                😅 판매자가 등록한 다른 책이 없어요
+              </div>
+            )}
           </ModalContent>
         </ModalOverlay>
       )}

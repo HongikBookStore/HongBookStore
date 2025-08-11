@@ -71,7 +71,7 @@ public class SalePostController {
     @PostMapping("/custom")
     public ResponseEntity<Void> createSalePostCustom(
             @RequestPart("request") SalePostCustomCreateRequestDTO request,
-            @RequestPart("images") List<MultipartFile> images,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException {
         Long postId = salePostService.createSalePostCustom(request, images, loginUser.id());
         return ResponseEntity.created(URI.create("/api/posts/" + postId)).build();

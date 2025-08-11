@@ -81,7 +81,7 @@ const SubMenuButton = styled.button`
 `;
 
 const menus = [
-  { key: 'booksale', label: '책 판매 글쓰기' },
+  { key: 'bookstore/add', label: '책 판매 글쓰기' },
   { key: 'wanted', label: '구하기 게시판' },
   { key: 'mybookstore', label: '나의 책방' },
   { key: 'chat', label: '거래 채팅' },
