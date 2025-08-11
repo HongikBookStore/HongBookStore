@@ -162,3 +162,6 @@ naver:
       key:
         id: ${NAVER_SEARCH_ID}
       secret: ${NAVER_SEARCH_SECRET}
+  api:
+    client-id: ${NAVER_ROUTE_ID}
+    client-secret: ${NAVER_ROUTE_SECRET}

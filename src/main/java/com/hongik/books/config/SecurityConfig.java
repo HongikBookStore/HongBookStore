@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 "/api/images/**",
                                 "/api/naver/**",
                                 "/actuator/health",
+                                "/api/directions/**",
                                 "/", "/login", "/oauth2/**", "/error"
                         ).permitAll()
                         // 인증 관련 API는 모두 허용

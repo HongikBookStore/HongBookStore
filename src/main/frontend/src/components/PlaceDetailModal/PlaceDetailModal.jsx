@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMarkerAlt, FaHeart, FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle } from 'react-icons/fa';
 
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+const DIRECTIONS_ENDPOINT = '/api/directions/driving';
 const SEARCH_ENDPOINT = '/api/places/search'; // 너의 백엔드 검색 엔드포인트
 
 // 네이버 로컬검색 item에서 위경도 추출 (mapx/mapy는 1e7 스케일된 WGS84)
@@ -38,6 +39,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [expandedReview, setExpandedReview] = useState(null);
   const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] });
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [routeSummary, setRouteSummary] = useState(null);
   const fileInputRef = useRef(null);
 
   // 지도 refs
@@ -61,7 +63,15 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       : 0;
 
   // 간단 표시용
-  const calculateRouteTime = () => (startPoint ? '직선 경로 표시 중' : '출발지를 검색해서 선택하세요');
+  const calculateRouteTime = () => {
+    if (!startPoint) return '출발지를 검색해서 선택하세요';
+    if (routeSummary) {
+      const mins = Math.round(routeSummary.duration / 60000);
+      const km = (routeSummary.distance / 1000).toFixed(1);
+      return `예상 ${mins}분 · ${km}km`;
+    }
+    return '경로 계산 중...';
+  };
 
   // 카테고리 추가
   const handleAddToCategory = () => {
@@ -180,45 +190,59 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     const { naver } = window;
     const map = mapInstanceRef.current;
 
-    // 오버레이 초기화
-    markersRef.current.forEach(m => m.setMap(null));
-    markersRef.current = [];
-    if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
+    // 기존에 동기 코드였던 부분을 async 함수로 래핑
+    const drawRoute = async () => {
+      // 오버레이 초기화
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
+      if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
 
-    // 도착지
-    const dest = new naver.maps.LatLng(place.lat, place.lng);
-    const destMarker = new naver.maps.Marker({ position: dest, map, title: place.name });
-    markersRef.current.push(destMarker);
+      const dest = new naver.maps.LatLng(place.lat, place.lng);
+      const destMarker = new naver.maps.Marker({ position: dest, map, title: place.name });
+      markersRef.current.push(destMarker);
 
-    const bounds = new naver.maps.LatLngBounds();
-    bounds.extend(dest);
+      if (startPoint?.lat && startPoint?.lng) {
+        const start = new naver.maps.LatLng(startPoint.lat, startPoint.lng);
+        const startMarker = new naver.maps.Marker({ position: start, map, title: '출발지' });
+        markersRef.current.push(startMarker);
 
-    if (startPoint?.lat && startPoint?.lng) {
-      const start = new naver.maps.LatLng(startPoint.lat, startPoint.lng);
-      const startMarker = new naver.maps.Marker({
-        position: start, map, title: '출발지',
-        icon: {
-          content: '<div style="width:12px;height:12px;border-radius:50%;background:#2b8a3e;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.4)"></div>',
-          anchor: new naver.maps.Point(6, 6),
-        },
-      });
-      markersRef.current.push(startMarker);
+        try {
+          const startParam = `${start.lng()},${start.lat()}`;
+          const goalParam  = `${dest.lng()},${dest.lat()}`;
+          const res = await fetch(`${DIRECTIONS_ENDPOINT}?start=${encodeURIComponent(startParam)}&goal=${encodeURIComponent(goalParam)}&option=traoptimal`);
+          if (!res.ok) throw new Error('경로 조회 실패');
+          const body = await res.json();
 
-      polylineRef.current = new naver.maps.Polyline({
-        path: [start, dest],
-        map,
-        strokeColor: '#007bff',
-        strokeWeight: 4,
-        strokeOpacity: 0.9,
-        strokeStyle: 'solid',
-      });
+          const track = body?.route?.traoptimal?.[0];
+          const naverPath = track?.path || [];
+          const pathLatLngs = naverPath.map(([x, y]) => new naver.maps.LatLng(y, x));
 
-      bounds.extend(start);
-      map.fitBounds(bounds);
-    } else {
-      map.setCenter(dest);
-      map.setZoom(16);
-    }
+          polylineRef.current = new naver.maps.Polyline({
+            path: pathLatLngs,
+            map,
+            strokeWeight: 5,
+            strokeOpacity: 0.9,
+            strokeColor: '#1e6fff',
+            strokeStyle: 'solid'
+          });
+
+          if (track?.summary) setRouteSummary({ distance: track.summary.distance, duration: track.summary.duration });
+
+          const bounds = new naver.maps.LatLngBounds();
+          pathLatLngs.forEach(ll => bounds.extend(ll));
+          map.fitBounds(bounds);
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        map.setCenter(dest);
+        map.setZoom(16);
+      }
+    };
+
+    // 비동기 함수 실행
+    drawRoute();
+
   }, [startPoint, isOpen, activeTab, place]);
 
   // 출발지 검색
