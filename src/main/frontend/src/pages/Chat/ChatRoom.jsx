@@ -866,11 +866,11 @@ const ChatRoom = ({ roomId, username, myId }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (!salePostId || !token) return;
+    if (!chatId || !token) return;
 
     const loadPreviousMessages = async () => {
       try {
-        const res = await fetch(`/api/chat/room/${salePostId}/messages`, {
+        const res = await fetch(`/api/chat/room/${chatId}/messages`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -888,7 +888,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
     };
 
     loadPreviousMessages();
-  }, [salePostId]);
+  }, [chatId]);
 
 
   // ✅ STOMP 연결

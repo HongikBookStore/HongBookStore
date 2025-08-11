@@ -10,4 +10,5 @@ public class ChatRoomResponse {
     private Long salePostId;
     private Long buyerId;
     private Long sellerId;
+    private String bookTitle; // 🔹 책 제목
 }

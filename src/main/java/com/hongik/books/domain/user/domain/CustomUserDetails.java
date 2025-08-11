@@ -32,4 +32,5 @@ public class CustomUserDetails implements UserDetails {
         // Spring Security에서 사용하는 'username'을 우리 시스템의 주요 식별자인 'email'로 지정.
         return user.getEmail();
     }
+
 }
