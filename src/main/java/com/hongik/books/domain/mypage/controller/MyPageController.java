@@ -12,6 +12,7 @@ import com.hongik.books.domain.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -76,7 +77,7 @@ public class MyPageController {
     /**
      * TODO: 내 프로필 이미지를 변경하는 API
      */
-    @PostMapping("/profile-image")
+    @PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> updateProfileImage(
             @RequestPart("image") MultipartFile image,
             @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException {

@@ -52,7 +52,6 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/ws-stomp/**",
-                                "/api/images/**",
                                 "/api/naver/**",
                                 "/actuator/health",
                                 "/api/directions/**",

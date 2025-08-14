@@ -19,6 +19,7 @@ public class SalePostSummaryResponseDTO {
     private final SalePost.SaleStatus status;
     private final LocalDateTime createdAt;
     private final String sellerNickname;
+    private final long likeCount;
 
     public static SalePostSummaryResponseDTO fromEntity(SalePost salePost) {
         return new SalePostSummaryResponseDTO(salePost);
@@ -37,5 +38,6 @@ public class SalePostSummaryResponseDTO {
         this.status = salePost.getStatus();
         this.createdAt = salePost.getCreatedAt();
         this.sellerNickname = salePost.getSeller().getUsername();
+        this.likeCount = salePost.getLikeCount();
     }
 }

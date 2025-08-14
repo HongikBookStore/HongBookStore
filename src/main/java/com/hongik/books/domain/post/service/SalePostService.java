@@ -150,6 +150,27 @@ public class SalePostService {
     }
 
     /**
+     * 판매 게시글 수정 시 이미지 추가 업로드
+     * 기존 이미지 수 + 신규 업로드 수가 최대 3장을 초과하지 않도록 제한
+     */
+    public void addImagesToPost(Long postId, List<MultipartFile> imageFiles, Long userId) throws IOException {
+        SalePost salePost = findSalePostById(postId);
+        validatePostOwner(salePost, userId);
+
+        if (imageFiles == null || imageFiles.isEmpty()) {
+            return; // 업로드할 이미지가 없는 경우 그대로 종료
+        }
+
+        int existing = salePost.getPostImages() != null ? salePost.getPostImages().size() : 0;
+        int incoming = imageFiles.size();
+        if (existing + incoming > 3) {
+            throw new IllegalArgumentException("이미지는 최대 3장까지 업로드할 수 있습니다.");
+        }
+
+        uploadAndAttachImages(imageFiles, salePost);
+    }
+
+    /**
      * 판매 게시글의 상태를 변경 (판매중, 예약중, 판매완료)
      */
     public void updateSalePostStatus(Long postId, SalePostStatusUpdateRequestDTO request, Long userId) {

@@ -438,6 +438,16 @@ const BookPrice = styled.div`
   flex-wrap: wrap;
 `;
 
+const LikeCount = styled.span`
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  &::before { content: '❤'; color: #ff4757; }
+`;
+
 const SkeletonCard = styled.div`
   background: white;
   border-radius: 16px;
@@ -1007,6 +1017,21 @@ const Marketplace = () => {
       else newSet.add(postId);
       return newSet;
     });
+    // 목록 카드의 찜 수를 낙관적으로 반영
+    setPosts(prev => prev.map(p => {
+      if (p.postId !== postId) return p;
+      const current = p.likeCount ?? 0;
+      const next = isLiked ? Math.max(0, current - 1) : current + 1;
+      return { ...p, likeCount: next };
+    }));
+    // 많이 찜한 순 정렬 중이면, 현재 페이지 데이터만 즉시 재정렬
+    if (searchParams.sort === 'likeCount,desc') {
+      setPosts(prev => {
+        const next = [...prev];
+        next.sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0));
+        return next;
+      });
+    }
 
     try {
       if (isLiked) {
@@ -1029,6 +1054,20 @@ const Marketplace = () => {
         else newSet.delete(postId);
         return newSet;
       });
+      // likeCount도 원상 복구
+      setPosts(prev => prev.map(p => {
+        if (p.postId !== postId) return p;
+        const current = p.likeCount ?? 0;
+        const next = isLiked ? current + 1 : Math.max(0, current - 1);
+        return { ...p, likeCount: next };
+      }));
+      if (searchParams.sort === 'likeCount,desc') {
+        setPosts(prev => {
+          const next = [...prev];
+          next.sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0));
+          return next;
+        });
+      }
       alert("찜하기 처리 중 오류가 발생했어요. 다시 시도해주세요! 😅");
     }
   };
@@ -1104,7 +1143,10 @@ const Marketplace = () => {
       <BookInfo>
         <BookCardTitle>{post.postTitle}</BookCardTitle>
         {post.author && <BookAuthor>{post.author}</BookAuthor>}
-        <BookPrice>{post.price?.toLocaleString() || '0'}원</BookPrice>
+        <BookPrice>
+          {post.price?.toLocaleString() || '0'}원
+          <LikeCount>{(post.likeCount ?? 0).toLocaleString()}</LikeCount>
+        </BookPrice>
       </BookInfo>
     </BookCard>
   );
@@ -1167,8 +1209,8 @@ const Marketplace = () => {
                       <option value="createdAt,desc">최신순</option>
                       <option value="price,asc">낮은 가격순</option>
                       <option value="price,desc">높은 가격순</option>
-                      <option value="viewCount,desc">조회순</option>
-                      <option value="likeCount,desc">인기순</option>
+                      <option value="views,desc">조회순</option>
+                      <option value="likeCount,desc">많이 찜한 순</option>
                     </FilterSelect>
                   </FilterSection>
                   <FilterSection>
