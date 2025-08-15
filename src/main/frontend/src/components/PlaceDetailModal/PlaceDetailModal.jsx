@@ -1,3 +1,4 @@
+// src/components/PlaceDetailModal/PlaceDetailModal.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMarkerAlt, FaHeart, FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle } from 'react-icons/fa';
@@ -5,6 +6,11 @@ import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMark
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 const DIRECTIONS_ENDPOINT = '/api/directions/driving';
 const SEARCH_ENDPOINT = '/api/places/search'; // 너의 백엔드 검색 엔드포인트
+
+// ✅ 리뷰 API 엔드포인트
+const REVIEW_LIST   = (id) => `/api/places/${id}/reviews`;
+const REVIEW_REACT  = (reviewId) => `/api/places/reviews/${reviewId}/reactions`;
+const REVIEW_UPLOAD = '/api/images/review-photos'; // (선택) 7번을 안했으면 호출 실패 → 자동 무시
 
 // 네이버 로컬검색 item에서 위경도 추출 (mapx/mapy는 1e7 스케일된 WGS84)
 function extractLatLngFromNaverItem(item) {
@@ -32,13 +38,20 @@ function extractLatLngFromNaverItem(item) {
   return null;
 }
 
-
 const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCategory, userLocation }) => {
   const [activeTab, setActiveTab] = useState('info');
+
+  // ✅ 리뷰 관련 상태
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReview, setExpandedReview] = useState(null);
-  const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] });
+  const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] }); // photos: 미리보기 URL
+  const [avgRating, setAvgRating] = useState(null);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  // 카테고리
   const [selectedCategory, setSelectedCategory] = useState('');
+
+  // 경로 관련
   const [routeSummary, setRouteSummary] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -57,19 +70,40 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
   if (!isOpen || !place) return null;
 
-  // 평균 평점
-  const averageRating = place.reviews && place.reviews.length > 0
+  // ✅ 평균 평점 (서버값 우선, 없으면 클라이언트 계산)
+  const computedAvg = place.reviews && place.reviews.length > 0
       ? (place.reviews.reduce((sum, r) => sum + r.rating, 0) / place.reviews.length).toFixed(1)
       : 0;
+  const averageRating = (avgRating ?? computedAvg);
+  const totalReviews  = (reviewCount ?? (place.reviews?.length || 0));
 
-  // 간단 표시용
+  const HUMAN_WALK_SPEED_KMH = 3; // 평균 보행 속도
+  const ADJUSTED_SPEED_KMH = HUMAN_WALK_SPEED_KMH * 0.8; // 2.4 km/h
+
   const calculateRouteTime = () => {
     if (!startPoint) return '출발지를 검색해서 선택하세요';
     if (routeSummary) {
       const mins = Math.round(routeSummary.duration / 60000);
       const km = (routeSummary.distance / 1000).toFixed(1);
-      return `예상 ${mins}분 · ${km}km`;
+      return `예상 ${mins}분 · ${km} km`;
     }
+
+    // 거리 기반 fallback 계산
+    if (place && startPoint) {
+      const dx = place.lng - startPoint.lng;
+      const dy = place.lat - startPoint.lat;
+      const avgLat = (place.lat + startPoint.lat) / 2;
+      const meterPerDegLon = 111320 * Math.cos(avgLat * Math.PI / 180);
+      const meterPerDegLat = 110540;
+      const distanceMeters = Math.sqrt(
+          (dx * meterPerDegLon) ** 2 +
+          (dy * meterPerDegLat) ** 2
+      );
+      const distanceKm = distanceMeters / 1000;
+      const estMin = Math.round(distanceKm / ADJUSTED_SPEED_KMH * 60);
+      return `예상 약 ${estMin}분 (2.4 km/h 보행 기준)`;
+    }
+
     return '경로 계산 중...';
   };
 
@@ -81,19 +115,112 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
-  // 리뷰/사진
-  const handleSubmitReview = () => {
-    if (!newReview.content.trim()) return alert('리뷰 내용을 입력해주세요.');
-    console.log('Submit review:', newReview);
-    setNewReview({ rating: 5, content: '', photos: [] });
+  // ✅ 리뷰 목록 불러오기
+  const fetchReviews = async () => {
+    if (!place?.id) return;
+    try {
+      const res = await fetch(REVIEW_LIST(place.id), {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+      });
+      if (!res.ok) throw new Error('리뷰 조회 실패');
+      const data = await res.json(); // { averageRating, reviewCount, reviews: [...] }
+      setAvgRating(data.averageRating);
+      setReviewCount(data.reviewCount);
+      place.reviews = (data.reviews || []).map(r => ({
+        id: r.id,
+        userName: r.userName,
+        rating: r.rating,
+        content: r.content,
+        likes: r.likes,
+        dislikes: r.dislikes,
+        photos: (r.photos || []).map(p => p.url)
+      }));
+      setShowAllReviews(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  // ✅ 이미지 업로드 (선택 API가 없으면 자동 무시)
+  async function uploadReviewPhotos(files) {
+    if (!files || files.length === 0) return [];
+    try {
+      const form = new FormData();
+      for (const f of files) form.append('files', f);
+      const res = await fetch(REVIEW_UPLOAD, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` },
+        body: form
+      });
+      if (!res.ok) throw new Error('upload endpoint not available');
+      const data = await res.json(); // { urls: [...] }
+      return data.urls || [];
+    } catch (err) {
+      console.warn('사진 업로드 API가 없거나 실패했습니다. 사진 없이 리뷰를 등록합니다.');
+      return []; // 업로드 API 없으면 사진 없이 계속 진행
+    }
+  }
+
+  // ✅ 리뷰 등록
+  const handleSubmitReview = async () => {
+    if (!newReview.content.trim()) return alert('리뷰 내용을 입력해주세요.');
+
+    try {
+      // 실제 업로드는 input.files 기준
+      const fileInput = fileInputRef.current;
+      const files = fileInput?.files ? Array.from(fileInput.files) : [];
+      const photoUrls = await uploadReviewPhotos(files);
+
+      const res = await fetch(REVIEW_LIST(place.id), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`
+        },
+        body: JSON.stringify({
+          rating: newReview.rating,
+          content: newReview.content,
+          photoUrls
+        })
+      });
+      if (!res.ok) throw new Error('리뷰 등록 실패');
+
+      // 폼 리셋 & 목록 갱신
+      setNewReview({ rating: 5, content: '', photos: [] });
+      if (fileInput) fileInput.value = '';
+      await fetchReviews();
+    } catch (e) {
+      console.error(e);
+      alert('리뷰 등록에 실패했습니다.');
+    }
+  };
+
+  // 미리보기용 사진 관리 (프론트 전용)
   const handlePhotoUpload = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
     setNewReview(p => ({ ...p, photos: [...p.photos, ...files.map(f => URL.createObjectURL(f))] }));
   };
   const handleRemovePhoto = (idx) => setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
-  const handleLikeReview = (id) => console.log('Like review:', id);
-  const handleDislikeReview = (id) => console.log('Dislike review:', id);
+
+  // ✅ 좋아요/싫어요
+  const handleLikeReview = async (id) => {
+    try {
+      await fetch(REVIEW_REACT(id) + '?type=LIKE', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+      });
+      await fetchReviews();
+    } catch (e) { console.error(e); }
+  };
+  const handleDislikeReview = async (id) => {
+    try {
+      await fetch(REVIEW_REACT(id) + '?type=DISLIKE', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+      });
+      await fetchReviews();
+    } catch (e) { console.error(e); }
+  };
 
   const getTypeIcon = (type) => ({ restaurant: '🍽️', cafe: '☕', partner: '🤝', convenience: '🛍️', other: '📍' }[type] || '📍');
   const getTypeName = (type) => ({ restaurant: '음식점', cafe: '카페', partner: '제휴업체', convenience: '편의점', other: '기타' }[type] || '기타');
@@ -128,15 +255,24 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         if (!mapRef.current || !place) return;
         const { naver } = window;
 
-        if (!mapInstanceRef.current) {
+        const center = new naver.maps.LatLng(Number(place.lat), Number(place.lng));
+
+        // ✅ 컨테이너가 다르면 항상 재생성
+        const needRecreate =
+            !mapInstanceRef.current ||
+            mapInstanceRef.current.getElement?.() !== mapRef.current;
+
+        if (needRecreate) {
           mapInstanceRef.current = new naver.maps.Map(mapRef.current, {
-            center: new naver.maps.LatLng(place.lat, place.lng),
+            center,
             zoom: 16,
             minZoom: 6,
             mapDataControl: false,
             logoControl: false,
             scaleControl: true,
           });
+        } else {
+          mapInstanceRef.current.setCenter(center);
         }
 
         // 기존 오버레이 정리
@@ -144,37 +280,21 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         markersRef.current = [];
         if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
 
-        // 도착지 마커
-        const dest = new naver.maps.LatLng(place.lat, place.lng);
-        const destMarker = new naver.maps.Marker({ position: dest, map: mapInstanceRef.current, title: place.name });
+        const destMarker = new naver.maps.Marker({ position: center, map: mapInstanceRef.current, title: place.name });
         markersRef.current.push(destMarker);
 
-        // 현재 위치(선택) 있으면 보여주기
-        const bounds = new naver.maps.LatLngBounds();
-        bounds.extend(dest);
-        let hasStart = false;
-        if (userLocation?.lat && userLocation?.lng) {
-          const start = new naver.maps.LatLng(userLocation.lat, userLocation.lng);
-          const startMarker = new naver.maps.Marker({
-            position: start,
-            map: mapInstanceRef.current,
-            title: '현재 위치',
-            icon: {
-              content: '<div style="width:12px;height:12px;border-radius:50%;background:#2b8a3e;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.4)"></div>',
-              anchor: new naver.maps.Point(6, 6),
-            },
-          });
-          markersRef.current.push(startMarker);
-          bounds.extend(start);
-          hasStart = true;
-        }
-
-        if (hasStart) {
-          mapInstanceRef.current.fitBounds(bounds);
-        } else {
-          mapInstanceRef.current.setCenter(dest);
-          mapInstanceRef.current.setZoom(16);
-        }
+        // ✅ 표시 직후 사이즈/바운즈 보정 (탭 전환 시 필수)
+        setTimeout(() => {
+          const el = mapRef.current;
+          if (!el || !mapInstanceRef.current) return;
+          mapInstanceRef.current.setSize(new naver.maps.Size(el.clientWidth, el.clientHeight));
+          if (userLocation?.lat && userLocation?.lng) {
+            const b = new naver.maps.LatLngBounds();
+            b.extend(center);
+            b.extend(new naver.maps.LatLng(Number(userLocation.lat), Number(userLocation.lng)));
+            mapInstanceRef.current.fitBounds(b);
+          }
+        }, 0);
       } catch (e) {
         console.error('네이버 지도 로드 실패:', e);
       }
@@ -280,6 +400,20 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     setStartLabel(addr ? `${title} · ${addr}` : title);
   };
 
+  const maskUserName = (name) => {
+    if (!name) return '익명';
+    const trimmed = String(name).trim();
+    if (trimmed.length === 0) return '익명';
+    return trimmed[0] + '**';
+  };
+
+  // ✅ 모달 열릴 때 리뷰 불러오기
+  useEffect(() => {
+    if (!isOpen || !place?.id) return;
+    fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, place?.id]);
+
   return (
       <ModalOverlay onClick={onClose}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
@@ -292,10 +426,10 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                 <PlaceRating>
                   <Stars>
                     {[1, 2, 3, 4, 5].map(star => (
-                        <Star key={star} $isFilled={star <= averageRating}><FaStar /></Star>
+                        <Star key={star} $isFilled={star <= Number(averageRating)}><FaStar /></Star>
                     ))}
                   </Stars>
-                  <RatingText>{averageRating} ({place.reviews?.length || 0}개 리뷰)</RatingText>
+                  <RatingText>{averageRating} ({totalReviews}개 리뷰)</RatingText>
                 </PlaceRating>
               </PlaceDetails>
             </PlaceInfo>
@@ -368,9 +502,11 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
                   <ReviewsList>
                     <ReviewsHeader>
-                      <ReviewsTitle>리뷰 ({place.reviews?.length || 0})</ReviewsTitle>
+                      <ReviewsTitle>리뷰 ({totalReviews})</ReviewsTitle>
                       {place.reviews && place.reviews.length > 3 && (
-                          <ShowMoreButton onClick={() => setShowAllReviews(!showAllReviews)}>{showAllReviews ? '접기' : '더보기'}</ShowMoreButton>
+                          <ShowMoreButton onClick={() => setShowAllReviews(!showAllReviews)}>
+                            {showAllReviews ? '접기' : '더보기'}
+                          </ShowMoreButton>
                       )}
                     </ReviewsHeader>
 
@@ -378,14 +514,23 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         <ReviewItem key={review.id || index}>
                           <ReviewHeader>
                             <ReviewerInfo>
-                              <ReviewerName>{review.userName}</ReviewerName>
+                              {/* ✅ 여기만 수정 */}
+                              <ReviewerName>{maskUserName(review.userName)}</ReviewerName>
+
                               <ReviewRating>
-                                {[...Array(5)].map((_, i) => (<Star key={i} $isFilled={i < review.rating}><FaStar /></Star>))}
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} $isFilled={i < review.rating}><FaStar /></Star>
+                                ))}
                               </ReviewRating>
                             </ReviewerInfo>
+
                             <ReviewActions>
-                              <ActionButton onClick={() => handleLikeReview(review.id)}><FaThumbsUp /> {review.likes || 0}</ActionButton>
-                              <ActionButton onClick={() => handleDislikeReview(review.id)}><FaThumbsDown /> {review.dislikes || 0}</ActionButton>
+                              <ActionButton onClick={() => handleLikeReview(review.id)}>
+                                <FaThumbsUp /> {review.likes || 0}
+                              </ActionButton>
+                              <ActionButton onClick={() => handleDislikeReview(review.id)}>
+                                <FaThumbsDown /> {review.dislikes || 0}
+                              </ActionButton>
                             </ReviewActions>
                           </ReviewHeader>
 
@@ -398,19 +543,24 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                             ) : (
                                 <>
                                   {review.content.slice(0, 100)}
-                                  {review.content.length > 100 && <ExpandButton onClick={() => setExpandedReview(review.id)}>...더보기</ExpandButton>}
+                                  {review.content.length > 100 && (
+                                      <ExpandButton onClick={() => setExpandedReview(review.id)}>...더보기</ExpandButton>
+                                  )}
                                 </>
                             )}
                           </ReviewContent>
 
                           {review.photos && review.photos.length > 0 && (
                               <ReviewPhotos>
-                                {review.photos.map((photo, i) => <ReviewPhoto key={i} src={photo} alt="리뷰 사진" />)}
+                                {review.photos.map((photo, i) => (
+                                    <ReviewPhoto key={i} src={photo} alt="리뷰 사진" />
+                                ))}
                               </ReviewPhotos>
                           )}
                         </ReviewItem>
                     ))}
                   </ReviewsList>
+
                 </ReviewsTab>
             )}
 
@@ -460,6 +610,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       </ModalOverlay>
   );
 };
+
+/* ===================== styled components (원본 그대로) ===================== */
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -564,7 +716,7 @@ const CloseButton = styled.button`
   padding: 8px;
   border-radius: 8px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     color: #333;
     background: #f8f9fa;
@@ -588,11 +740,11 @@ const TabButton = styled.button`
   font-size: 14px;
   transition: all 0.2s ease;
   position: relative;
-  
+
   &:hover {
     background: ${props => props.$isActive ? 'white' : '#f0f0f0'};
   }
-  
+
   ${props => props.$isActive && `
     &::after {
       content: '';
@@ -655,7 +807,7 @@ const CategorySelect = styled.select`
   font-size: 14px;
   background: white;
   transition: border-color 0.2s ease;
-  
+
   &:focus {
     outline: none;
     border-color: #007bff;
@@ -671,7 +823,7 @@ const AddToCategoryButton = styled.button`
   cursor: pointer;
   font-weight: 500;
   transition: background 0.2s ease;
-  
+
   &:hover {
     background: #0056b3;
   }
@@ -707,7 +859,7 @@ const StarButton = styled.button`
   color: ${props => props.$isSelected ? '#ffc107' : '#ddd'};
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     color: #ffc107;
     transform: scale(1.1);
@@ -725,7 +877,7 @@ const ReviewTextarea = styled.textarea`
   margin-bottom: 16px;
   font-family: inherit;
   transition: border-color 0.2s ease;
-  
+
   &:focus {
     outline: none;
     border-color: #007bff;
@@ -756,7 +908,7 @@ const PhotoUploadArea = styled.div`
   align-items: center;
   gap: 12px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     border-color: #007bff;
     color: #007bff;
@@ -801,7 +953,7 @@ const RemovePhotoButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: background 0.2s ease;
-  
+
   &:hover {
     background: #c82333;
   }
@@ -818,7 +970,7 @@ const ReviewSubmitButton = styled.button`
   font-weight: 600;
   font-size: 16px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
@@ -853,7 +1005,7 @@ const ShowMoreButton = styled.button`
   padding: 8px 16px;
   border-radius: 8px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: rgba(0, 123, 255, 0.1);
     text-decoration: none;
@@ -867,7 +1019,7 @@ const ReviewItem = styled.div`
   margin-bottom: 16px;
   background: white;
   transition: all 0.2s ease;
-  
+
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
@@ -912,7 +1064,7 @@ const ActionButton = styled.button`
   padding: 6px 12px;
   border-radius: 20px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     color: #333;
     border-color: #ccc;
@@ -937,7 +1089,7 @@ const ExpandButton = styled.button`
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: rgba(0, 123, 255, 0.1);
     text-decoration: none;
@@ -955,7 +1107,7 @@ const CollapseButton = styled.button`
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: rgba(0, 123, 255, 0.1);
     text-decoration: none;
@@ -976,7 +1128,7 @@ const ReviewPhoto = styled.img`
   border-radius: 8px;
   border: 2px solid #f0f0f0;
   transition: transform 0.2s ease;
-  
+
   &:hover {
     transform: scale(1.05);
   }
@@ -1031,7 +1183,7 @@ const RouteMapPlaceholder = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  
+
   svg {
     font-size: 32px;
     color: #ccc;
@@ -1105,4 +1257,4 @@ const ResultAddr = styled.div`
   margin-top: 2px;
 `;
 
-export default PlaceDetailModal; 
+export default PlaceDetailModal;
