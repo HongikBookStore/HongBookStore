@@ -13,15 +13,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class PlaceReviewService {
+
     private final PlaceReviewRepository reviewRepo;
     private final ReviewReactionRepository reactionRepo;
     private final UserRepository userRepository;
 
     @Transactional
-    public Long createReview(Long placeId, Long userId, int rating, String content, java.util.List<String> photoUrls) {
+    public Long createReview(Long placeId, Long userId, int rating, String content, List<String> photoUrls) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found"));
 
@@ -30,21 +33,27 @@ public class PlaceReviewService {
                 .userId(user.getId())
                 .userName(user.getUsername())
                 .rating(Math.max(1, Math.min(5, rating)))
-                .content(content.trim())
+                .content(content == null ? "" : content.trim())
                 .build();
 
-        if (photoUrls != null) {
+        // ✅ 사진 URL 추가 (빈/null 필터링 + 편의 메서드 사용)
+        if (photoUrls != null && !photoUrls.isEmpty()) {
             int i = 0;
-            for (String url : photoUrls) {
+            for (String raw : photoUrls) {
+                if (raw == null) continue;
+                String url = raw.trim();
+                if (url.isEmpty()) continue;
+
                 ReviewPhoto p = ReviewPhoto.builder()
-                        .review(review)
                         .url(url)
                         .sortOrder(i++)
                         .build();
-                review.getPhotos().add(p);
+
+                review.addPhoto(p); // 양방향 세팅 + 리스트 add
             }
         }
-        reviewRepo.save(review);
+
+        reviewRepo.save(review); // cascade=ALL 로 사진도 함께 저장
         return review.getId();
     }
 
@@ -68,6 +77,7 @@ public class PlaceReviewService {
                     .reaction(type)
                     .build());
         }
+
         review.setLikesCount((int) reactionRepo.countByReviewIdAndReaction(reviewId, ReviewReaction.ReactionType.LIKE));
         review.setDislikesCount((int) reactionRepo.countByReviewIdAndReaction(reviewId, ReviewReaction.ReactionType.DISLIKE));
     }
@@ -94,9 +104,12 @@ public class PlaceReviewService {
                         .likes(r.getLikesCount())
                         .dislikes(r.getDislikesCount())
                         .createdAt(r.getCreatedAt().format(dtf))
-                        .photos(r.getPhotos().stream()
-                                .map(p -> new ReviewDtos.ReviewPhotoDto(p.getId(), p.getUrl(), p.getSortOrder()))
-                                .toList())
+                        .photos(
+                                (r.getPhotos() == null ? List.<ReviewDtos.ReviewPhotoDto>of() :
+                                        r.getPhotos().stream()
+                                                .map(p -> new ReviewDtos.ReviewPhotoDto(p.getId(), p.getUrl(), p.getSortOrder()))
+                                                .toList())
+                        )
                         .build()
         ).toList());
         return res;

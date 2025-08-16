@@ -1,25 +1,27 @@
 // src/components/PlaceDetailModal/PlaceDetailModal.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaStar, FaThumbsUp, FaThumbsDown, FaCamera, FaRoute, FaClock, FaMapMarkerAlt, FaHeart, FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import {
+  FaStar, FaThumbsUp, FaThumbsDown, FaRoute, FaClock, FaMapMarkerAlt,
+  FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle,
+  FaChevronLeft, FaChevronRight, FaSearchPlus, FaSearchMinus
+} from 'react-icons/fa';
 
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 const DIRECTIONS_ENDPOINT = '/api/directions/driving';
-const SEARCH_ENDPOINT = '/api/places/search'; // 너의 백엔드 검색 엔드포인트
+const SEARCH_ENDPOINT = '/api/places/search';
 
 // ✅ 리뷰 API 엔드포인트
 const REVIEW_LIST   = (id) => `/api/places/${id}/reviews`;
 const REVIEW_REACT  = (reviewId) => `/api/places/reviews/${reviewId}/reactions`;
-const REVIEW_UPLOAD = '/api/images/review-photos'; // (선택) 7번을 안했으면 호출 실패 → 자동 무시
+const REVIEW_UPLOAD = '/api/reviews/images'; // 리뷰 전용 업로드 엔드포인트
 
 // 네이버 로컬검색 item에서 위경도 추출 (mapx/mapy는 1e7 스케일된 WGS84)
 function extractLatLngFromNaverItem(item) {
   const toNum = (v) => (v == null ? NaN : Number(v));
-  // 우선 lat/lng가 있으면 그대로
   let lat = toNum(item.lat), lng = toNum(item.lng);
   if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
 
-  // mapx/mapy 문자열(또는 숫자) → 1e7 스케일 해제
   const mapx = toNum(item.mapx ?? item.mapX);
   const mapy = toNum(item.mapy ?? item.mapY);
   if (Number.isFinite(mapx) && Number.isFinite(mapy)) {
@@ -30,7 +32,6 @@ function extractLatLngFromNaverItem(item) {
     }
   }
 
-  // x/y(lng/lat) 형식이 올 수도 있으니 보조 처리
   const x = toNum(item.x), y = toNum(item.y);
   if (Number.isFinite(x) && Number.isFinite(y) && Math.abs(y) <= 90 && Math.abs(x) <= 180) {
     return { lat: y, lng: x };
@@ -42,11 +43,12 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [activeTab, setActiveTab] = useState('info');
 
   // ✅ 리뷰 관련 상태
+  const [reviews, setReviews] = useState([]);             // 서버에서 받은 리뷰 목록
+  const [avgRating, setAvgRating] = useState(null);       // 서버 평균(없으면 클라 계산)
+  const [reviewCount, setReviewCount] = useState(0);      // 서버 카운트(없으면 reviews.length)
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReview, setExpandedReview] = useState(null);
   const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] }); // photos: 미리보기 URL
-  const [avgRating, setAvgRating] = useState(null);
-  const [reviewCount, setReviewCount] = useState(0);
 
   // 카테고리
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -68,17 +70,44 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [searching, setSearching] = useState(false);
   const [startLabel, setStartLabel] = useState('');
 
+  // ✅ 라이트박스 (리뷰 사진 확대)
+  const [lbOpen, setLbOpen] = useState(false);
+  const [lbImages, setLbImages] = useState([]);   // string[]
+  const [lbIndex, setLbIndex] = useState(0);
+
+  const openLightbox = (images, startIndex = 0) => {
+    if (!images || images.length === 0) return;
+    setLbImages(images);
+    setLbIndex(Math.min(Math.max(0, startIndex), images.length - 1));
+    setLbOpen(true);
+  };
+  const closeLightbox = () => setLbOpen(false);
+  const prevLightbox  = () => setLbIndex(i => (i - 1 + lbImages.length) % lbImages.length);
+  const nextLightbox  = () => setLbIndex(i => (i + 1) % lbImages.length);
+
+  useEffect(() => {
+    if (!lbOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevLightbox();
+      if (e.key === 'ArrowRight') nextLightbox();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lbOpen, lbImages.length]);
+
   if (!isOpen || !place) return null;
 
-  // ✅ 평균 평점 (서버값 우선, 없으면 클라이언트 계산)
-  const computedAvg = place.reviews && place.reviews.length > 0
-      ? (place.reviews.reduce((sum, r) => sum + r.rating, 0) / place.reviews.length).toFixed(1)
+  // ✅ 평균 평점 계산 (서버값 우선, 없으면 클라이언트 계산)
+  const clientAvg = reviews.length > 0
+      ? Number((reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / reviews.length).toFixed(1))
       : 0;
-  const averageRating = (avgRating ?? computedAvg);
-  const totalReviews  = (reviewCount ?? (place.reviews?.length || 0));
 
-  const HUMAN_WALK_SPEED_KMH = 3; // 평균 보행 속도
-  const ADJUSTED_SPEED_KMH = HUMAN_WALK_SPEED_KMH * 0.8; // 2.4 km/h
+  const averageRating = (typeof avgRating === 'number' ? avgRating : clientAvg);
+  const totalReviews  = (typeof reviewCount === 'number' ? reviewCount : reviews.length);
+
+  const HUMAN_WALK_SPEED_KMH = 3;
+  const ADJUSTED_SPEED_KMH = HUMAN_WALK_SPEED_KMH * 0.8;
 
   const calculateRouteTime = () => {
     if (!startPoint) return '출발지를 검색해서 선택하세요';
@@ -88,22 +117,17 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       return `예상 ${mins}분 · ${km} km`;
     }
 
-    // 거리 기반 fallback 계산
     if (place && startPoint) {
       const dx = place.lng - startPoint.lng;
       const dy = place.lat - startPoint.lat;
       const avgLat = (place.lat + startPoint.lat) / 2;
       const meterPerDegLon = 111320 * Math.cos(avgLat * Math.PI / 180);
       const meterPerDegLat = 110540;
-      const distanceMeters = Math.sqrt(
-          (dx * meterPerDegLon) ** 2 +
-          (dy * meterPerDegLat) ** 2
-      );
+      const distanceMeters = Math.sqrt((dx * meterPerDegLon) ** 2 + (dy * meterPerDegLat) ** 2);
       const distanceKm = distanceMeters / 1000;
       const estMin = Math.round(distanceKm / ADJUSTED_SPEED_KMH * 60);
       return `예상 약 ${estMin}분 (2.4 km/h 보행 기준)`;
     }
-
     return '경로 계산 중...';
   };
 
@@ -124,9 +148,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       });
       if (!res.ok) throw new Error('리뷰 조회 실패');
       const data = await res.json(); // { averageRating, reviewCount, reviews: [...] }
-      setAvgRating(data.averageRating);
-      setReviewCount(data.reviewCount);
-      place.reviews = (data.reviews || []).map(r => ({
+      setAvgRating(typeof data.averageRating === 'number' ? data.averageRating : null);
+      setReviewCount(typeof data.reviewCount === 'number' ? data.reviewCount : 0);
+      const mapped = (data.reviews || []).map(r => ({
         id: r.id,
         userName: r.userName,
         rating: r.rating,
@@ -135,13 +159,14 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         dislikes: r.dislikes,
         photos: (r.photos || []).map(p => p.url)
       }));
+      setReviews(mapped);
       setShowAllReviews(false);
     } catch (e) {
       console.error(e);
     }
   };
 
-  // ✅ 이미지 업로드 (선택 API가 없으면 자동 무시)
+  // ✅ 이미지 업로드 (엔드포인트 접근 실패 시 사진 없이 진행)
   async function uploadReviewPhotos(files) {
     if (!files || files.length === 0) return [];
     try {
@@ -157,7 +182,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       return data.urls || [];
     } catch (err) {
       console.warn('사진 업로드 API가 없거나 실패했습니다. 사진 없이 리뷰를 등록합니다.');
-      return []; // 업로드 API 없으면 사진 없이 계속 진행
+      return [];
     }
   }
 
@@ -166,7 +191,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     if (!newReview.content.trim()) return alert('리뷰 내용을 입력해주세요.');
 
     try {
-      // 실제 업로드는 input.files 기준
       const fileInput = fileInputRef.current;
       const files = fileInput?.files ? Array.from(fileInput.files) : [];
       const photoUrls = await uploadReviewPhotos(files);
@@ -185,7 +209,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       });
       if (!res.ok) throw new Error('리뷰 등록 실패');
 
-      // 폼 리셋 & 목록 갱신
       setNewReview({ rating: 5, content: '', photos: [] });
       if (fileInput) fileInput.value = '';
       await fetchReviews();
@@ -222,10 +245,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     } catch (e) { console.error(e); }
   };
 
-  const getTypeIcon = (type) => ({ restaurant: '🍽️', cafe: '☕', partner: '🤝', convenience: '🛍️', other: '📍' }[type] || '📍');
   const getTypeName = (type) => ({ restaurant: '음식점', cafe: '카페', partner: '제휴업체', convenience: '편의점', other: '기타' }[type] || '기타');
-
-  // 태그 제거
   const stripTags = (s) => (s || '').replace(/<[^>]+>/g, '');
 
   // 네이버 스크립트 로더
@@ -257,7 +277,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
         const center = new naver.maps.LatLng(Number(place.lat), Number(place.lng));
 
-        // ✅ 컨테이너가 다르면 항상 재생성
         const needRecreate =
             !mapInstanceRef.current ||
             mapInstanceRef.current.getElement?.() !== mapRef.current;
@@ -276,18 +295,18 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         }
 
         // 기존 오버레이 정리
-        markersRef.current.forEach(m => m.setMap(null));
+        markersRef.current.forEach(m => m.setMap?.(null));
         markersRef.current = [];
-        if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
+        if (polylineRef.current) { polylineRef.current.setMap?.(null); polylineRef.current = null; }
 
         const destMarker = new naver.maps.Marker({ position: center, map: mapInstanceRef.current, title: place.name });
         markersRef.current.push(destMarker);
 
-        // ✅ 표시 직후 사이즈/바운즈 보정 (탭 전환 시 필수)
+        // 표시 직후 사이즈/바운즈 보정
         setTimeout(() => {
           const el = mapRef.current;
           if (!el || !mapInstanceRef.current) return;
-          mapInstanceRef.current.setSize(new naver.maps.Size(el.clientWidth, el.clientHeight));
+          mapInstanceRef.current.setSize?.(new naver.maps.Size(el.clientWidth, el.clientHeight));
           if (userLocation?.lat && userLocation?.lng) {
             const b = new naver.maps.LatLngBounds();
             b.extend(center);
@@ -302,7 +321,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     if (isOpen && activeTab === 'route') init();
   }, [isOpen, activeTab, place, userLocation]);
 
-  // 출발지 선택되면: 출발/도착 마커 + 직선 표시
+  // 출발지 선택되면: 출발/도착 마커 + 경로 표시
   useEffect(() => {
     if (!(isOpen && activeTab === 'route')) return;
     if (!window.naver?.maps || !mapInstanceRef.current) return;
@@ -310,12 +329,10 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     const { naver } = window;
     const map = mapInstanceRef.current;
 
-    // 기존에 동기 코드였던 부분을 async 함수로 래핑
     const drawRoute = async () => {
-      // 오버레이 초기화
-      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current.forEach(m => m.setMap?.(null));
       markersRef.current = [];
-      if (polylineRef.current) { polylineRef.current.setMap(null); polylineRef.current = null; }
+      if (polylineRef.current) { polylineRef.current.setMap?.(null); polylineRef.current = null; }
 
       const dest = new naver.maps.LatLng(place.lat, place.lng);
       const destMarker = new naver.maps.Marker({ position: dest, map, title: place.name });
@@ -360,9 +377,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       }
     };
 
-    // 비동기 함수 실행
     drawRoute();
-
   }, [startPoint, isOpen, activeTab, place]);
 
   // 출발지 검색
@@ -376,7 +391,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
-      // data가 [{lat,lng,name,address}, ...] 또는 {items:[...]}(네이버 원본) 둘 다 처리
       const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
       setStartResults(items);
     } catch (e) {
@@ -394,9 +408,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
     setStartPoint(ll);
 
-    // ✅ 제목/이름 + (선택) 도로명주소
     const title = stripTags(item.title || item.name || '');
-    const addr  = stripTags(item.roadAddress || item.address || '');
+    const addr  = stripTags(item.roadAddress || item.address || item.addr || '');
     setStartLabel(addr ? `${title} · ${addr}` : title);
   };
 
@@ -419,7 +432,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalHeader>
             <PlaceInfo>
-              <PlaceIcon>{getTypeIcon(place.category)}</PlaceIcon>
+              <PlaceIcon>{({ restaurant: '🍽️', cafe: '☕', partner: '🤝', convenience: '🛍️', other: '📍' }[place.category] || '📍')}</PlaceIcon>
               <PlaceDetails>
                 <PlaceName>{place.name}</PlaceName>
                 <PlaceType>{getTypeName(place.category)}</PlaceType>
@@ -429,7 +442,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         <Star key={star} $isFilled={star <= Number(averageRating)}><FaStar /></Star>
                     ))}
                   </Stars>
-                  <RatingText>{averageRating} ({totalReviews}개 리뷰)</RatingText>
+                  <RatingText>{Number(averageRating || 0).toFixed(1)} ({Number(totalReviews || 0)}개 리뷰)</RatingText>
                 </PlaceRating>
               </PlaceDetails>
             </PlaceInfo>
@@ -476,16 +489,33 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                     <ReviewFormTitle>리뷰 작성</ReviewFormTitle>
                     <RatingContainer>
                       {[1, 2, 3, 4, 5].map(star => (
-                          <StarButton key={star} $isSelected={newReview.rating >= star} onClick={() => setNewReview({ ...newReview, rating: star })}><FaStar /></StarButton>
+                          <StarButton
+                              key={star}
+                              $isSelected={newReview.rating >= star}
+                              onClick={() => setNewReview({ ...newReview, rating: star })}
+                          >
+                            <FaStar />
+                          </StarButton>
                       ))}
                     </RatingContainer>
-                    <ReviewTextarea placeholder="리뷰를 작성해주세요..." value={newReview.content} onChange={(e) => setNewReview({ ...newReview, content: e.target.value })} />
+                    <ReviewTextarea
+                        placeholder="리뷰를 작성해주세요..."
+                        value={newReview.content}
+                        onChange={(e) => setNewReview({ ...newReview, content: e.target.value })}
+                    />
                     <PhotoUploadSection>
                       <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
                       <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>
                         <FaUpload /><span>사진을 선택하거나 클릭하여 업로드</span>
                       </PhotoUploadArea>
-                      <input ref={fileInputRef} type="file" multiple accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                      <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          style={{ display: 'none' }}
+                      />
                       {newReview.photos.length > 0 && (
                           <PhotoPreviewContainer>
                             {newReview.photos.map((photo, index) => (
@@ -502,21 +532,19 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
                   <ReviewsList>
                     <ReviewsHeader>
-                      <ReviewsTitle>리뷰 ({totalReviews})</ReviewsTitle>
-                      {place.reviews && place.reviews.length > 3 && (
+                      <ReviewsTitle>리뷰 ({Number(totalReviews || 0)})</ReviewsTitle>
+                      {reviews.length > 3 && (
                           <ShowMoreButton onClick={() => setShowAllReviews(!showAllReviews)}>
                             {showAllReviews ? '접기' : '더보기'}
                           </ShowMoreButton>
                       )}
                     </ReviewsHeader>
 
-                    {(place.reviews || []).slice(0, showAllReviews ? undefined : 3).map((review, index) => (
+                    {reviews.slice(0, showAllReviews ? undefined : 3).map((review, index) => (
                         <ReviewItem key={review.id || index}>
                           <ReviewHeader>
                             <ReviewerInfo>
-                              {/* ✅ 여기만 수정 */}
                               <ReviewerName>{maskUserName(review.userName)}</ReviewerName>
-
                               <ReviewRating>
                                 {[...Array(5)].map((_, i) => (
                                     <Star key={i} $isFilled={i < review.rating}><FaStar /></Star>
@@ -553,7 +581,13 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                           {review.photos && review.photos.length > 0 && (
                               <ReviewPhotos>
                                 {review.photos.map((photo, i) => (
-                                    <ReviewPhoto key={i} src={photo} alt="리뷰 사진" />
+                                    <ReviewPhoto
+                                        key={i}
+                                        src={photo}
+                                        alt="리뷰 사진"
+                                        onClick={() => openLightbox(review.photos, i)}
+                                        title="클릭하면 크게 보기"
+                                    />
                                 ))}
                               </ReviewPhotos>
                           )}
@@ -574,7 +608,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                       <RouteItem><FaClock /><span>상태: {calculateRouteTime()}</span></RouteItem>
                     </RouteDetails>
 
-                    {/* ✅ 출발지 장소검색 UI */}
+                    {/* 출발지 장소검색 UI */}
                     <SearchRow>
                       <label>출발지 검색</label>
                       <SearchControls>
@@ -584,16 +618,21 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                             placeholder="예) 홍대입구역 2번출구, 스타벅스 상수역"
                             onKeyDown={(e) => { if (e.key === 'Enter') searchStartPlaces(); }}
                         />
-                        <SearchBtn onClick={searchStartPlaces} disabled={searching}>{searching ? '검색 중...' : '검색'}</SearchBtn>
+                        <SearchBtn onClick={searchStartPlaces} disabled={searching}>
+                          {searching ? '검색 중...' : '검색'}
+                        </SearchBtn>
                       </SearchControls>
                     </SearchRow>
 
                     {startResults.length > 0 && (
                         <ResultsList>
                           {startResults.slice(0, 10).map((r, idx) => (
-                              <ResultItem key={r.id ?? `${r.mapx ?? r.x}-${r.mapy ?? r.y}-${idx}`} onClick={() => pickStartFromResult(r)}>
+                              <ResultItem
+                                  key={r.id ?? `${r.mapx ?? r.x}-${r.mapy ?? r.y}-${idx}`}
+                                  onClick={() => pickStartFromResult(r)}
+                              >
                                 <ResultTitle>{stripTags(r.title || r.name)}</ResultTitle>
-                                <ResultAddr>{stripTags(r.roadAddress || r.address || r.roadAddress || r.addr || '')}</ResultAddr>
+                                <ResultAddr>{stripTags(r.roadAddress || r.address || r.addr || '')}</ResultAddr>
                               </ResultItem>
                           ))}
                         </ResultsList>
@@ -607,11 +646,22 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
             )}
           </ModalBody>
         </ModalContent>
+
+        {/* ✅ 리뷰 이미지 라이트박스 */}
+        {lbOpen && (
+            <Lightbox
+                images={lbImages}
+                index={lbIndex}
+                onClose={closeLightbox}
+                onPrev={prevLightbox}
+                onNext={nextLightbox}
+            />
+        )}
       </ModalOverlay>
   );
 };
 
-/* ===================== styled components (원본 그대로) ===================== */
+/* ===================== styled components ===================== */
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -1128,6 +1178,7 @@ const ReviewPhoto = styled.img`
   border-radius: 8px;
   border: 2px solid #f0f0f0;
   transition: transform 0.2s ease;
+  cursor: zoom-in;
 
   &:hover {
     transform: scale(1.05);
@@ -1255,6 +1306,189 @@ const ResultAddr = styled.div`
   color: #666;
   font-size: 12px;
   margin-top: 2px;
+`;
+
+/* ===================== Lightbox (리뷰 이미지 확대) ===================== */
+
+const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
+  const [scale, setScale] = useState(1);
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [last, setLast] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    // 이미지 변경 시 상태 초기화
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+    setDragging(false);
+  }, [index]);
+
+  const onWheel = (e) => {
+    e.preventDefault();
+    const delta = -Math.sign(e.deltaY) * 0.15; // 위로 스크롤 시 확대
+    setScale((s) => {
+      const next = Math.min(5, Math.max(1, +(s + delta).toFixed(2)));
+      if (next === 1) setOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const onMouseDown = (e) => {
+    if (scale === 1) return; // 1배율에선 드래그 비활성
+    setDragging(true);
+    setLast({ x: e.clientX, y: e.clientY });
+  };
+  const onMouseMove = (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    setLast({ x: e.clientX, y: e.clientY });
+    setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+  };
+  const onMouseUp = () => setDragging(false);
+  const onMouseLeave = () => setDragging(false);
+
+  const zoomIn  = () => setScale((s) => Math.min(5, +(s + 0.5).toFixed(2)));
+  const zoomOut = () => setScale((s) => {
+    const next = Math.max(1, +(s - 0.5).toFixed(2));
+    if (next === 1) setOffset({ x: 0, y: 0 });
+    return next;
+  });
+  const reset   = () => { setScale(1); setOffset({ x: 0, y: 0 }); };
+
+  const dblClick = () => {
+    if (scale === 1) setScale(2);
+    else reset();
+  };
+
+  if (!images || images.length === 0) return null;
+
+  return (
+      <LightboxOverlay onClick={onClose}>
+        <LBStage
+            onClick={(e) => e.stopPropagation()}
+            onWheel={onWheel}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
+            $dragging={dragging}
+        >
+          <LBImageWrapper>
+            <LBImage
+                src={images[index]}
+                alt=""
+                draggable={false}
+                onDoubleClick={dblClick}
+                style={{
+                  transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                  cursor: scale > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in',
+                }}
+            />
+          </LBImageWrapper>
+
+          <LBControls>
+            <LBButton onClick={onPrev} aria-label="이전"><FaChevronLeft /></LBButton>
+            <LBButton onClick={zoomOut} aria-label="축소"><FaSearchMinus /></LBButton>
+            <LBButton onClick={reset} aria-label="원래 크기">1x</LBButton>
+            <LBButton onClick={zoomIn} aria-label="확대"><FaSearchPlus /></LBButton>
+            <LBButton onClick={onNext} aria-label="다음"><FaChevronRight /></LBButton>
+            <LBClose onClick={onClose} aria-label="닫기"><FaTimes /></LBClose>
+          </LBControls>
+
+          {images.length > 1 && (
+              <LBPager>
+                {index + 1} / {images.length}
+              </LBPager>
+          )}
+        </LBStage>
+      </LightboxOverlay>
+  );
+};
+
+const LightboxOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.8);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const LBStage = styled.div`
+  position: relative;
+  width: 92vw;
+  height: 86vh;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1);
+  user-select: none;
+  cursor: ${p => p.$dragging ? 'grabbing' : 'default'};
+`;
+
+const LBImageWrapper = styled.div`
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+`;
+
+const LBImage = styled.img`
+  max-width: 90%;
+  max-height: 85%;
+  transform-origin: center center;
+  transition: transform 0.04s linear;
+  will-change: transform;
+`;
+
+const LBControls = styled.div`
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background: rgba(0,0,0,.4);
+  padding: 8px 10px;
+  border-radius: 999px;
+  align-items: center;
+`;
+
+const LBButton = styled.button`
+  border: none;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background .15s ease;
+  &:hover { background: rgba(255,255,255,.22); }
+`;
+
+const LBClose = styled(LBButton)`
+  margin-left: 4px;
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+`;
+
+const LBPager = styled.div`
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  background: rgba(0,0,0,.35);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
 `;
 
 export default PlaceDetailModal;
