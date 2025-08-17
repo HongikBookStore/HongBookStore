@@ -66,6 +66,10 @@ public class ChatRoomController {
                 .salePostId(chatRoom.getSalePost().getId())
                 .buyerId(chatRoom.getBuyer().getId())
                 .sellerId(chatRoom.getSeller().getId())
+                .buyerNickname(chatRoom.getBuyer().getUsername())
+                .sellerNickname(chatRoom.getSeller().getUsername())
+                .buyerProfileImageUrl(chatRoom.getBuyer().getProfileImagePath())
+                .sellerProfileImageUrl(chatRoom.getSeller().getProfileImagePath())
                 .build();
     }
 
@@ -80,6 +84,10 @@ public class ChatRoomController {
                 .salePostId(chatRoom.getSalePost().getId())
                 .buyerId(chatRoom.getBuyer().getId())
                 .sellerId(chatRoom.getSeller().getId())
+                .buyerNickname(chatRoom.getBuyer().getUsername())
+                .sellerNickname(chatRoom.getSeller().getUsername())
+                .buyerProfileImageUrl(chatRoom.getBuyer().getProfileImagePath())
+                .sellerProfileImageUrl(chatRoom.getSeller().getProfileImagePath())
                 .build();
     }
 
@@ -97,6 +105,10 @@ public class ChatRoomController {
                         .buyerId(room.getBuyer().getId())
                         .sellerId(room.getSeller().getId())
                         .bookTitle(room.getSalePost().getPostTitle()) // ✅ 책 제목 추가
+                        .buyerNickname(room.getBuyer().getUsername())
+                        .sellerNickname(room.getSeller().getUsername())
+                        .buyerProfileImageUrl(room.getBuyer().getProfileImagePath())
+                        .sellerProfileImageUrl(room.getSeller().getProfileImagePath())
                         .build())
                 .toList();
 

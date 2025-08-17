@@ -577,11 +577,12 @@ const Stepper = styled.div`
   text-align: center; font-size: 0.98rem; color: #007bff; margin-bottom: 10px; font-weight: 600;
 `;
 
+// 별점 0~5 스케일로 전송 (소수 2자리까지 지원)
 const ratingOptions = [
-  { label: '최악', value: 'worst', score: 25, star: 1 },
-  { label: '별로', value: 'bad', score: 50, star: 2 },
-  { label: '좋아', value: 'good', score: 75, star: 3 },
-  { label: '최고', value: 'best', score: 100, star: 4 },
+  { label: '최악', value: 'worst', score: 1.00, star: 1 },
+  { label: '별로', value: 'bad', score: 2.00, star: 2 },
+  { label: '좋아', value: 'good', score: 3.00, star: 3 },
+  { label: '최고', value: 'best', score: 5.00, star: 5 },
 ];
 const ratingKeywords = {
   best: ['약속 시간을 잘 지켜요', '답장이 빨라요', '책이 사진과 동일해요', '친절해요', '가격 협상이 원활해요', '거래 장소에 일찍 도착해요'],
@@ -672,7 +673,8 @@ const MyTransactions = () => {
   const [modal, setModal] = useState({ open: false, type: '', transactionId: null });
   const [reason, setReason] = useState('');
   const [ratingModal, setRatingModal] = useState({ open: false, transactionId: null });
-  const [selectedRating, setSelectedRating] = useState(null);
+  const [selectedRating, setSelectedRating] = useState(null); // 라벨: worst/bad/good/best
+  const [starRating, setStarRating] = useState(null); // 숫자 별점: 0.5 단위 1.00~5.00
   const [selectedKeywords, setSelectedKeywords] = useState([]);
   const [reviewModal, setReviewModal] = useState({ open: false, review: null });
   const [reservation, setReservation] = useState({ place: '', date: '', time: '' });
@@ -681,6 +683,13 @@ const MyTransactions = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState('reserved'); // 'reserved', 'completed', 'all'
+  // 구매자 선택 모달 상태
+  const [buyerModal, setBuyerModal] = useState({ open: false, postId: null });
+  const [buyerCandidates, setBuyerCandidates] = useState([]); // {buyerId, salePostId, buyerNickname, buyerProfileImageUrl}
+  const [selectedBuyerId, setSelectedBuyerId] = useState(null);
+  const [buyerLoading, setBuyerLoading] = useState(false);
+  const [buyerError, setBuyerError] = useState('');
+  const [confirmingBuyer, setConfirmingBuyer] = useState(false);
 
   // API 호출 함수
   const fetchMyPosts = useCallback(async () => {
@@ -706,13 +715,66 @@ const MyTransactions = () => {
     if (!window.confirm(`정말로 이 거래를 '${status === 'SOLD_OUT' ? '거래완료' : '예약취소'}' 상태로 변경하시겠습니까?`)) {
       return;
     }
+    // SOLD_OUT이면 구매자 선택 모달을 띄워 buyerId 포함 패치
+    if (status === 'SOLD_OUT') {
+      setBuyerModal({ open: true, postId });
+      setSelectedBuyerId(null);
+      setBuyerError('');
+      setBuyerLoading(true);
+      try {
+        // 내 채팅방에서 해당 게시글과 연결된 후보 구매자들을 수집
+        const res = await axios.get('/api/chat/rooms/me', { headers: getAuthHeader() });
+        const rooms = Array.isArray(res.data) ? res.data : [];
+        const candidates = rooms
+          .filter(r => r.salePostId === postId)
+          .map(r => ({ buyerId: r.buyerId, salePostId: r.salePostId, buyerNickname: r.buyerNickname, buyerProfileImageUrl: r.buyerProfileImageUrl }))
+          // 중복 buyerId 제거
+          .filter((v, i, arr) => arr.findIndex(x => x.buyerId === v.buyerId) === i);
+        setBuyerCandidates(candidates);
+        setBuyerLoading(false);
+      } catch (e) {
+        console.error('채팅방 목록 조회 실패', e);
+        setBuyerCandidates([]);
+        setBuyerError(e.response?.data?.message || '채팅방 정보를 불러오지 못했습니다. 직접 구매자 ID를 입력해 주세요.');
+        setBuyerLoading(false);
+      }
+      return;
+    }
     try {
       await axios.patch(`/api/posts/${postId}/status`, { status }, { headers: getAuthHeader() });
-      alert("상태가 성공적으로 변경되었습니다.");
-      fetchMyPosts(); // 목록 새로고침
+      alert('상태가 성공적으로 변경되었습니다.');
+      fetchMyPosts();
     } catch (error) {
-      console.error("상태 변경에 실패했습니다.", error);
-      alert("상태 변경 중 오류가 발생했습니다.");
+      console.error('상태 변경에 실패했습니다.', error);
+      alert('상태 변경 중 오류가 발생했습니다.');
+    }
+  };
+
+  const closeBuyerModal = () => {
+    setBuyerModal({ open: false, postId: null });
+    setBuyerCandidates([]);
+    setSelectedBuyerId(null);
+  };
+
+  const handleConfirmBuyer = async () => {
+    if (!selectedBuyerId) {
+      alert('구매자를 선택해 주세요.');
+      return;
+    }
+    try {
+      setConfirmingBuyer(true);
+      await axios.patch(`/api/posts/${buyerModal.postId}/status`,
+        { status: 'SOLD_OUT', buyerId: selectedBuyerId },
+        { headers: getAuthHeader() }
+      );
+      alert('거래완료로 변경되었습니다.');
+      closeBuyerModal();
+      fetchMyPosts();
+    } catch (error) {
+      console.error('구매자 지정 실패', error);
+      alert(error.response?.data?.message || '구매자 지정 중 오류가 발생했습니다.');
+    } finally {
+      setConfirmingBuyer(false);
     }
   };
 
@@ -812,30 +874,61 @@ const MyTransactions = () => {
   const openRatingModal = (transactionId) => {
     setRatingModal({ open: true, transactionId });
     setSelectedRating(null);
+    setStarRating(null);
     setSelectedKeywords([]);
   };
   const closeRatingModal = () => {
     setRatingModal({ open: false, transactionId: null });
     setSelectedRating(null);
+    setStarRating(null);
     setSelectedKeywords([]);
   };
 
-  // 평가 제출
-  const handleRatingSubmit = () => {
-    if (!selectedRating) return;
-    setTransactions(prev => prev.map(t =>
-      t.id === ratingModal.transactionId
-        ? {
-            ...t,
-            myReview: {
-              rating: selectedRating,
-              ratingScore: ratingOptions.find(r => r.value === selectedRating).score,
-              ratingKeywords: selectedKeywords
+  // 평가 제출 (백엔드 후기 생성 연동)
+  const handleRatingSubmit = async () => {
+    if (!starRating) return;
+    const tx = transactions.find(t => t.id === ratingModal.transactionId);
+    if (!tx) {
+      closeRatingModal();
+      return;
+    }
+    const postId = tx.postId ?? tx.id; // API 형태에 따라 postId 또는 id 사용
+    const getLabelForStar = (s) => {
+      if (s == null) return null;
+      if (s < 1.5) return 'worst';
+      if (s < 2.5) return 'bad';
+      if (s < 3.5) return 'good';
+      return 'best';
+    };
+    const label = getLabelForStar(starRating);
+    const payload = {
+      postId,
+      ratingLabel: label,
+      ratingScore: Number(Number(starRating).toFixed(2)),
+      ratingKeywords: selectedKeywords,
+    };
+    try {
+      // 내 판매글 기준 화면이므로, 내가 판매자 → 구매자에 대한 후기 생성
+      await axios.post('/api/buyer-reviews', payload, { headers: getAuthHeader() });
+      // 로컬 UI 업데이트
+      setTransactions(prev => prev.map(t =>
+        (t.id === ratingModal.transactionId)
+          ? {
+              ...t,
+              myReview: {
+                rating: label,
+                ratingScore: payload.ratingScore,
+                ratingKeywords: selectedKeywords
+              }
             }
-          }
-        : t
-    ));
-    closeRatingModal();
+          : t
+      ));
+    } catch (e) {
+      console.error('후기 저장 실패', e);
+      alert(e.response?.data?.message || '후기 저장 중 오류가 발생했습니다.');
+    } finally {
+      closeRatingModal();
+    }
   };
 
   // 거래 완료 버튼 핸들러 수정
@@ -1068,26 +1161,36 @@ const MyTransactions = () => {
         <ModalOverlay>
           <RatingModalBox>
             <Stepper>1 / 2단계</Stepper>
-            <ModalTitle>상대와의 거래는 어떠셨나요?</ModalTitle>
-            <WowRow>
-              {[
-                {img: wowWorst, value: 'worst', label: '최악'},
-                {img: wowBad, value: 'bad', label: '별로'},
-                {img: wowGood, value: 'good', label: '좋아'},
-                {img: wowBest, value: 'best', label: '최고'}
-              ].map(opt => (
-                <WowFace key={opt.value} onClick={() => { setSelectedRating(opt.value); setSelectedKeywords([]); }}>
-                  <WowImg src={opt.img} alt={opt.label} selected={selectedRating === opt.value} />
-                  <WowLabel style={{color: selectedRating === opt.value ? '#007bff' : '#333'}}>{opt.label}</WowLabel>
-                </WowFace>
+            <ModalTitle>별점을 선택해 주세요 (0.5 단위)</ModalTitle>
+            <StarRow>
+              {[1,2,3,4,5].map(n => (
+                <Star key={n}
+                  selected={starRating != null && Math.floor(starRating) >= n}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const half = x < rect.width / 2;
+                    const s = half ? n - 0.5 : n;
+                    setStarRating(s);
+                    const lbl = s < 1.5 ? 'worst' : s < 2.5 ? 'bad' : s < 3.5 ? 'good' : 'best';
+                    setSelectedRating(lbl);
+                    setSelectedKeywords([]);
+                  }}
+                  title={`${n}번째 별 (왼쪽 클릭: ${n - 0.5}★, 오른쪽 클릭: ${n}★)`}
+                >★</Star>
               ))}
-            </WowRow>
-            {selectedRating && (
+            </StarRow>
+            {starRating != null && (
+              <div style={{textAlign:'center', color:'#333', marginBottom:8}}>
+                선택한 별점: <b>{Number(starRating).toFixed(2)}★</b> · 라벨: <b>{selectedRating}</b>
+              </div>
+            )}
+            {starRating != null && (
               <>
                 <Stepper>2 / 2단계</Stepper>
                 <div style={{marginTop:12, fontWeight:500, color:'#333'}}>키워드를 선택해 주세요 (복수 선택 가능)</div>
                 <KeywordList>
-                  {ratingKeywords[selectedRating].map(kw => (
+                  {ratingKeywords[selectedRating]?.map(kw => (
                     <KeywordChip
                       key={kw}
                       className={selectedKeywords.includes(kw) ? 'selected' : ''}
@@ -1103,7 +1206,7 @@ const MyTransactions = () => {
             )}
             <ModalActions>
               <ModalButton className="cancel" onClick={closeRatingModal}>취소</ModalButton>
-              <ModalButton onClick={handleRatingSubmit} disabled={!selectedRating}>확인</ModalButton>
+              <ModalButton onClick={handleRatingSubmit} disabled={!(starRating != null)}>확인</ModalButton>
             </ModalActions>
           </RatingModalBox>
         </ModalOverlay>
@@ -1114,7 +1217,7 @@ const MyTransactions = () => {
           <RatingModalBox>
             <ModalTitle>상대방이 남긴 거래 후기</ModalTitle>
             <div style={{marginBottom:8}}>
-              <b>평가:</b> {ratingOptions.find(r => r.value === reviewModal.review.rating)?.label} ({reviewModal.review.ratingScore}점)
+              <b>평가:</b> {ratingOptions.find(r => r.value === reviewModal.review.rating)?.label} ({Number(reviewModal.review.ratingScore).toFixed(2)}★)
             </div>
             {reviewModal.review.ratingKeywords && reviewModal.review.ratingKeywords.length > 0 && (
               <div style={{marginTop:6, fontSize:'0.96rem'}}>
@@ -1123,6 +1226,61 @@ const MyTransactions = () => {
             )}
             <ModalActions>
               <ModalButton onClick={closeReviewModal}>닫기</ModalButton>
+            </ModalActions>
+          </RatingModalBox>
+        </ModalOverlay>
+      )}
+
+      {/* 구매자 선택 모달 */}
+      {buyerModal.open && (
+        <ModalOverlay>
+          <RatingModalBox>
+            <ModalTitle>구매자 선택</ModalTitle>
+            {buyerLoading ? (
+              <div style={{margin:'8px 0 16px', color:'#555'}}>후보를 불러오는 중...</div>
+            ) : buyerCandidates.length === 0 ? (
+              <div style={{margin:'8px 0 16px', color:'#555'}}>
+                연결된 채팅방에서 구매자 후보를 찾지 못했습니다. 아래에 구매자 ID를 직접 입력해 주세요.
+              </div>
+            ) : (
+              <div style={{margin:'8px 0 16px'}}>
+                아래 후보 중 구매자를 선택해 주세요.
+              </div>
+            )}
+            {buyerError && (
+              <div style={{margin:'0 0 12px', color:'#d32f2f'}}>{buyerError}</div>
+            )}
+            {!buyerLoading && buyerCandidates.length > 0 && (
+              <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:180, overflowY:'auto', marginBottom:12}}>
+                {buyerCandidates.map(c => (
+                  <label key={c.buyerId} style={{display:'flex', alignItems:'center', gap:8}}>
+                    <input type="radio" name="buyer" value={c.buyerId}
+                      checked={selectedBuyerId === c.buyerId}
+                      onChange={() => setSelectedBuyerId(c.buyerId)} />
+                    {c.buyerProfileImageUrl ? (
+                      <img src={c.buyerProfileImageUrl} alt="buyer" style={{width:28,height:28,borderRadius:'50%',objectFit:'cover',border:'1px solid #eee'}} />
+                    ) : (
+                      <span style={{width:28,height:28,borderRadius:'50%',background:'#eee',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#666'}}>👤</span>
+                    )}
+                    <span>구매자 ID: {c.buyerId}{c.buyerNickname ? ` (닉네임: ${c.buyerNickname})` : ''}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div style={{marginBottom:12}}>
+              <input
+                type="number"
+                placeholder="직접 입력: 구매자 ID"
+                value={selectedBuyerId ?? ''}
+                onChange={e => setSelectedBuyerId(e.target.value ? Number(e.target.value) : null)}
+                style={{width:'100%', padding:'10px 12px', border:'1px solid #ddd', borderRadius:8}}
+              />
+            </div>
+            <ModalActions>
+              <ModalButton className="cancel" onClick={closeBuyerModal} disabled={confirmingBuyer}>취소</ModalButton>
+              <ModalButton onClick={handleConfirmBuyer} disabled={!selectedBuyerId || confirmingBuyer}>
+                {confirmingBuyer ? '처리 중...' : '확인'}
+              </ModalButton>
             </ModalActions>
           </RatingModalBox>
         </ModalOverlay>
@@ -1230,7 +1388,7 @@ const MyTransactions = () => {
 
               {selectedTransaction.rating && (
                 <div style={{background:'#e6f0ff', color:'#007bff', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
-                  <b>평가:</b> {ratingOptions.find(r => r.value === selectedTransaction.rating)?.label} ({selectedTransaction.ratingScore}점)
+                  <b>평가:</b> {ratingOptions.find(r => r.value === selectedTransaction.rating)?.label} ({Number(selectedTransaction.ratingScore).toFixed(2)}★)
                   {selectedTransaction.ratingKeywords && selectedTransaction.ratingKeywords.length > 0 && (
                     <div style={{marginTop:6, fontSize:'0.96rem'}}>
                       <b>키워드:</b> {selectedTransaction.ratingKeywords.join(', ')}

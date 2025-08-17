@@ -256,6 +256,30 @@ const NoBooks = styled.div`
   color: #666;
 `;
 
+// --- Reviews styles ---
+const ReviewSection = styled.div`
+  margin-top: 10px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+`;
+const ReviewHeader = styled.div`
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+`;
+const ReviewList = styled.div`
+  display: flex; flex-direction: column; gap: 10px;
+`;
+const ReviewItem = styled.div`
+  display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid #eee; border-radius: 8px;
+`;
+const ReviewBadge = styled.span`
+  padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; color: #fff;
+  background: ${props => (
+    props.$label === 'best' ? '#28a745' : props.$label === 'good' ? '#17a2b8' : props.$label === 'bad' ? '#ffc107' : '#dc3545'
+  )};
+`;
+
 const SectionContainer = styled.div`
   margin-bottom: 40px;
 `;
@@ -570,6 +594,11 @@ const MyBookstore = () => {
   const [error, setError] = useState({ myPosts: null, wishlist: null }); // 에러 상태 관리
   const navigate = useNavigate();
 
+  // 받은 거래 후기 상태
+  const [myReviews, setMyReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [errorReviews, setErrorReviews] = useState('');
+
   // 내 판매글 목록을 불러오는 API 호출 함수
   const fetchMyPosts = useCallback(async () => {
     setLoading(prev => ({ ...prev, myPosts: true }));
@@ -604,7 +633,22 @@ const MyBookstore = () => {
   useEffect(() => {
     fetchMyPosts();
     fetchWishlist();
+    fetchMyReviews();
   }, [fetchMyPosts, fetchWishlist]);
+
+  const fetchMyReviews = useCallback(async () => {
+    setLoadingReviews(true);
+    setErrorReviews('');
+    try {
+      const res = await axios.get('/api/seller-reviews/my-received', { headers: getAuthHeader() });
+      setMyReviews(res.data || []);
+    } catch (e) {
+      console.error('내가 받은 후기 조회 실패', e);
+      setErrorReviews('후기를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, []);
 
   // 탭에 따라 게시글을 필터링하는 함수
   const getFilteredBooks = () => {
@@ -799,6 +843,53 @@ const MyBookstore = () => {
                 </NoBooks>
               )}
             </TabSection>
+        </SectionContainer>
+
+          {/* 3. 받은 거래 후기 */}
+          <SectionContainer>
+            <SectionHeader>
+              <SectionTitle>받은 거래 후기</SectionTitle>
+              <ViewMoreButton onClick={fetchMyReviews}>새로고침</ViewMoreButton>
+            </SectionHeader>
+            <ReviewSection>
+              {loadingReviews ? (
+                <LoadingSpinner>후기를 불러오는 중...</LoadingSpinner>
+              ) : errorReviews ? (
+                <EmptyState>
+                  <EmptyIcon>😥</EmptyIcon>
+                  <h3>{errorReviews}</h3>
+                </EmptyState>
+              ) : myReviews.length === 0 ? (
+                <EmptyState>
+                  <EmptyIcon>🙂</EmptyIcon>
+                  <h3>아직 받은 후기가 없습니다</h3>
+                </EmptyState>
+              ) : (
+                <>
+                  <div style={{marginBottom: 12, color: '#333', fontWeight: 600}}>
+                    평균 별점: {(
+                      myReviews.reduce((acc, r) => acc + (Number(r.ratingScore) || 0), 0) / myReviews.length
+                    ).toFixed(2)} / 5.00 (총 {myReviews.length}개)
+                  </div>
+                  <ReviewList>
+                    {myReviews.slice(0, 5).map(rv => (
+                      <ReviewItem key={rv.reviewId}>
+                        <div>
+                          <div style={{fontWeight:600}}>{rv.reviewerNickname || '구매자'}</div>
+                          {rv.ratingKeywords && rv.ratingKeywords.length > 0 && (
+                            <div style={{fontSize:'0.9rem', color:'#666'}}>{rv.ratingKeywords.join(', ')}</div>
+                          )}
+                        </div>
+                        <div style={{display:'flex', alignItems:'center', gap:8}}>
+                          <ReviewBadge $label={rv.ratingLabel}>{rv.ratingLabel}</ReviewBadge>
+                          <div style={{color:'#007bff', fontWeight:700}}>{Number(rv.ratingScore).toFixed(2)}★</div>
+                        </div>
+                      </ReviewItem>
+                    ))}
+                  </ReviewList>
+                </>
+              )}
+            </ReviewSection>
           </SectionContainer>
 
           {/* 2. 찜한 책 */}

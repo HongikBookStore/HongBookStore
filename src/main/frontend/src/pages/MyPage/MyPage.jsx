@@ -782,7 +782,11 @@ const MyPage = () => {
     return '#D97706'; // 진주황
   };
   
-  const userScore = 85; // 사용자 평점 (실제로는 API에서 가져올 값)
+  const userScore = 85; // deprecated placeholder
+  // 거래 평점 요약 상태
+  const [ratingSummary, setRatingSummary] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingError, setRatingError] = useState('');
 
   const fetchProfile = useCallback(async () => {
     // 페이지가 로드될 때마다 항상 최신 정보를 가져오도록 setLoading(true) 추가
@@ -809,6 +813,26 @@ const MyPage = () => {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // 프로필 로드 후 거래 평점 요약 조회
+  useEffect(() => {
+    const fetchRating = async (uid) => {
+      setRatingLoading(true);
+      setRatingError('');
+      try {
+        const res = await axios.get(`/api/reviews/summary/users/${uid}`, { headers: getAuthHeader() });
+        setRatingSummary(res.data);
+      } catch (e) {
+        console.error('거래 평점 요약 조회 실패', e);
+        setRatingError(e.response?.data?.message || '거래 평점을 불러오지 못했습니다.');
+      } finally {
+        setRatingLoading(false);
+      }
+    };
+    if (profile?.id) {
+      fetchRating(profile.id);
+    }
+  }, [profile?.id]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -894,12 +918,16 @@ const MyPage = () => {
     return <MyPageContainer><h2>로딩 중...</h2></MyPageContainer>;
   }
 
+  // 프로필 링(원형) 표시를 위한 퍼센트(0~100) 계산: 0~5 ★ → ×20
+  const overall = Number(ratingSummary?.overallAverage ?? 0);
+  const overallPercent = Math.max(0, Math.min(100, overall * 20));
+
   return (
     <MyPageContainer>
       <ProfileCard>
         <ProfileImageBig style={{
-          '--score-color': getScoreColor(userScore),
-          '--score-percentage': `${userScore * 3.6}deg`
+          '--score-color': getScoreColor(overallPercent),
+          '--score-percentage': `${overallPercent * 3.6}deg`
         }}>
           {profile.profileImageUrl ? (
             <img src={profile.profileImageUrl} alt="Profile" />
@@ -1014,6 +1042,26 @@ const MyPage = () => {
 
             </ProfileNameLeft>
           </ProfileNameRow>
+          {/* 거래 평점 표시 */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6, width:'100%', marginTop:8}}>
+            {ratingLoading ? (
+              <div style={{color:'#666'}}>거래 평점을 불러오는 중...</div>
+            ) : ratingError ? (
+              <div style={{color:'#d32f2f'}}>{ratingError}</div>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                <div style={{fontWeight:700,color:'#333'}}>
+                  거래 평점: {overall.toFixed(2)}★
+                  <span style={{color:'#777',fontWeight:500}}> / 5.00 (총 {ratingSummary?.totalCount ?? 0}건)</span>
+                </div>
+                <div style={{fontSize:'0.92rem',color:'#555'}}>
+                  판매자: {Number(ratingSummary?.sellerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.sellerCount ?? 0}건
+                  {"  |  "}
+                  구매자: {Number(ratingSummary?.buyerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.buyerCount ?? 0}건
+                </div>
+              </div>
+            )}
+          </div>
         </ProfileInfoBox>
       </ProfileCard>
 

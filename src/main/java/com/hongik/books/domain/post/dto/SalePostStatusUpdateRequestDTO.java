@@ -11,4 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SalePostStatusUpdateRequestDTO {
     private SalePost.SaleStatus status;
+    // SOLD_OUT으로 변경 시 최종 구매자 ID 전달
+    private Long buyerId;
 }

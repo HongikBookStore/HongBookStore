@@ -63,13 +63,21 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/verify-student/confirm").permitAll()
                         // 게시글 조회(GET)와 책 검색 API는 모두 허용
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
+                        // 판매자 후기 조회(공개)
+                        .requestMatchers(HttpMethod.GET, "/api/seller-reviews/sellers/**").permitAll()
+                        // 구매자 후기 조회(공개)
+                        .requestMatchers(HttpMethod.GET, "/api/buyer-reviews/buyers/**").permitAll()
+                        // 통합 요약(공개)
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/summary/users/**").permitAll()
                         .requestMatchers("/api/search/**").permitAll()
 
                         // --- 로그인이 필요한 API ---
-                        // [추가] '나의' 정보와 관련된 모든 API는 인증 필요
+                        // '나의' 정보와 관련된 모든 API는 인증 필요
                         .requestMatchers("/api/my/**").authenticated()
-                        // [추가] 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
+                        // 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
                         .requestMatchers("/api/posts/**").authenticated()
+                        // 판매자/구매자 후기 작성/내가 받은 후기는 인증 필요
+                        .requestMatchers("/api/seller-reviews/**", "/api/buyer-reviews/**").authenticated()
 
                         // 그 외 요청은 인증 필요
                         .anyRequest().authenticated())
