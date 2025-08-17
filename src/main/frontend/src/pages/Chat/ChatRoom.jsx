@@ -1,6 +1,12 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+// ✅ ChatRoom.jsx — chatId가 없거나 유효하지 않을 때 API/WS 호출을 전부 차단한 복붙용 완성본
+
+import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import styled from 'styled-components';
-import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaSignOutAlt, FaCalendarAlt, FaRegClock, FaCheckCircle, FaEye, FaExclamationCircle, FaMapMarkerAlt, FaRoute, FaQrcode, FaDownload } from 'react-icons/fa';
+import {
+  FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaSignOutAlt, FaCalendarAlt,
+  FaRegClock, FaCheckCircle, FaEye, FaExclamationCircle, FaMapMarkerAlt,
+  FaRoute, FaQrcode, FaDownload, FaUniversity, FaSubway, FaTrophy
+} from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import Stomp from 'stompjs';
 import QRCode from 'react-qr-code';
@@ -446,15 +452,136 @@ function useWindowWidth() {
   return width;
 }
 
+/* =================== 교내/교외 중간지점 추천 헬퍼(네 자바 로직 이식) =================== */
+
+/** 교내: 코드 → 라벨 */
+const ONCAMPUS_LABELS = {
+  A:'A동', B:'B동', C:'C동', D:'D동', E:'E동', F:'F동', G:'G동', H:'H동',
+  I:'I동', J:'J동', K:'K동', L:'L동', M:'M동', MH:'MH', P:'P동', Q:'Q동', R:'R동',
+  S:'S동', T:'제2공학관(T동)', U:'U동', X:'운동장(X)', Z1:'정문(Z1)', Z2:'후문(Z2)', Z3:'측문(Z3)', Z4:'측문(Z4)', '신기숙사':'신기숙사'
+};
+/** 교내 드롭다운 옵션 */
+const CAMPUS_OPTIONS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','MH','P','Q','R','S','T','U','X','Z1','Z2','Z3','Z4','신기숙사'];
+
+/** 교내 그래프 (자바 코드 1:1 이식) */
+function buildCampusGraph() {
+  const g = {};
+  const add = (a,b,w)=>{ g[a]=g[a]||[]; g[b]=g[b]||[]; g[a].push({to:b,w}); g[b].push({to:a,w}); };
+  add("I","L",1); add("I","P",1); add("J","L",1); add("K","L",1); add("K","R",1); add("R","M",1);
+  add("L","G",1); add("G","Q",1); add("G","H",1); add("L","H",1); add("H","P",1); add("H","Q",1);
+  add("F","MH",1); add("F","E",1); add("E","U",1); add("E","B",1); add("B","A",1); add("A","C",1); add("C","D",1);
+  add("Q","F",1); add("S","Z2",1); add("Z1","S",1); add("S","T",1); add("T","Z3",1); add("T","Z4",1);
+  add("Z2","신기숙사",1); add("신기숙사","X",1);
+  add("Z1","MH",2);
+  return g;
+}
+const CAMPUS_GRAPH = buildCampusGraph();
+
+function dijkstraCampus(start, end) {
+  if (!CAMPUS_GRAPH[start] || !CAMPUS_GRAPH[end]) return null;
+  const dist={}, prev={}, all=Object.keys(CAMPUS_GRAPH); all.forEach(n=>dist[n]=Infinity);
+  dist[start]=0;
+  const todo=new Set(all);
+  const pick=()=>{ let b=null,bd=Infinity; for(const n of todo) if(dist[n]<bd){bd=dist[n]; b=n;} return b; };
+  while(todo.size){
+    const u=pick(); if(u==null) break; todo.delete(u); if(u===end) break;
+    for(const {to,w} of CAMPUS_GRAPH[u]){
+      const alt=dist[u]+w; if(alt<dist[to]){ dist[to]=alt; prev[to]=u; }
+    }
+  }
+  if(start!==end && !prev[end]) return null;
+  const path=[]; let cur=end; while(cur!=null){ path.push(cur); cur=prev[cur]; } return path.reverse();
+}
+function recommendOnCampus(aCode, bCode) {
+  const path = dijkstraCampus(aCode, bCode);
+  if (!path) return null;
+  const mid = path[Math.floor((path.length - 1)/2)];
+  return { path, midCode: mid, midLabel: ONCAMPUS_LABELS[mid] || mid };
+}
+
+/** 교외: 노선/역 데이터 (자바 코드 1:1 이식) */
+const SUBWAY_MAP = {
+  '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
+  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
+  '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
+  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
+  '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
+  '6호선': ["응암","역촌","불광","독립문","연신내","구산","디지털미디어시티","월드컵경기장","마포구청","망원","합정","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","상월곡","돌곶이","석계","태릉입구","화랑대","봉화산"],
+  '7호선': ["장암","도봉산","수락산","마들","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지","철산","광명사거리","천왕","온수","오류동","개봉","구일"],
+  '8호선': ["암사","천호","강동구청","몽촌토성","잠실","석촌","송파","가락시장","문정","장지","복정","산성","남한산성입구","단대오거리","신흥","수진","모란"],
+  '9호선': ["개화","김포공항","공항시장","신방화","마곡나루","양천향교","가양","증미","등촌","염창","신목동","선유도","당산","국회의사당","여의도","샛강","노량진","노들","흑석","동작","구반포","신반포","고속터미널","사평","신논현","언주","선정릉","삼성중앙","봉은사","종합운동장"],
+  '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
+  '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
+  '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+};
+const getLineByStation = (station) => {
+  if (!station) return null;
+  for (const [line, arr] of Object.entries(SUBWAY_MAP)) if (arr.includes(station)) return line;
+  return null;
+};
+function buildStationGraphAndLineMap() {
+  const graph={}, stationLines={};
+  for (const [line, arr] of Object.entries(SUBWAY_MAP)) {
+    arr.forEach((name,i)=>{
+      graph[name]=graph[name]||new Set();
+      stationLines[name]=stationLines[name]||new Set();
+      stationLines[name].add(line);
+      if(i>0){ graph[name].add(arr[i-1]); graph[arr[i-1]].add(name); }
+    });
+  }
+  return { graph, stationLines };
+}
+const { graph: ST_GRAPH, stationLines: ST_LINES } = buildStationGraphAndLineMap();
+
+/** 자바 로직 동일: 환승/패널티 가중 Dijkstra */
+function dijkstraWeighted(start, end, transferCost = 10, penalizePenalty = 10) {
+  if (!ST_GRAPH[start] || !ST_GRAPH[end]) return null;
+  const penalized = new Set(["공항철도","경의중앙선","신분당선","수인분당선"]);
+  const dist={}, prev={}; Object.keys(ST_GRAPH).forEach(s=>dist[s]=Infinity); dist[start]=0;
+  const todo=new Set(Object.keys(ST_GRAPH));
+  const pick=()=>{ let b=null,bd=Infinity; for(const s of todo) if(dist[s]<bd){bd=dist[s]; b=s;} return b; };
+  while(todo.size){
+    const u=pick(); if(u==null) break; todo.delete(u); if(u===end) break;
+    for(const v of ST_GRAPH[u]){
+      const linesU=ST_LINES[u]||new Set(), linesV=ST_LINES[v]||new Set();
+      let commonNonPen=false; for(const l of linesU){ if(!penalized.has(l) && linesV.has(l)){ commonNonPen=true; break; } }
+      let w; if(commonNonPen){ w=1; } else {
+        let p=false; for(const l of linesU){ if(penalized.has(l) && linesV.has(l)){ p=true; break; } }
+        w = p ? penalizePenalty : transferCost;
+      }
+      const alt=dist[u]+w; if(alt<dist[v]){ dist[v]=alt; prev[v]=u; }
+    }
+  }
+  if(start!==end && !prev[end]) return null;
+  const path=[]; let cur=end; path.unshift(cur); while(prev[cur]){ cur=prev[cur]; path.unshift(cur); }
+  return path;
+}
+function recommendOffCampus(aStation, bStation){
+  const path = dijkstraWeighted(aStation, bStation, 10, 10);
+  if (!path) return null;
+  const mid = path[Math.floor(path.length/2)];
+  return { path, midStation: mid };
+}
+
 /* ----------------------------- component start ------------------------------ */
 
-const ChatRoom = ({ roomId, username, myId }) => {
+const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
+
+const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 사용합니다 */) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const { chatId } = useParams();
+
+  // ✅ chatId → 유효한 숫자 roomId로 변환 (없거나 NaN이면 null)
+  const roomId = useMemo(() => {
+    const n = Number(chatId);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [chatId]);
+
   const [isReserved, setIsReserved] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -467,14 +594,19 @@ const ChatRoom = ({ roomId, username, myId }) => {
   const [profanityWarning, setProfanityWarning] = useState('');
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
+
+  // ✅ 스마트 예약 관련
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [reserveConfirmed, setReserveConfirmed] = useState(false);
+
+  // ✅ QR
   const [showQRModal, setShowQRModal] = useState(false);
   const [showQRQuestion, setShowQRQuestion] = useState(false);
   const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
+
   const width = useWindowWidth();
   const [receiverId, setReceiverId] = useState(null);
   const [senderId, setSenderId] = useState(null);
@@ -486,6 +618,20 @@ const ChatRoom = ({ roomId, username, myId }) => {
   // ✅ 날씨 상태
   const [weeklyWeather, setWeeklyWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+
+  // ✅ 판매자가 설정한 기본 위치 (게시글에서 가져옴)
+  const [sellerDefault, setSellerDefault] = useState({
+    oncampusPlaceCode: null,
+    offcampusStationCode: null
+  });
+
+  // ✅ 교내/교외 입력 + 추천 상태
+  const [meetType, setMeetType] = useState('on'); // 'on' | 'off'
+  const [buyerCampusCode, setBuyerCampusCode] = useState('');
+  const [campusSuggest, setCampusSuggest] = useState(null);
+  const [buyerLine, setBuyerLine] = useState('');
+  const [buyerStation, setBuyerStation] = useState('');
+  const [offSuggest, setOffSuggest] = useState(null);
 
   // 버튼 텍스트 반응형
   const getLabel = (type) => {
@@ -518,12 +664,15 @@ const ChatRoom = ({ roomId, username, myId }) => {
 
   /* -------------------------- 채팅방/메시지 로딩 -------------------------- */
   useEffect(() => {
+    // ❗ roomId 없으면 호출 금지
+    if (!roomId) return;
+
     async function loadRoomInfo() {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        const res = await fetch(`/api/chat/rooms/${chatId}`, { headers: { Authorization: `Bearer ${token}` }});
+        const res = await fetch(`/api/chat/rooms/${roomId}`, { headers: { Authorization: `Bearer ${token}` }});
         if (!res.ok) throw new Error('채팅방 정보 불러오기 실패');
 
         const room = await res.json();
@@ -541,20 +690,33 @@ const ChatRoom = ({ roomId, username, myId }) => {
         setSenderId(sender);
         setReceiverId(receiver);
         setSalePostId(room.salePostId);
+
+        // ✅ 판매자 기본 위치 로드 (게시글 상세에서 가져옴)
+        if (room.salePostId) {
+          const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
+          if (postRes.ok) {
+            const post = await postRes.json();
+            setSellerDefault({
+              oncampusPlaceCode: post.oncampusPlaceCode || null,
+              offcampusStationCode: post.offcampusStationCode || null
+            });
+            setMeetType(post.oncampusPlaceCode ? 'on' : (post.offcampusStationCode ? 'off' : 'on'));
+          }
+        }
       } catch (err) {
         console.error('❌ 채팅방 정보 불러오기 실패:', err);
       }
     }
     loadRoomInfo();
-  }, [chatId]);
+  }, [roomId]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (!chatId || !token) return;
+    if (!roomId || !token) return; // ❗ 가드 강화
 
     const loadPreviousMessages = async () => {
       try {
-        const res = await fetch(`/api/chat/room/${chatId}/messages`, { headers: { Authorization: `Bearer ${token}` }});
+        const res = await fetch(`/api/chat/room/${roomId}/messages`, { headers: { Authorization: `Bearer ${token}` }});
         if (!res.ok) throw new Error('이전 메시지 불러오기 실패');
         const data = await res.json();
         setMessages(data);
@@ -563,15 +725,22 @@ const ChatRoom = ({ roomId, username, myId }) => {
       }
     };
     loadPreviousMessages();
-  }, [chatId]);
+  }, [roomId]);
 
   /* -------------------------------- STOMP -------------------------------- */
   useEffect(() => {
-    const stomp = Stomp.over(new WebSocket("ws://localhost:8080/ws-stomp/websocket"));
-    stomp.debug = (str) => console.log('[STOMP]', str);
+    // ❗ roomId 없으면 연결 금지
+    if (!roomId) return;
+
+    // 중복 연결 방지
+    if (stompClient.current?.connected) return;
+
+    const ws = new WebSocket(WS_ENDPOINT);
+    const stomp = Stomp.over(ws);
+    stomp.debug = () => {}; // 필요시 로그 활성화
 
     stomp.connect({}, () => {
-      stomp.subscribe(`/sub/chat/room/${chatId}`, (message) => {
+      stomp.subscribe(`/sub/chat/room/${roomId}`, (message) => {
         const newMessage = JSON.parse(message.body);
         setMessages(prev => [...prev, newMessage]);
       });
@@ -579,15 +748,18 @@ const ChatRoom = ({ roomId, username, myId }) => {
     });
 
     return () => {
-      try { stomp.disconnect(() => {}); } catch {}
+      try { stomp.disconnect(() => { stompClient.current = null; }); } catch { stompClient.current = null; }
     };
-  }, [chatId, username]);
+  }, [roomId]);
 
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !receiverId || !stompClient.current?.connected) return;
+    if (!newMessage.trim() || !receiverId) return;
+    if (!roomId) return; // ❗ 가드
+    const client = stompClient.current;
+    if (!client || !client.connected) return;
 
     const msgPayload = {
-      roomId: chatId,
+      roomId,
       salePostId,
       senderId,
       receiverId,
@@ -595,7 +767,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
       sentAt: new Date().toISOString()
     };
 
-    stompClient.current.send("/pub/chat.sendMessage", {}, JSON.stringify(msgPayload));
+    client.send("/pub/chat.sendMessage", {}, JSON.stringify(msgPayload));
     setNewMessage('');
   };
 
@@ -635,6 +807,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
   /* -------------------------------- 예약/신고 -------------------------------- */
   const handleReserve = () => { setShowReserveModal(true); };
   const handleReserveConfirm = () => {
+    if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
     setIsReserved(true);
     setReserveConfirmed(true);
     setShowReserveModal(false);
@@ -676,6 +849,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
   };
 
   const handleComplete = () => {
+    if (!isReserved && !isCompleted) return;
     if (!isCompleted) {
       setIsCompleted(true);
       setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }]));
@@ -719,7 +893,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
       amount: parseInt(price),
       currency: 'KRW',
       merchantId: 'hongbookstore',
-      orderId: `order_${chatId}_${Date.now()}`,
+      orderId: `order_${roomId ?? 'unknown'}_${Date.now()}`,
       description: `책 구매: ${bookTitle}`,
       timestamp: new Date().toISOString()
     };
@@ -762,12 +936,6 @@ const ChatRoom = ({ roomId, username, myId }) => {
         </MessageStatus>
     );
   };
-
-  /* ---------------------------- 스마트 예약 (장소) --------------------------- */
-  const userLocationType = '교내'; // TODO: 실제 사용자/상대방 정보로 대체
-  const placeOptions = userLocationType === '교내'
-      ? ['홍문관 앞', '학생회관', '중앙도서관', '제2공학관']
-      : ['정문 앞 카페', '홍대입구역', '신촌역', '합정역'];
 
   /* --------------------------- ✅ 스마트 예약 (날씨) -------------------------- */
 
@@ -825,6 +993,24 @@ const ChatRoom = ({ roomId, username, myId }) => {
   });
 
   const bestDate = dateOptions.find(x => x.best) || [...dateOptions].sort((a,b)=>a.pop-b.pop)[0];
+
+  /* ---------------------------------- UI 가드 ---------------------------------- */
+
+  // 잘못된 방 주소로 접근 시 안내
+  if (chatId !== undefined && !roomId) {
+    return (
+        <div style={{maxWidth: 720, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 12, background: '#fff'}}>
+          <div style={{fontSize: 18, fontWeight: 700, marginBottom: 8}}>잘못된 채팅방 주소</div>
+          <div style={{color: '#666', marginBottom: 16}}>유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.</div>
+          <button
+              onClick={() => navigate('/chat')}
+              style={{padding: '10px 14px', borderRadius: 8, border: 'none', background: '#111827', color: '#fff', fontWeight: 700, cursor: 'pointer'}}
+          >
+            채팅 목록으로 이동
+          </button>
+        </div>
+    );
+  }
 
   /* ---------------------------------- JSX ---------------------------------- */
 
@@ -885,15 +1071,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
               )}
 
               <ChatMenuButton
-                  onClick={() => {
-                    if (!isCompleted) {
-                      setIsCompleted(true);
-                      setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }]));
-                    } else {
-                      setIsCompleted(false);
-                      setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래 완료가 취소되었습니다.', sentAt: new Date().toISOString() }]));
-                    }
-                  }}
+                  onClick={handleComplete}
                   title={isCompleted ? "거래 완료 취소" : "거래 완료"}
                   disabled={!isReserved && !isCompleted}
                   onMouseEnter={() => setHovered(isCompleted ? 'complete-cancel' : 'complete')}
@@ -980,25 +1158,130 @@ const ChatRoom = ({ roomId, username, myId }) => {
                 <ReserveModalBox>
                   <ModalTitle>스마트 예약</ModalTitle>
 
-                  <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>추천 거래 장소</div>
-                  <PlaceList>
-                    {placeOptions.map(place => (
-                        <PlaceItem key={place} selected={selectedPlace===place} onClick={()=>setSelectedPlace(place)}>
-                          <FaMapMarkerAlt style={{opacity:0.7}} /> {place}
-                        </PlaceItem>
-                    ))}
-                  </PlaceList>
+                  {/* 거래 방식 선택 */}
+                  <div style={{fontWeight:700, margin:'6px 0'}}>거래 방식</div>
+                  <div style={{display:'flex', gap:8, margin:'6px 0 12px'}}>
+                    <button
+                        onClick={()=>setMeetType('on')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='on'?'#0b63d1':'#e5e7eb'), background:meetType==='on'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='on'?'#0b63d1':'#334155'}}
+                    ><FaUniversity/> 교내</button>
+                    <button
+                        onClick={()=>setMeetType('off')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='off'?'#0b63d1':'#e5e7eb'), background:meetType==='off'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='off'?'#0b63d1':'#334155'}}
+                    ><FaSubway/> 교외</button>
+                  </div>
 
+                  {/* 판매자 설정 위치 노출 */}
+                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
+                    <div style={{fontWeight:800, marginBottom:6}}>판매자 설정 위치</div>
+                    {meetType==='on' ? (
+                        sellerDefault.oncampusPlaceCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaUniversity/>{ONCAMPUS_LABELS[sellerDefault.oncampusPlaceCode] || sellerDefault.oncampusPlaceCode}
+                      </span>
+                            : <span style={{color:'#64748b'}}>판매자가 교내 위치를 설정하지 않았습니다.</span>
+                    ) : (
+                        sellerDefault.offcampusStationCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaSubway/>{`${getLineByStation(sellerDefault.offcampusStationCode) || ''} · ${sellerDefault.offcampusStationCode}`}
+                      </span>
+                            : <span style={{color:'#64748b'}}>판매자가 교외 지하철역을 설정하지 않았습니다.</span>
+                    )}
+                  </div>
+
+                  {/* 교내 / 교외 입력 + 중간지점 추천 */}
+                  {meetType==='on' ? (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10}}>
+                          <select value={buyerCampusCode} onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
+                            <option value="">선택하세요</option>
+                            {CAMPUS_OPTIONS.map(code => <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>)}
+                          </select>
+                          <button onClick={()=>{
+                            if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
+                            if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
+                            const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
+                            if(!r) return alert('경로를 찾을 수 없습니다.');
+                            setCampusSuggest(r);
+                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                            <FaTrophy/> 중간지점 추천
+                          </button>
+                        </div>
+                        {campusSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                추천 중간지점: {campusSuggest.midLabel}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                최단 경로: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
+                              </div>
+                              <button onClick={()=>setSelectedPlace(`교내 · ${campusSuggest.midLabel}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> 이 장소 사용
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  ) : (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>구매자 교외 위치</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
+                          <select value={buyerLine} onChange={e=>{ setBuyerLine(e.target.value); setBuyerStation(''); setOffSuggest(null); }}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:160, fontWeight:700}}>
+                            <option value="">노선 선택</option>
+                            {Object.keys(SUBWAY_MAP).map(line => <option key={line} value={line}>{line}</option>)}
+                          </select>
+                          <select value={buyerStation} onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }} disabled={!buyerLine}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
+                            <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
+                            {(buyerLine ? SUBWAY_MAP[buyerLine] : []).map(st => <option key={st} value={st}>{st}</option>)}
+                          </select>
+                          <button onClick={()=>{
+                            if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
+                            if(!buyerStation) return alert('구매자 역을 선택하세요');
+                            const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
+                            if(!r) return alert('경로를 찾을 수 없습니다.');
+                            setOffSuggest(r);
+                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                            <FaTrophy/> 중간역 추천
+                          </button>
+                        </div>
+                        {offSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                추천 중간역: {getLineByStation(offSuggest.midStation) ? `${getLineByStation(offSuggest.midStation)} · ` : ''}{offSuggest.midStation}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                최적 경로: {offSuggest.path.join(' → ')}
+                              </div>
+                              <button onClick={()=>setSelectedPlace(`교외 · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> 이 장소 사용
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  )}
+
+                  {/* 선택된 장소 미리보기 */}
+                  <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
+                    <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> 선택된 장소</div>
+                    <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || '아직 선택되지 않았습니다.'}</div>
+                  </div>
+
+                  {/* ====== 추천 날짜 (기존 유지) ====== */}
                   <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>추천 날짜 (강수확률 중심)</div>
                   {weatherLoading && <div style={{color:'#555'}}>날씨 불러오는 중...</div>}
                   {!weatherLoading && (
                       <DateList>
                         {dateOptions.map(opt => {
-                          const h = Math.max(0, Math.min(100, opt.pop)); // 0~100(%)
+                          const h = Math.max(0, Math.min(100, opt.pop));
                           return (
                               <DateItem key={opt.iso} selected={selectedDate?.iso===opt.iso} onClick={()=>setSelectedDate(opt)}>
                                 <MiniBarWrap><MiniBar style={{height: `${h}%`}}/></MiniBarWrap>
-                                <div style={{display:'flex',flexDirection:'column', gap:4}}>
+                                <div style={{display:'flex', flexDirection:'column', gap:4}}>
                                   <div style={{display:'flex', alignItems:'center', gap:8}}>
                                     <span style={{fontWeight:700}}>{opt.date}</span>
                                     {opt.best && <span style={{fontSize:11, color:'#fff', background:'#16a34a', padding:'2px 6px', borderRadius:999}}>추천</span>}
@@ -1020,7 +1303,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
 
                   <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
                     <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
-                    <ModalButton onClick={handleReserveConfirm} disabled={!selectedPlace||!selectedDate}><FaCheckCircle /> 예약 확정</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 확정</ModalButton>
                     <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
                   </div>
 
@@ -1028,7 +1311,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
                       <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
                         <b>예상 이동 경로/시간 안내</b><br/>
                         (카카오맵/네이버지도 API 연동 예정, 현재는 임시 안내)<br/>
-                        <span style={{fontSize:'0.95em'}}>내 위치 → {selectedPlace} (예상 15분)</span>
+                        <span style={{fontSize:'0.95em'}}>내 위치 → {selectedPlace || '선택된 장소 없음'} (예상 15분)</span>
                       </div>
                   )}
 
@@ -1137,7 +1420,7 @@ const ChatRoom = ({ roomId, username, myId }) => {
                   rows={1}
                   hasProfanity={hasProfanity}
               />
-              <SendButton onClick={handleSendMessage} disabled={!newMessage.trim() || loading || hasProfanity}>
+              <SendButton onClick={handleSendMessage} disabled={!newMessage.trim() || loading || hasProfanity || !roomId}>
                 <FaPaperPlane />
               </SendButton>
             </InputContainer>
