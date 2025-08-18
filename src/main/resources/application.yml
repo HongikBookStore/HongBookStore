@@ -166,3 +166,12 @@ naver:
   api:
     client-id: ${NAVER_ROUTE_ID}
     client-secret: ${NAVER_ROUTE_SECRET}
+
+### KMA ###
+weather:
+  kma:
+    base-url: "https://apihub.kma.go.kr"
+    auth-key: ${KMA_APIHUB_KEY}   # .env에 KMA_APIHUB_KEY=실제키
+    path:
+      vilage: "/api/typ01/openApi/VilageFcstInfoService_2.0/getVilageFcst"  # 네 계정 대시보드 경로로 교체
+      midland-url: "/api/typ01/url/fct_afs_wl.php"                           # 지금 성공한 URL(전문) 엔드포인트

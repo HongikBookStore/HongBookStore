@@ -3,6 +3,7 @@ package com.hongik.books.domain.post.controller;
 import com.hongik.books.auth.dto.LoginUserDTO;
 import com.hongik.books.domain.post.dto.*;
 import com.hongik.books.domain.post.service.SalePostService;
+import com.hongik.books.domain.post.service.RecentlyViewedPostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SalePostController {
     private final SalePostService salePostService;
+    private final RecentlyViewedPostService recentlyViewedPostService;
 
     /**
      * 판매 게시글 목록을 페이지네이션및 동적 조건으로 조회하는 API
@@ -45,9 +47,32 @@ public class SalePostController {
      * @param postId URL 경로에 포함된 게시글 ID
      */
     @GetMapping("/{postId}")
-    public ResponseEntity<SalePostDetailResponseDTO> getSalePost(@PathVariable Long postId) {
+    public ResponseEntity<SalePostDetailResponseDTO> getSalePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal LoginUserDTO loginUser) {
         SalePostDetailResponseDTO response = salePostService.getSalePostById(postId);
+        // 로그인 사용자라면 최근 본 게시글 기록 (실패해도 본문 응답은 유지)
+        if (loginUser != null) {
+            try {
+                recentlyViewedPostService.recordView(loginUser.id(), postId);
+            } catch (Exception ignored) {}
+        }
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 내 최근 본 판매 게시글 목록 조회 (최대 10개)
+     * [GET] /api/posts/recent?limit=10
+     */
+    @GetMapping("/recent")
+    public ResponseEntity<List<SalePostSummaryResponseDTO>> getMyRecentlyViewed(
+            @RequestParam(name = "limit", defaultValue = "10") int limit,
+            @AuthenticationPrincipal LoginUserDTO loginUser) {
+        if (loginUser == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<SalePostSummaryResponseDTO> list = recentlyViewedPostService.list(loginUser.id(), Math.min(Math.max(limit, 5), 10));
+        return ResponseEntity.ok(list);
     }
 
     /**
