@@ -94,6 +94,15 @@ public class SalePost {
     @Column(precision = 11, scale = 8)
     private BigDecimal longitude;
 
+    // ✅ 추가: 교내/교외 기본 위치 코드
+    // 교내 동/건물 코드 (예: "R", "A", "T"...)
+    @Column(length = 64, nullable = false)
+    private String oncampusPlaceCode;
+
+    // 교외 지하철역 코드 (노선 포함, 예: "HONGDAE_2")
+    @Column(length = 64, nullable = false)
+    private String offcampusStationCode;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -105,7 +114,8 @@ public class SalePost {
     public SalePost(User seller, Book book, String postTitle, String postContent,
                     Integer price, SaleStatus status, String locationName,
                     BigDecimal latitude, BigDecimal longitude,
-                    Condition writingCondition, Condition tearCondition, Condition waterCondition, boolean negotiable) {
+                    Condition writingCondition, Condition tearCondition, Condition waterCondition, boolean negotiable,
+                    String oncampusPlaceCode, String offcampusStationCode) {
         this.seller = seller;
         this.book = book;
         this.postTitle = postTitle;
@@ -119,6 +129,8 @@ public class SalePost {
         this.tearCondition = tearCondition;
         this.waterCondition = waterCondition;
         this.negotiable = negotiable;
+        this.oncampusPlaceCode = oncampusPlaceCode;
+        this.offcampusStationCode = offcampusStationCode;
     }
 
     public enum SaleStatus {
@@ -138,6 +150,7 @@ public class SalePost {
         this.tearCondition = request.getTearCondition();
         this.waterCondition = request.getWaterCondition();
         this.negotiable = request.isNegotiable();
+        // 위치 코드는 "작성 시 필수" 요구라 수정 DTO에는 반영 안 함(필요 시 별도 DTO로 추가)
     }
 
     public void increaseViewCount() {
@@ -155,7 +168,6 @@ public class SalePost {
      * @param newStatus 새로운 판매 상태
      */
     public void changeStatus(SaleStatus newStatus) {
-        // TODO: 나중에 여기에 상태 변경에 대한 복잡한 비즈니스 규칙(예: SOLD_OUT 상태에서는 다른 상태로 변경 불가)을 추가
         this.status = newStatus;
     }
 

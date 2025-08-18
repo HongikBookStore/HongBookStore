@@ -5,6 +5,8 @@ spring:
     import: optional:file:.env[.properties]
   profiles:
     active: prod # 'dev' 프로필 활성화
+  jackson:
+    time-zone: Asia/Seoul
 
   ### OAuth ###
   security:

@@ -48,7 +48,7 @@ const PostDetailGrid = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
   margin-top: 1rem;
-  
+
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
     gap: 2rem;
@@ -240,7 +240,7 @@ const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
-  
+
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
   }
@@ -399,7 +399,6 @@ const OtherBooksTitle = styled.h3`
   gap: 0.5rem;
 `;
 
-// 로딩 컴포넌트
 const LoadingContainer = styled.div`
   display: flex;
   justify-content: center;
@@ -409,7 +408,6 @@ const LoadingContainer = styled.div`
   color: #666;
 `;
 
-// 에러 컴포넌트
 const ErrorContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -417,12 +415,12 @@ const ErrorContainer = styled.div`
   align-items: center;
   height: 200px;
   gap: 1rem;
-  
+
   h2 {
     color: #dc3545;
     margin: 0;
   }
-  
+
   button {
     padding: 0.5rem 1rem;
     background: #007bff;
@@ -430,7 +428,7 @@ const ErrorContainer = styled.div`
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    
+
     &:hover {
       background: #0056b3;
     }
@@ -491,7 +489,6 @@ const LikeButton = styled.button`
   }
 `;
 
-// 팝업 모달 스타일 컴포넌트들
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -550,7 +547,6 @@ const CloseButton = styled.button`
   }
 `;
 
-// 팝업 모달용 스타일 컴포넌트들
 const OtherBooksGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -634,11 +630,94 @@ const statusMap = {
   'SOLD_OUT': '판매완료'
 };
 
+// ✅ 지하철 호선 → 역 리스트
+const SUBWAY_MAP = {
+  '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
+  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
+  '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
+  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
+  '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
+  '6호선': ["응암","역촌","불광","독바위","연신내","구산","디지털미디어시티","월드컵경기장","마포구청","망원","합정","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","상월곡","돌곶이","석계","태릉입구","화랑대","봉화산"],
+  '7호선': ["장암","도봉산","수락산","마들","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지","철산","광명사거리","천왕","온수","오류동","개봉","구일"],
+  '8호선': ["암사","천호","강동구청","몽촌토성","잠실","석촌","송파","가락시장","문정","장지","복정","산성","남한산성입구","단대오거리","신흥","수진","모란"],
+  '9호선': ["개화","김포공항","공항시장","신방화","마곡나루","양천향교","가양","증미","등촌","염창","신목동","선유도","당산","국회의사당","여의도","샛강","노량진","노들","흑석","동작","구반포","신반포","고속터미널","사평","신논현","언주","선정릉","삼성중앙","봉은사","종합운동장"],
+  '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
+  '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
+  '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+};
+
+// ✅ 교내 코드 → 라벨(사람 친화) 매핑
+const ONCAMPUS_PLACE_LABELS = {
+  T: 'T동',
+  R: 'R동',
+  A: 'A동',
+  MH: 'MH관',
+  E: 'E동',
+  F: 'F동',
+  G: 'G동',
+  H: 'H동',
+  L: 'L동',
+  Q: 'Q동',
+  S: 'S존',
+  Z1: 'Z1',
+  Z2: 'Z2',
+  Z3: 'Z3',
+  Z4: 'Z4',
+  U: 'U동',
+  B: 'B동',
+  C: 'C동',
+  D: 'D동',
+  M: 'M동',
+  K: 'K동',
+  J: 'J동',
+  I: 'I동',
+  X: 'X(기타)',
+  '신기숙사': '신기숙사'
+};
+
+// ✅ 역 이름으로 호선을 찾아주는 헬퍼 (중복 시 최초 매칭 반환)
+const getLineByStation = (stationName) => {
+  if (!stationName) return null;
+  for (const [line, stations] of Object.entries(SUBWAY_MAP)) {
+    if (stations.includes(stationName)) return line;
+  }
+  return null;
+};
+
 // 할인율에 따른 책 상태 반환 함수
 const getBookCondition = (discountRate) => {
   if (discountRate <= 20) return { text: conditionMap.HIGH, color: '#28a745', bgColor: '#d4edda' };
   if (discountRate <= 40) return { text: conditionMap.MEDIUM, color: '#ffc107', bgColor: '#fff3cd' };
   return { text: conditionMap.LOW, color: '#dc3545', bgColor: '#f8d7da' };
+};
+
+// ✅ 응답 어디에 있어도 안전하게 추출하는 유틸 (교내/교외 기준 위치)
+const deriveTradeLocations = (p = {}) => {
+  // 여러 가능성 커버 (필드명/중첩)
+  const onRaw =
+      p.oncampusPlaceCode ??
+      p.oncampusPlace ??
+      p.onCampusPlaceCode ??
+      p.onCampus?.placeCode ??
+      p.oncampus?.placeCode ??
+      null;
+
+  const offRaw =
+      p.offcampusStationCode ??
+      p.offcampusStation ??
+      p.offCampusStationCode ??
+      p.offCampus?.stationCode ??
+      p.offcampus?.stationCode ??
+      null;
+
+  const onLabel = onRaw ? (ONCAMPUS_PLACE_LABELS[onRaw] || onRaw) : null;
+
+  // 역 이름이 '홍대입구' 처럼 한글이면 바로 사용, 라인 자동 탐색
+  const offStation = offRaw || null;
+  const offLine = offStation ? getLineByStation(offStation) : null;
+
+  return { onRaw, onLabel, offRaw, offStation, offLine };
 };
 
 const PostDetail = () => {
@@ -651,14 +730,12 @@ const PostDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0); // 이미지 선택 상태
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // '다른 책 보기' 모달 관련 상태
   const [showOtherBooks, setShowOtherBooks] = useState(false);
-  const [sellerOtherBooks, setSellerOtherBooks] = useState([]); // 판매자 다른 책들
-  const [loadingOtherBooks, setLoadingOtherBooks] = useState(false); // 추가 로딩 상태
+  const [sellerOtherBooks, setSellerOtherBooks] = useState([]);
+  const [loadingOtherBooks, setLoadingOtherBooks] = useState(false);
 
-  // useCallback으로 함수 메모이제이션
   const fetchPost = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -666,7 +743,10 @@ const PostDetail = () => {
       // 로그인 사용자의 최근 본 게시글 기록을 위해 토큰이 있으면 인증 헤더를 포함해 호출
       const response = await axios.get(`/api/posts/${id}`, { headers: getAuthHeader() });
       setPost(response.data);
-      setSelectedImageIndex(0); // ✅ 이미지 인덱스 초기화
+      setSelectedImageIndex(0);
+
+      // 디버깅 도움(필요 없으면 주석 처리 가능)
+      // console.log('PostDetail Response:', response.data);
     } catch (err) {
       setError(err);
       console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
@@ -686,33 +766,17 @@ const PostDetail = () => {
     }
   }, [id]);
 
-  // 판매자의 다른 책들을 가져오는 함수
   const fetchSellerOtherBooks = useCallback(async (sellerId) => {
     if (!sellerId) return;
-    
     setLoadingOtherBooks(true);
     try {
-      // TODO: 실제 API 엔드포인트에 맞게 수정 필요
       const response = await axios.get(`/api/posts/seller/${sellerId}`);
-      setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id))); // 현재 책 제외
+      setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id)));
     } catch (error) {
       console.error("판매자의 다른 책들을 불러오는 데 실패했습니다.", error);
-      // 임시 더미 데이터 (실제 구현 시 제거)
       setSellerOtherBooks([
-        {
-          id: parseInt(id) + 1,
-          title: "알고리즘 문제해결 전략",
-          author: "구종만",
-          price: 25000,
-          discountRate: 30
-        },
-        {
-          id: parseInt(id) + 2,
-          title: "Clean Code",
-          author: "Robert C. Martin",
-          price: 20000,
-          discountRate: 15
-        }
+        { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
+        { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
       ]);
     } finally {
       setLoadingOtherBooks(false);
@@ -724,7 +788,6 @@ const PostDetail = () => {
     fetchMyLikes();
   }, [fetchPost, fetchMyLikes]);
 
-  // 찜하기/찜취소 핸들러
   const handleLikeToggle = useCallback(async () => {
     if (!localStorage.getItem('accessToken')) {
       alert("로그인이 필요한 기능입니다.");
@@ -748,10 +811,9 @@ const PostDetail = () => {
     }
   }, [liked, id, navigate]);
 
-  // 채팅 시작 핸들러
   const handleChat = useCallback(async () => {
-    const salePostId = id;           // 책 게시글 ID
-    const buyerId = user.id;        // 현재 로그인 사용자 ID 가져오기
+    const salePostId = id;
+    const buyerId = user?.id;
 
     if (!buyerId) {
       alert('로그인이 필요합니다.');
@@ -760,13 +822,11 @@ const PostDetail = () => {
     }
 
     try {
-      // fetch 대신 axios를 사용하여 일관성을 유지하고 에러 처리를 개선
       const response = await axios.post(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {}, {
         headers: getAuthHeader()
       });
       const chatRoom = response.data;
       navigate(`/chat/${chatRoom.id}`);
-      
     } catch (err) {
       console.error("채팅방 생성/입장 실패", err);
       const errorMessage = err.response?.data?.message || '채팅방을 열 수 없습니다. 잠시 후 다시 시도해주세요.';
@@ -775,25 +835,17 @@ const PostDetail = () => {
   }, [id, user, navigate]);
 
   const handleCall = useCallback(() => {
-    // 실제로는 전화 연결 로직
     alert('전화 연결 기능은 준비 중입니다.');
   }, []);
 
-  // '다른 책 보기' 버튼 클릭 핸들러
   const handleViewOtherBooks = useCallback(() => {
     setShowOtherBooks(!showOtherBooks);
   }, [showOtherBooks]);
 
   const handleOtherBookClick = useCallback((bookId) => {
-    console.log('다른 책 클릭:', bookId, '현재 ID:', id);
-    // 현재 URL의 id와 다른 경우에만 네비게이션
     if (bookId !== parseInt(id)) {
-      console.log('페이지 이동:', `/book/${bookId}`);
-      // replace: true로 현재 페이지를 대체
       navigate(`/book/${bookId}`, { replace: true });
-      setShowOtherBooks(false); // ✅ 모달 닫기
-    } else {
-      console.log('현재 책과 동일하므로 이동하지 않음');
+      setShowOtherBooks(false);
     }
   }, [id, navigate]);
 
@@ -805,9 +857,9 @@ const PostDetail = () => {
   // 할인율 계산
   const discountRate = useMemo(() => {
     if (!post) return 0;
-    return post.originalPrice > 0 
-      ? Math.round(((post.originalPrice - post.price) / post.originalPrice) * 100)
-      : 0;
+    return post.originalPrice > 0
+        ? Math.round(((post.originalPrice - post.price) / post.originalPrice) * 100)
+        : 0;
   }, [post]);
 
   // 책 상태 계산
@@ -816,281 +868,300 @@ const PostDetail = () => {
     return getBookCondition(post.discountRate || discountRate);
   }, [post, discountRate]);
 
+  // ✅ 교내/교외 기준 위치 안전 추출 (필드명/중첩 변화에 내성)
+  const { onLabel: oncampusLabel, offStation: offcampusStation, offLine: offcampusLine } = useMemo(
+      () => deriveTradeLocations(post || {}),
+      [post]
+  );
+
   // 로딩 상태
   if (loading) {
     return (
-      <DetailContainer>
-        <LoadingContainer>
-          <div>📚 게시글을 불러오는 중...</div>
-        </LoadingContainer>
-      </DetailContainer>
+        <DetailContainer>
+          <LoadingContainer>
+            <div>📚 게시글을 불러오는 중...</div>
+          </LoadingContainer>
+        </DetailContainer>
     );
   }
 
   // 에러 상태
   if (error || !post) {
     return (
-      <DetailContainer>
-        <ErrorContainer>
-          <h2>😅 게시글을 불러올 수 없어요</h2>
-          <p>네트워크 연결을 확인하고 다시 시도해주세요.</p>
-          <button onClick={handleRetry}>다시 시도</button>
-        </ErrorContainer>
-      </DetailContainer>
+        <DetailContainer>
+          <ErrorContainer>
+            <h2>😅 게시글을 불러올 수 없어요</h2>
+            <p>네트워크 연결을 확인하고 다시 시도해주세요.</p>
+            <button onClick={handleRetry}>다시 시도</button>
+          </ErrorContainer>
+        </DetailContainer>
     );
   }
 
   return (
-    <>
-      <div className="header-spacer" />
-      <DetailContainer>
-        <BackButton onClick={() => navigate(-1)}>
-          <FaArrowLeft /> 뒤로가기
-        </BackButton>
+      <>
+        <div className="header-spacer" />
+        <DetailContainer>
+          <BackButton onClick={() => navigate(-1)}>
+            <FaArrowLeft /> 뒤로가기
+          </BackButton>
 
-        <PostDetailGrid>
-          <ImageSection>
-            <MainImage>
-              {post.postImageUrls && post.postImageUrls.length > 0 ? (
-                <MainImageImg src={post.postImageUrls[selectedImageIndex]} alt={post.bookTitle} />
-              ) : (
-                <span>이미지 없음</span>
+          <PostDetailGrid>
+            <ImageSection>
+              <MainImage>
+                {post.postImageUrls && post.postImageUrls.length > 0 ? (
+                    <MainImageImg src={post.postImageUrls[selectedImageIndex]} alt={post.bookTitle} />
+                ) : (
+                    <span>이미지 없음</span>
+                )}
+              </MainImage>
+              {post.postImageUrls && post.postImageUrls.length > 1 && (
+                  <ThumbnailGrid>
+                    {post.postImageUrls.map((imageUrl, index) => (
+                        <Thumbnail
+                            key={index}
+                            $active={selectedImageIndex === index}
+                            onClick={() => setSelectedImageIndex(index)}
+                        >
+                          <ThumbnailImg src={imageUrl} alt={`${post.bookTitle} ${index + 1}`} />
+                        </Thumbnail>
+                    ))}
+                  </ThumbnailGrid>
               )}
-            </MainImage>
-            {post.postImageUrls && post.postImageUrls.length > 1 && (
-              <ThumbnailGrid>
-                {post.postImageUrls.map((imageUrl, index) => (
-                  <Thumbnail 
-                    key={index} 
-                    $active={selectedImageIndex === index}
-                    onClick={() => setSelectedImageIndex(index)}
-                  >
-                    <ThumbnailImg src={imageUrl} alt={`${post.bookTitle} ${index + 1}`} />
-                  </Thumbnail>
-                ))}
-              </ThumbnailGrid>
-            )}
-          </ImageSection>
+            </ImageSection>
 
-          <InfoSection>
-            <div>
-              <BookTitle>
-                {post.bookTitle}
-                <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
-              </BookTitle>
-              <BookAuthor>{post.author}</BookAuthor>
-            </div>
-
-            <PriceSection>
-              <PriceLabel>판매 가격</PriceLabel>
-              <Price>{post.price.toLocaleString()}원</Price>
-              {post.originalPrice && (
-                <>
-                  <OriginalPrice>{post.originalPrice.toLocaleString()}원</OriginalPrice>
-                  <DiscountRate>{discountRate}% 할인</DiscountRate>
-                </>
-              )}
-            </PriceSection>
-
-            <OverallConditionSection>
-              <OverallConditionTitle>
-                📊 전체 책 상태
-              </OverallConditionTitle>
-              <OverallConditionBadge 
-                $bgColor={getBookCondition(post.discountRate).bgColor}
-                $color={getBookCondition(post.discountRate).color}
-              >
-                {getBookCondition(post.discountRate).text}
-              </OverallConditionBadge>
-              <OverallConditionDescription>
-                할인율 {post.discountRate}%에 따른 전체 상태 평가입니다.
-                {post.discountRate <= 20 && ' 책이 양호한 상태입니다.'}
-                {post.discountRate > 20 && post.discountRate <= 40 && ' 책이 보통 상태입니다.'}
-                {post.discountRate > 40 && ' 책에 일부 손상이 있습니다.'}
-              </OverallConditionDescription>
-            </OverallConditionSection>
-
-            <ConditionSection>
-              <ConditionTitle>책 상태</ConditionTitle>
-              <ConditionGrid>
-                <ConditionItem>
-                  <ConditionLabel>필기 상태</ConditionLabel>
-                  <ConditionValue value={conditionMap[post.writingCondition]}>{conditionMap[post.writingCondition]}</ConditionValue>
-                </ConditionItem>
-                <ConditionItem>
-                  <ConditionLabel>찢어짐 정도</ConditionLabel>
-                  <ConditionValue value={conditionMap[post.tearCondition]}>{conditionMap[post.tearCondition]}</ConditionValue>
-                </ConditionItem>
-                <ConditionItem>
-                  <ConditionLabel>물흘림 정도</ConditionLabel>
-                  <ConditionValue value={conditionMap[post.waterCondition]}>{conditionMap[post.waterCondition]}</ConditionValue>
-                </ConditionItem>
-              </ConditionGrid>
-            </ConditionSection>
-
-            <BookInfoSection>
-              <InfoTitle>책 정보</InfoTitle>
-              <InfoGrid>
-                <InfoItem>
-                  <InfoLabel>카테고리</InfoLabel>
-                  <InfoValue>{post.category || '컴퓨터공학'}</InfoValue> {/* TODO: 카테고리 정보 추가 예정 */}
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>거래 지역</InfoLabel>
-                  <InfoValue>{post.tradeLocation || '교내'}</InfoValue> {/* TODO: 거래 지역 정보 추가 예정 */}
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>가격 협의</InfoLabel>
-                  <InfoValue>{post.negotiable ? '가능' : '불가능'}</InfoValue>
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>판매 상태</InfoLabel>
-                  <InfoValue>{statusMap[post.status] || '판매중'}</InfoValue> {/* 판매 상태 추가 */}
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>등록일</InfoLabel>
-                  <InfoValue>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</InfoValue> {/* 한국 날짜 형식 */}
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>조회수</InfoLabel>
-                  <InfoValue>{post.views?.toLocaleString() || 0}</InfoValue> {/* 조회수 포맷팅 및 기본값 */}
-                </InfoItem>
-              </InfoGrid>
-            </BookInfoSection>
-
-            <SellerSection>
-              <SellerTitle><FaUser /> 판매자 정보</SellerTitle>
-              <SellerInfo>
-                <SellerAvatar>
-                  {post.sellerProfileImageUrl ? (
-                    <img src={post.sellerProfileImageUrl} alt={post.sellerNickname} />
-                  ) : (
-                    post.sellerNickname.charAt(0) || '?'
-                  )}
-                </SellerAvatar>
-                <SellerDetails>
-                  <SellerName>{post.sellerNickname || '익명 사용자'}</SellerName>
-                  {/* ✅ 판매자 추가 정보들 (향후 DTO에 추가 예정) */}
-                  <SellerLocation>
-                    <FaMapMarkerAlt />
-                    {post.sellerLocation || '위치 정보 없음'}
-                  </SellerLocation>
-                  {post.sellerRating && (
-                    <SellerRating>
-                      <Stars>
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} filled={i < Math.floor(post.sellerRating)} />
-                        ))}
-                      </Stars>
-                      <RatingText>{post.sellerRating.toFixed(1)}</RatingText>
-                    </SellerRating>
-                  )}
-                  {post.sellerSalesCount && (
-                    <SalesCount>판매 {post.sellerSalesCount}회</SalesCount>
-                  )}
-                </SellerDetails>
-              </SellerInfo>
-              <ActionButtons>
-                <ChatButton onClick={handleChat}>
-                  <FaComment />
-                  채팅하기
-                </ChatButton>
-                <ViewOtherBooksButton onClick={handleViewOtherBooks}>
-                  <FaUser />
-                  다른 책 보기 {sellerOtherBooks.length > 0 && `(${sellerOtherBooks.length})`}
-                </ViewOtherBooksButton>
-              </ActionButtons>
-            </SellerSection>
-          </InfoSection>
-        </PostDetailGrid>
-      </DetailContainer>
-
-      {/* 팝업 모달 */}
-      {showOtherBooks && (
-        <ModalOverlay onClick={() => setShowOtherBooks(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                <FaUser /> {post.sellerNickname || '판매자'}님이 판매하는 다른 책들
-              </ModalTitle>
-              <CloseButton onClick={() => setShowOtherBooks(false)}>
-                <FaTimes />
-              </CloseButton>
-            </ModalHeader>
-            
-            {loadingOtherBooks ? (
-              <LoadingContainer>
-                <div>📚 다른 책들을 불러오는 중...</div>
-              </LoadingContainer>
-            ) : sellerOtherBooks.length > 0 ? (
-              <OtherBooksGrid>
-                {sellerOtherBooks.map(book => {
-                  const bookConditionInfo = getBookCondition(book.discountRate);
-                  return (
-                    <OtherBookCard 
-                      key={book.id} 
-                      onClick={() => handleOtherBookClick(book.id)}
-                      style={{ 
-                        borderColor: book.id === parseInt(id) ? '#007bff' : '#e0e0e0',
-                        backgroundColor: book.id === parseInt(id) ? '#f8f9fa' : 'white',
-                      }}
-                    >
-                      {book.id === parseInt(id) && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '0.5rem',
-                          right: '0.5rem',
-                          background: '#007bff',
-                          color: 'white',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: '600',
-                          zIndex: 1
-                        }}>
-                          현재
-                        </div>
-                      )}
-                      <OtherBookImage>
-                        {book.postImageUrls && book.postImageUrls.length > 0 ? (
-                          <img 
-                            src={book.postImageUrls[0]} 
-                            alt={book.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
-                          />
-                        ) : (
-                          book.title
-                        )}
-                      </OtherBookImage>
-                      <OtherBookTitle>{book.title}</OtherBookTitle>
-                      <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
-                        {book.author}
-                      </div>
-                      <OtherBookPrice>{book.price.toLocaleString()}원</OtherBookPrice>
-                      <OtherBookCondition 
-                        $bgColor={bookConditionInfo.bgColor}
-                        $color={bookConditionInfo.color}
-                      >
-                        {bookConditionInfo.text}
-                      </OtherBookCondition>
-                    </OtherBookCard>
-                  );
-                })}
-              </OtherBooksGrid>
-            ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '2rem', 
-                color: '#666' 
-              }}>
-                😅 판매자가 등록한 다른 책이 없어요
+            <InfoSection>
+              <div>
+                <BookTitle>
+                  {post.bookTitle}
+                  <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
+                </BookTitle>
+                <BookAuthor>{post.author}</BookAuthor>
               </div>
-            )}
-          </ModalContent>
-        </ModalOverlay>
-      )}
-    </>
+
+              <PriceSection>
+                <PriceLabel>판매 가격</PriceLabel>
+                <Price>{post.price.toLocaleString()}원</Price>
+                {post.originalPrice && (
+                    <>
+                      <OriginalPrice>{post.originalPrice.toLocaleString()}원</OriginalPrice>
+                      <DiscountRate>{discountRate}% 할인</DiscountRate>
+                    </>
+                )}
+              </PriceSection>
+
+              <OverallConditionSection>
+                <OverallConditionTitle>📊 전체 책 상태</OverallConditionTitle>
+                <OverallConditionBadge
+                    $bgColor={getBookCondition(post.discountRate).bgColor}
+                    $color={getBookCondition(post.discountRate).color}
+                >
+                  {getBookCondition(post.discountRate).text}
+                </OverallConditionBadge>
+                <OverallConditionDescription>
+                  할인율 {post.discountRate}%에 따른 전체 상태 평가입니다.
+                  {post.discountRate <= 20 && ' 책이 양호한 상태입니다.'}
+                  {post.discountRate > 20 && post.discountRate <= 40 && ' 책이 보통 상태입니다.'}
+                  {post.discountRate > 40 && ' 책에 일부 손상이 있습니다.'}
+                </OverallConditionDescription>
+              </OverallConditionSection>
+
+              <ConditionSection>
+                <ConditionTitle>책 상태</ConditionTitle>
+                <ConditionGrid>
+                  <ConditionItem>
+                    <ConditionLabel>필기 상태</ConditionLabel>
+                    <ConditionValue value={conditionMap[post.writingCondition]}>{conditionMap[post.writingCondition]}</ConditionValue>
+                  </ConditionItem>
+                  <ConditionItem>
+                    <ConditionLabel>찢어짐 정도</ConditionLabel>
+                    <ConditionValue value={conditionMap[post.tearCondition]}>{conditionMap[post.tearCondition]}</ConditionValue>
+                  </ConditionItem>
+                  <ConditionItem>
+                    <ConditionLabel>물흘림 정도</ConditionLabel>
+                    <ConditionValue value={conditionMap[post.waterCondition]}>{conditionMap[post.waterCondition]}</ConditionValue>
+                  </ConditionItem>
+                </ConditionGrid>
+              </ConditionSection>
+
+              <BookInfoSection>
+                <InfoTitle>책 정보</InfoTitle>
+                <InfoGrid>
+                  <InfoItem>
+                    <InfoLabel>카테고리</InfoLabel>
+                    <InfoValue>{post.category || '컴퓨터공학'}</InfoValue>
+                  </InfoItem>
+
+                  <InfoItem>
+                    <InfoLabel>거래 지역</InfoLabel>
+                    <InfoValue>{post.tradeLocation || '교내'}</InfoValue>
+                  </InfoItem>
+
+                  {/* ✅ 교내 기준 위치(사람 친화 라벨) */}
+                  <InfoItem>
+                    <InfoLabel>교내 기준 위치</InfoLabel>
+                    <InfoValue>{oncampusLabel || '정보 없음'}</InfoValue>
+                  </InfoItem>
+
+                  {/* ✅ 교외 기준 위치(호선 · 역 자동 매칭) */}
+                  <InfoItem>
+                    <InfoLabel>교외 기준 위치</InfoLabel>
+                    <InfoValue>
+                      {offcampusStation
+                          ? `${offcampusLine ? `${offcampusLine} · ` : ''}${offcampusStation}`
+                          : '정보 없음'}
+                    </InfoValue>
+                  </InfoItem>
+
+                  <InfoItem>
+                    <InfoLabel>가격 협의</InfoLabel>
+                    <InfoValue>{post.negotiable ? '가능' : '불가능'}</InfoValue>
+                  </InfoItem>
+
+                  <InfoItem>
+                    <InfoLabel>판매 상태</InfoLabel>
+                    <InfoValue>{statusMap[post.status] || '판매중'}</InfoValue>
+                  </InfoItem>
+
+                  <InfoItem>
+                    <InfoLabel>등록일</InfoLabel>
+                    <InfoValue>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</InfoValue>
+                  </InfoItem>
+
+                  <InfoItem>
+                    <InfoLabel>조회수</InfoLabel>
+                    <InfoValue>{post.views?.toLocaleString() || 0}</InfoValue>
+                  </InfoItem>
+                </InfoGrid>
+              </BookInfoSection>
+
+              <SellerSection>
+                <SellerTitle><FaUser /> 판매자 정보</SellerTitle>
+                <SellerInfo>
+                  <SellerAvatar>
+                    {post.sellerProfileImageUrl ? (
+                        <img src={post.sellerProfileImageUrl} alt={post.sellerNickname} />
+                    ) : (
+                        post.sellerNickname?.charAt(0) || '?'
+                    )}
+                  </SellerAvatar>
+                  <SellerDetails>
+                    <SellerName>{post.sellerNickname || '익명 사용자'}</SellerName>
+                    <SellerLocation>
+                      <FaMapMarkerAlt />
+                      {post.sellerLocation || '위치 정보 없음'}
+                    </SellerLocation>
+                    {post.sellerRating && (
+                        <SellerRating>
+                          <Stars>
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} filled={i < Math.floor(post.sellerRating)} />
+                            ))}
+                          </Stars>
+                          <RatingText>{post.sellerRating.toFixed(1)}</RatingText>
+                        </SellerRating>
+                    )}
+                    {post.sellerSalesCount && (
+                        <SalesCount>판매 {post.sellerSalesCount}회</SalesCount>
+                    )}
+                  </SellerDetails>
+                </SellerInfo>
+                <ActionButtons>
+                  <ChatButton onClick={handleChat}>
+                    <FaComment />
+                    채팅하기
+                  </ChatButton>
+                  <ViewOtherBooksButton onClick={handleViewOtherBooks}>
+                    <FaUser />
+                    다른 책 보기 {sellerOtherBooks.length > 0 && `(${sellerOtherBooks.length})`}
+                  </ViewOtherBooksButton>
+                </ActionButtons>
+              </SellerSection>
+            </InfoSection>
+          </PostDetailGrid>
+        </DetailContainer>
+
+        {showOtherBooks && (
+            <ModalOverlay onClick={() => setShowOtherBooks(false)}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>
+                    <FaUser /> {post.sellerNickname || '판매자'}님이 판매하는 다른 책들
+                  </ModalTitle>
+                  <CloseButton onClick={() => setShowOtherBooks(false)}>
+                    <FaTimes />
+                  </CloseButton>
+                </ModalHeader>
+
+                {loadingOtherBooks ? (
+                    <LoadingContainer>
+                      <div>📚 다른 책들을 불러오는 중...</div>
+                    </LoadingContainer>
+                ) : sellerOtherBooks.length > 0 ? (
+                    <OtherBooksGrid>
+                      {sellerOtherBooks.map(book => {
+                        const bookConditionInfo = getBookCondition(book.discountRate);
+                        return (
+                            <OtherBookCard
+                                key={book.id}
+                                onClick={() => handleOtherBookClick(book.id)}
+                                style={{
+                                  borderColor: book.id === parseInt(id) ? '#007bff' : '#e0e0e0',
+                                  backgroundColor: book.id === parseInt(id) ? '#f8f9fa' : 'white',
+                                }}
+                            >
+                              {book.id === parseInt(id) && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '0.5rem',
+                                    right: '0.5rem',
+                                    background: '#007bff',
+                                    color: 'white',
+                                    padding: '0.2rem 0.5rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '600',
+                                    zIndex: 1
+                                  }}>
+                                    현재
+                                  </div>
+                              )}
+                              <OtherBookImage>
+                                {book.postImageUrls && book.postImageUrls.length > 0 ? (
+                                    <img
+                                        src={book.postImageUrls[0]}
+                                        alt={book.title}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
+                                    />
+                                ) : (
+                                    book.title
+                                )}
+                              </OtherBookImage>
+                              <OtherBookTitle>{book.title}</OtherBookTitle>
+                              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
+                                {book.author}
+                              </div>
+                              <OtherBookPrice>{book.price.toLocaleString()}원</OtherBookPrice>
+                              <OtherBookCondition
+                                  $bgColor={bookConditionInfo.bgColor}
+                                  $color={bookConditionInfo.color}
+                              >
+                                {bookConditionInfo.text}
+                              </OtherBookCondition>
+                            </OtherBookCard>
+                        );
+                      })}
+                    </OtherBooksGrid>
+                ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                      😅 판매자가 등록한 다른 책이 없어요
+                    </div>
+                )}
+              </ModalContent>
+            </ModalOverlay>
+        )}
+      </>
   );
 };
 
-export default PostDetail; 
+export default PostDetail;

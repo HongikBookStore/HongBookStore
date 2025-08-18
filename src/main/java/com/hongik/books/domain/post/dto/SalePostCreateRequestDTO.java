@@ -26,4 +26,8 @@ public class SalePostCreateRequestDTO {
     private Condition tearCondition;    // 찢어짐 상태
     private Condition waterCondition;   // 물흘림 상태
     private boolean negotiable;         // 가격 협의 여부
+
+    // ✅ 추가: 교내/교외 기본 위치 코드
+    private String oncampusPlaceCode;     // 예: "R", "A" ...
+    private String offcampusStationCode;  // 예: "HONGDAE_2"
 }

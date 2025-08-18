@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef} from 'react';
 import styled from 'styled-components';
-import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle, FaHeart, FaClock, FaUser } from 'react-icons/fa';
+import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle, FaHeart, FaClock, FaUser, FaMapMarkerAlt } from 'react-icons/fa';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
+
+/* ----------------------- 스타일 ----------------------- */
 
 const TextArea = styled.textarea`
   width: 100%;
@@ -731,30 +733,23 @@ const InfoNote = styled.div`
   text-align: left;
 `;
 
-// 책 검색 버튼 스타일
+// 책 검색 버튼 (누락 방지)
 const BookSearchButton = styled.button`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   padding: 0.75rem 1.5rem;
   background: #007bff;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
   transition: background 0.2s;
-
-  &:hover {
-    background: #0056b3;
-  }
+  &:hover { background: #0056b3; }
 `;
 
-const CircleIconButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
+/* ----------------------- 상수/도우미 ----------------------- */
 
 // 프론트엔드 상태값 -> 백엔드 Enum 값으로 변환
 const CONDITION_MAP = {
@@ -768,7 +763,7 @@ const MAX_IMAGES = 3;
 const DRAFT_STORAGE_KEY = 'postWriteDraft';
 const DRAFT_EXPIRY_HOURS = 24;
 
-// 카테고리 데이터
+// 카테고리 데이터 (현재 미사용이나 유지)
 const CATEGORIES = {
   '전공': {
     '경영대학': ['경영학부'],
@@ -794,6 +789,29 @@ const CATEGORIES = {
   }
 };
 
+// ✅ 교내 드롭다운: addEdge 데이터에서 중복 제거한 코드 목록
+const ONCAMPUS_CODES = [
+  'A','B','C','D','E','F','G','H','I','J','K','L','M','P','Q','R','S','T','U',
+  'X','Z1','Z2','Z3','Z4','MH','신기숙사'
+];
+
+// ✅ 교외 드롭다운: 노선 → 역
+const SUBWAY_MAP = {
+  '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
+  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
+  '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
+  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
+  '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
+  '6호선': ["응암","역촌","불광","독바위","연신내","구산","디지털미디어시티","월드컵경기장","마포구청","망원","합정","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","상월곡","돌곶이","석계","태릉입구","화랑대","봉화산"],
+  '7호선': ["장암","도봉산","수락산","마들","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지","철산","광명사거리","천왕","온수","오류동","개봉","구일"],
+  '8호선': ["암사","천호","강동구청","몽촌토성","잠실","석촌","송파","가락시장","문정","장지","복정","산성","남한산성입구","단대오거리","신흥","수진","모란"],
+  '9호선': ["개화","김포공항","공항시장","신방화","마곡나루","양천향교","가양","증미","등촌","염창","신목동","선유도","당산","국회의사당","여의도","샛강","노량진","노들","흑석","동작","구반포","신반포","고속터미널","사평","신논현","언주","선정릉","삼성중앙","봉은사","종합운동장"],
+  '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
+  '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
+  '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+};
+
 // 인증 토큰을 가져오는 헬퍼 함수
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken');
@@ -813,10 +831,10 @@ const toBookArray = (data) => {
 // 공백 구분된 ISBN에서 우선순위 선택
 const pickIsbn = (raw) => {
   const tokens = String(raw || '')
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => t.replace(/[^\dXx]/g, '')); // 숫자/검증문자만
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => t.replace(/[^\dXx]/g, ''));
   const isbn13 = tokens.find((t) => /^\d{13}$/.test(t));
   const isbn10 = tokens.find((t) => /^\d{9}[\dXx]$/.test(t));
   return isbn13 || isbn10 || tokens[0] || '';
@@ -825,7 +843,7 @@ const pickIsbn = (raw) => {
 // 문서 → 화면/상태에서 쓰는 표준 속성으로 매핑
 const normalizeBook = (doc) => ({
   title: doc?.title ?? '',
-  author: Array.isArray(doc?.authors) ? doc.authors.filter(Boolean).join(', ') : (doc?.author ?? ''), // UI는 문자열 사용
+  author: Array.isArray(doc?.authors) ? doc.authors.filter(Boolean).join(', ') : (doc?.author ?? ''),
   publisher: doc?.publisher ?? '',
   isbn: pickIsbn(doc?.isbn),
   thumbnail: doc?.thumbnail ?? '',
@@ -861,6 +879,10 @@ const PostWrite = () => {
     tearCondition: '상',
     waterCondition: '상',
     negotiable: true,
+
+    // 거래 기준 위치(판매자)
+    oncampusPlaceCode: '',
+    offcampusStationCode: '',
   });
 
   const [images, setImages] = useState([]); // 다중 이미지 파일 관리
@@ -879,13 +901,15 @@ const PostWrite = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // DOM 접근 대신 ref 사용 (StrictMode/SSR 안전)
+  // ✅ 교외 2단 드롭다운 상태
+  const [offcampusLine, setOffcampusLine] = useState('');
+
   const imageInputRef = useRef(null);
 
   // 최신 변경 상태/함수 접근을 위한 ref (이벤트 리스너 안정화)
   const hasUnsavedChangesRef = useRef(false);
-  useEffect(() => { 
-    hasUnsavedChangesRef.current = hasUnsavedChanges; 
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
   }, [hasUnsavedChanges]);
 
   const clearErrors = useCallback((fieldName) => {
@@ -901,7 +925,7 @@ const PostWrite = () => {
   // 임시저장 로직을 별도 함수로 분리
   const loadDraftData = useCallback(() => {
     if (isEdit) return;
-    
+
     try {
       const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (!savedDraft) return;
@@ -909,7 +933,7 @@ const PostWrite = () => {
       const draftData = JSON.parse(savedDraft);
       const draftAge = new Date() - new Date(draftData.timestamp);
       const expiryTime = DRAFT_EXPIRY_HOURS * 60 * 60 * 1000;
-      
+
       if (draftAge < expiryTime) {
         const shouldLoad = window.confirm('임시저장된 내용이 있어! 불러올까? 💾');
         if (shouldLoad) {
@@ -939,7 +963,7 @@ const PostWrite = () => {
     console.log('PostWrite 컴포넌트 마운트됨');
     startWriting('sale');
     loadDraftData();
-    
+
     return () => {
       console.log('PostWrite 컴포넌트 언마운트됨');
       stopWriting();
@@ -955,40 +979,34 @@ const PostWrite = () => {
 
   // 폼 데이터 변경 감지
   useEffect(() => {
-    const hasChanges = Object.values(formData).some(value => 
-      value && value.toString().trim() !== ''
+    const hasChanges = Object.values(formData).some(value =>
+        value && value.toString().trim() !== ''
     ) || images.length > 0;
     setHasUnsavedChanges(hasChanges);
     setUnsavedChanges(hasChanges);
   }, [formData, images, setUnsavedChanges]);
 
-  // 메모리 누수 방지: unmount 시 blob URL 해제 (catch 바인딩 및 유효성 검사 추가)
-const imagesRef = useRef(images);
-useEffect(() => { imagesRef.current = images; }, [images]);
-
-useEffect(() => {
-  return () => {
-    imagesRef.current.forEach((img) => {
-      // 업로드된(url) 이미지는 건너뛰고, blob URL만 해제
-      const url = img?.preview;
-      if (!url || img.isUploaded) return;
-      if (typeof url !== 'string' || !url.startsWith('blob:')) return;
-
-      try {
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        // 오류 객체 바인딩 및 조용한 로깅
-        // (프로덕션에서 소음 줄이고, 개발 중엔 원인 파악 가능)
-        if (typeof console !== 'undefined') {
-          console.debug('[cleanup] revokeObjectURL 실패:', err);
+  // 메모리 누수 방지: unmount 시 blob URL 해제
+  const imagesRef = useRef(images);
+  useEffect(() => { imagesRef.current = images; }, [images]);
+  useEffect(() => {
+    return () => {
+      imagesRef.current.forEach((img) => {
+        const url = img?.preview;
+        if (!url || img.isUploaded) return;
+        if (typeof url !== 'string' || !url.startsWith('blob:')) return;
+        try {
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          if (typeof console !== 'undefined') {
+            console.debug('[cleanup] revokeObjectURL 실패:', err);
+          }
         }
-      }
-    });
-  };
-}, []);
+      });
+    };
+  }, []);
 
-  // handleSaveDraft를 선선언하여 TDZ 오류 방지 + 안정화 ref 제공
-  // 임시저장 함수
+  // 임시저장
   const handleSaveDraft = useCallback(async () => {
     try {
       const draftData = {
@@ -996,13 +1014,9 @@ useEffect(() => {
         images: images,
         timestamp: new Date().toISOString()
       };
-      
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
       console.log('임시저장 완료:', draftData);
-
-      // TODO: 서버 임시저장 API 구현 시 추가
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       setHasUnsavedChanges(false);
       setUnsavedChanges(false);
       alert('게시글을 임시저장했어! 📂');
@@ -1011,11 +1025,11 @@ useEffect(() => {
       alert('임시저장에 실패했어! 😅');
     }
   }, [formData, images, setUnsavedChanges]);
+
   const handleSaveDraftRef = useRef(handleSaveDraft);
   useEffect(() => { handleSaveDraftRef.current = handleSaveDraft; }, [handleSaveDraft]);
 
-  // 브라우저 이벤트 처리 로직
-  // 최신 상태는 ref로 읽어 재등록 없이 안정 동작
+  // 브라우저 이벤트 처리
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChangesRef.current) {
@@ -1040,17 +1054,16 @@ useEffect(() => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('saveDraft', handleSaveDraftEvent);
-    
     window.history.pushState(null, '', window.location.pathname);
-    
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('saveDraft', handleSaveDraftEvent);
     };
-  }, []);
+  }, [hasUnsavedChanges, handleSaveDraft]);
 
-  // 수정 모드
+  // 수정 모드 데이터 로딩
   useEffect(() => {
     if (!isEdit) return;
 
@@ -1061,8 +1074,7 @@ useEffect(() => {
           headers: getAuthHeader()
         });
         const postData = response.data;
-        
-        // API 응답 데이터를 formData 형태로 변환
+
         setFormData({
           isbn: postData.isbn || '',
           bookTitle: postData.bookTitle || '',
@@ -1077,16 +1089,19 @@ useEffect(() => {
           tearCondition: Object.keys(CONDITION_MAP).find(key => CONDITION_MAP[key] === postData.tearCondition) || '상',
           waterCondition: Object.keys(CONDITION_MAP).find(key => CONDITION_MAP[key] === postData.waterCondition) || '상',
           negotiable: postData.negotiable ?? true,
+
+          oncampusPlaceCode: postData.oncampusPlaceCode || '',
+          offcampusStationCode: postData.offcampusStationCode || '',
         });
 
         if (postData.postImageUrls?.length > 0) {
-          setImages(postData.postImageUrls.map((url, index) => ({ 
-            id: `uploaded_${index}_${Date.now()}`, 
-            preview: url, 
-            isUploaded: true 
+          setImages(postData.postImageUrls.map((url, index) => ({
+            id: `uploaded_${index}_${Date.now()}`,
+            preview: url,
+            isUploaded: true
           })));
         }
-        
+
         setInputType(postData.isbn ? 'search' : 'custom');
       } catch (error) {
         console.error("수정할 게시글 정보를 불러오는 데 실패했습니다.", error);
@@ -1096,66 +1111,49 @@ useEffect(() => {
         setLoading(false);
       }
     };
-    
+
     fetchPostForEdit();
   }, [id, isEdit, navigate]);
 
-  // 할인율 계산 함수
+  // ✅ 수정모드에서 저장된 역 이름을 보고 호선 자동 세팅
+  useEffect(() => {
+    if (!formData.offcampusStationCode || offcampusLine) return;
+    const found = Object.keys(SUBWAY_MAP).find(line =>
+        SUBWAY_MAP[line].includes(formData.offcampusStationCode)
+    );
+    if (found) setOffcampusLine(found);
+  }, [formData.offcampusStationCode, offcampusLine]);
+
+  // 할인율 계산
   const calculateDiscountRate = useCallback(() => {
-    const WEIGHTS = {
-      writing: 0.15,    // 15% 가중치
-      tear: 0.35,       // 35% 가중치  
-      water: 0.50,      // 50% 가중치
-    };
-
-    const DISCOUNT_RATES = {
-      '상': 0.15,
-      '중': 0.35,  
-      '하': 0.55,
-    };
-
-    const BASE_DISCOUNT = 0.1; // 중고책 기본 할인 10%
+    const WEIGHTS = { writing: 0.15, tear: 0.35, water: 0.50 };
+    const DISCOUNT_RATES = { '상': 0.15, '중': 0.35, '하': 0.55 };
+    const BASE_DISCOUNT = 0.1;
 
     let totalDiscount = 0;
-    
     totalDiscount += WEIGHTS.writing * DISCOUNT_RATES[formData.writingCondition];
     totalDiscount += WEIGHTS.tear * DISCOUNT_RATES[formData.tearCondition];
     totalDiscount += WEIGHTS.water * DISCOUNT_RATES[formData.waterCondition];
     totalDiscount += BASE_DISCOUNT;
-    
     return Math.round(totalDiscount * 100);
   }, [formData.writingCondition, formData.tearCondition, formData.waterCondition]);
 
-  // 추천 가격 계산
-  // 현재는 책 상태(필기, 찢어짐, 물흘림)를 기준으로 할인율을 계산하여 추천 가격을 산정합니다.
-  // 
-  // 할인율 계산 기준:
-  // - 필기 상태: 없음(0%) ~ 많음(15%)
-  // - 찢어짐 정도: 없음(0%) ~ 심함(10%)
-  // - 물흘림 정도: 없음(0%) ~ 심함(10%)
-  //
-  // TODO: 실제 구현 시에는 시장 가격 데이터베이스나 유사 책의 거래 이력을 참고하여 더 정확한 추천 가격을 제공
   const getRecommendedPrice = useCallback(() => {
     if (!formData.originalPrice) return null;
-    
     const originalPrice = parseInt(formData.originalPrice, 10);
     if (Number.isNaN(originalPrice) || originalPrice <= 0) return null;
-    
     const discountRate = calculateDiscountRate();
     const recommendedPrice = Math.round(originalPrice * (1 - discountRate / 100));
-    
     return { discountRate, recommendedPrice };
   }, [formData.originalPrice, calculateDiscountRate]);
 
   // 입력 핸들러
   const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
-    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    
     clearErrors(name);
   }, [clearErrors]);
 
@@ -1166,29 +1164,18 @@ useEffect(() => {
     clearErrors('originalPrice');
   }, [clearErrors]);
 
-        
-  // 이미지 업로드 핸들러
+  // 이미지 업로드
   const handleImageUpload = useCallback((e) => {
     const files = Array.from(e.target.files);
-    
     if (images.length + files.length > MAX_IMAGES) {
       alert(`이미지는 최대 ${MAX_IMAGES}개까지 업로드할 수 있어! 📸`);
       return;
     }
-
-    // 이미지 검증
     const validFiles = files.filter(file => {
       const isValidType = file.type.startsWith('image/');
-      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB 제한
-      
-      if (!isValidType) {
-        alert(`${file.name}은(는) 이미지 파일이 아니야! 🖼️`);
-        return false;
-      }
-      if (!isValidSize) {
-        alert(`${file.name}은(는) 5MB를 초과해! 더 작은 파일로 올려줘 📏`);
-        return false;
-      }
+      const isValidSize = file.size <= 5 * 1024 * 1024;
+      if (!isValidType) { alert(`${file.name}은(는) 이미지 파일이 아니야! 🖼️`); return false; }
+      if (!isValidSize) { alert(`${file.name}은(는) 5MB를 초과해! 더 작은 파일로 올려줘 📏`); return false; }
       return true;
     });
 
@@ -1197,17 +1184,13 @@ useEffect(() => {
       file,
       preview: URL.createObjectURL(file)
     }));
-
     setImages(prev => [...prev, ...newImages]);
-    // 같은 파일을 다시 선택할 수 있도록 input 값 초기화
     if (imageInputRef.current) imageInputRef.current.value = '';
   }, [images.length]);
 
-  // 이미지 삭제 핸들러
   const handleRemoveImage = useCallback((imageId) => {
     setImages(prev => {
       const imageToRemove = prev.find(img => img.id === imageId);
-      // 메모리 누수 방지를 위해 URL 해제
       if (imageToRemove && imageToRemove.preview && !imageToRemove.isUploaded) {
         URL.revokeObjectURL(imageToRemove.preview);
       }
@@ -1215,7 +1198,7 @@ useEffect(() => {
     });
   }, []);
 
-  // 책 검색 함수
+  // 책 검색
   const handleBookSearch = useCallback(async () => {
     if (!searchQuery.trim()) {
       alert('검색어를 입력해줘! 🔍');
@@ -1224,28 +1207,25 @@ useEffect(() => {
 
     setSearchLoading(true);
     try {
-      const response = await axios.get('/api/search/books', { 
+      const response = await axios.get('/api/search/books', {
         params: { query: searchQuery.trim() },
         headers: getAuthHeader()
       });
-      
       const raw = response?.data;
       const results = toBookArray(raw).map(normalizeBook);
       setSearchResults(results);
-      
       if (results.length === 0) {
         alert('검색 결과가 없어! 다른 키워드로 시도해봐 📚');
       }
     } catch (error) {
       console.error("책 검색 실패:", error);
       alert("책 검색 중 오류가 발생했어! 다시 시도해줘 😅");
-      setSearchResults([]); // 실패 시에도 배열 보장
+      setSearchResults([]);
     } finally {
       setSearchLoading(false);
     }
   }, [searchQuery]);
 
-  // 책 선택 함수
   const handleBookSelect = useCallback((book) => {
     setFormData(prev => ({
       ...prev,
@@ -1254,40 +1234,29 @@ useEffect(() => {
       author: book.author || '',
       publisher: book.publisher || '',
     }));
-    
-    // 모달 닫을 때 검색 상태 초기화
     setShowBookSearch(false);
     setSearchQuery('');
     setSearchResults([]);
   }, []);
 
-  // 폼 검증 로직
+  // 검증
   const validateForm = useCallback(() => {
     const newErrors = {};
 
-    // 검색 모드에서는 isbn 유무만 체크 (정규화로 항상 문자열 보장)
     if (inputType === 'search' && !formData.isbn.trim()) {
       newErrors.bookTitle = '책을 검색에서 선택해줘! (ISBN 필요) 📚';
     }
-
-    // 책 정보 검증 (custom 모드에서만 필수)
     if (inputType === 'custom') {
-      if (!formData.bookTitle.trim()) {
-        newErrors.bookTitle = '책 제목을 입력해줘! 📖';
-      }
-      if (!formData.author.trim()) {
-        newErrors.author = '저자를 입력해줘! ✍️';
-      }
+      if (!formData.bookTitle.trim()) newErrors.bookTitle = '책 제목을 입력해줘! 📖';
+      if (!formData.author.trim()) newErrors.author = '저자를 입력해줘! ✍️';
     }
 
-    // 판매글 정보 검증
     if (!formData.postTitle.trim()) {
       newErrors.postTitle = '글 제목을 입력해줘! 📝';
     } else if (formData.postTitle.trim().length < 5) {
       newErrors.postTitle = '글 제목은 최소 5자 이상 입력해줘! 📏';
     }
 
-    // 가격 검증
     const originalPrice = parseInt(formData.originalPrice, 10);
     const price = parseInt(formData.price, 10);
 
@@ -1311,37 +1280,48 @@ useEffect(() => {
       newErrors.price = '판매가가 원가보다 클 수 없어! 🤔';
     }
 
-    // 상태 검증
     if (!['상', '중', '하'].includes(formData.writingCondition)) {
       newErrors.writingCondition = '필기 상태를 선택해줘! ✏️';
     }
-
     if (!['상', '중', '하'].includes(formData.tearCondition)) {
       newErrors.tearCondition = '찢어짐 정도를 선택해줘! 📄';
     }
-
     if (!['상', '중', '하'].includes(formData.waterCondition)) {
       newErrors.waterCondition = '물기 상태를 선택해줘! 💧';
     }
 
+    // ✅ 교내: 드롭다운 목록에서 선택
+    if (!formData.oncampusPlaceCode.trim()) {
+      newErrors.oncampusPlaceCode = '교내 기본 위치를 선택해줘! 🏫';
+    } else if (!ONCAMPUS_CODES.includes(formData.oncampusPlaceCode.trim())) {
+      newErrors.oncampusPlaceCode = '목록에서 선택해줘! 🏫';
+    }
+
+    // ✅ 교외: 호선/역 검증
+    if (!offcampusLine) {
+      newErrors.offcampusStationCode = '호선을 먼저 선택해줘! 🚇';
+    } else if (!formData.offcampusStationCode.trim()) {
+      newErrors.offcampusStationCode = '역을 선택해줘! 🚇';
+    } else if (!SUBWAY_MAP[offcampusLine]?.includes(formData.offcampusStationCode.trim())) {
+      newErrors.offcampusStationCode = '목록에서 선택해줘! 🚇';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  }, [formData, inputType, offcampusLine]);
 
-  // 제출 핸들러
+  // 제출
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       alert('입력 정보를 다시 확인해줘! 🔍');
       return;
     }
-
     setLoading(true);
 
     try {
       if (isEdit) {
-        // 수정 로직 (기본 정보 PATCH)
+        // 수정 로직 (위치 코드는 현재 수정 DTO에 없음 → 필요 시 별도 API)
         const payload = {
           postTitle: formData.postTitle.trim(),
           postContent: formData.postContent.trim(),
@@ -1371,10 +1351,8 @@ useEffect(() => {
         }
 
         alert('게시글이 성공적으로 수정됐어! 🎉');
-        // 임시저장 데이터 삭제
         localStorage.removeItem(DRAFT_STORAGE_KEY);
         navigate(`/posts/${id}`);
-
       } else {
         // 생성 로직
         const apiData = new FormData();
@@ -1392,6 +1370,10 @@ useEffect(() => {
           tearCondition: CONDITION_MAP[formData.tearCondition],
           waterCondition: CONDITION_MAP[formData.waterCondition],
           negotiable: formData.negotiable,
+
+          // 서버로 전송
+          oncampusPlaceCode: formData.oncampusPlaceCode.trim(),
+          offcampusStationCode: formData.offcampusStationCode.trim(),
         };
 
         if (inputType === 'search') {
@@ -1448,7 +1430,6 @@ useEffect(() => {
         });
 
         alert('게시글이 성공적으로 등록됐어! 🎉');
-        // 임시저장 데이터 삭제
         localStorage.removeItem(DRAFT_STORAGE_KEY);
         navigate('/marketplace');
       }
@@ -1474,7 +1455,7 @@ useEffect(() => {
     }
   }, [formData, images, isEdit, id, inputType, validateForm, navigate]);
 
-  // 안전한 네비게이션 함수
+  // 안전한 네비게이션
   const safeNavigate = useCallback((path) => {
     if (hasUnsavedChanges) {
       setPendingNavigation(path);
@@ -1484,7 +1465,6 @@ useEffect(() => {
     }
   }, [hasUnsavedChanges, navigate]);
 
-  // 모달 처리 함수들
   const handleConfirmExit = useCallback(() => {
     setShowWarningModal(false);
     const targetPath = pendingNavigation || '/marketplace';
@@ -1506,7 +1486,6 @@ useEffect(() => {
       setPendingNavigation(null);
     } catch (error) {
       console.error('임시저장 후 나가기 실패:', error);
-      // 임시저장 실패해도 나가기는 진행
       setShowWarningModal(false);
       const targetPath = pendingNavigation || '/marketplace';
       navigate(targetPath);
@@ -1514,7 +1493,6 @@ useEffect(() => {
     }
   }, [handleSaveDraft, navigate, pendingNavigation]);
 
-  // 취소 핸들러
   const handleCancel = useCallback((e) => {
     if (e) {
       e.preventDefault();
@@ -1523,7 +1501,6 @@ useEffect(() => {
     safeNavigate('/marketplace');
   }, [safeNavigate]);
 
-  // 책 검색 모달 제어 함수들
   const handleCloseBookSearch = useCallback(() => {
     setShowBookSearch(false);
     setSearchQuery('');
@@ -1535,12 +1512,10 @@ useEffect(() => {
     setShowBookSearch(true);
   }, []);
 
-  // 조건 상태별 체크 여부 확인 함수
   const isConditionChecked = useCallback((conditionType, value) => {
     return formData[conditionType] === value;
   }, [formData]);
 
-  // 네고 상태 체크 함수
   const isNegotiableChecked = useCallback((isNegotiable) => {
     return formData.negotiable === isNegotiable;
   }, [formData.negotiable]);
@@ -1549,507 +1524,527 @@ useEffect(() => {
 
   const recommended = getRecommendedPrice();
 
-  // 로딩 중일 때 로딩 화면 표시
   if (loading && isEdit) {
     return (
-      <WriteContainer>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <p>게시글 정보를 불러오는 중... ⏳</p>
-        </div>
-      </WriteContainer>
+        <WriteContainer>
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>게시글 정보를 불러오는 중... ⏳</p>
+          </div>
+        </WriteContainer>
     );
   }
 
   return (
-    <>
-      <div className="header-spacer" />
-      <WriteContainer>
-        <WriteHeader>
-          <BackButton onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setPendingNavigation('/marketplace');
-            setShowWarningModal(true);
-          }}>
-            <FaArrowLeft /> 뒤로가기
-          </BackButton>
-          <WriteTitle>{isEdit ? '판매글 수정' : '판매글 등록'}</WriteTitle>
-        </WriteHeader>
+      <>
+        <div className="header-spacer" />
+        <WriteContainer>
+          <WriteHeader>
+            <BackButton onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPendingNavigation('/marketplace');
+              setShowWarningModal(true);
+            }}>
+              <FaArrowLeft /> 뒤로가기
+            </BackButton>
+            <WriteTitle>{isEdit ? '판매글 수정' : '판매글 등록'}</WriteTitle>
+          </WriteHeader>
 
-        <WriteForm onSubmit={handleSubmit}>
-          {!isEdit && (
+          <WriteForm onSubmit={handleSubmit}>
+            {!isEdit && (
+                <FormSection>
+                  <SectionTitle><FaBook /> 등록 방식</SectionTitle>
+                  <InputTypeButtons>
+                    <InputTypeButton type="button" $active={inputType === 'search'} onClick={() => setInputType('search')}>ISBN / 책 제목 검색</InputTypeButton>
+                    <InputTypeButton type="button" $active={inputType === 'custom'} onClick={() => setInputType('custom')}>직접 입력 (제본 등)</InputTypeButton>
+                  </InputTypeButtons>
+                </FormSection>
+            )}
+
+            {/* --- 책 정보 섹션 --- */}
             <FormSection>
-              <SectionTitle><FaBook /> 등록 방식</SectionTitle>
-              <InputTypeButtons>
-                <InputTypeButton type="button" $active={inputType === 'search'} onClick={() => setInputType('search')}>ISBN / 책 제목 검색</InputTypeButton>
-                <InputTypeButton type="button" $active={inputType === 'custom'} onClick={() => setInputType('custom')}>직접 입력 (제본 등)</InputTypeButton>
-              </InputTypeButtons>
+              <SectionTitle>📖 책 정보</SectionTitle>
+              {inputType === 'search' ? (
+                  <>
+                    {!isEdit && (
+                        <FormGroup>
+                          <Label>책 검색 <Required>*</Required></Label>
+                          <BookSearchButton type="button" onClick={() => setShowBookSearch(true)}>
+                            <FaSearch /> 책 검색하기
+                          </BookSearchButton>
+                        </FormGroup>
+                    )}
+                    {formData.bookTitle && (
+                        <SelectedBookDisplay>
+                          <BookItemTitle>{formData.bookTitle}</BookItemTitle>
+                          <BookInfo>저자: {formData.author} | 출판사: {formData.publisher}</BookInfo>
+                        </SelectedBookDisplay>
+                    )}
+                  </>
+              ) : (
+                  <>
+                    <FormGroup>
+                      <Label>책 제목 <Required>*</Required></Label>
+                      <Input
+                          name="bookTitle"
+                          value={formData.bookTitle}
+                          onChange={handleInputChange}
+                          placeholder="책 제목을 입력해줘"
+                      />
+                      {errors.bookTitle && <ErrorMessage>{errors.bookTitle}</ErrorMessage>}
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>저자 <Required>*</Required></Label>
+                      <Input
+                          name="author"
+                          value={formData.author}
+                          onChange={handleInputChange}
+                          placeholder="저자를 입력해줘"
+                      />
+                      {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>출판사</Label>
+                      <Input
+                          name="publisher"
+                          value={formData.publisher}
+                          onChange={handleInputChange}
+                          placeholder="출판사를 입력해줘"
+                      />
+                    </FormGroup>
+                  </>
+              )}
             </FormSection>
-          )}
 
-          {/* --- 책 정보 섹션 --- */}
-          <FormSection>
-            <SectionTitle>📖 책 정보</SectionTitle>
-            {inputType === 'search' ? (
-              <>
+            <FormSection>
+              <SectionTitle><FaCamera /> 실물 사진 등록 (최대 {MAX_IMAGES}장)</SectionTitle>
+              <input
+                  ref={imageInputRef}
+                  id="imageInput"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+              />
+              {images.length < MAX_IMAGES && (
+                  <ImageUploadArea onClick={() => imageInputRef.current && imageInputRef.current.click()}>
+                    <ImageUploadIcon><FaImage /></ImageUploadIcon>
+                    <ImageUploadText>클릭해서 사진을 업로드해줘! 📷</ImageUploadText>
+                    <HelpText>최대 {MAX_IMAGES}장, 각 파일당 5MB 이하</HelpText>
+                  </ImageUploadArea>
+              )}
+              {images.length > 0 && (
+                  <ImagePreview>
+                    {images.map(image => (
+                        <ImagePreviewItem key={image.id}>
+                          <ImagePreviewImg src={image.preview} alt="미리보기" />
+                          <RemoveImageButton onClick={() => handleRemoveImage(image.id)}>
+                            <FaTimes />
+                          </RemoveImageButton>
+                        </ImagePreviewItem>
+                    ))}
+                  </ImagePreview>
+              )}
+            </FormSection>
+
+            {/* --- 판매글 정보 섹션 --- */}
+            <FormSection>
+              <SectionTitle>📝 판매글 정보</SectionTitle>
+              <FormGroup>
+                <Label>글 제목 <Required>*</Required></Label>
+                <Input
+                    name="postTitle"
+                    value={formData.postTitle}
+                    onChange={handleInputChange}
+                    placeholder="판매글 제목을 입력해줘 (최소 5자)"
+                />
+                {errors.postTitle && <ErrorMessage>{errors.postTitle}</ErrorMessage>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label>필기 상태 <Required>*</Required></Label>
+                <ToggleContainer>
+                  {['상', '중', '하'].map(condition => (
+                      <ToggleOption
+                          key={condition}
+                          $checked={formData.writingCondition === condition}
+                      >
+                        <input
+                            type="radio"
+                            name="writingCondition"
+                            value={condition}
+                            checked={formData.writingCondition === condition}
+                            onChange={handleInputChange}
+                        />
+                        <ToggleText $checked={formData.writingCondition === condition}>
+                          {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 필기' : '많이 필기'})
+                        </ToggleText>
+                      </ToggleOption>
+                  ))}
+                </ToggleContainer>
+                {errors.writingCondition && <ErrorMessage>{errors.writingCondition}</ErrorMessage>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label>찢어짐 정도 <Required>*</Required></Label>
+                <ToggleContainer>
+                  {['상', '중', '하'].map(condition => (
+                      <ToggleOption
+                          key={condition}
+                          $checked={formData.tearCondition === condition}
+                      >
+                        <input
+                            type="radio"
+                            name="tearCondition"
+                            value={condition}
+                            checked={formData.tearCondition === condition}
+                            onChange={handleInputChange}
+                        />
+                        <ToggleText $checked={formData.tearCondition === condition}>
+                          {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 찢어짐' : '많이 찢어짐'})
+                        </ToggleText>
+                      </ToggleOption>
+                  ))}
+                </ToggleContainer>
+                {errors.tearCondition && <ErrorMessage>{errors.tearCondition}</ErrorMessage>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label>물기 상태 <Required>*</Required></Label>
+                <ToggleContainer>
+                  {['상', '중', '하'].map(condition => (
+                      <ToggleOption
+                          key={condition}
+                          $checked={formData.waterCondition === condition}
+                      >
+                        <input
+                            type="radio"
+                            name="waterCondition"
+                            value={condition}
+                            checked={formData.waterCondition === condition}
+                            onChange={handleInputChange}
+                        />
+                        <ToggleText $checked={formData.waterCondition === condition}>
+                          {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 물기' : '많이 물기'})
+                        </ToggleText>
+                      </ToggleOption>
+                  ))}
+                </ToggleContainer>
+                {errors.waterCondition && <ErrorMessage>{errors.waterCondition}</ErrorMessage>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label>네고 가능 여부</Label>
+                <ToggleContainer>
+                  <ToggleOption $checked={formData.negotiable === true}>
+                    <input
+                        type="radio"
+                        name="negotiable"
+                        value={true}
+                        checked={formData.negotiable === true}
+                        onChange={() => setFormData(prev => ({ ...prev, negotiable: true }))}
+                    />
+                    <ToggleText $checked={formData.negotiable === true}>네고 가능 💬</ToggleText>
+                  </ToggleOption>
+                  <ToggleOption $checked={formData.negotiable === false}>
+                    <input
+                        type="radio"
+                        name="negotiable"
+                        value={false}
+                        checked={formData.negotiable === false}
+                        onChange={() => setFormData(prev => ({ ...prev, negotiable: false }))}
+                    />
+                    <ToggleText $checked={formData.negotiable === false}>네고 불가 🚫</ToggleText>
+                  </ToggleOption>
+                </ToggleContainer>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>원가 <Required>*</Required></Label>
+                <Input
+                    type="number"
+                    name="originalPrice"
+                    value={formData.originalPrice}
+                    onChange={handleOriginalPriceChange}
+                    placeholder="정가를 입력해줘"
+                    min="0"
+                />
+                {errors.originalPrice && <ErrorMessage>{errors.originalPrice}</ErrorMessage>}
+                <HelpText>책의 정가를 입력해줘 </HelpText>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>판매가 <Required>*</Required></Label>
+                <Input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    placeholder="판매 희망가를 입력해줘"
+                    min="0"
+                />
+                {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
+
+                {formData.originalPrice && recommended && (
+                    <DiscountInfo>
+                      할인율: {recommended.discountRate}%
+                      ({(parseInt(formData.originalPrice) - recommended.recommendedPrice).toLocaleString()}원 할인)
+                      <br />
+                      <strong>추천가: {recommended.recommendedPrice.toLocaleString()}원</strong>
+                      <RecommendButton
+                          type="button"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            price: recommended.recommendedPrice.toString()
+                          }))}
+                      >
+                        추천 가격으로 입력 ✨
+                      </RecommendButton>
+                      <InfoButton
+                          type="button"
+                          onClick={() => setShowInfoModal(true)}
+                          title="추천 거래 가격 산정 기준 안내"
+                      >
+                        <FaInfoCircle />
+                      </InfoButton>
+                    </DiscountInfo>
+                )}
+              </FormGroup>
+
+              <FormGroup>
+                <Label>상세 설명</Label>
+                <TextArea
+                    name="postContent"
+                    value={formData.postContent}
+                    onChange={handleInputChange}
+                    placeholder="책 상태나 거래 방법 등 자세한 설명을 써줘! 📝 예: 필기는 연필로 되어있어서 지우개로 지울 수 있어! T동에서 직거래 가능해!"
+                />
+                <HelpText>구매자가 궁금해할 만한 내용을 상세히 적어주면 좋아! 🤗</HelpText>
+              </FormGroup>
+            </FormSection>
+
+            {/* ✅ 거래 기준 위치(필수) 섹션 */}
+            <FormSection>
+              <SectionTitle><FaMapMarkerAlt /> 거래 기준 위치(판매자) <Required>*</Required></SectionTitle>
+
+              {/* 교내: 드롭다운 */}
+              <FormGroup>
+                <Label>교내 기본 위치 (동/건물) <Required>*</Required></Label>
+                <Select
+                    name="oncampusPlaceCode"
+                    value={formData.oncampusPlaceCode}
+                    onChange={handleInputChange}
+                >
+                  <option value="">선택해줘</option>
+                  {ONCAMPUS_CODES.map(code => (
+                      <option key={code} value={code}>{code}</option>
+                  ))}
+                </Select>
+                {errors.oncampusPlaceCode && <ErrorMessage>{errors.oncampusPlaceCode}</ErrorMessage>}
+                <HelpText>스마트 예약 모달의 “교내 중간거리 추천” 기준점으로 사용돼.</HelpText>
+              </FormGroup>
+
+              {/* 교외: 호선 → 역 2단 드롭다운 */}
+              <FormGroup>
+                <Label>교외 기본 위치 (지하철역) <Required>*</Required></Label>
+
+                {/* 1) 호선 */}
+                <Select
+                    value={offcampusLine}
+                    onChange={(e) => {
+                      setOffcampusLine(e.target.value);
+                      setFormData(prev => ({ ...prev, offcampusStationCode: '' }));
+                      clearErrors('offcampusStationCode');
+                    }}
+                >
+                  <option value="">호선을 선택해줘</option>
+                  {Object.keys(SUBWAY_MAP).map(line => (
+                      <option key={line} value={line}>{line}</option>
+                  ))}
+                </Select>
+
+                {/* 2) 역 */}
+                <div style={{ marginTop: 8 }} />
+                <Select
+                    name="offcampusStationCode"
+                    value={formData.offcampusStationCode}
+                    onChange={handleInputChange}
+                    disabled={!offcampusLine}
+                >
+                  <option value="">{offcampusLine ? '역을 선택해줘' : '호선을 먼저 선택해줘'}</option>
+                  {(SUBWAY_MAP[offcampusLine] || []).map(st => (
+                      <option key={st} value={st}>{st}</option>
+                  ))}
+                </Select>
+
+                {errors.offcampusStationCode && <ErrorMessage>{errors.offcampusStationCode}</ErrorMessage>}
+                <HelpText>스마트 예약 모달의 “교외(지하철) 중간거리 추천” 기준점으로 사용돼.</HelpText>
+              </FormGroup>
+            </FormSection>
+
+            {/* 버튼 영역 */}
+            <ButtonSection>
+              <ButtonGroup>
+                <CancelButton type="button" onClick={handleCancel}>
+                  취소
+                </CancelButton>
+
                 {!isEdit && (
-                  <FormGroup>
-                    <Label>책 검색 <Required>*</Required></Label>
-                    <button type="button" onClick={() => setShowBookSearch(true)}>책 검색하기</button>
-                  </FormGroup>
+                    <SaveDraftButton type="button" onClick={handleSaveDraft}>
+                      <FaSave /> 임시저장
+                    </SaveDraftButton>
                 )}
-                {/* 선택된 책 정보 표시 */}
-                {formData.bookTitle && (
-                  <SelectedBookDisplay>
-                    <BookItemTitle>{formData.bookTitle}</BookItemTitle>
-                    <BookInfo>저자: {formData.author} | 출판사: {formData.publisher}</BookInfo>
-                  </SelectedBookDisplay>
-                )}
-              </>
-            ) : (
-              <>
-                {/* 직접 입력 폼 */}
-                <FormGroup>
-                  <Label>책 제목 <Required>*</Required></Label>
-                  <Input 
-                    name="bookTitle" 
-                    value={formData.bookTitle} 
-                    onChange={handleInputChange}
-                    placeholder="책 제목을 입력해줘"
-                  />
-                  {errors.bookTitle && <ErrorMessage>{errors.bookTitle}</ErrorMessage>}
-                </FormGroup>
-                <FormGroup>
-                  <Label>저자 <Required>*</Required></Label>
-                  <Input 
-                    name="author" 
-                    value={formData.author} 
-                    onChange={handleInputChange}
-                    placeholder="저자를 입력해줘"
-                  />
-                  {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
-                </FormGroup>
-                <FormGroup>
-                  <Label>출판사</Label>
-                  <Input 
-                    name="publisher" 
-                    value={formData.publisher} 
-                    onChange={handleInputChange}
-                    placeholder="출판사를 입력해줘"
-                  />
-                </FormGroup>
-              </>
-            )}
-          </FormSection>
 
-          <FormSection>
-            <SectionTitle><FaCamera /> 실물 사진 등록 (최대 {MAX_IMAGES}장)</SectionTitle>
-            <input 
-              id="imageInput" 
-              ref={imageInputRef}
-              type="file" 
-              multiple 
-              accept="image/*" 
-              onChange={handleImageUpload}
-              style={{ display: 'none' }} 
-            />
-            {images.length < MAX_IMAGES && (
-              <ImageUploadArea onClick={() => imageInputRef.current?.click()}>
-                <ImageUploadIcon><FaImage /></ImageUploadIcon>
-                <ImageUploadText>클릭해서 사진을 업로드해줘! 📷</ImageUploadText>
-                <HelpText>최대 {MAX_IMAGES}장, 각 파일당 5MB 이하</HelpText>
-              </ImageUploadArea>
-            )}
-            {images.length > 0 && (
-              <ImagePreview>
-                {images.map(image => (
-                  <ImagePreviewItem key={image.id}>
-                    <ImagePreviewImg src={image.preview} alt="미리보기" />
-                    <RemoveImageButton onClick={() => handleRemoveImage(image.id)}>
-                      <FaTimes />
-                    </RemoveImageButton>
-                  </ImagePreviewItem>
-                ))}
-              </ImagePreview>
-            )}
-          </FormSection>
-
-          {/* --- 판매글 정보 섹션 --- */}
-          <FormSection>
-            <SectionTitle>📝 판매글 정보</SectionTitle>
-            <FormGroup>
-              <Label>글 제목 <Required>*</Required></Label>
-              <Input 
-                name="postTitle" 
-                value={formData.postTitle} 
-                onChange={handleInputChange}
-                placeholder="판매글 제목을 입력해줘 (최소 5자)"
-              />
-              {errors.postTitle && <ErrorMessage>{errors.postTitle}</ErrorMessage>}
-            </FormGroup>
-
-            {/* ... (책 상태, 가격 협의 등 다른 폼 그룹들) ... */}
-
-            <FormGroup>
-              <Label>필기 상태 <Required>*</Required></Label>
-              <ToggleContainer>
-                {['상', '중', '하'].map(condition => (
-                  <ToggleOption 
-                    key={condition} 
-                    $checked={isConditionChecked('writingCondition', condition)}
-                  >
-                    <input
-                      type="radio"
-                      name="writingCondition"
-                      value={condition}
-                      checked={isConditionChecked('writingCondition', condition)}
-                      onChange={handleInputChange}
-                    />
-                    <ToggleText $checked={isConditionChecked('writingCondition', condition)}>
-                      {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 필기' : '많이 필기'})
-                    </ToggleText>
-                  </ToggleOption>
-                ))}
-              </ToggleContainer>
-              {errors.writingCondition && <ErrorMessage>{errors.writingCondition}</ErrorMessage>}
-            </FormGroup>
-
-            <FormGroup>
-              <Label>찢어짐 정도 <Required>*</Required></Label>
-              <ToggleContainer>
-                {['상', '중', '하'].map(condition => (
-                  <ToggleOption 
-                    key={condition}
-                    $checked={isConditionChecked('tearCondition', condition)}
-                  >
-                    <input
-                      type="radio"
-                      name="tearCondition"
-                      value={condition}
-                      checked={isConditionChecked('tearCondition', condition)}
-                      onChange={handleInputChange}
-                    />
-                    <ToggleText $checked={isConditionChecked('tearCondition', condition)}>
-                      {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 찢어짐' : '많이 찢어짐'})
-                    </ToggleText>
-                  </ToggleOption>
-                ))}
-              </ToggleContainer>
-              {errors.tearCondition && <ErrorMessage>{errors.tearCondition}</ErrorMessage>}
-            </FormGroup>
-
-            <FormGroup>
-              <Label>물기 상태 <Required>*</Required></Label>
-              <ToggleContainer>
-                {['상', '중', '하'].map(condition => (
-                  <ToggleOption 
-                    key={condition}
-                    $checked={isConditionChecked('waterCondition', condition)}
-                  >
-                    <input
-                      type="radio"
-                      name="waterCondition"
-                      value={condition}
-                      checked={isConditionChecked('waterCondition', condition)}
-                      onChange={handleInputChange}
-                    />
-                    <ToggleText $checked={isConditionChecked('waterCondition', condition)}>
-                      {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 물기' : '많이 물기'})
-                    </ToggleText>
-                  </ToggleOption>
-                ))}
-              </ToggleContainer>
-              {errors.waterCondition && <ErrorMessage>{errors.waterCondition}</ErrorMessage>}
-            </FormGroup>
-
-            <FormGroup>
-              <Label>네고 가능 여부</Label>
-              <ToggleContainer>
-                <ToggleOption $checked={isNegotiableChecked(true)}>
-                  <input
-                    type="radio"
-                    name="negotiable"
-                    value={true}
-                    checked={isNegotiableChecked(true)}
-                    onChange={(e) => setFormData(prev => ({ ...prev, negotiable: true }))}
-                  />
-                  <ToggleText $checked={isNegotiableChecked(true)}>네고 가능 💬</ToggleText>
-                </ToggleOption>
-                <ToggleOption $checked={isNegotiableChecked(false)}>
-                  <input
-                    type="radio"
-                    name="negotiable"
-                    value={false}
-                    checked={isNegotiableChecked(false)}
-                    onChange={(e) => setFormData(prev => ({ ...prev, negotiable: false }))}
-                  />
-                  <ToggleText $checked={isNegotiableChecked(false)}>네고 불가 🚫</ToggleText>
-                </ToggleOption>
-              </ToggleContainer>
-            </FormGroup>
-
-            <FormGroup>
-              <Label>
-                원가 {inputType === 'search' && <Required>*</Required>}
-              </Label>
-              {inputType === 'custom' && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>
-                    <input
-                      type="checkbox"
-                      checked={unknownOriginalPrice}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setUnknownOriginalPrice(checked);
-                        if (checked) {
-                          setFormData(prev => ({ ...prev, originalPrice: '' }));
-                          clearErrors('originalPrice');
-                        }
-                      }}
-                      style={{ marginRight: '0.5rem' }}
-                    />
-                    정가 없음/모름
-                  </label>
-                </div>
-              )}
-              <Input
-                type="number"
-                name="originalPrice"
-                value={formData.originalPrice}
-                onChange={handleOriginalPriceChange}
-                placeholder={inputType === 'custom' ? '정가를 입력해줘 (선택)' : '정가를 입력해줘'}
-                min="0"
-                disabled={inputType === 'custom' && unknownOriginalPrice}
-              />
-              {errors.originalPrice && <ErrorMessage>{errors.originalPrice}</ErrorMessage>}
-              <HelpText>{inputType === 'custom' ? '정가가 없는 프린트물 등은 체크 후 생략 가능해!' : '책의 정가를 입력해줘'}</HelpText>
-            </FormGroup>
-
-            <FormGroup>
-              <Label>판매가 <Required>*</Required></Label>
-              <Input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleInputChange}
-                placeholder={
-                  inputType === 'custom'
-                    ? (unknownOriginalPrice
-                        ? '정가 없음/모름 — 시장가격과 상태를 고려해 판매가를 입력해줘'
-                        : '추천가 미제공 — 책 상태를 고려해 판매가를 입력해줘')
-                    : '추천가를 참고해 판매가를 입력해줘'
-                }
-                min="0"
-              />
-              {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
-              
-              {inputType === 'search' && formData.originalPrice && recommended && (
-                <DiscountInfo>
-                  할인율: {recommended.discountRate}% 
-                  ({(parseInt(formData.originalPrice) - recommended.recommendedPrice).toLocaleString()}원 할인)
-                  <br />
-                  <strong>추천가: {recommended.recommendedPrice.toLocaleString()}원</strong>
-                  <RecommendButton
-                    type="button"
-                    onClick={() => setFormData(prev => ({ 
-                      ...prev, 
-                      price: recommended.recommendedPrice.toString() 
-                    }))}
-                  >
-                    추천 가격으로 입력 ✨
-                  </RecommendButton>
-                  <InfoButton 
-                    type="button" 
-                    onClick={() => setShowInfoModal(true)} 
-                    title="추천 거래 가격 산정 기준 안내"
-                  >
-                    <FaInfoCircle />
-                  </InfoButton>
-                </DiscountInfo>
-              )}
-
-              {inputType === 'custom' && (
-                <HelpText>
-                  직접 입력에서는 추천가가 제공되지 않습니다. 책 상태와 시장 가격을 고려해 합리적인 금액을 입력해 주세요.
-                </HelpText>
-              )}
-            </FormGroup>
-
-            <FormGroup>
-              <Label>상세 설명</Label>
-              <TextArea
-                name="postContent"
-                value={formData.postContent}
-                onChange={handleInputChange}
-                placeholder="책 상태나 거래 방법 등 자세한 설명을 써줘! 📝 예: 필기는 연필로 되어있어서 지우개로 지울 수 있어! T동에서 직거래 가능해!"
-              />
-              <HelpText>구매자가 궁금해할 만한 내용을 상세히 적어주면 좋아! 🤗</HelpText>
-            </FormGroup>
-          </FormSection>
-
-          {/* 버튼 영역 */}
-          <ButtonSection>
-            <ButtonGroup>
-              <CancelButton type="button" onClick={handleCancel}>
-                취소
-              </CancelButton>
-
-              {!isEdit && (
-                <SaveDraftButton type="button" onClick={handleSaveDraft}>
-                  <FaSave /> 임시저장
-                </SaveDraftButton>
-              )}
-
-              <SubmitButton type="submit" disabled={loading}>
-                {loading ? (
-                  isEdit ? '수정 중... ⏳' : '등록 중... ⏳'
-                ) : (
-                  isEdit ? '수정하기 ✅' : '등록하기 🚀'
-                )}
-              </SubmitButton>
-            </ButtonGroup>
-          </ButtonSection>
-        </WriteForm>
-      </WriteContainer>
-
-      {/* 책 검색 모달 */}
-      {showBookSearch && (
-        <BookSearchModal>
-          <BookSearchContent>
-            <h3>📚 책 검색</h3>
-            <SearchInput
-              type="text"
-              placeholder="ISBN 또는 책 제목으로 검색해줘!"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
-            />
-            <BookSearchButton 
-              type="button"
-              onClick={handleBookSearch}
-              disabled={searchLoading}
-            >
-              <FaSearch /> {searchLoading ? '검색 중... ⏳' : '검색하기'}
-            </BookSearchButton>
-            
-            {searchLoading && (
-              <div style={{ textAlign: 'center', padding: '1rem' }}>
-                검색 중이야... 잠시만 기다려줘! ⏳
-              </div>
-            )}
-            
-            <BookList>
-              {(Array.isArray(searchResults) ? searchResults : []).map((book, index) => (
-                <BookItem key={index} onClick={() => handleBookSelect(book)}>
-                  {/* 썸네일이 있으면 보여주고, 없어도 문제없도록 */}
-                  {book.thumbnail && (
-                    <img
-                      src={book.thumbnail}
-                      alt={book.title}
-                      style={{ width: 48, height: 70, objectFit: 'cover', marginRight: 8, borderRadius: 4 }}
-                    />
+                <SubmitButton type="submit" disabled={loading}>
+                  {loading ? (
+                      isEdit ? '수정 중... ⏳' : '등록 중... ⏳'
+                  ) : (
+                      isEdit ? '수정하기 ✅' : '등록하기 🚀'
                   )}
-                  <div>
-                    <BookItemTitle>{book.title}</BookItemTitle>
-                    <BookInfo>
-                      저자: {book.author || '정보 없음'} | 출판사: {book.publisher || '정보 없음'}
-                    </BookInfo>
-                    {book.isbn && <BookInfo>ISBN: {book.isbn}</BookInfo>}
-                  </div>
-                </BookItem>
-              ))}
-            </BookList>
-            
-            <ModalButtons>
-              <ModalButton 
-                type="button" 
-                className="secondary" 
-                onClick={handleCloseBookSearch}
-              >
-                닫기
-              </ModalButton>
-            </ModalButtons>
-          </BookSearchContent>
-        </BookSearchModal>
-      )}
+                </SubmitButton>
+              </ButtonGroup>
+            </ButtonSection>
+          </WriteForm>
+        </WriteContainer>
 
-      {/* 경고 모달 */}
-      <WarningModal
-        isOpen={showWarningModal}
-        onClose={handleCancelExit}
-        onConfirm={handleConfirmExit}
-        onCancel={handleCancelExit}
-        onSaveDraft={handleSaveDraftAndExit}
-        type="sale"
-        showSaveDraft={!isEdit} // 수정 모드에서는 임시저장 버튼 숨김
-      />
+        {/* 책 검색 모달 */}
+        {showBookSearch && (
+            <BookSearchModal>
+              <BookSearchContent>
+                <h3>📚 책 검색</h3>
+                <SearchInput
+                    type="text"
+                    placeholder="ISBN 또는 책 제목으로 검색해줘!"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
+                />
+                <BookSearchButton
+                    type="button"
+                    onClick={handleBookSearch}
+                    disabled={searchLoading}
+                >
+                  <FaSearch /> {searchLoading ? '검색 중... ⏳' : '검색하기'}
+                </BookSearchButton>
 
-      {/* 정보 모달 */}
-      {showInfoModal && (
-        <InfoModalOverlay onClick={() => setShowInfoModal(false)}>
-          <InfoModalContent onClick={e => e.stopPropagation()}>
-            <h3>📚 추천 거래 가격 산정 기준표</h3>
-            <InfoDescription>
-              <p>원가 대비 책 상태를 종합적으로 평가해서 추천 가격을 계산해줘! 🤖</p>
-              <p>각 항목별 할인율이 누적되어 적용돼.</p>
-            </InfoDescription>
-            <InfoTable>
-              <thead>
-                <tr>
-                  <th>평가 항목</th>
-                  <th>가중치</th>
-                  <th>상태별 할인율</th>
-                  <th>상세 설명</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>필기 상태</strong></td>
-                  <td>15%</td>
-                  <td>상: 2.25% / 중: 5.25% / 하: 8.25%</td>
-                  <td>연필, 펜 등으로 필기된 정도에 따라 할인</td>
-                </tr>
-                <tr>
-                  <td><strong>찢어짐 정도</strong></td>
-                  <td>35%</td>
-                  <td>상: 5.25% / 중: 12.25% / 하: 19.25%</td>
-                  <td>책장, 표지 등의 찢어짐 정도에 따라 할인</td>
-                </tr>
-                <tr>
-                  <td><strong>물흘림 정도</strong></td>
-                  <td>50%</td>
-                  <td>상: 7.5% / 중: 17.5% / 하: 27.5%</td>
-                  <td>물에 젖은 흔적이나 얼룩 정도에 따라 할인</td>
-                </tr>
-                <tr style={{backgroundColor: '#f8f9fa'}}>
-                  <td><strong>중고책 기본 할인</strong></td>
-                  <td>-</td>
-                  <td>10%</td>
-                  <td>새책이 아닌 모든 중고책에 기본 적용</td>
-                </tr>
-                <tr style={{backgroundColor: '#e3f2fd', fontWeight: 'bold'}}>
-                  <td colSpan={2}><strong>최대 총 할인율</strong></td>
-                  <td><strong>약 65%</strong></td>
-                  <td><strong>모든 상태가 '하'일 때</strong></td>
-                </tr>
-              </tbody>
-            </InfoTable>
-            <InfoNote>
-              <p><strong>💡 참고사항:</strong></p>
-              <ul>
-                <li>각 항목의 상태는 '상/중/하'로 평가해줘</li>
-                <li>할인율은 원가에서 차감되어 추천가가 계산돼</li>
-                <li>실제 판매가는 자유롭게 설정할 수 있어!</li>
-                <li>이 기준은 참고용이니까 시장 상황에 맞게 조정해도 좋아 📊</li>
-              </ul>
-            </InfoNote>
-            <InfoModalClose onClick={() => setShowInfoModal(false)}>
-              확인 👍
-            </InfoModalClose>
-          </InfoModalContent>
-        </InfoModalOverlay>
-      )}
-    </>
+                {searchLoading && (
+                    <div style={{ textAlign: 'center', padding: '1rem' }}>
+                      검색 중이야... 잠시만 기다려줘! ⏳
+                    </div>
+                )}
+
+                <BookList>
+                  {(Array.isArray(searchResults) ? searchResults : []).map((book, index) => (
+                      <BookItem key={index} onClick={() => handleBookSelect(book)}>
+                        {book.thumbnail && (
+                            <img
+                                src={book.thumbnail}
+                                alt={book.title}
+                                style={{ width: 48, height: 70, objectFit: 'cover', marginRight: 8, borderRadius: 4 }}
+                            />
+                        )}
+                        <div>
+                          <BookItemTitle>{book.title}</BookItemTitle>
+                          <BookInfo>
+                            저자: {book.author || '정보 없음'} | 출판사: {book.publisher || '정보 없음'}
+                          </BookInfo>
+                          {book.isbn && <BookInfo>ISBN: {book.isbn}</BookInfo>}
+                        </div>
+                      </BookItem>
+                  ))}
+                </BookList>
+
+                <ModalButtons>
+                  <ModalButton
+                      type="button"
+                      className="secondary"
+                      onClick={handleCloseBookSearch}
+                  >
+                    닫기
+                  </ModalButton>
+                </ModalButtons>
+              </BookSearchContent>
+            </BookSearchModal>
+        )}
+
+        {/* 경고 모달 */}
+        <WarningModal
+            isOpen={showWarningModal}
+            onClose={handleCancelExit}
+            onConfirm={handleConfirmExit}
+            onCancel={handleCancelExit}
+            onSaveDraft={handleSaveDraftAndExit}
+            type="sale"
+            showSaveDraft={!isEdit}
+        />
+
+        {/* 정보 모달 */}
+        {showInfoModal && (
+            <InfoModalOverlay onClick={() => setShowInfoModal(false)}>
+              <InfoModalContent onClick={e => e.stopPropagation()}>
+                <h3>📚 추천 거래 가격 산정 기준표</h3>
+                <InfoDescription>
+                  <p>원가 대비 책 상태를 종합적으로 평가해서 추천 가격을 계산해줘! 🤖</p>
+                  <p>각 항목별 할인율이 누적되어 적용돼.</p>
+                </InfoDescription>
+                <InfoTable>
+                  <thead>
+                  <tr>
+                    <th>평가 항목</th>
+                    <th>가중치</th>
+                    <th>상태별 할인율</th>
+                    <th>상세 설명</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr>
+                    <td><strong>필기 상태</strong></td>
+                    <td>15%</td>
+                    <td>상: 2.25% / 중: 5.25% / 하: 8.25%</td>
+                    <td>연필, 펜 등으로 필기된 정도에 따라 할인</td>
+                  </tr>
+                  <tr>
+                    <td><strong>찢어짐 정도</strong></td>
+                    <td>35%</td>
+                    <td>상: 5.25% / 중: 12.25% / 하: 19.25%</td>
+                    <td>책장, 표지 등의 찢어짐 정도에 따라 할인</td>
+                  </tr>
+                  <tr>
+                    <td><strong>물흘림 정도</strong></td>
+                    <td>50%</td>
+                    <td>상: 7.5% / 중: 17.5% / 하: 27.5%</td>
+                    <td>물에 젖은 흔적이나 얼룩 정도에 따라 할인</td>
+                  </tr>
+                  <tr style={{backgroundColor: '#f8f9fa'}}>
+                    <td><strong>중고책 기본 할인</strong></td>
+                    <td>-</td>
+                    <td>10%</td>
+                    <td>새책이 아닌 모든 중고책에 기본 적용</td>
+                  </tr>
+                  <tr style={{backgroundColor: '#e3f2fd', fontWeight: 'bold'}}>
+                    <td colSpan={2}><strong>최대 총 할인율</strong></td>
+                    <td><strong>약 65%</strong></td>
+                    <td><strong>모든 상태가 '하'일 때</strong></td>
+                  </tr>
+                  </tbody>
+                </InfoTable>
+                <InfoNote>
+                  <p><strong>💡 참고사항:</strong></p>
+                  <ul>
+                    <li>각 항목의 상태는 '상/중/하'로 평가해줘</li>
+                    <li>할인율은 원가에서 차감되어 추천가가 계산돼</li>
+                    <li>실제 판매가는 자유롭게 설정할 수 있어!</li>
+                    <li>이 기준은 참고용이니까 시장 상황에 맞게 조정해도 좋아 📊</li>
+                  </ul>
+                </InfoNote>
+                <InfoModalClose onClick={() => setShowInfoModal(false)}>
+                  확인 👍
+                </InfoModalClose>
+              </InfoModalContent>
+            </InfoModalOverlay>
+        )}
+      </>
   );
 };
 
