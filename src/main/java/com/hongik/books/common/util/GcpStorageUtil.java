@@ -27,7 +27,7 @@ public class GcpStorageUtil {
      * MultipartFile을 GCP Cloud Storage에 업로드하고, 공개 URL을 반환
      *
      * @param file 업로드할 이미지 파일
-     * @param directory 업로드할 디렉토리 (e.g., "profile-images", "book-covers")
+     * @param directory 업로드할 디렉토리
      * @return 업로드된 파일의 공개 URL
      * @throws IOException 파일 처리 중 예외 발생 시
      */

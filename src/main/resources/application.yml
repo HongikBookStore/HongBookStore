@@ -105,11 +105,12 @@ spring:
         bucket-name: ${GCP_BUCKET_NAME} # .env 파일의 GCP_BUCKET_NAME 값을 사용합니다.
       credentials:
         location: classpath:gcp-service-account-key.json # 키 파일은 그대로 resources 폴더에서 관리합니다.
-    servlet:
-      multipart:
-        enabled: true
-        max-file-size: 10MB # 업로드 파일 최대 크기 설정
-        max-request-size: 10MB
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB # 단일 파일 최대 크기
+      # 여러 장 업로드 시 총합이 10MB를 넘어서 실패하는 이슈 대응
+      max-request-size: 30MB
 
 ### JWT ###
 jwt:
@@ -168,6 +169,7 @@ naver:
     client-id: ${NAVER_ROUTE_ID}
     client-secret: ${NAVER_ROUTE_SECRET}
 
+### KMA ###
 weather:
   kma:
     base-url: "https://apihub.kma.go.kr"

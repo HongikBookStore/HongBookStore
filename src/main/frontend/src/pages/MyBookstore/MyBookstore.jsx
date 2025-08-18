@@ -618,8 +618,8 @@ const MyBookstore = () => {
     return myPosts.filter(post => post.status === statusMapping[activeTab]);
   };
 
-  const handleEditBook = (bookId) => {
-    navigate(`/bookwrite/${bookId}`);
+  const handleEditBook = (postId) => {
+    navigate(`/postwrite/${postId}`);
   };
 
   // 게시글 삭제 핸들러

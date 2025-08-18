@@ -890,6 +890,7 @@ const PostWrite = () => {
   const [loading, setLoading] = useState(false);
 
   const [inputType, setInputType] = useState('search'); // 'search' or 'custom'
+  const [unknownOriginalPrice, setUnknownOriginalPrice] = useState(false); // custom 모드에서 정가 없음/모름
   const [showBookSearch, setShowBookSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -968,6 +969,13 @@ const PostWrite = () => {
       stopWriting();
     };
   }, [startWriting, stopWriting, loadDraftData]);
+
+  // 등록 방식 전환 시 custom -> search로 변경되면 정가 없음 플래그 해제
+  useEffect(() => {
+    if (inputType === 'search' && unknownOriginalPrice) {
+      setUnknownOriginalPrice(false);
+    }
+  }, [inputType, unknownOriginalPrice]);
 
   // 폼 데이터 변경 감지
   useEffect(() => {
@@ -1250,14 +1258,25 @@ const PostWrite = () => {
     }
 
     const originalPrice = parseInt(formData.originalPrice, 10);
-    if (!formData.originalPrice || Number.isNaN(originalPrice) || originalPrice <= 0) {
-      newErrors.originalPrice = '원가를 올바르게 입력해줘! 💰';
+    const price = parseInt(formData.price, 10);
+
+    // 원가 필수 여부: 검색 모드에서는 필수, 직접 입력(custom)에서는 선택
+    if (inputType === 'search') {
+      if (!formData.originalPrice || Number.isNaN(originalPrice) || originalPrice <= 0) {
+        newErrors.originalPrice = '원가를 올바르게 입력해줘! 💰';
+      }
+    } else {
+      // custom 모드: 사용자가 원가를 적어준 경우에만 유효성 검사
+      if (!unknownOriginalPrice && formData.originalPrice) {
+        if (Number.isNaN(originalPrice) || originalPrice <= 0) {
+          newErrors.originalPrice = '원가를 올바르게 입력해줘! 💰';
+        }
+      }
     }
 
-    const price = parseInt(formData.price, 10);
     if (!formData.price || Number.isNaN(price) || price <= 0) {
       newErrors.price = '판매가를 올바르게 입력해줘! 💵';
-    } else if (!Number.isNaN(originalPrice) && price > originalPrice) {
+    } else if (formData.originalPrice && !Number.isNaN(originalPrice) && price > originalPrice) { // 원가가 있을 때만 비교
       newErrors.price = '판매가가 원가보다 클 수 없어! 🤔';
     }
 
@@ -1312,7 +1331,25 @@ const PostWrite = () => {
           waterCondition: CONDITION_MAP[formData.waterCondition],
           negotiable: formData.negotiable,
         };
+
         await axios.patch(`/api/posts/${id}`, payload, { headers: getAuthHeader() });
+
+        // 새로 추가된 이미지가 있으면 별도 업로드 엔드포인트 호출
+        const newImageFiles = images.filter(img => img.file && !img.isUploaded).map(img => img.file);
+        if (newImageFiles.length > 0) {
+          const fd = new FormData();
+          newImageFiles.forEach(f => fd.append('images', f));
+
+          // 디버그 출력
+          try {
+            for (const [k, v] of fd.entries()) {
+              console.debug('[edit-upload] part', k, v && v.name ? v.name : v);
+            }
+          } catch {}
+
+          await axios.post(`/api/posts/${id}/images`, fd, { headers: { ...getAuthHeader() } });
+        }
+
         alert('게시글이 성공적으로 수정됐어! 🎉');
         localStorage.removeItem(DRAFT_STORAGE_KEY);
         navigate(`/posts/${id}`);
@@ -1326,7 +1363,6 @@ const PostWrite = () => {
           bookTitle: formData.bookTitle.trim(),
           author: formData.author.trim(),
           publisher: formData.publisher.trim(),
-          originalPrice: parseInt(formData.originalPrice, 10),
           postTitle: formData.postTitle.trim(),
           postContent: formData.postContent.trim(),
           price: parseInt(formData.price, 10),
@@ -1342,21 +1378,55 @@ const PostWrite = () => {
 
         if (inputType === 'search') {
           endpoint = '/api/posts';
-          requestJson = { ...baseData, isbn: formData.isbn.trim() };
+          requestJson = {
+            ...baseData,
+            isbn: formData.isbn.trim(),
+            originalPrice: parseInt(formData.originalPrice, 10),
+          };
         } else {
           endpoint = '/api/posts/custom';
-          requestJson = baseData;
+          // custom 모드: 원가는 선택 사항. 입력이 없거나 '정가 없음/모름'이면 0으로 전송
+          const parsedOriginal = parseInt(formData.originalPrice, 10);
+          requestJson = {
+            ...baseData,
+            originalPrice: (!unknownOriginalPrice && formData.originalPrice && !Number.isNaN(parsedOriginal) && parsedOriginal > 0)
+              ? parsedOriginal
+              : 0,
+          };
         }
 
-        apiData.append('request', new Blob([JSON.stringify(requestJson)], { type: 'application/json' }));
+        // JSON 파트는 명시적으로 파일명을 지정해 Content-Type 힌트를 강화합니다.
+        apiData.append(
+          'request',
+          new Blob([JSON.stringify(requestJson)], { type: 'application/json' }),
+          'request.json'
+        );
+
+        // 새 이미지만 전송
         images.forEach(img => {
           if (img.file && !img.isUploaded) {
             apiData.append('images', img.file);
           }
         });
 
-        await axios.post(endpoint, apiData, {
-          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' }
+        // 디버그: 전송되는 FormData 내용을 콘솔에서 확인 (개발 편의)
+        try {
+          for (const [k, v] of apiData.entries()) {
+            if (k === 'images' && v && typeof v === 'object') {
+              console.debug('[upload] part', k, (v.name || ''), (v.type || ''), (v.size || ''));
+            } else if (k === 'request') {
+              console.debug('[upload] part', k, '(JSON)');
+            } else {
+              console.debug('[upload] part', k, v);
+            }
+          }
+        } catch {}
+
+        await axios.post(endpoint, apiData, { 
+          // Content-Type은 브라우저가 boundary 포함해 자동 설정하도록 둡니다.
+          headers: { 
+            ...getAuthHeader()
+          } 
         });
 
         alert('게시글이 성공적으로 등록됐어! 🎉');
@@ -1365,15 +1435,20 @@ const PostWrite = () => {
       }
     } catch (error) {
       console.error("게시글 처리 중 오류 발생:", error);
+      const serverMessage = error.response?.data?.message;
+
       if (error.response?.status === 401) {
-        alert('로그인이 필요해! 다시 로그인해줘 🔐');
+        alert(serverMessage || '로그인이 필요해! 다시 로그인해줘 🔐');
         navigate('/login');
       } else if (error.response?.status === 403) {
-        alert('권한이 없어! 😥');
+        alert(serverMessage || '권한이 없어! 😥');
       } else if (error.response?.status === 400) {
-        alert('입력 정보에 문제가 있어! 다시 확인해줘 📝');
+        // 용량 초과, 잘못된 포맷 등 서버 메시지를 우선 표시
+        alert(serverMessage || '입력 정보에 문제가 있어! 다시 확인해줘 📝');
+      } else if (error.response?.status === 415) {
+        alert(serverMessage || '업로드 형식이 올바르지 않아! multipart/form-data로 다시 시도해줘 📎');
       } else {
-        alert('오류가 발생했어! 잠시 후 다시 시도해줘 🔄');
+        alert(serverMessage || '오류가 발생했어! 잠시 후 다시 시도해줘 🔄');
       }
     } finally {
       setLoading(false);

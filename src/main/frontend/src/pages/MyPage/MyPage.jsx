@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from '../../contexts/LocationContext'; // TODO: 위치 관리 기능 구현
 import axios from 'axios';
+import { useNavigate as useRouterNavigate } from 'react-router-dom';
 
 const MyPageContainer = styled.div`
   padding: 2rem 1rem 4rem;
@@ -390,6 +391,141 @@ const SettingsSection = styled.div`
       margin-bottom: 2rem;
     }
   }
+`;
+
+// 최근 본 게시글 카드 스타일
+const RecentGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+`;
+
+const RecentCard = styled.div`
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    border-color: var(--primary);
+  }
+`;
+
+const RecentThumb = styled.div`
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+`;
+
+const RecentTitle = styled.div`
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+`;
+
+const RecentMeta = styled.div`
+  font-size: 0.8rem;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+// 확인 모달 스타일
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalBox = styled.div`
+  width: min(520px, 92vw);
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  overflow: hidden;
+`;
+
+const ModalHeader = styled.div`
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--text);
+`;
+
+const ModalBody = styled.div`
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 1rem;
+`;
+
+const ModalThumb = styled.div`
+  width: 96px;
+  height: 96px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  img { width: 100%; height: 100%; object-fit: cover; }
+`;
+
+const ModalInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  .title { font-weight: 700; color: var(--text); line-height: 1.3; }
+  .meta { font-size: 0.9rem; color: var(--text-light); }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem 1.25rem;
+`;
+
+const ModalButton = styled.button`
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  transition: all 0.15s;
+  &:hover { background: #f8fafc; }
+  &.primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  &.primary:hover { filter: brightness(0.95); }
 `;
 
 const Button = styled.button`
@@ -810,6 +946,38 @@ const MyPage = () => {
     fetchProfile();
   }, [fetchProfile]);
 
+  // 최근 본 게시글 목록
+  const [recentPosts, setRecentPosts] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(true);
+  const routerNavigate = useRouterNavigate();
+  const [confirmPost, setConfirmPost] = useState(null);
+
+  const fetchRecent = useCallback(async () => {
+    setRecentLoading(true);
+    try {
+      const res = await axios.get('/api/posts/recent?limit=10', { headers: getAuthHeader() });
+      setRecentPosts(res.data || []);
+    } catch (e) {
+      setRecentPosts([]);
+    } finally {
+      setRecentLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecent();
+  }, [fetchRecent]);
+
+  const openConfirm = (post) => setConfirmPost(post);
+  const closeConfirm = () => setConfirmPost(null);
+  const goToPost = () => {
+    if (confirmPost) {
+      const id = confirmPost.postId;
+      setConfirmPost(null);
+      routerNavigate(`/posts/${id}`);
+    }
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -1019,6 +1187,59 @@ const MyPage = () => {
 
       {/* 오른쪽 열 - 설정 섹션들 */}
       <SettingsContainer>
+        <SettingsSection>
+          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> 최근 본 게시글</h3>
+          {recentLoading ? (
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>불러오는 중…</div>
+          ) : recentPosts.length === 0 ? (
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>최근 본 게시글이 없습니다.</div>
+          ) : (
+            <RecentGrid>
+              {recentPosts.map(p => (
+                <RecentCard key={p.postId} onClick={() => openConfirm(p)}>
+                  <RecentThumb>
+                    {p.thumbnailUrl ? (
+                      <img src={p.thumbnailUrl} alt={p.postTitle} />
+                    ) : (
+                      <span>{p.postTitle}</span>
+                    )}
+                  </RecentThumb>
+                  <RecentTitle>{p.postTitle}</RecentTitle>
+                  <RecentMeta>
+                    <span>{(p.price ?? 0).toLocaleString()}원</span>
+                    <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
+                  </RecentMeta>
+                </RecentCard>
+              ))}
+            </RecentGrid>
+          )}
+        </SettingsSection>
+
+        {confirmPost && (
+          <ModalOverlay onClick={closeConfirm}>
+            <ModalBox onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>게시글로 이동할까요?</ModalHeader>
+              <ModalBody>
+                <ModalThumb>
+                  {confirmPost.thumbnailUrl ? (
+                    <img src={confirmPost.thumbnailUrl} alt={confirmPost.postTitle} />
+                  ) : (
+                    <span>{confirmPost.postTitle}</span>
+                  )}
+                </ModalThumb>
+                <ModalInfo>
+                  <div className="title">{confirmPost.postTitle}</div>
+                  <div className="meta">{confirmPost.author}</div>
+                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}원</div>
+                </ModalInfo>
+              </ModalBody>
+              <ModalActions>
+                <ModalButton onClick={closeConfirm}>취소</ModalButton>
+                <ModalButton className="primary" onClick={goToPost}>이동</ModalButton>
+              </ModalActions>
+            </ModalBox>
+          </ModalOverlay>
+        )}
         <SettingsSection>
           <h3>계정 정보</h3>
           <SettingsList>

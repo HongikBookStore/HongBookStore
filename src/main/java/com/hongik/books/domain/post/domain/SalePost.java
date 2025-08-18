@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -75,6 +76,10 @@ public class SalePost {
     @Column(nullable = false)
     @ColumnDefault("0") // DB 기본값을 0으로 설정
     private int views = 0;
+
+    // 해당 게시글을 찜한 수 (정렬용 가상 컬럼)
+    @Formula("(select count(pl.post_like_id) from post_like pl where pl.post_id = post_id)")
+    private long likeCount;
 
     private String locationName;
 
