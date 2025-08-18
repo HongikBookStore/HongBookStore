@@ -663,7 +663,8 @@ const PostDetail = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`/api/posts/${id}`);
+      // 로그인 사용자의 최근 본 게시글 기록을 위해 토큰이 있으면 인증 헤더를 포함해 호출
+      const response = await axios.get(`/api/posts/${id}`, { headers: getAuthHeader() });
       setPost(response.data);
       setSelectedImageIndex(0); // ✅ 이미지 인덱스 초기화
     } catch (err) {
