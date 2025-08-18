@@ -71,7 +71,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/my/**").authenticated()
                         // [추가] 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
                         .requestMatchers("/api/posts/**").authenticated()
-
+                        .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
                         // 그 외 요청은 인증 필요
                         .anyRequest().authenticated())
                 // OAuth 로그인 설정

@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 판매 게시글 상세 조회를 위한 응답 DTO
- * 게시글 정보, 책 정보, 판매자 정보, 그리고 여러 장의 이미지 URL을 모두 포함
- */
 @Getter
 public class SalePostDetailResponseDTO {
 
@@ -29,6 +25,10 @@ public class SalePostDetailResponseDTO {
     private final boolean negotiable;
     private final int views;
 
+    // ✅ 위치 정보 (교내/교외)
+    private final String oncampusPlaceCode;     // 예: "T", "R", "A" ...
+    private final String offcampusStationCode;  // 예: "홍대입구"
+
     // Book 정보
     private final Long bookId;
     private final String bookTitle;
@@ -41,17 +41,15 @@ public class SalePostDetailResponseDTO {
     private final String sellerNickname;
     private final String sellerProfileImageUrl;
 
-    // PostImage 정보 (여러 장의 이미지 URL)
+    // PostImage 정보
     private final List<String> postImageUrls;
 
-    // Entity를 DTO로 변환하는 정적 팩토리 메서드
     public static SalePostDetailResponseDTO fromEntity(SalePost salePost) {
         return new SalePostDetailResponseDTO(salePost);
     }
 
-    // 생성자를 private으로 선언하여 정적 팩토리 메서드 사용을 유도
     private SalePostDetailResponseDTO(SalePost salePost) {
-        // SalePost 정보 매핑
+        // SalePost 정보
         this.postId = salePost.getId();
         this.postTitle = salePost.getPostTitle();
         this.postContent = salePost.getPostContent();
@@ -64,19 +62,23 @@ public class SalePostDetailResponseDTO {
         this.negotiable = salePost.isNegotiable();
         this.views = salePost.getViews();
 
-        // 연관된 Book 정보 매핑
+        // ✅ 위치 정보 매핑 (엔티티의 필드/게터 이름에 맞춰주세요)
+        this.oncampusPlaceCode = salePost.getOncampusPlaceCode();      // 예: 컬럼 oncampus_place_code
+        this.offcampusStationCode = salePost.getOffcampusStationCode(); // 예: 컬럼 offcampus_station_code
+
+        // Book 정보
         this.bookId = salePost.getBook().getId();
         this.bookTitle = salePost.getBook().getTitle();
         this.author = salePost.getBook().getAuthor();
         this.publisher = salePost.getBook().getPublisher();
         this.originalPrice = salePost.getBook().getOriginalPrice();
 
-        // 연관된 User(Seller) 정보 매핑
+        // 판매자
         this.sellerId = salePost.getSeller().getId();
         this.sellerNickname = salePost.getSeller().getUsername();
         this.sellerProfileImageUrl = salePost.getSeller().getProfileImagePath();
 
-        // 연관된 PostImage 정보 매핑
+        // 이미지
         this.postImageUrls = salePost.getPostImages().stream()
                 .map(PostImage::getImageUrl)
                 .collect(Collectors.toList());

@@ -24,4 +24,8 @@ public class SalePostCustomCreateRequestDTO {
     private Condition tearCondition;
     private Condition waterCondition;
     private boolean negotiable;
+
+    // ✅ 추가: 교내/교외 기본 위치 코드
+    private String oncampusPlaceCode;     // 예: "R", "A" ...
+    private String offcampusStationCode;  // 예: "HONGDAE_2"
 }

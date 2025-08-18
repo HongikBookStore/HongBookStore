@@ -1,6 +1,5 @@
 package com.hongik.books.domain.post.service;
 
-
 import com.hongik.books.common.util.GcpStorageUtil;
 import com.hongik.books.domain.book.domain.Book;
 import com.hongik.books.domain.book.repository.BookRepository;
@@ -101,25 +100,18 @@ public class SalePostService {
      * 판매 게시글 목록을 페이지네이션 및 동적 조건으로 조회
      */
     public Page<SalePostSummaryResponseDTO> getSalePosts(PostSearchCondition condition, Pageable pageable) {
-        // Specification.allOf()를 사용하여 여러 조건을 조합
-        // allOf는 null인 Specification을 알아서 무시
-        // 1. 검색 조건 조립
         Specification<SalePost> spec = Specification.allOf(
                 PostSpecification.hasQuery(condition.getQuery()),
                 PostSpecification.inCategory(condition.getCategory()),
                 PostSpecification.priceBetween(condition.getMinPrice(), condition.getMaxPrice())
         );
 
-        // 2. 조립된 Specification으로 DB에서 데이터를 조회
         Page<SalePost> salePosts = salePostRepository.findAll(spec, pageable);
-
         return salePosts.map(SalePostSummaryResponseDTO::fromEntity);
     }
 
     /**
      * 특정 판매 게시글의 상세 정보를 조회, 조회수 1 증가
-     * @param postId 조회할 게시글의 ID
-     * @return 게시글 상세 정보 DTO
      */
     public SalePostDetailResponseDTO getSalePostById(Long postId) {
         SalePost salePost = findSalePostById(postId);
@@ -139,9 +131,6 @@ public class SalePostService {
 
     /**
      * 판매 게시글을 수정
-     * @param postId 수정할 게시글 ID
-     * @param request 수정할 내용 DTO
-     * @param userId 수정을 요청한 사용자 ID (권한 확인용)
      */
     public void updateSalePost(Long postId, SalePostUpdateRequestDTO request, Long userId) {
         SalePost salePost = findSalePostById(postId);
@@ -160,16 +149,11 @@ public class SalePostService {
 
     /**
      * 판매 게시글을 삭제 (GCP 이미지 포함)
-     * @param postId 삭제할 게시글 ID
-     * @param userId 삭제를 요청한 사용자 ID (권한 확인용)
      */
     public void deleteSalePost(Long postId, Long userId) {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
-
-        // GCP에서 이미지들 삭제
         salePost.getPostImages().forEach(image -> gcpStorageUtil.deleteImage(image.getImageUrl()));
-
         salePostRepository.delete(salePost);
     }
 
@@ -194,15 +178,35 @@ public class SalePostService {
         // DTO 타입에 따라 분기하여 SalePost 객체 생성 (중복 코드 제거)
         if (requestDto instanceof SalePostCreateRequestDTO req) {
             return SalePost.builder()
-                    .seller(seller).book(book).postTitle(req.getPostTitle()).postContent(req.getPostContent())
-                    .price(req.getPrice()).status(SalePost.SaleStatus.FOR_SALE).writingCondition(req.getWritingCondition())
-                    .tearCondition(req.getTearCondition()).waterCondition(req.getWaterCondition()).negotiable(req.isNegotiable())
+                    .seller(seller)
+                    .book(book)
+                    .postTitle(req.getPostTitle())
+                    .postContent(req.getPostContent())
+                    .price(req.getPrice())
+                    .status(SalePost.SaleStatus.FOR_SALE)
+                    .writingCondition(req.getWritingCondition())
+                    .tearCondition(req.getTearCondition())
+                    .waterCondition(req.getWaterCondition())
+                    .negotiable(req.isNegotiable())
+                    // ✅ 추가 매핑
+                    .oncampusPlaceCode(req.getOncampusPlaceCode())
+                    .offcampusStationCode(req.getOffcampusStationCode())
                     .build();
         } else if (requestDto instanceof SalePostCustomCreateRequestDTO req) {
             return SalePost.builder()
-                    .seller(seller).book(book).postTitle(req.getPostTitle()).postContent(req.getPostContent())
-                    .price(req.getPrice()).status(SalePost.SaleStatus.FOR_SALE).writingCondition(req.getWritingCondition())
-                    .tearCondition(req.getTearCondition()).waterCondition(req.getWaterCondition()).negotiable(req.isNegotiable())
+                    .seller(seller)
+                    .book(book)
+                    .postTitle(req.getPostTitle())
+                    .postContent(req.getPostContent())
+                    .price(req.getPrice())
+                    .status(SalePost.SaleStatus.FOR_SALE)
+                    .writingCondition(req.getWritingCondition())
+                    .tearCondition(req.getTearCondition())
+                    .waterCondition(req.getWaterCondition())
+                    .negotiable(req.isNegotiable())
+                    // ✅ 추가 매핑
+                    .oncampusPlaceCode(req.getOncampusPlaceCode())
+                    .offcampusStationCode(req.getOffcampusStationCode())
                     .build();
         }
         throw new IllegalArgumentException("지원하지 않는 요청 타입입니다.");
