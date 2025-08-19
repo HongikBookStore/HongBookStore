@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/posts/**").authenticated()
                         .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
+                        .requestMatchers("/api/user-categories/**").authenticated()
                         // 그 외 요청은 인증 필요
                         .anyRequest().authenticated())
                 // OAuth 로그인 설정
