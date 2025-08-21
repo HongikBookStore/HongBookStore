@@ -1,4 +1,4 @@
-package com.hongik.books.domain.review.domain;
+package com.hongik.books.domain.review.place.domain;
 
 import jakarta.persistence.*;
 import lombok.*;

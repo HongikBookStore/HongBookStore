@@ -1,9 +1,9 @@
-package com.hongik.books.domain.review.controller;
+package com.hongik.books.domain.review.place.controller;
 
 import com.hongik.books.auth.dto.LoginUserDTO;
-import com.hongik.books.domain.review.domain.ReviewReaction;
+import com.hongik.books.domain.review.place.domain.ReviewReaction;
 import com.hongik.books.domain.review.dto.ReviewDtos;
-import com.hongik.books.domain.review.service.PlaceReviewService;
+import com.hongik.books.domain.review.place.service.PlaceReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

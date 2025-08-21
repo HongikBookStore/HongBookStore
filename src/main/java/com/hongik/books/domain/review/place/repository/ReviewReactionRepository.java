@@ -1,6 +1,6 @@
-package com.hongik.books.domain.review.repository;
+package com.hongik.books.domain.review.place.repository;
 
-import com.hongik.books.domain.review.domain.ReviewReaction;
+import com.hongik.books.domain.review.place.domain.ReviewReaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

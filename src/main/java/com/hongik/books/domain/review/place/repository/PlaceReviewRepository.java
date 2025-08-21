@@ -1,6 +1,6 @@
-package com.hongik.books.domain.review.repository;
+package com.hongik.books.domain.review.place.repository;
 
-import com.hongik.books.domain.review.domain.PlaceReview;
+import com.hongik.books.domain.review.place.domain.PlaceReview;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;

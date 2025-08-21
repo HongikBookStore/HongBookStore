@@ -1,4 +1,4 @@
-package com.hongik.books.domain.review.controller;
+package com.hongik.books.domain.review.place.controller;
 
 import com.hongik.books.common.util.GcpStorageUtil;
 import lombok.RequiredArgsConstructor;

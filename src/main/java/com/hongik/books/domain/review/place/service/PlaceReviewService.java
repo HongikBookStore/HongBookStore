@@ -1,11 +1,11 @@
-package com.hongik.books.domain.review.service;
+package com.hongik.books.domain.review.place.service;
 
-import com.hongik.books.domain.review.domain.PlaceReview;
-import com.hongik.books.domain.review.domain.ReviewPhoto;
-import com.hongik.books.domain.review.domain.ReviewReaction;
+import com.hongik.books.domain.review.place.domain.PlaceReview;
+import com.hongik.books.domain.review.place.domain.ReviewPhoto;
+import com.hongik.books.domain.review.place.domain.ReviewReaction;
 import com.hongik.books.domain.review.dto.ReviewDtos;
-import com.hongik.books.domain.review.repository.PlaceReviewRepository;
-import com.hongik.books.domain.review.repository.ReviewReactionRepository;
+import com.hongik.books.domain.review.place.repository.PlaceReviewRepository;
+import com.hongik.books.domain.review.place.repository.ReviewReactionRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;

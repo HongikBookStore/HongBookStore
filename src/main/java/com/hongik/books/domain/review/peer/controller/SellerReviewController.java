@@ -1,9 +1,7 @@
 package com.hongik.books.domain.review.seller.controller;
 
 import com.hongik.books.auth.dto.LoginUserDTO;
-import com.hongik.books.domain.review.seller.dto.SellerReviewCreateRequestDTO;
-import com.hongik.books.domain.review.seller.dto.SellerReviewResponseDTO;
-import com.hongik.books.domain.review.seller.dto.SellerReviewSummaryDTO;
+import com.hongik.books.domain.review.peer.dto.PeerReviewDtos;
 import com.hongik.books.domain.review.seller.service.SellerReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,7 @@ public class SellerReviewController {
     @PostMapping
     public ResponseEntity<Void> createReview(
             @AuthenticationPrincipal LoginUserDTO loginUser,
-            @Valid @RequestBody SellerReviewCreateRequestDTO request) {
+            @Valid @RequestBody PeerReviewDtos.CreateRequest request) {
         sellerReviewService.createReview(loginUser.id(), request);
         return ResponseEntity.created(URI.create("/api/seller-reviews"))
                 .build();
@@ -32,19 +30,23 @@ public class SellerReviewController {
 
     // 특정 판매자에 대한 후기 목록 (공개)
     @GetMapping("/sellers/{sellerId}")
-    public ResponseEntity<List<SellerReviewResponseDTO>> getSellerReviews(@PathVariable Long sellerId) {
-        return ResponseEntity.ok(sellerReviewService.getReviewsForSeller(sellerId));
+    public ResponseEntity<PeerReviewDtos.PageRes> getSellerReviews(@PathVariable Long sellerId,
+                                                                  @RequestParam(defaultValue = "0") int page,
+                                                                  @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(sellerReviewService.getReviewsForSeller(sellerId, page, size));
     }
 
     // 특정 판매자에 대한 평점 요약 (공개)
     @GetMapping("/sellers/{sellerId}/summary")
-    public ResponseEntity<SellerReviewSummaryDTO> getSellerSummary(@PathVariable Long sellerId) {
+    public ResponseEntity<PeerReviewDtos.Summary> getSellerSummary(@PathVariable Long sellerId) {
         return ResponseEntity.ok(sellerReviewService.getSellerSummary(sellerId));
     }
 
     // 내가 받은 후기 목록 (인증 필요)
     @GetMapping("/my-received")
-    public ResponseEntity<List<SellerReviewResponseDTO>> getMyReceived(@AuthenticationPrincipal LoginUserDTO loginUser) {
-        return ResponseEntity.ok(sellerReviewService.getMyReceivedReviews(loginUser.id()));
+    public ResponseEntity<PeerReviewDtos.PageRes> getMyReceived(@AuthenticationPrincipal LoginUserDTO loginUser,
+                                                               @RequestParam(defaultValue = "0") int page,
+                                                               @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(sellerReviewService.getMyReceivedReviews(loginUser.id(), page, size));
     }
 }
