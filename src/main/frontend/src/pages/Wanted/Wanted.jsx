@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaSearch, FaUser, FaClock, FaBook, FaGraduationCap, FaEye } from 'react-icons/fa';
+import { FaPlus, FaSearch } from 'react-icons/fa';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
 import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton } from '../../components/ui';
@@ -86,89 +86,6 @@ const SearchInput = styled.input`
   }
 `;
 
-
-
-
-
-const WantedHeaderRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
-`;
-
-const WantedTitleText = styled.h3`
-  font-size: 1.3rem;
-  color: #333;
-  margin-bottom: 8px;
-  flex: 1;
-`;
-
-const MetaRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 0.3rem;
-`;
-
-
-
-const CategoryRow = styled.div`
-  margin-top: 0.7rem;
-  padding-top: 0.7rem;
-  border-top: 1px solid #f0f0f0;
-  font-size: 0.98rem;
-  color: #666;
-  word-break: break-all;
-`;
-
-const WantedContent = styled.div`
-  color: #555;
-  line-height: 1.6;
-  margin-bottom: 15px;
-`;
-
-const WantedTags = styled.div`
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-const Tag = styled.span`
-  padding: 4px 12px;
-  background: #e9ecef;
-  color: #495057;
-  border-radius: 15px;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-`;
-
-const WantedFooter = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #f0f0f0;
-`;
-
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #666;
-`;
-
-const ViewCount = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #888;
-  font-size: 0.9rem;
-`;
-
 const NoWanted = styled.div`
   text-align: center;
   padding: 60px 20px;
@@ -182,6 +99,16 @@ const PageWrapper = styled.div`
   width: 100%;
 `;
 
+/* 카드 전체를 클릭 영역으로 만들기 위한 래퍼 */
+const ClickableCard = styled.div`
+  cursor: pointer;
+  outline: none;
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .4);
+    border-radius: 12px;
+  }
+`;
+
 const Wanted = () => {
   const [wantedPosts, setWantedPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,60 +116,71 @@ const Wanted = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 임시 데이터
-  const mockWantedPosts = [
-    {
-      id: 1,
-      title: '자바의 정석 3판',
-      author: '남궁성',
-      condition: '상',
-      price: 15000,
-      category: '전공 > 공과대학 > 컴퓨터공학과',
-    },
-    {
-      id: 2,
-      title: '스프링 부트 입문',
-      author: '최범균',
-      condition: '중',
-      price: 18000,
-      category: '전공 > 공과대학 > 전자전기공학부',
-    },
-    {
-      id: 3,
-      title: '알고리즘 문제 해결 전략',
-      author: '구종만',
-      condition: '하',
-      price: 20000,
-      category: '전공 > 공과대학 > 컴퓨터공학과',
-    }
-  ];
-
+  // 목록 불러오기
   useEffect(() => {
-    setWantedPosts(mockWantedPosts);
+    async function fetchWanted() {
+      try {
+        const res = await fetch('/api/wanted'); // Vite 프록시 또는 절대 URL 사용
+        const contentType = res.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+
+        if (!res.ok) {
+          const errTxt = isJson ? JSON.stringify(await res.json()).slice(0, 500) : (await res.text()).slice(0, 500);
+          throw new Error(`구해요 목록 요청 실패(${res.status}) ${errTxt}`);
+        }
+
+        const payload = isJson ? await res.json() : null;
+
+        // 서버 응답이 ApiResponse 형태일 수도 있고, Page 그대로일 수도 있어 둘 다 지원
+        // 1) { success, data: { content: [...] } }
+        // 2) { content: [...] }
+        let list = [];
+        if (payload?.data?.content) {
+          list = payload.data.content;
+        } else if (payload?.content) {
+          list = payload.content;
+        } else if (Array.isArray(payload)) {
+          list = payload;
+        }
+
+        setWantedPosts(Array.isArray(list) ? list : []);
+      } catch (e) {
+        console.error('구해요 목록 불러오기 실패', e);
+        setWantedPosts([]);
+      }
+    }
+    fetchWanted();
   }, []);
 
-  const handleSearch = (e) => {
+  // 검색(클라이언트 임시 필터) — 실제 연동 시 서버 쿼리 파라미터로 교체
+  const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    // 실제로는 API 호출
-    setTimeout(() => {
-      const filtered = mockWantedPosts.filter(post => 
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.category.toLowerCase().includes(searchTerm.toLowerCase())
+    try {
+      // 실제 사용 시: /api/wanted?query=... 같은 식으로 백엔드와 합의
+      const keyword = searchTerm.trim().toLowerCase();
+      if (!keyword) {
+        setLoading(false);
+        return;
+      }
+      const filtered = wantedPosts.filter(p =>
+          (p.title || '').toLowerCase().includes(keyword) ||
+          (p.author || '').toLowerCase().includes(keyword) ||
+          (p.category || '').toLowerCase().includes(keyword)
       );
       setWantedPosts(filtered);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const handleFilter = (filter) => {
     setActiveFilter(filter);
-    // 실제로는 API 호출로 필터링
+    // TODO: 실제로는 API 호출 (예: /api/wanted?tag=programming)
   };
 
   const handlePostClick = (postId) => {
+    if (!postId) return;
     navigate(`/wanted/${postId}`);
   };
 
@@ -265,97 +203,115 @@ const Wanted = () => {
   };
 
   return (
-    <PageWrapper>
-      <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
-      <MainContent>
-        <WantedContainer>
-          <WantedHeader>
-            <WantedTitle>구해요 게시판</WantedTitle>
-            <WriteButton onClick={handleWriteClick}>
-              <FaPlus /> 글쓰기
-            </WriteButton>
-          </WantedHeader>
+      <PageWrapper>
+        <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
+        <MainContent>
+          <WantedContainer>
+            <WantedHeader>
+              <WantedTitle>구해요 게시판</WantedTitle>
+              <WriteButton onClick={handleWriteClick}>
+                <FaPlus /> 글쓰기
+              </WriteButton>
+            </WantedHeader>
 
-          <SearchSection>
-            <SearchForm onSubmit={handleSearch}>
-              <SearchInput
-                type="text"
-                placeholder="책의 제목이나 저자명을 검색해보세요."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <SearchButton type="submit">
-                <FaSearch />
-              </SearchButton>
-            </SearchForm>
-          </SearchSection>
+            <SearchSection>
+              <SearchForm onSubmit={handleSearch}>
+                <SearchInput
+                    type="text"
+                    placeholder="책의 제목이나 저자명을 검색해보세요."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <SearchButton type="submit">
+                  <FaSearch />
+                </SearchButton>
+              </SearchForm>
+            </SearchSection>
 
-          <FilterSection>
-            <FilterButton 
-              $active={activeFilter === 'all'} 
-              onClick={() => handleFilter('all')}
-            >
-              전체
-            </FilterButton>
-            <FilterButton 
-              $active={activeFilter === 'programming'} 
-              onClick={() => handleFilter('programming')}
-            >
-              프로그래밍
-            </FilterButton>
-            <FilterButton 
-              $active={activeFilter === 'algorithm'} 
-              onClick={() => handleFilter('algorithm')}
-            >
-              알고리즘
-            </FilterButton>
-            <FilterButton 
-              $active={activeFilter === 'math'} 
-              onClick={() => handleFilter('math')}
-            >
-              수학
-            </FilterButton>
-            <FilterButton 
-              $active={activeFilter === 'english'} 
-              onClick={() => handleFilter('english')}
-            >
-              영어
-            </FilterButton>
-          </FilterSection>
+            <FilterSection>
+              <FilterButton
+                  $active={activeFilter === 'all'}
+                  onClick={() => handleFilter('all')}
+              >
+                전체
+              </FilterButton>
+              <FilterButton
+                  $active={activeFilter === 'programming'}
+                  onClick={() => handleFilter('programming')}
+              >
+                프로그래밍
+              </FilterButton>
+              <FilterButton
+                  $active={activeFilter === 'algorithm'}
+                  onClick={() => handleFilter('algorithm')}
+              >
+                알고리즘
+              </FilterButton>
+              <FilterButton
+                  $active={activeFilter === 'math'}
+                  onClick={() => handleFilter('math')}
+              >
+                수학
+              </FilterButton>
+              <FilterButton
+                  $active={activeFilter === 'english'}
+                  onClick={() => handleFilter('english')}
+              >
+                영어
+              </FilterButton>
+            </FilterSection>
 
-          {loading ? (
-            <NoWanted>검색 중...</NoWanted>
-          ) : wantedPosts.length > 0 ? (
-            <Grid>
-              {wantedPosts.map(post => (
-                <Card key={post.id}>
-                  <CardTitle>{post.title}</CardTitle>
-                  <CardMeta>
-                        <MetaLabel>저자</MetaLabel>
-                        <MetaValue>{post.author}</MetaValue>
-                  </CardMeta>
-                  <CardMeta>
-                        <MetaLabel>상태</MetaLabel>
-                        <MetaValue>{post.condition}</MetaValue>
-                  </CardMeta>
-                  <CardMeta>
-                        <MetaLabel>희망 가격</MetaLabel>
-                        <MetaValue>{post.price.toLocaleString()}원</MetaValue>
-                  </CardMeta>
-                  <CardMeta>
-                    <MetaLabel>카테고리</MetaLabel>
-                    <MetaValue>{post.category.split('>').pop().trim()}</MetaValue>
-                  </CardMeta>
-                </Card>
-              ))}
-            </Grid>
-          ) : (
-            <NoWanted>등록된 글이 없습니다.</NoWanted>
-          )}
-        </WantedContainer>
-      </MainContent>
-    </PageWrapper>
+            {loading ? (
+                <NoWanted>검색 중...</NoWanted>
+            ) : wantedPosts.length > 0 ? (
+                <Grid>
+                  {wantedPosts.map((post) => {
+                    const priceNum = Number(post?.price ?? 0);
+                    const priceText = Number.isFinite(priceNum) ? `${priceNum.toLocaleString()}원` : '-';
+                    const categoryLast = (post?.category || '').split('>').pop()?.trim() || '';
+
+                    return (
+                        <ClickableCard
+                            key={post.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handlePostClick(post.id)}
+                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePostClick(post.id)}
+                        >
+                          <Card>
+                            <CardTitle>{post.title || '-'}</CardTitle>
+
+                            <CardMeta>
+                              <MetaLabel>저자</MetaLabel>
+                              <MetaValue>{post.author || '-'}</MetaValue>
+                            </CardMeta>
+
+                            <CardMeta>
+                              <MetaLabel>상태</MetaLabel>
+                              <MetaValue>{post.condition || '-'}</MetaValue>
+                            </CardMeta>
+
+                            <CardMeta>
+                              <MetaLabel>희망 가격</MetaLabel>
+                              <MetaValue>{priceText}</MetaValue>
+                            </CardMeta>
+
+                            <CardMeta>
+                              <MetaLabel>카테고리</MetaLabel>
+                              <MetaValue>{categoryLast}</MetaValue>
+                            </CardMeta>
+                          </Card>
+                        </ClickableCard>
+                    );
+                  })}
+                </Grid>
+            ) : (
+                <NoWanted>등록된 글이 없습니다.</NoWanted>
+            )}
+          </WantedContainer>
+        </MainContent>
+      </PageWrapper>
   );
 };
 
-export default Wanted; 
+export default Wanted;

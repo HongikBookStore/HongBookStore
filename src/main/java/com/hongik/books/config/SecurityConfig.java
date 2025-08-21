@@ -73,6 +73,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
                         .requestMatchers("/api/user-categories/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/wanted/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/wanted/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/wanted/**").authenticated()
+                        // (나머지 규칙들…)
                         // 그 외 요청은 인증 필요
                         .anyRequest().authenticated())
                 // OAuth 로그인 설정
