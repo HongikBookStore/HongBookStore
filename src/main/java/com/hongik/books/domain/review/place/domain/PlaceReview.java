@@ -8,7 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "place_reviews")
+@Table(name = "place_reviews",
+       indexes = {
+           @Index(name = "idx_place_reviews_place_id", columnList = "place_id"),
+           @Index(name = "idx_place_reviews_place_created", columnList = "place_id, created_at")
+       })
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

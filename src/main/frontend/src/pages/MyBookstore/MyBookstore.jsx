@@ -594,10 +594,17 @@ const MyBookstore = () => {
   const [error, setError] = useState({ myPosts: null, wishlist: null }); // 에러 상태 관리
   const navigate = useNavigate();
 
-  // 받은 거래 후기 상태
+  // 받은 거래 후기 상태 (페이지네이션 + 요약)
   const [myReviews, setMyReviews] = useState([]);
+  const [myReviewsTotal, setMyReviewsTotal] = useState(0);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [errorReviews, setErrorReviews] = useState('');
+  const [reviewPage, setReviewPage] = useState(0);
+  const [reviewSize, setReviewSize] = useState(5);
+  const [reviewTotalPages, setReviewTotalPages] = useState(0);
+  const [reviewLast, setReviewLast] = useState(true);
+  const [overallAvg, setOverallAvg] = useState(null);
+  const [profileId, setProfileId] = useState(null);
 
   // 내 판매글 목록을 불러오는 API 호출 함수
   const fetchMyPosts = useCallback(async () => {
@@ -633,22 +640,52 @@ const MyBookstore = () => {
   useEffect(() => {
     fetchMyPosts();
     fetchWishlist();
-    fetchMyReviews();
+    fetchMyReviews(0, reviewSize);
   }, [fetchMyPosts, fetchWishlist]);
 
-  const fetchMyReviews = useCallback(async () => {
+  const fetchMyReviews = useCallback(async (page = 0, size = reviewSize) => {
     setLoadingReviews(true);
     setErrorReviews('');
     try {
-      const res = await axios.get('/api/seller-reviews/my-received', { headers: getAuthHeader() });
-      setMyReviews(res.data || []);
+      const res = await axios.get('/api/seller-reviews/my-received', {
+        headers: getAuthHeader(),
+        params: { page, size }
+      });
+      const data = res.data || {};
+      setMyReviews(Array.isArray(data.content) ? data.content : []);
+      setMyReviewsTotal(typeof data.totalElements === 'number' ? data.totalElements : (Array.isArray(data.content) ? data.content.length : 0));
+      setReviewPage(typeof data.page === 'number' ? data.page : page);
+      setReviewSize(typeof data.size === 'number' ? data.size : size);
+      setReviewTotalPages(typeof data.totalPages === 'number' ? data.totalPages : 0);
+      setReviewLast(Boolean(data.last));
     } catch (e) {
       console.error('내가 받은 후기 조회 실패', e);
       setErrorReviews('후기를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoadingReviews(false);
     }
+  }, [reviewSize]);
+
+  // 내 프로필 ID → 전체 요약 불러오기
+  const fetchProfileId = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/my/profile', { headers: getAuthHeader() });
+      const uid = response?.data?.data?.id;
+      if (uid) setProfileId(uid);
+    } catch (_) {}
   }, []);
+
+  useEffect(() => { fetchProfileId(); }, [fetchProfileId]);
+
+  useEffect(() => {
+    const fetchSummary = async (uid) => {
+      try {
+        const res = await axios.get(`/api/reviews/summary/users/${uid}`, { headers: getAuthHeader() });
+        setOverallAvg(res.data?.overallAverage ?? null);
+      } catch (_) { setOverallAvg(null); }
+    };
+    if (profileId) fetchSummary(profileId);
+  }, [profileId]);
 
   // 탭에 따라 게시글을 필터링하는 함수
   const getFilteredBooks = () => {
@@ -849,7 +886,15 @@ const MyBookstore = () => {
           <SectionContainer>
             <SectionHeader>
               <SectionTitle>받은 거래 후기</SectionTitle>
-              <ViewMoreButton onClick={fetchMyReviews}>새로고침</ViewMoreButton>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <ViewMoreButton onClick={() => fetchMyReviews(0, reviewSize)}>새로고침</ViewMoreButton>
+                <ViewMoreButton onClick={() => reviewPage > 0 && fetchMyReviews(reviewPage - 1, reviewSize)} disabled={reviewPage <= 0}>
+                  이전
+                </ViewMoreButton>
+                <ViewMoreButton onClick={() => !reviewLast && fetchMyReviews(reviewPage + 1, reviewSize)} disabled={reviewLast}>
+                  다음
+                </ViewMoreButton>
+              </div>
             </SectionHeader>
             <ReviewSection>
               {loadingReviews ? (
@@ -867,9 +912,16 @@ const MyBookstore = () => {
               ) : (
                 <>
                   <div style={{marginBottom: 12, color: '#333', fontWeight: 600}}>
-                    평균 별점: {(
-                      myReviews.reduce((acc, r) => acc + (Number(r.ratingScore) || 0), 0) / myReviews.length
-                    ).toFixed(2)} / 5.00 (총 {myReviews.length}개)
+                    페이지 평균: {(
+                      myReviews.reduce((acc, r) => acc + (Number(r.ratingScore) || 0), 0) / (myReviews.length || 1)
+                    ).toFixed(2)} / 5.00
+                    {overallAvg != null && (
+                      <span style={{ marginLeft: 12, color:'#555', fontWeight: 500 }}>
+                        전체 평균: {Number(overallAvg).toFixed(2)} / 5.00
+                      </span>
+                    )}
+                    <span style={{ marginLeft: 12 }}>총 {myReviewsTotal}개</span>
+                    <span style={{ marginLeft: 12 }}>페이지 {reviewPage + 1} / {Math.max(reviewTotalPages, 1)}</span>
                   </div>
                   <ReviewList>
                     {myReviews.slice(0, 5).map(rv => (
@@ -881,7 +933,7 @@ const MyBookstore = () => {
                           )}
                         </div>
                         <div style={{display:'flex', alignItems:'center', gap:8}}>
-                          <ReviewBadge $label={rv.ratingLabel}>{rv.ratingLabel}</ReviewBadge>
+                          <ReviewBadge $label={(rv.ratingLabel || '').toString().toLowerCase()}>{rv.ratingLabel}</ReviewBadge>
                           <div style={{color:'#007bff', fontWeight:700}}>{Number(rv.ratingScore).toFixed(2)}★</div>
                         </div>
                       </ReviewItem>

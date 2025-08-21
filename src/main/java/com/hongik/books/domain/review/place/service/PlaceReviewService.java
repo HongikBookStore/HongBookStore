@@ -3,7 +3,7 @@ package com.hongik.books.domain.review.place.service;
 import com.hongik.books.domain.review.place.domain.PlaceReview;
 import com.hongik.books.domain.review.place.domain.ReviewPhoto;
 import com.hongik.books.domain.review.place.domain.ReviewReaction;
-import com.hongik.books.domain.review.dto.ReviewDtos;
+import com.hongik.books.domain.review.place.dto.ReviewDtos;
 import com.hongik.books.domain.review.place.repository.PlaceReviewRepository;
 import com.hongik.books.domain.review.place.repository.ReviewReactionRepository;
 import com.hongik.books.domain.user.domain.User;

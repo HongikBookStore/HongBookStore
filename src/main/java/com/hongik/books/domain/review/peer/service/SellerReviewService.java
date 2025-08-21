@@ -1,8 +1,7 @@
-package com.hongik.books.domain.review.seller.service;
+package com.hongik.books.domain.review.peer.service;
 
 import com.hongik.books.domain.review.peer.domain.PeerReview.TargetRole;
 import com.hongik.books.domain.review.peer.dto.PeerReviewDtos;
-import com.hongik.books.domain.review.peer.service.PeerReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

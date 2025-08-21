@@ -1,7 +1,7 @@
 package com.hongik.books.domain.review.summary.controller;
 
-import com.hongik.books.domain.review.buyer.repository.BuyerReviewRepository;
-import com.hongik.books.domain.review.seller.repository.SellerReviewRepository;
+import com.hongik.books.domain.review.peer.domain.PeerReview.TargetRole;
+import com.hongik.books.domain.review.peer.repository.PeerReviewRepository;
 import com.hongik.books.domain.review.summary.dto.UserReviewAggregateSummaryDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,15 +17,14 @@ import java.math.RoundingMode;
 @RequestMapping("/api/reviews/summary")
 @RequiredArgsConstructor
 public class ReviewSummaryController {
-    private final SellerReviewRepository sellerReviewRepository;
-    private final BuyerReviewRepository buyerReviewRepository;
+    private final PeerReviewRepository peerReviewRepository;
 
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserReviewAggregateSummaryDTO> getUserAggregate(@PathVariable Long userId) {
-        Double sellerAvgD = sellerReviewRepository.findAverageScoreBySellerId(userId);
-        long sellerCnt = sellerReviewRepository.countBySellerId(userId);
-        Double buyerAvgD = buyerReviewRepository.findAverageScoreByBuyerId(userId);
-        long buyerCnt = buyerReviewRepository.countByBuyerId(userId);
+        Double sellerAvgD = peerReviewRepository.findAverageScoreByTargetUserAndRole(userId, TargetRole.SELLER);
+        long sellerCnt = peerReviewRepository.countByTargetUserIdAndTargetRole(userId, TargetRole.SELLER);
+        Double buyerAvgD = peerReviewRepository.findAverageScoreByTargetUserAndRole(userId, TargetRole.BUYER);
+        long buyerCnt = peerReviewRepository.countByTargetUserIdAndTargetRole(userId, TargetRole.BUYER);
 
         BigDecimal sellerAvg = BigDecimal.valueOf(sellerAvgD == null ? 0.0 : sellerAvgD).setScale(2, RoundingMode.HALF_UP);
         BigDecimal buyerAvg = BigDecimal.valueOf(buyerAvgD == null ? 0.0 : buyerAvgD).setScale(2, RoundingMode.HALF_UP);
@@ -40,4 +39,3 @@ public class ReviewSummaryController {
         ));
     }
 }
-

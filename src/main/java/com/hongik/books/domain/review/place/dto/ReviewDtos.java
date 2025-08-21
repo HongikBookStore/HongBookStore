@@ -1,4 +1,4 @@
-package com.hongik.books.domain.review.dto;
+package com.hongik.books.domain.review.place.dto;
 
 import lombok.*;
 import java.util.List;

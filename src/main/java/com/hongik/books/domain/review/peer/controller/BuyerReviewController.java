@@ -1,8 +1,8 @@
-package com.hongik.books.domain.review.buyer.controller;
+package com.hongik.books.domain.review.peer.controller;
 
 import com.hongik.books.auth.dto.LoginUserDTO;
 import com.hongik.books.domain.review.peer.dto.PeerReviewDtos;
-import com.hongik.books.domain.review.buyer.service.BuyerReviewService;
+import com.hongik.books.domain.review.peer.service.BuyerReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,7 +10,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/buyer-reviews")
