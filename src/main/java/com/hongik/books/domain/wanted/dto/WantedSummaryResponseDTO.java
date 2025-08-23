@@ -8,7 +8,8 @@ public record WantedSummaryResponseDTO(
         String author,
         String condition,
         int price,
-        String category
+        String category,
+        String department
 ) {
     public static WantedSummaryResponseDTO from(Wanted w) {
         return new WantedSummaryResponseDTO(
@@ -17,7 +18,8 @@ public record WantedSummaryResponseDTO(
                 w.getAuthor(),
                 w.getDesiredCondition(),
                 w.getPrice(),
-                w.getCategory()
+                w.getCategory(),
+                w.getDepartment()
         );
     }
 }

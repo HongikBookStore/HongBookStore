@@ -10,6 +10,7 @@ public class WantedCreateRequestDTO {
     private String author;
     private String condition;
     private int price;
-    private String category;
+    private String category;    // "전공" | "교양"
+    private String department;  // 전공일 때만 사용
     private String content;
 }

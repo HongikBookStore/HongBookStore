@@ -5,6 +5,55 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
+/* =========================
+   헬퍼: userId 보장하기
+   ========================= */
+// JWT payload 파싱
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+        atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+// localStorage에 userId가 없으면 JWT에서 복구하거나(없으면 프롬프트) 저장
+async function ensureUserId() {
+  let uid = localStorage.getItem('userId');
+  if (uid) return uid;
+
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    const payload = parseJwt(token);
+    if (payload) {
+      uid = String(
+          payload.userId ?? payload.id ?? payload.user_id ?? payload.uid ?? payload.sub ?? ''
+      );
+      if (uid && uid !== 'undefined' && uid !== 'null') {
+        localStorage.setItem('userId', uid);
+        if (payload.nickname) localStorage.setItem('nickname', payload.nickname);
+        return uid;
+      }
+    }
+  }
+
+  // 개발/테스트 편의용(운영 배포 시 제거 권장)
+  const typed = window.prompt('userId가 없습니다. 테스트용 userId를 입력하세요', '1');
+  if (typed) {
+    localStorage.setItem('userId', typed);
+    return typed;
+  }
+  return null;
+}
+
 const WriteContainer = styled.div`
   max-width: 1600px;
   width: 100vw;
@@ -558,17 +607,31 @@ const WantedWrite = () => {
     if (!validateForm()) return;
 
     const token = localStorage.getItem('accessToken');
-    const category = `${formData.mainCategory} > ${formData.subCategory} > ${formData.detailCategory}`;
+    const userId = await ensureUserId(); // ✅ userId 보장
+    if (!userId) {
+      alert('로그인이 필요합니다. (userId가 없습니다)');
+      return;
+    }
 
-    // 백엔드 DTO는 { title, author, condition, price, category, content } 구조
-    const payload = {
+    // ✅ 백엔드 규격에 맞게 전송
+    const topCategory = formData.mainCategory || '교양';
+    const dept =
+        topCategory === '전공'
+            ? (formData.detailCategory || formData.subCategory || '').trim()
+            : '';
+
+    const basePayload = {
       title: formData.title.trim(),
       author: formData.author.trim(),
       condition: formData.condition,
       price: Number(formData.price),
-      category,
-      content: '' // 현재 UI에는 추가 설명 입력란이 없으므로 빈 값으로 보냄
+      category: topCategory,
+      content: '' // 설명 칸 없으므로 공란
     };
+    // 전공일 때만 department 필드 포함
+    const payload = (topCategory === '전공' && dept)
+        ? { ...basePayload, department: dept }
+        : basePayload;
 
     try {
       setSubmitting(true);
@@ -579,6 +642,7 @@ const WantedWrite = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': String(userId),            // ✅ 필수 헤더
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify(payload)
@@ -589,9 +653,9 @@ const WantedWrite = () => {
         throw new Error(`요청 실패 (${res.status}) ${txt}`);
       }
 
-      const json = await res.json().catch(() => ({}));
-      if (json && json.success === false) {
-        throw new Error(json.message || '처리 실패');
+      // 생성(201)은 body가 있을 수 있고, 수정(204)은 body 없음
+      if (!isEdit) {
+        await res.json().catch(() => ({}));
       }
 
       // 성공 처리

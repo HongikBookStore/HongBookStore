@@ -11,5 +11,6 @@ public class WantedUpdateRequestDTO {
     private String condition;
     private int price;
     private String category;
+    private String department;
     private String content;
 }

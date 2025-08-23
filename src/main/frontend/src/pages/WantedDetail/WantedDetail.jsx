@@ -259,12 +259,18 @@ export default function WantedDetail() {
         );
     }
 
+    // ⬇️ 여기서부터는 data가 존재하므로 안전하게 파생값 계산
     const condition = (data.condition || '').trim(); // '상/중/하'
     const displayAuthor =
         data.requesterNickname || data.requesterName || data.author || '익명 사용자';
-    const category = data.category || '';
     const createdAt = data.createdAt ? new Date(data.createdAt) : null;
     const views = typeof data.views !== 'undefined' ? Number(data.views) : null;
+
+    // 🔹 카테고리/학과 표시용 텍스트
+    const rawCategory = (data.category || '').trim();
+    const displayCategory = data.department
+        ? `${(rawCategory.split('>')[0]?.trim() || rawCategory || '전공')} / ${data.department}`
+        : (rawCategory.split('>').pop()?.trim() || rawCategory || '-');
 
     return (
         <PageWrapper>
@@ -297,7 +303,7 @@ export default function WantedDetail() {
                         </MetaRow>
 
                         <SubMeta>
-                            {category && <span><FaBook /> {category}</span>}
+                            {displayCategory && <span><FaBook /> {displayCategory}</span>}
                             {createdAt && <span><FaClock /> 작성일: {createdAt.toLocaleString('ko-KR')}</span>}
                             {views !== null && <span><FaEye /> 조회수: {views.toLocaleString()}</span>}
                         </SubMeta>
@@ -338,7 +344,7 @@ export default function WantedDetail() {
                                 </InfoItem>
                                 <InfoItem>
                                     <Label>카테고리</Label>
-                                    <Value>{category || '-'}</Value>
+                                    <Value>{displayCategory || '-'}</Value>
                                 </InfoItem>
                                 <InfoItem>
                                     <Label>작성자</Label>

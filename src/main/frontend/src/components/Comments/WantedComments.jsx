@@ -51,6 +51,13 @@ const Item = styled.li`
     &:first-child { border-top: 0; }
 `;
 
+const RepliesList = styled.ul`
+    list-style: none;
+    margin: 10px 0 0 26px;
+    padding-left: 12px;
+    border-left: 3px solid #eef2f6;
+`;
+
 const Meta = styled.div`
     display: flex; gap: 10px; align-items: center; color: #6b7280; font-size: .9rem; margin-bottom: 6px;
 `;
@@ -64,8 +71,7 @@ const Actions = styled.div`
 `;
 
 const ReplyBox = styled.div`
-    margin-top: 10px; margin-left: 26px; /* 들여쓰기 */
-    border-left: 3px solid #eef2f6; padding-left: 12px;
+    margin-top: 10px; margin-left: 26px;
 `;
 
 function authHeaders() {
@@ -88,7 +94,6 @@ function toJsonSafely(res) {
 
 function normalizeApiData(json) {
     if (!json) return [];
-    // ApiResponse<T> 또는 배열 직접
     const arr = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
     return arr;
 }
@@ -104,7 +109,7 @@ function buildTree(list) {
         if (c.parentId) {
             const p = byId.get(c.parentId);
             if (p) p.children.push(node);
-            else roots.push(node); // 부모 없으면 루트로
+            else roots.push(node);
         } else {
             roots.push(node);
         }
@@ -210,13 +215,13 @@ export default function WantedComments({ wantedId }) {
         return (
             <Item key={c.id}>
                 <Meta>
-          <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-            <FaUser/>{c.authorNickname || '익명'}
-          </span>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                        <FaUser/>{c.authorNickname || '익명'}
+                    </span>
                     {created && (
                         <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <FaClock/>{created.toLocaleString('ko-KR')}
-            </span>
+                            <FaClock/>{created.toLocaleString('ko-KR')}
+                        </span>
                     )}
                 </Meta>
                 <Content $deleted={c.deleted}>{c.content}</Content>
@@ -249,13 +254,9 @@ export default function WantedComments({ wantedId }) {
 
                 {/* children */}
                 {c.children && c.children.length > 0 && (
-                    <div style={{marginTop:10, marginLeft:26}}>
-                        {c.children.map(ch => (
-                            <div key={ch.id} style={{borderLeft:'3px solid #eef2f6', paddingLeft:12, marginBottom:12}}>
-                                {renderItem(ch)}
-                            </div>
-                        ))}
-                    </div>
+                    <RepliesList>
+                        {c.children.map(ch => renderItem(ch))}
+                    </RepliesList>
                 )}
             </Item>
         );
