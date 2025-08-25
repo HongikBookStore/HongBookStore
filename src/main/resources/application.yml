@@ -4,7 +4,7 @@ spring:
   config:
     import: optional:file:.env[.properties]
   profiles:
-    active: prod # 'dev' 프로필 활성화
+    active: prod
   jackson:
     time-zone: Asia/Seoul
 

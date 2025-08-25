@@ -25,6 +25,7 @@ import wowBad from '../../assets/wow/wow_bad.png';
 import wowGood from '../../assets/wow/wow_good.png';
 import wowBest from '../../assets/wow/wow_best.png';
 import axios from 'axios';
+import { createPeerReview } from '../../api/peerReviews';
 
 const TransactionsContainer = styled.div`
   max-width: 1200px;
@@ -908,8 +909,14 @@ const MyTransactions = () => {
       ratingKeywords: selectedKeywords,
     };
     try {
-      // 내 판매글 기준 화면이므로, 내가 판매자 → 구매자에 대한 후기 생성
-      await axios.post('/api/buyer-reviews', payload, { headers: getAuthHeader() });
+      // 내 판매글 기준 화면이므로, 내가 판매자 → 구매자에 대한 후기 생성 (role=BUYER)
+      await createPeerReview({
+        postId,
+        ratingLabel: label,
+        ratingScore: payload.ratingScore,
+        ratingKeywords: selectedKeywords,
+        role: 'BUYER'
+      });
       // 로컬 UI 업데이트
       setTransactions(prev => prev.map(t =>
         (t.id === ratingModal.transactionId)

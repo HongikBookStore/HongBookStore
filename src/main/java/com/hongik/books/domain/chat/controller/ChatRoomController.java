@@ -29,6 +29,7 @@ public class ChatRoomController {
     private final UserRepository userRepository;
 
     @PostMapping
+    @Transactional // LAZY 연관(User/SalePost) 접근 중 세션 유지
     public ChatRoomResponse createChatRoom(@RequestParam Long salePostId,
                                            @RequestParam Long buyerId) {
         SalePost salePost = salePostRepository.findById(salePostId)
@@ -75,6 +76,7 @@ public class ChatRoomController {
 
 
     @GetMapping("/{roomId}")
+    @Transactional(readOnly = true) // LAZY 연관 접근 중 세션 유지
     public ChatRoomResponse getRoom(@PathVariable Long roomId) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방"));

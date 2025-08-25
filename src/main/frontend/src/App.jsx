@@ -27,6 +27,7 @@ import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
 import ChatRoomWrapper from './pages/Chat/ChatRoomWrapper.jsx'
 import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
 import VerificationConfirmPage from './pages/VerificationConfirmPage/VerificationConfirmPage.jsx';
+import UserProfile from './pages/UserProfile/UserProfile.jsx';
 
 // 임시 컴포넌트
 const Community = () => <div>Community Page</div>;
@@ -210,6 +211,12 @@ function App() {
                             } />
                             <Route path="/oauth/callback" element={<OAuth2RedirectHandler />} />
                             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+                            <Route path="/users/:userId" element={
+                                <>
+                                    <Header />
+                                    <UserProfile />
+                                </>
+                            } />
                         </Routes>
                         <FloatingChatBot />
                         <Footer />

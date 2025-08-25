@@ -63,10 +63,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/verify-student/confirm").permitAll()
                         // 게시글 조회(GET)와 책 검색 API는 모두 허용
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
-                        // 판매자 후기 조회(공개)
-                        .requestMatchers(HttpMethod.GET, "/api/seller-reviews/sellers/**").permitAll()
-                        // 구매자 후기 조회(공개)
-                        .requestMatchers(HttpMethod.GET, "/api/buyer-reviews/buyers/**").permitAll()
+                        // (통합으로 대체) 기존 seller/buyer-reviews 공개 경로 제거
+                        // 통합 Peer 리뷰 조회(공개)
+                        .requestMatchers(HttpMethod.GET, "/api/peer-reviews/users/**").permitAll()
                         // 통합 요약(공개)
                         .requestMatchers(HttpMethod.GET, "/api/reviews/summary/users/**").permitAll()
                         .requestMatchers("/api/search/**").permitAll()
@@ -77,9 +76,11 @@ public class SecurityConfig {
                         // 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
                         .requestMatchers("/api/posts/**").authenticated()
                         .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").authenticated()
+                        .requestMatchers("/api/peer-reviews/my-received").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/peer-reviews").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
                         // 판매자/구매자 후기 작성/내가 받은 후기는 인증 필요
-                        .requestMatchers("/api/seller-reviews/**", "/api/buyer-reviews/**").authenticated()
+                        // (통합으로 대체) 기존 seller/buyer-reviews 인증 경로 제거
 
                         // 그 외 요청은 인증 필요
                         .anyRequest().authenticated())
