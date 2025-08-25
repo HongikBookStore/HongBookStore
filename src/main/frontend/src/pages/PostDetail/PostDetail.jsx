@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthCtx } from '../../contexts/AuthContext';
+import { createPeerReview } from '../../api/peerReviews';
 import axios from 'axios';
 
 const DetailContainer = styled.div`
@@ -731,6 +732,11 @@ const PostDetail = () => {
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  // 후기 모달 상태
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewStar, setReviewStar] = useState(null);
+  const [reviewKeywords, setReviewKeywords] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   const [showOtherBooks, setShowOtherBooks] = useState(false);
   const [sellerOtherBooks, setSellerOtherBooks] = useState([]);
@@ -853,6 +859,39 @@ const PostDetail = () => {
     fetchPost();
     fetchMyLikes();
   }, [fetchPost, fetchMyLikes]);
+
+  // 후기 남기기 핸들러
+  const canLeaveReview = !!post && post.status === 'SOLD_OUT' && !!user;
+  const openReview = () => {
+    if (!canLeaveReview) return;
+    setReviewOpen(true);
+    setReviewStar(null);
+    setReviewKeywords('');
+  };
+  const submitReview = async () => {
+    if (!reviewStar) return;
+    const role = user?.id === post?.sellerId ? 'BUYER' : 'SELLER';
+    const ratingScore = Number(Number(reviewStar).toFixed(2));
+    const ratingLabel = ratingScore < 1.5 ? 'worst' : ratingScore < 2.5 ? 'bad' : ratingScore < 3.5 ? 'good' : 'best';
+    const kw = reviewKeywords.split(',').map(s => s.trim()).filter(Boolean);
+    try {
+      setReviewSubmitting(true);
+      await createPeerReview({
+        postId: post.postId,
+        ratingLabel,
+        ratingScore,
+        ratingKeywords: kw,
+        role
+      });
+      alert('후기가 저장되었습니다.');
+      setReviewOpen(false);
+    } catch (e) {
+      console.error('후기 저장 실패', e);
+      alert(e.response?.data?.message || '후기 저장 중 오류가 발생했습니다.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   // 할인율 계산
   const discountRate = useMemo(() => {
@@ -1022,6 +1061,14 @@ const PostDetail = () => {
                     <InfoLabel>판매 상태</InfoLabel>
                     <InfoValue>{statusMap[post.status] || '판매중'}</InfoValue>
                   </InfoItem>
+                  {canLeaveReview && (
+                    <InfoItem>
+                      <InfoLabel>거래 후기</InfoLabel>
+                      <div>
+                        <button onClick={openReview} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', background: '#007bff', color: '#fff', cursor: 'pointer' }}>후기 남기기</button>
+                      </div>
+                    </InfoItem>
+                  )}
 
                   <InfoItem>
                     <InfoLabel>등록일</InfoLabel>
@@ -1061,6 +1108,9 @@ const PostDetail = () => {
                           <RatingText>{post.sellerRating.toFixed(1)}</RatingText>
                         </SellerRating>
                     )}
+                    <div>
+                      <button onClick={() => navigate(`/users/${post.sellerId}`)} style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}>판매자 프로필</button>
+                    </div>
                     {post.sellerSalesCount && (
                         <SalesCount>판매 {post.sellerSalesCount}회</SalesCount>
                     )}
@@ -1159,6 +1209,34 @@ const PostDetail = () => {
                 )}
               </ModalContent>
             </ModalOverlay>
+        )}
+
+        {reviewOpen && (
+          <ModalOverlay onClick={() => setReviewOpen(false)}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <ModalTitle>후기 남기기</ModalTitle>
+                <CloseButton onClick={() => setReviewOpen(false)}><FaTimes /></CloseButton>
+              </ModalHeader>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
+                <input type="number" min="1" max="5" step="0.5" value={reviewStar ?? ''}
+                       onChange={e => setReviewStar(e.target.value ? Number(e.target.value) : null)}
+                       style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: 8 }} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표로 구분, 선택)</div>
+                <input type="text" value={reviewKeywords}
+                       onChange={e => setReviewKeywords(e.target.value)}
+                       placeholder="친절함, 시간엄수"
+                       style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: 8 }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button onClick={() => setReviewOpen(false)} disabled={reviewSubmitting} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#6c757d', color: '#fff' }}>취소</button>
+                <button onClick={submitReview} disabled={!reviewStar || reviewSubmitting} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#007bff', color: '#fff' }}>{reviewSubmitting ? '저장 중...' : '저장'}</button>
+              </div>
+            </ModalContent>
+          </ModalOverlay>
         )}
       </>
   );

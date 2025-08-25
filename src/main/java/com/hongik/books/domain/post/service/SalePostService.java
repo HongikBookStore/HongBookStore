@@ -4,6 +4,7 @@ import com.hongik.books.common.util.GcpStorageUtil;
 import com.hongik.books.domain.book.domain.Book;
 import com.hongik.books.domain.book.repository.BookRepository;
 import com.hongik.books.domain.post.domain.PostImage;
+import com.hongik.books.domain.chat.repository.ChatRoomRepository;
 import com.hongik.books.domain.post.domain.SalePost;
 import com.hongik.books.domain.post.dto.*;
 import com.hongik.books.domain.post.repository.PostSpecification;
@@ -33,6 +34,7 @@ public class SalePostService {
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
     private final GcpStorageUtil gcpStorageUtil;
+    private final ChatRoomRepository chatRoomRepository;
 
     /**
      * [ISBN 조회된 책]으로 판매 게시글을 생성 (이미지 업로드 포함)
@@ -166,6 +168,24 @@ public class SalePostService {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
         salePost.changeStatus(request.getStatus());
+        // 거래 완료 시 최종 구매자 기록 (필수)
+        if (request.getStatus() == SalePost.SaleStatus.SOLD_OUT) {
+            if (request.getBuyerId() == null) {
+                throw new IllegalArgumentException("SOLD_OUT 상태로 변경하려면 buyerId가 필요합니다.");
+            }
+            User buyer = findUserById(request.getBuyerId());
+            if (buyer.getId().equals(salePost.getSeller().getId())) {
+                throw new IllegalArgumentException("판매자 자신을 구매자로 설정할 수 없습니다.");
+            }
+            // 해당 게시글의 채팅 상대인지 검증
+            var roomOpt = chatRoomRepository.findBySalePostIdAndBuyerIdAndSellerId(
+                    salePost.getId(), buyer.getId(), salePost.getSeller().getId()
+            );
+            if (roomOpt.isEmpty()) {
+                throw new IllegalArgumentException("해당 구매자는 이 게시글의 채팅 상대가 아닙니다.");
+            }
+            salePost.setBuyer(buyer);
+        }
     }
 
     /**

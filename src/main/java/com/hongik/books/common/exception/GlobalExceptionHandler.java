@@ -7,11 +7,16 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.validation.BindException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -45,6 +50,30 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    public ResponseEntity<ApiResponse<Void>> handleValidation(Exception ex) {
+        var binding = ex instanceof MethodArgumentNotValidException manv ? manv.getBindingResult() : ((BindException) ex).getBindingResult();
+        String msg = binding.getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + (e.getDefaultMessage() == null ? "invalid" : e.getDefaultMessage()))
+                .collect(Collectors.joining(", "));
+        if (msg.isBlank()) msg = "유효하지 않은 요청입니다.";
+        return build(HttpStatus.BAD_REQUEST, msg);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex) {
+        String msg = ex.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                .collect(Collectors.joining(", "));
+        if (msg.isBlank()) msg = "유효하지 않은 요청입니다.";
+        return build(HttpStatus.BAD_REQUEST, msg);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
+        return build(HttpStatus.BAD_REQUEST, "필수 파라미터가 누락되었습니다: " + ex.getParameterName());
+    }
+
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<ApiResponse<Void>> handleSecurity(SecurityException ex) {
         return build(HttpStatus.FORBIDDEN, "권한이 없습니다.");
@@ -60,4 +89,3 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
     }
 }
-

@@ -29,6 +29,8 @@ public class User {
 
     private String emailVerificationToken; // 이메일 인증 위한 임시 토큰
 
+    private LocalDateTime emailVerificationTokenExpiresAt; // 인증 토큰 만료 시각
+
     @Column(unique = true) // 한 학교 이메일로 한 계정만 인증 가능하도록 unique 설정
     private String univEmail; // 인증받을 대학교 이메일
 
@@ -63,9 +65,10 @@ public class User {
     /**
      * 재학생 인증을 시작할 때, 사용자가 입력한 학교 이메일과 발급된 인증 토큰을 저장
      */
-    public void startStudentVerification(String univEmail, String verificationToken) {
+    public void startStudentVerification(String univEmail, String verificationToken, LocalDateTime expiresAt) {
         this.univEmail = univEmail;
         this.emailVerificationToken = verificationToken;
+        this.emailVerificationTokenExpiresAt = expiresAt;
     }
 
     /**
@@ -75,6 +78,7 @@ public class User {
     public void completeStudentVerification() {
         this.studentVerified = true;
         this.emailVerificationToken = null;
+        this.emailVerificationTokenExpiresAt = null;
     }
 
     /**

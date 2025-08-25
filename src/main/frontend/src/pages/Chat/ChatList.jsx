@@ -7,6 +7,8 @@ import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMe
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrCreateChatRoom } from '../../api/chat';
 import { AuthCtx } from '../../contexts/AuthContext';
+import { createPeerReview } from '../../api/peerReviews';
+import axios from 'axios';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -215,6 +217,39 @@ const EmptyState = styled.div`
 
 const EmptyIcon = styled(FaBook)` font-size: 3rem; color: #ddd; margin-bottom: 20px; `;
 
+const RowActions = styled.div`
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  display: flex; gap: 6px;
+`;
+
+const SmallBtn = styled.button`
+  padding: 4px 8px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;
+  background: #f8f9fa; color: #333; font-size: 0.8rem;
+  &:hover { background: #e9ecef; }
+`;
+
+// 후기 모달 스타일
+const ModalOverlay = styled.div`
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 2000;
+`;
+const ModalBox = styled.div`
+  background: #fff; border-radius: 12px; width: 420px; max-width: 92vw;
+  padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+`;
+const ModalTitle = styled.h3`
+  margin: 0 0 10px; color: #333;
+`;
+const ModalActions = styled.div`
+  display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;
+`;
+const ModalButton = styled.button`
+  padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;
+  background: #007bff; color: #fff;
+  &.cancel { background: #6c757d; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
 /* ---------------------------- 유틸 & 정규화 로직 ---------------------------- */
 
 function safeLower(v) {
@@ -340,6 +375,10 @@ const ChatListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roomsRaw, setRoomsRaw] = useState([]);
   const [error, setError] = useState(null);
+  const [reviewModal, setReviewModal] = useState({ open: false, postId: null, role: null });
+  const [star, setStar] = useState(null);
+  const [keywords, setKeywords] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // URL ?bookId=xxxxx 처리: 해당 책 채팅방 생성/열기
   useEffect(() => {
@@ -439,6 +478,60 @@ const ChatListPage = () => {
     }
   };
 
+  const getAuthHeader = () => {
+    const token = localStorage.getItem('accessToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const patchPostStatus = async (postId, status, buyerId) => {
+    try {
+      const payload = buyerId ? { status, buyerId } : { status };
+      await axios.patch(`/api/posts/${postId}/status`, payload, { headers: getAuthHeader() });
+      alert('상태가 변경되었습니다.');
+    } catch (e) {
+      console.error('상태 변경 실패', e);
+      alert(e.response?.data?.message || '상태 변경 중 오류가 발생했습니다.');
+    }
+  };
+
+  const openReviewForChat = (chat) => {
+    if (!chat?.salePostId) {
+      alert('연결된 판매글 정보를 확인할 수 없습니다.');
+      return;
+    }
+    const role = chat.role === 'seller' ? 'BUYER' : (chat.role === 'buyer' ? 'SELLER' : null);
+    if (!role) {
+      alert('후기 대상을 결정할 수 없습니다.');
+      return;
+    }
+    setReviewModal({ open: true, postId: chat.salePostId, role });
+    setStar(null); setKeywords('');
+  };
+
+  const submitReview = async () => {
+    if (!reviewModal.open || !reviewModal.postId || !reviewModal.role || !star) return;
+    const ratingScore = Number(Number(star).toFixed(2));
+    const ratingLabel = ratingScore < 1.5 ? 'worst' : ratingScore < 2.5 ? 'bad' : ratingScore < 3.5 ? 'good' : 'best';
+    const kw = keywords.split(',').map(s => s.trim()).filter(Boolean);
+    try {
+      setSubmitting(true);
+      await createPeerReview({
+        postId: reviewModal.postId,
+        ratingLabel,
+        ratingScore,
+        ratingKeywords: kw,
+        role: reviewModal.role
+      });
+      alert('후기가 저장되었습니다.');
+      setReviewModal({ open: false, postId: null, role: null });
+    } catch (e) {
+      console.error('후기 저장 실패', e);
+      alert(e.response?.data?.message || '후기 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
       <PageWrapper>
         <SidebarMenu active="chat" onMenuClick={handleSidebarMenu} />
@@ -502,6 +595,26 @@ const ChatListPage = () => {
                               <UnreadCount>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</UnreadCount>
                           )}
                         </ChatMeta>
+                        {chat.role === 'seller' && chat.salePostId && (
+                          <RowActions onClick={(e) => e.stopPropagation()}>
+                            {chat.isReserved ? (
+                              <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'FOR_SALE')}>예약 해제</SmallBtn>
+                            ) : (
+                              <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'RESERVED')}>예약중</SmallBtn>
+                            )}
+                            {chat.buyerId && (
+                              <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'SOLD_OUT', chat.buyerId)}>판매완료</SmallBtn>
+                            )}
+                            <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
+                            {chat.buyerId && <SmallBtn onClick={() => navigate(`/users/${chat.buyerId}`)}>프로필</SmallBtn>}
+                          </RowActions>
+                        )}
+                        {chat.role === 'buyer' && (
+                          <RowActions onClick={(e) => e.stopPropagation()}>
+                            <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
+                            {chat.sellerId && <SmallBtn onClick={() => navigate(`/users/${chat.sellerId}`)}>프로필</SmallBtn>}
+                          </RowActions>
+                        )}
                       </ChatItem>
                   ))
               ) : (
@@ -513,6 +626,30 @@ const ChatListPage = () => {
               )}
             </ChatList>
           </ChatListContainer>
+          {reviewModal.open && (
+            <ModalOverlay>
+              <ModalBox>
+                <ModalTitle>후기 남기기</ModalTitle>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
+                  <input type="number" min="1" max="5" step="0.5" value={star ?? ''}
+                         onChange={e => setStar(e.target.value ? Number(e.target.value) : null)}
+                         style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }} />
+                </div>
+                <div>
+                  <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표 구분, 선택)</div>
+                  <input type="text" value={keywords}
+                         onChange={e => setKeywords(e.target.value)}
+                         placeholder="친절함, 시간엄수"
+                         style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }} />
+                </div>
+                <ModalActions>
+                  <ModalButton className="cancel" onClick={() => setReviewModal({ open: false, postId: null, role: null })} disabled={submitting}>취소</ModalButton>
+                  <ModalButton onClick={submitReview} disabled={!star || submitting}>{submitting ? '저장 중...' : '저장'}</ModalButton>
+                </ModalActions>
+              </ModalBox>
+            </ModalOverlay>
+          )}
         </MainContent>
       </PageWrapper>
   );

@@ -37,6 +37,11 @@ public class SalePost {
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
+    // 거래 완료 시 실제 구매자 기록 (null 가능)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "buyer_id")
+    private User buyer;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
@@ -164,5 +169,9 @@ public class SalePost {
      */
     public void changeStatus(SaleStatus newStatus) {
         this.status = newStatus;
+    }
+
+    public void setBuyer(User buyer) {
+        this.buyer = buyer;
     }
 }

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from '../../contexts/LocationContext'; // TODO: 위치 관리 기능 구현
 import axios from 'axios';
+import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
 
 const MyPageContainer = styled.div`
@@ -918,7 +919,21 @@ const MyPage = () => {
     return '#D97706'; // 진주황
   };
   
-  const userScore = 85; // 사용자 평점 (실제로는 API에서 가져올 값)
+  const userScore = 85; // deprecated placeholder
+  // 거래 평점 요약 상태
+  const [ratingSummary, setRatingSummary] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingError, setRatingError] = useState('');
+  // 통합 Peer 리뷰 탭 상태
+  const [reviewTab, setReviewTab] = useState('SELLER'); // SELLER | BUYER
+  const [roleReviews, setRoleReviews] = useState([]);
+  const [rolePage, setRolePage] = useState(0);
+  const [roleSize, setRoleSize] = useState(5);
+  const [roleTotal, setRoleTotal] = useState(0);
+  const [roleLast, setRoleLast] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleError, setRoleError] = useState('');
+  const [roleSummary, setRoleSummary] = useState({ SELLER: null, BUYER: null });
 
   const fetchProfile = useCallback(async () => {
     // 페이지가 로드될 때마다 항상 최신 정보를 가져오도록 setLoading(true) 추가
@@ -977,6 +992,57 @@ const MyPage = () => {
       routerNavigate(`/posts/${id}`);
     }
   };
+
+  // 프로필 로드 후 거래 평점 요약 조회
+  useEffect(() => {
+    const fetchRating = async (uid) => {
+      setRatingLoading(true);
+      setRatingError('');
+      try {
+        const res = await axios.get(`/api/reviews/summary/users/${uid}`, { headers: getAuthHeader() });
+        setRatingSummary(res.data);
+      } catch (e) {
+        console.error('거래 평점 요약 조회 실패', e);
+        setRatingError(e.response?.data?.message || '거래 평점을 불러오지 못했습니다.');
+      } finally {
+        setRatingLoading(false);
+      }
+    };
+    if (profile?.id) {
+      fetchRating(profile.id);
+    }
+  }, [profile?.id]);
+
+  // 역할별 요약/목록 조회
+  const fetchRoleData = useCallback(async (uid, role, page = 0, size = roleSize) => {
+    if (!uid) return;
+    setRoleLoading(true);
+    setRoleError('');
+    try {
+      const [sum, list] = await Promise.all([
+        getUserPeerSummary(uid, role),
+        getUserPeerReviews(uid, role, page, size)
+      ]);
+      setRoleSummary(prev => ({ ...prev, [role]: sum }));
+      const data = list || {};
+      setRoleReviews(Array.isArray(data.content) ? data.content : []);
+      setRolePage(typeof data.page === 'number' ? data.page : page);
+      setRoleSize(typeof data.size === 'number' ? data.size : size);
+      setRoleTotal(typeof data.totalElements === 'number' ? data.totalElements : (Array.isArray(data.content) ? data.content.length : 0));
+      setRoleLast(Boolean(data.last));
+    } catch (e) {
+      console.error('역할별 후기 조회 실패', e);
+      setRoleError(e.response?.data?.message || '후기 목록을 불러오지 못했습니다.');
+      setRoleReviews([]);
+    } finally {
+      setRoleLoading(false);
+    }
+  }, [roleSize]);
+
+  useEffect(() => {
+    if (profile?.id) fetchRoleData(profile.id, reviewTab, 0, roleSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, reviewTab]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -1062,12 +1128,16 @@ const MyPage = () => {
     return <MyPageContainer><h2>로딩 중...</h2></MyPageContainer>;
   }
 
+  // 프로필 링(원형) 표시를 위한 퍼센트(0~100) 계산: 0~5 ★ → ×20
+  const overall = Number(ratingSummary?.overallAverage ?? 0);
+  const overallPercent = Math.max(0, Math.min(100, overall * 20));
+
   return (
     <MyPageContainer>
       <ProfileCard>
         <ProfileImageBig style={{
-          '--score-color': getScoreColor(userScore),
-          '--score-percentage': `${userScore * 3.6}deg`
+          '--score-color': getScoreColor(overallPercent),
+          '--score-percentage': `${overallPercent * 3.6}deg`
         }}>
           {profile.profileImageUrl ? (
             <img src={profile.profileImageUrl} alt="Profile" />
@@ -1182,11 +1252,137 @@ const MyPage = () => {
 
             </ProfileNameLeft>
           </ProfileNameRow>
+          {/* 거래 평점 표시 */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6, width:'100%', marginTop:8}}>
+            {ratingLoading ? (
+              <div style={{color:'#666'}}>거래 평점을 불러오는 중...</div>
+            ) : ratingError ? (
+              <div style={{color:'#d32f2f'}}>{ratingError}</div>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                <div style={{fontWeight:700,color:'#333'}}>
+                  거래 평점: {overall.toFixed(2)}★
+                  <span style={{color:'#777',fontWeight:500}}> / 5.00 (총 {ratingSummary?.totalCount ?? 0}건)</span>
+                </div>
+                <div style={{fontSize:'0.92rem',color:'#555'}}>
+                  판매자: {Number(ratingSummary?.sellerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.sellerCount ?? 0}건
+                  {"  |  "}
+                  구매자: {Number(ratingSummary?.buyerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.buyerCount ?? 0}건
+                </div>
+              </div>
+            )}
+          </div>
         </ProfileInfoBox>
       </ProfileCard>
 
       {/* 오른쪽 열 - 설정 섹션들 */}
       <SettingsContainer>
+        {/* 거래 후기 섹션 (판매자/구매자 탭) */}
+        <SettingsSection>
+          <h3><i className="fas fa-star" style={{color: 'var(--primary)'}}></i> 거래 후기</h3>
+          <TabContainer>
+            <TabList>
+              <TabButton active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>판매자 후기</TabButton>
+              <TabButton active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>구매자 후기</TabButton>
+            </TabList>
+          </TabContainer>
+          {/* 요약 배지 */}
+          <div style={{ display:'flex', gap: 12, marginBottom: 12 }}>
+            {reviewTab === 'SELLER' && (
+              <div style={{padding:'6px 10px', border:'1px solid var(--border)', borderRadius:8, background:'var(--background)'}}>
+                평균 {Number(roleSummary.SELLER?.averageScore ?? 0).toFixed(2)}★ · {roleSummary.SELLER?.reviewCount ?? 0}건
+              </div>
+            )}
+            {reviewTab === 'BUYER' && (
+              <div style={{padding:'6px 10px', border:'1px solid var(--border)', borderRadius:8, background:'var(--background)'}}>
+                평균 {Number(roleSummary.BUYER?.averageScore ?? 0).toFixed(2)}★ · {roleSummary.BUYER?.reviewCount ?? 0}건
+              </div>
+            )}
+          </div>
+          {/* 목록 */}
+          {roleLoading ? (
+            <div style={{color:'#666'}}>후기를 불러오는 중...</div>
+          ) : roleError ? (
+            <div style={{color:'#d32f2f'}}>{roleError}</div>
+          ) : roleReviews.length === 0 ? (
+            <div style={{color:'#666'}}>아직 후기가 없습니다.</div>
+          ) : (
+            <ul style={{ listStyle:'none', padding:0, margin:0, display:'flex', flexDirection:'column', gap:8 }}>
+              {roleReviews.map(rv => (
+                <li key={rv.reviewId} style={{ display:'flex', justifyContent:'space-between', border:'1px solid var(--border)', borderRadius:8, padding:'10px 12px' }}>
+                  <div>
+                    <div style={{fontWeight:600}}>{rv.reviewerNickname || '사용자'}</div>
+                    {Array.isArray(rv.ratingKeywords) && rv.ratingKeywords.length > 0 && (
+                      <div style={{fontSize:'0.9rem', color:'#666'}}>{rv.ratingKeywords.join(', ')}</div>
+                    )}
+                  </div>
+                  <div style={{display:'flex', alignItems:'center', gap:8}}>
+                    <span style={{fontSize:'0.85rem', color:'#555'}}>{new Date(rv.createdAt).toLocaleDateString('ko-KR')}</span>
+                    <span style={{color:'#007bff', fontWeight:700}}>{Number(rv.ratingScore).toFixed(2)}★</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* 페이지 네비게이션 */}
+          <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:12 }}>
+            <SmallButton onClick={() => fetchRoleData(profile.id, reviewTab, Math.max(0, rolePage - 1), roleSize)} disabled={rolePage <= 0}>이전</SmallButton>
+            <SmallButton onClick={() => !roleLast && fetchRoleData(profile.id, reviewTab, rolePage + 1, roleSize)} disabled={roleLast}>다음</SmallButton>
+          </div>
+        </SettingsSection>
+        <SettingsSection>
+          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> 최근 본 게시글</h3>
+          {recentLoading ? (
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>불러오는 중…</div>
+          ) : recentPosts.length === 0 ? (
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>최근 본 게시글이 없습니다.</div>
+          ) : (
+            <RecentGrid>
+              {recentPosts.map(p => (
+                <RecentCard key={p.postId} onClick={() => openConfirm(p)}>
+                  <RecentThumb>
+                    {p.thumbnailUrl ? (
+                      <img src={p.thumbnailUrl} alt={p.postTitle} />
+                    ) : (
+                      <span>{p.postTitle}</span>
+                    )}
+                  </RecentThumb>
+                  <RecentTitle>{p.postTitle}</RecentTitle>
+                  <RecentMeta>
+                    <span>{(p.price ?? 0).toLocaleString()}원</span>
+                    <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
+                  </RecentMeta>
+                </RecentCard>
+              ))}
+            </RecentGrid>
+          )}
+        </SettingsSection>
+
+        {confirmPost && (
+          <ModalOverlay onClick={closeConfirm}>
+            <ModalBox onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>게시글로 이동할까요?</ModalHeader>
+              <ModalBody>
+                <ModalThumb>
+                  {confirmPost.thumbnailUrl ? (
+                    <img src={confirmPost.thumbnailUrl} alt={confirmPost.postTitle} />
+                  ) : (
+                    <span>{confirmPost.postTitle}</span>
+                  )}
+                </ModalThumb>
+                <ModalInfo>
+                  <div className="title">{confirmPost.postTitle}</div>
+                  <div className="meta">{confirmPost.author}</div>
+                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}원</div>
+                </ModalInfo>
+              </ModalBody>
+              <ModalActions>
+                <ModalButton onClick={closeConfirm}>취소</ModalButton>
+                <ModalButton className="primary" onClick={goToPost}>이동</ModalButton>
+              </ModalActions>
+            </ModalBox>
+          </ModalOverlay>
+        )}
         <SettingsSection>
           <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> 최근 본 게시글</h3>
           {recentLoading ? (
