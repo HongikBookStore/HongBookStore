@@ -1,8 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+// ✅ ChatRoom.jsx — chatId가 없거나 유효하지 않을 때 API/WS 호출을 전부 차단한 복붙용 완성본
+
+import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import styled from 'styled-components';
-import { FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaEllipsisV, FaSignOutAlt, FaCalendarAlt, FaExclamationTriangle, FaRegClock, FaCheckCircle, FaRedo, FaEye, FaEyeSlash, FaExclamationCircle, FaMapMarkerAlt, FaRoute, FaQrcode, FaCloudSun, FaDownload } from 'react-icons/fa';
+import {
+  FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaSignOutAlt, FaCalendarAlt,
+  FaRegClock, FaCheckCircle, FaEye, FaExclamationCircle, FaMapMarkerAlt,
+  FaRoute, FaQrcode, FaDownload, FaUniversity, FaSubway, FaTrophy
+} from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
+import Stomp from 'stompjs';
 import QRCode from 'react-qr-code';
+import { AuthCtx } from '../../contexts/AuthContext';
+
+/* ----------------------------- styled components ----------------------------- */
 
 const ChatContainer = styled.div`
   width: 100%;
@@ -17,12 +27,8 @@ const ChatContainer = styled.div`
   overflow: hidden;
   box-sizing: border-box;
   padding-top: 0;
-  @media (max-width: 900px) {
-    padding-top: 0;
-  }
-  @media (max-width: 600px) {
-    padding-top: 0;
-  }
+  @media (max-width: 900px) { padding-top: 0; }
+  @media (max-width: 600px) { padding-top: 0; }
 `;
 
 const ChatHeader = styled.div`
@@ -54,10 +60,7 @@ const BackButton = styled.button`
   cursor: pointer;
   font-size: 0.9rem;
   transition: background 0.3s;
-
-  &:hover {
-    background: #5a6268;
-  }
+  &:hover { background: #5a6268; }
 `;
 
 const ChatInfo = styled.div`
@@ -103,10 +106,7 @@ const HeaderRight = styled.div`
   flex-shrink: 0;
   overflow-x: auto;
   padding-left: 10px;
-  
-  @media (max-width: 768px) {
-    gap: 5px;
-  }
+  @media (max-width: 768px) { gap: 5px; }
 `;
 
 const ChatMenuButton = styled.button`
@@ -132,23 +132,14 @@ const ChatMenuButton = styled.button`
   margin-right: 0;
   height: 44px;
   flex-shrink: 0;
-
   &::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(255, 255, 255, 0.1);
     transform: translateX(-100%);
     transition: 0.6s;
   }
-
-  &:hover::before {
-    transform: translateX(100%);
-  }
-
+  &:hover::before { transform: translateX(100%); }
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
@@ -156,30 +147,18 @@ const ChatMenuButton = styled.button`
     color: var(--primary);
     background: rgba(0, 123, 255, 0.05);
   }
-
-  &:active {
-    transform: translateY(0);
-  }
-
+  &:active { transform: translateY(0); }
   &:disabled {
     color: #bbb;
     background: #f5f5f5;
     border-color: #eee;
     cursor: not-allowed;
   }
-
   @media (max-width: 768px) {
-    min-width: 100px;
-    font-size: 0.9rem;
-    padding: 0.6rem 0.8rem;
-    margin-left: 5px;
+    min-width: 100px; font-size: 0.9rem; padding: 0.6rem 0.8rem; margin-left: 5px;
   }
-  
   @media (max-width: 600px) {
-    min-width: 80px;
-    font-size: 0.85rem;
-    padding: 0.5rem 0.6rem;
-    margin-left: 3px;
+    min-width: 80px; font-size: 0.85rem; padding: 0.5rem 0.6rem; margin-left: 3px;
   }
 `;
 
@@ -188,11 +167,8 @@ const ExitButton = styled(ChatMenuButton)`
   color: #ef4444;
   border: 2px solid rgba(239, 68, 68, 0.2);
   &:hover {
-    background: #ef4444;
-    color: white;
-    border-color: #ef4444;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    background: #ef4444; color: white; border-color: #ef4444;
+    transform: translateY(-2px); box-shadow: var(--shadow-lg);
   }
 `;
 
@@ -203,10 +179,7 @@ const ChatMessages = styled.div`
   display: flex;
   flex-direction: column;
   gap: 15px;
-  @media (max-width: 600px) {
-    padding: 8px;
-    gap: 8px;
-  }
+  @media (max-width: 600px) { padding: 8px; gap: 8px; }
 `;
 
 const MessageGroup = styled.div`
@@ -221,17 +194,10 @@ const Message = styled.div`
   border-radius: 18px;
   word-wrap: break-word;
   position: relative;
-  
   ${props => props.isOwn ? `
-    align-self: flex-end;
-    background: #007bff;
-    color: white;
-    border-bottom-right-radius: 4px;
+    align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 4px;
   ` : `
-    align-self: flex-start;
-    background: #f1f3f4;
-    color: #333;
-    border-bottom-left-radius: 4px;
+    align-self: flex-start; background: #f1f3f4; color: #333; border-bottom-left-radius: 4px;
   `}
 `;
 
@@ -240,13 +206,10 @@ const MessageTime = styled.div`
   color: #999;
   margin-top: 4px;
   white-space: nowrap;
-  
   ${props => props.isOwn ? `
-    align-self: flex-end;
-    text-align: right;
+    align-self: flex-end; text-align: right;
   ` : `
-    align-self: flex-start;
-    text-align: left;
+    align-self: flex-start; text-align: left;
   `}
 `;
 
@@ -261,299 +224,149 @@ const SystemMessage = styled.div`
   align-self: center;
   max-width: 80%;
   &.cancel {
-    color: #d32f2f;
-    background: #fff0f0;
-    border: 1px solid #ffcdd2;
-    font-weight: 600;
+    color: #d32f2f; background: #fff0f0; border: 1px solid #ffcdd2; font-weight: 600;
   }
 `;
 
 const ChatInput = styled.div`
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  background: #f8f9fa;
-  @media (max-width: 600px) {
-    padding: 8px;
-  }
+  padding: 20px; border-top: 1px solid #e0e0e0; background: #f8f9fa;
+  @media (max-width: 600px) { padding: 8px; }
 `;
 
 const InputContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
+  display: flex; gap: 10px; align-items: flex-end;
 `;
 
 const MessageStatus = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
-  margin-top: 2px;
-  
+  display: flex; align-items: center; gap: 4px; font-size: 0.7rem; margin-top: 2px;
   ${props => props.isOwn ? `
-    align-self: flex-end;
-    justify-content: flex-end;
+    align-self: flex-end; justify-content: flex-end;
   ` : `
-    align-self: flex-start;
-    justify-content: flex-start;
+    align-self: flex-start; justify-content: flex-start;
   `}
 `;
 
 const StatusIcon = styled.span`
   color: ${props => {
-    if (props.status === 'sending') return '#ffa726';
-    if (props.status === 'read') return '#2196f3';
-    if (props.status === 'failed') return '#f44336';
+    if (props.$status === 'sending') return '#ffa726';
+    if (props.$status === 'read') return '#2196f3';
+    if (props.$status === 'failed') return '#f44336';
     return '#9e9e9e';
   }};
   font-size: 0.8rem;
 `;
 
 const RetryButton = styled.button`
-  background: none;
-  border: none;
-  color: #f44336;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-  
-  &:hover {
-    background: rgba(244, 67, 54, 0.1);
-  }
+  background: none; border: none; color: #f44336; cursor: pointer; padding: 2px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+  &:hover { background: rgba(244, 67, 54, 0.1); }
 `;
 
 const ProfanityWarning = styled.div`
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  color: #856404;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+  background: #fff3cd; border: 1px solid #ffeaa7; color: #856404;
+  padding: 8px 12px; border-radius: 8px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
 `;
 
 const MessageInput = styled.textarea`
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid ${props => props.hasProfanity ? '#f44336' : '#ddd'};
-  border-radius: 20px;
-  resize: none;
-  font-family: inherit;
-  font-size: 1rem;
-  outline: none;
-  transition: border-color 0.3s;
-  max-height: 100px;
-  min-height: 44px;
-
-  &:focus {
-    border-color: ${props => props.hasProfanity ? '#f44336' : '#007bff'};
-  }
+  flex: 1; padding: 12px 16px; border: 1px solid ${p => p.hasProfanity ? '#f44336' : '#ddd'};
+  border-radius: 20px; resize: none; font-family: inherit; font-size: 1rem; outline: none; transition: border-color 0.3s;
+  max-height: 100px; min-height: 44px;
+  &:focus { border-color: ${p => p.hasProfanity ? '#f44336' : '#007bff'}; }
 `;
 
 const SendButton = styled.button`
-  padding: 12px 16px;
-  background: ${props => props.disabled ? '#ccc' : '#007bff'};
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  transition: background 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-
-  &:hover {
-    background: ${props => props.disabled ? '#ccc' : '#0056b3'};
-  }
+  padding: 12px 16px; background: ${p => p.disabled ? '#ccc' : '#007bff'}; color: white;
+  border: none; border-radius: 50%; cursor: ${p => p.disabled ? 'not-allowed' : 'pointer'};
+  transition: background 0.3s; display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  &:hover { background: ${p => p.disabled ? '#ccc' : '#0056b3'}; }
 `;
 
 const QuickActions = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+  display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;
 `;
 
 const QuickActionButton = styled.button`
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 15px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.3s;
-
-  &:hover {
-    background: #007bff;
-    color: white;
-    border-color: #007bff;
-  }
+  padding: 6px 12px; background: white; border: 1px solid #ddd; border-radius: 15px;
+  cursor: pointer; font-size: 0.9rem; transition: all 0.3s;
+  &:hover { background: #007bff; color: white; border-color: #007bff; }
 `;
 
 const NoMessages = styled.div`
-  text-align: center;
-  color: #666;
-  padding: 40px 20px;
+  text-align: center; color: #666; padding: 40px 20px;
 `;
 
 const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000;
 `;
 
 const ModalBox = styled.div`
-  background: #fff;
-  border-radius: 12px;
-  padding: 32px 24px 24px 24px;
-  min-width: 320px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  background: #fff; border-radius: 12px; padding: 32px 24px 24px 24px; min-width: 320px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px;
 `;
 
 const ModalTitle = styled.div`
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;
 `;
 
 const ModalTextarea = styled.textarea`
-  width: 100%;
-  min-height: 60px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 1rem;
-  resize: none;
+  width: 100%; min-height: 60px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 1rem; resize: none;
 `;
 
 const ModalActions = styled.div`
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  display: flex; gap: 10px; justify-content: flex-end;
 `;
 
 const ModalButton = styled.button`
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  background: #007bff;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
+  padding: 8px 16px; border-radius: 8px; border: none; background: #007bff; color: #fff; font-weight: 600; cursor: pointer;
   &:hover { background: #0056b3; }
   &[data-variant='cancel'] {
-    background: #ccc;
-    color: #333;
-    &:hover { background: #bbb; }
+    background: #ccc; color: #333; &:hover { background: #bbb; }
   }
 `;
 
 const ReportRadio = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  cursor: pointer;
-  font-size: 0.9rem;
-  
-  &:hover {
-    color: #007bff;
-  }
+  display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; font-size: 0.9rem;
+  &:hover { color: #007bff; }
 `;
 
 const RadioInput = styled.input`
-  margin: 0;
-  cursor: pointer;
+  margin: 0; cursor: pointer;
 `;
 
-const RetryModalOverlay = styled.div`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
+const RetryModalOverlay = styled(ModalOverlay)``;
 
 const RetryModalBox = styled.div`
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  min-width: 320px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: center;
+  background: #fff; border-radius: 12px; padding: 24px; min-width: 320px; box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  display: flex; flex-direction: column; gap: 16px; text-align: center;
 `;
 
 const RetryModalTitle = styled.div`
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
+  font-size: 1.1rem; font-weight: 600; color: #333;
 `;
 
 const RetryModalMessage = styled.div`
-  font-size: 0.95rem;
-  color: #666;
-  line-height: 1.4;
+  font-size: 0.95rem; color: #666; line-height: 1.4;
 `;
 
 const RetryModalActions = styled.div`
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 8px;
+  display: flex; gap: 10px; justify-content: center; margin-top: 8px;
 `;
 
 const RetryModalButton = styled.button`
-  padding: 8px 20px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  
-  &.cancel {
-    background: #f1f3f4;
-    color: #333;
-    &:hover { background: #e8eaed; }
-  }
-  
-  &.confirm {
-    background: #007bff;
-    color: white;
-    &:hover { background: #0056b3; }
-  }
+  padding: 8px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  &.cancel { background: #f1f3f4; color: #333; &:hover { background: #e8eaed; } }
+  &.confirm { background: #007bff; color: white; &:hover { background: #0056b3; } }
 `;
 
 const ReserveModalBox = styled(ModalBox)`
-  min-width: 380px;
-  max-width: 95vw;
+  min-width: 380px; max-width: 95vw;
 `;
 
 const PlaceList = styled.div`
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
 `;
 
 const PlaceItem = styled.button`
@@ -566,21 +379,12 @@ const PlaceItem = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  &:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: #eaf0ff;
-  }
+  display: flex; align-items: center; gap: 0.5rem;
+  &:hover { border-color: var(--primary); color: var(--primary); background: #eaf0ff; }
 `;
 
 const DateList = styled.div`
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
 `;
 
 const DateItem = styled.button`
@@ -593,136 +397,51 @@ const DateItem = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  &:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: #eaf0ff;
-  }
+  display: flex; align-items: center; gap: 0.75rem;
+  &:hover { border-color: var(--primary); color: var(--primary); background: #eaf0ff; }
 `;
 
-// QR 코드 관련 스타일 컴포넌트들
+/* ✅ 강수확률 미니 막대 스타일 */
+const MiniBarWrap = styled.div`
+  height: 70px; width: 10px; border-radius: 6px;
+  background: linear-gradient(#eaf3ff, #f3f4f6);
+  display:flex; align-items:flex-end; padding: 2px; margin-right: 8px;
+`;
+const MiniBar = styled.div`
+  width:100%; border-radius:4px; background:#1d4ed8; transition: height .4s;
+`;
+
+/* QR 모달 */
 const QRModal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
 `;
-
 const QRModalContent = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: white; border-radius: 12px; padding: 2rem; max-width: 400px; width: 100%;
+  text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 `;
-
 const QRCodeContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
+  display: flex; justify-content: center; margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;
 `;
-
-const QRCodeInfo = styled.div`
-  margin: 1rem 0;
-  text-align: left;
-`;
-
+const QRCodeInfo = styled.div` margin: 1rem 0; text-align: left; `;
 const QRCodeInfoItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin: 0.5rem 0;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e0e0e0;
-  
-  &:last-child {
-    border-bottom: none;
-  }
+  display: flex; justify-content: space-between; margin: 0.5rem 0; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;
+  &:last-child { border-bottom: none; }
 `;
-
-const QRCodeLabel = styled.span`
-  font-weight: 600;
-  color: #333;
-`;
-
-const QRCodeValue = styled.span`
-  color: #666;
-`;
-
-const QRCodeActions = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  justify-content: center;
-`;
-
+const QRCodeLabel = styled.span` font-weight: 600; color: #333; `;
+const QRCodeValue = styled.span` color: #666; `;
+const QRCodeActions = styled.div` display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; `;
 const QRCodeButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  
-  &.download {
-    background: #007bff;
-    color: white;
-    
-    &:hover {
-      background: #0056b3;
-    }
-  }
-  
-
-  
-  &.close {
-    background: #6c757d;
-    color: white;
-    
-    &:hover {
-      background: #5a6268;
-    }
-  }
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 8px;
+  cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
+  &.download { background: #007bff; color: white; &:hover { background: #0056b3; } }
+  &.close { background: #6c757d; color: white; &:hover { background: #5a6268; } }
 `;
+const QRCodeQuestion = styled.div` margin: 1rem 0; padding: 1rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3; `;
+const QRCodeQuestionText = styled.div` font-weight: 600; color: #1976d2; margin-bottom: 0.5rem; `;
+const QRCodeQuestionDescription = styled.div` font-size: 0.9rem; color: #424242; `;
 
-const QRCodeQuestion = styled.div`
-  margin: 1rem 0;
-  padding: 1rem;
-  background: #e3f2fd;
-  border-radius: 8px;
-  border-left: 4px solid #2196f3;
-`;
-
-const QRCodeQuestionText = styled.div`
-  font-weight: 600;
-  color: #1976d2;
-  margin-bottom: 0.5rem;
-`;
-
-const QRCodeQuestionDescription = styled.div`
-  font-size: 0.9rem;
-  color: #424242;
-`;
-
-// 반응형 width 감지 훅
+/* ---------------------------------- hooks ---------------------------------- */
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -733,54 +452,136 @@ function useWindowWidth() {
   return width;
 }
 
-const ChatRoom = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'message',
-      content: '안녕하세요! 책에 대해 문의드립니다.',
-      sender: 'other',
-      timestamp: '2024-01-15 14:30:00',
-      status: 'read'
-    },
-    {
-      id: 2,
-      type: 'message',
-      content: '네, 어떤 점이 궁금하신가요?',
-      sender: 'own',
-      timestamp: '2024-01-15 14:32:00',
-      status: 'read'
-    },
-    {
-      id: 3,
-      type: 'message',
-      content: '책 상태가 어떤가요?',
-      sender: 'other',
-      timestamp: '2024-01-15 14:33:00',
-      status: 'read'
-    },
-    {
-      id: 4,
-      type: 'message',
-      content: '거의 새책 상태입니다!',
-      sender: 'own',
-      timestamp: '2024-01-15 14:35:00',
-      status: 'read'
-    },
-    {
-      id: 5,
-      type: 'message',
-      content: '네트워크 오류로 전송 실패한 메시지 예시입니다.',
-      sender: 'own',
-      timestamp: '2024-01-15 14:36:00',
-      status: 'failed'
+/* =================== 교내/교외 중간지점 추천 헬퍼(네 자바 로직 이식) =================== */
+
+/** 교내: 코드 → 라벨 */
+const ONCAMPUS_LABELS = {
+  A:'A동', B:'B동', C:'C동', D:'D동', E:'E동', F:'F동', G:'G동', H:'H동',
+  I:'I동', J:'J동', K:'K동', L:'L동', M:'M동', MH:'MH', P:'P동', Q:'Q동', R:'R동',
+  S:'S동', T:'제2공학관(T동)', U:'U동', X:'운동장(X)', Z1:'정문(Z1)', Z2:'후문(Z2)', Z3:'측문(Z3)', Z4:'측문(Z4)', '신기숙사':'신기숙사'
+};
+/** 교내 드롭다운 옵션 */
+const CAMPUS_OPTIONS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','MH','P','Q','R','S','T','U','X','Z1','Z2','Z3','Z4','신기숙사'];
+
+/** 교내 그래프 (자바 코드 1:1 이식) */
+function buildCampusGraph() {
+  const g = {};
+  const add = (a,b,w)=>{ g[a]=g[a]||[]; g[b]=g[b]||[]; g[a].push({to:b,w}); g[b].push({to:a,w}); };
+  add("I","L",1); add("I","P",1); add("J","L",1); add("K","L",1); add("K","R",1); add("R","M",1);
+  add("L","G",1); add("G","Q",1); add("G","H",1); add("L","H",1); add("H","P",1); add("H","Q",1);
+  add("F","MH",1); add("F","E",1); add("E","U",1); add("E","B",1); add("B","A",1); add("A","C",1); add("C","D",1);
+  add("Q","F",1); add("S","Z2",1); add("Z1","S",1); add("S","T",1); add("T","Z3",1); add("T","Z4",1);
+  add("Z2","신기숙사",1); add("신기숙사","X",1);
+  add("Z1","MH",2);
+  return g;
+}
+const CAMPUS_GRAPH = buildCampusGraph();
+
+function dijkstraCampus(start, end) {
+  if (!CAMPUS_GRAPH[start] || !CAMPUS_GRAPH[end]) return null;
+  const dist={}, prev={}, all=Object.keys(CAMPUS_GRAPH); all.forEach(n=>dist[n]=Infinity);
+  dist[start]=0;
+  const todo=new Set(all);
+  const pick=()=>{ let b=null,bd=Infinity; for(const n of todo) if(dist[n]<bd){bd=dist[n]; b=n;} return b; };
+  while(todo.size){
+    const u=pick(); if(u==null) break; todo.delete(u); if(u===end) break;
+    for(const {to,w} of CAMPUS_GRAPH[u]){
+      const alt=dist[u]+w; if(alt<dist[to]){ dist[to]=alt; prev[to]=u; }
     }
-  ]);
+  }
+  if(start!==end && !prev[end]) return null;
+  const path=[]; let cur=end; while(cur!=null){ path.push(cur); cur=prev[cur]; } return path.reverse();
+}
+function recommendOnCampus(aCode, bCode) {
+  const path = dijkstraCampus(aCode, bCode);
+  if (!path) return null;
+  const mid = path[Math.floor((path.length - 1)/2)];
+  return { path, midCode: mid, midLabel: ONCAMPUS_LABELS[mid] || mid };
+}
+
+/** 교외: 노선/역 데이터 (자바 코드 1:1 이식) */
+const SUBWAY_MAP = {
+  '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
+  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
+  '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
+  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
+  '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
+  '6호선': ["응암","역촌","불광","독립문","연신내","구산","디지털미디어시티","월드컵경기장","마포구청","망원","합정","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","상월곡","돌곶이","석계","태릉입구","화랑대","봉화산"],
+  '7호선': ["장암","도봉산","수락산","마들","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지","철산","광명사거리","천왕","온수","오류동","개봉","구일"],
+  '8호선': ["암사","천호","강동구청","몽촌토성","잠실","석촌","송파","가락시장","문정","장지","복정","산성","남한산성입구","단대오거리","신흥","수진","모란"],
+  '9호선': ["개화","김포공항","공항시장","신방화","마곡나루","양천향교","가양","증미","등촌","염창","신목동","선유도","당산","국회의사당","여의도","샛강","노량진","노들","흑석","동작","구반포","신반포","고속터미널","사평","신논현","언주","선정릉","삼성중앙","봉은사","종합운동장"],
+  '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
+  '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
+  '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+};
+const getLineByStation = (station) => {
+  if (!station) return null;
+  for (const [line, arr] of Object.entries(SUBWAY_MAP)) if (arr.includes(station)) return line;
+  return null;
+};
+function buildStationGraphAndLineMap() {
+  const graph={}, stationLines={};
+  for (const [line, arr] of Object.entries(SUBWAY_MAP)) {
+    arr.forEach((name,i)=>{
+      graph[name]=graph[name]||new Set();
+      stationLines[name]=stationLines[name]||new Set();
+      stationLines[name].add(line);
+      if(i>0){ graph[name].add(arr[i-1]); graph[arr[i-1]].add(name); }
+    });
+  }
+  return { graph, stationLines };
+}
+const { graph: ST_GRAPH, stationLines: ST_LINES } = buildStationGraphAndLineMap();
+
+/** 자바 로직 동일: 환승/패널티 가중 Dijkstra */
+function dijkstraWeighted(start, end, transferCost = 10, penalizePenalty = 10) {
+  if (!ST_GRAPH[start] || !ST_GRAPH[end]) return null;
+  const penalized = new Set(["공항철도","경의중앙선","신분당선","수인분당선"]);
+  const dist={}, prev={}; Object.keys(ST_GRAPH).forEach(s=>dist[s]=Infinity); dist[start]=0;
+  const todo=new Set(Object.keys(ST_GRAPH));
+  const pick=()=>{ let b=null,bd=Infinity; for(const s of todo) if(dist[s]<bd){bd=dist[s]; b=s;} return b; };
+  while(todo.size){
+    const u=pick(); if(u==null) break; todo.delete(u); if(u===end) break;
+    for(const v of ST_GRAPH[u]){
+      const linesU=ST_LINES[u]||new Set(), linesV=ST_LINES[v]||new Set();
+      let commonNonPen=false; for(const l of linesU){ if(!penalized.has(l) && linesV.has(l)){ commonNonPen=true; break; } }
+      let w; if(commonNonPen){ w=1; } else {
+        let p=false; for(const l of linesU){ if(penalized.has(l) && linesV.has(l)){ p=true; break; } }
+        w = p ? penalizePenalty : transferCost;
+      }
+      const alt=dist[u]+w; if(alt<dist[v]){ dist[v]=alt; prev[v]=u; }
+    }
+  }
+  if(start!==end && !prev[end]) return null;
+  const path=[]; let cur=end; path.unshift(cur); while(prev[cur]){ cur=prev[cur]; path.unshift(cur); }
+  return path;
+}
+function recommendOffCampus(aStation, bStation){
+  const path = dijkstraWeighted(aStation, bStation, 10, 10);
+  if (!path) return null;
+  const mid = path[Math.floor(path.length/2)];
+  return { path, midStation: mid };
+}
+
+/* ----------------------------- component start ------------------------------ */
+
+const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
+
+const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 사용합니다 */) => {
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { chatId } = useParams();
+
+  // ✅ chatId → 유효한 숫자 roomId로 변환 (없거나 NaN이면 null)
+  const roomId = useMemo(() => {
+    const n = Number(chatId);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [chatId]);
+
   const [isReserved, setIsReserved] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -793,47 +594,44 @@ const ChatRoom = () => {
   const [profanityWarning, setProfanityWarning] = useState('');
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
+
+  // ✅ 스마트 예약 관련
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [reserveConfirmed, setReserveConfirmed] = useState(false);
+
+  // ✅ QR
   const [showQRModal, setShowQRModal] = useState(false);
   const [showQRQuestion, setShowQRQuestion] = useState(false);
   const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
+
   const width = useWindowWidth();
+  const [receiverId, setReceiverId] = useState(null);
+  const [senderId, setSenderId] = useState(null);
+  const [salePostId, setSalePostId] = useState(null);
+  const stompClient = useRef(null);
+  const { user } = useContext(AuthCtx);
+  const currentUserId = user?.id;
 
-  // 채팅방 ID에 따른 사용자 정보 매핑
-  const getChatUserInfo = (chatId) => {
-    // chatId가 유효한 숫자인지 확인
-    const numericChatId = parseInt(chatId);
-    if (isNaN(numericChatId)) {
-      console.log('유효하지 않은 chatId:', chatId);
-      return { name: '사용자', avatar: '사', bookTitle: '책 제목', price: '0' };
-    }
-    
-    const userInfoMap = {
-      1: { name: '김철수', avatar: '김', bookTitle: '자바의 정석', price: '15,000' },
-      2: { name: '이영희', avatar: '이', bookTitle: '알고리즘 문제 해결 전략', price: '18,000' },
-      3: { name: '박민수', avatar: '박', bookTitle: '스프링 부트 실전 활용', price: '20,000' },
-      4: { name: '최지영', avatar: '최', bookTitle: '데이터베이스 시스템', price: '22,000' }
-    };
-    
-    const userInfo = userInfoMap[numericChatId];
-    if (!userInfo) {
-      console.log('매핑되지 않은 chatId:', numericChatId);
-    }
-    
-    return userInfo || { name: '사용자', avatar: '사', bookTitle: '책 제목', price: '0' };
-  };
+  // ✅ 날씨 상태
+  const [weeklyWeather, setWeeklyWeather] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
-  // chatId 디버깅
-  console.log('현재 chatId:', id, '타입:', typeof id);
-  
-  const chatUserInfo = getChatUserInfo(id);
-  
-  // 사용자 정보 디버깅
-  console.log('사용자 정보:', chatUserInfo);
+  // ✅ 판매자가 설정한 기본 위치 (게시글에서 가져옴)
+  const [sellerDefault, setSellerDefault] = useState({
+    oncampusPlaceCode: null,
+    offcampusStationCode: null
+  });
+
+  // ✅ 교내/교외 입력 + 추천 상태
+  const [meetType, setMeetType] = useState('on'); // 'on' | 'off'
+  const [buyerCampusCode, setBuyerCampusCode] = useState('');
+  const [campusSuggest, setCampusSuggest] = useState(null);
+  const [buyerLine, setBuyerLine] = useState('');
+  const [buyerStation, setBuyerStation] = useState('');
+  const [offSuggest, setOffSuggest] = useState(null);
 
   // 버튼 텍스트 반응형
   const getLabel = (type) => {
@@ -858,118 +656,130 @@ const ChatRoom = () => {
     }
   };
 
-  // 아이콘 색상 동적
+  // 아이콘 색상
   const iconColor = (activeColor, isActive, isHover) => {
     if (isActive || isHover) return activeColor;
     return '#bbb';
   };
 
+  /* -------------------------- 채팅방/메시지 로딩 -------------------------- */
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // ❗ roomId 없으면 호출 금지
+    if (!roomId) return;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+    async function loadRoomInfo() {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || hasProfanity) return;
+        const res = await fetch(`/api/chat/rooms/${roomId}`, { headers: { Authorization: `Bearer ${token}` }});
+        if (!res.ok) throw new Error('채팅방 정보 불러오기 실패');
 
-    const messageId = Date.now();
-    const message = {
-      id: messageId,
-      type: 'message',
-      content: newMessage.trim(),
-      sender: 'own',
-      timestamp: new Date().toLocaleString('ko-KR'),
-      status: 'sending'
+        const room = await res.json();
+
+        const userJson = localStorage.getItem('user');
+        const myUsername = userJson ? JSON.parse(userJson).username : null;
+        const myIdLocal = userJson ? JSON.parse(userJson).id : null;
+        if (!myUsername || !myIdLocal) return;
+
+        let sender = null, receiver = null;
+        if (myIdLocal === room.buyerId) { sender = room.buyerId; receiver = room.sellerId; }
+        else if (myIdLocal === room.sellerId) { sender = room.sellerId; receiver = room.buyerId; }
+        else return;
+
+        setSenderId(sender);
+        setReceiverId(receiver);
+        setSalePostId(room.salePostId);
+
+        // ✅ 판매자 기본 위치 로드 (게시글 상세에서 가져옴)
+        if (room.salePostId) {
+          const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
+          if (postRes.ok) {
+            const post = await postRes.json();
+            setSellerDefault({
+              oncampusPlaceCode: post.oncampusPlaceCode || null,
+              offcampusStationCode: post.offcampusStationCode || null
+            });
+            setMeetType(post.oncampusPlaceCode ? 'on' : (post.offcampusStationCode ? 'off' : 'on'));
+          }
+        }
+      } catch (err) {
+        console.error('❌ 채팅방 정보 불러오기 실패:', err);
+      }
+    }
+    loadRoomInfo();
+  }, [roomId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!roomId || !token) return; // ❗ 가드 강화
+
+    const loadPreviousMessages = async () => {
+      try {
+        const res = await fetch(`/api/chat/room/${roomId}/messages`, { headers: { Authorization: `Bearer ${token}` }});
+        if (!res.ok) throw new Error('이전 메시지 불러오기 실패');
+        const data = await res.json();
+        setMessages(data);
+      } catch (err) {
+        console.error("❌ 이전 메시지 로딩 실패:", err);
+      }
+    };
+    loadPreviousMessages();
+  }, [roomId]);
+
+  /* -------------------------------- STOMP -------------------------------- */
+  useEffect(() => {
+    // ❗ roomId 없으면 연결 금지
+    if (!roomId) return;
+
+    // 중복 연결 방지
+    if (stompClient.current?.connected) return;
+
+    const ws = new WebSocket(WS_ENDPOINT);
+    const stomp = Stomp.over(ws);
+    stomp.debug = () => {}; // 필요시 로그 활성화
+
+    stomp.connect({}, () => {
+      stomp.subscribe(`/sub/chat/room/${roomId}`, (message) => {
+        const newMessage = JSON.parse(message.body);
+        setMessages(prev => [...prev, newMessage]);
+      });
+      stompClient.current = stomp;
+    });
+
+    return () => {
+      try { stomp.disconnect(() => { stompClient.current = null; }); } catch { stompClient.current = null; }
+    };
+  }, [roomId]);
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !receiverId) return;
+    if (!roomId) return; // ❗ 가드
+    const client = stompClient.current;
+    if (!client || !client.connected) return;
+
+    const msgPayload = {
+      roomId,
+      salePostId,
+      senderId,
+      receiverId,
+      message: newMessage.trim(),
+      sentAt: new Date().toISOString()
     };
 
-    // 메시지를 즉시 추가 (전송 중 상태)
-    setMessages(prev => [...prev, message]);
+    client.send("/pub/chat.sendMessage", {}, JSON.stringify(msgPayload));
     setNewMessage('');
-    setLoading(true);
-
-    try {
-      // 실제로는 API 호출하여 메시지 전송
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // 전송 성공 시 바로 읽음 상태로 변경
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'read' }
-          : msg
-      ));
-
-    } catch (error) {
-      console.error('메시지 전송 실패:', error);
-      // 전송 실패 시 상태 업데이트
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const handleRetryMessage = async (messageId) => {
-    const message = messages.find(msg => msg.id === messageId);
-    if (!message) return;
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-    // 메시지 상태를 전송 중으로 변경
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, status: 'sending' }
-        : msg
-    ));
-
-    try {
-      // 재전송 시도
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // 재전송 성공 시 바로 읽음 상태로 변경
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'read' }
-          : msg
-      ));
-
-    } catch (error) {
-      console.error('메시지 재전송 실패:', error);
-      // 재전송 실패
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
-    }
-  };
-
-  const handleRetryClick = (messageId) => {
-    setRetryMessageId(messageId);
-    setShowRetryModal(true);
-  };
-
-  const handleRetryConfirm = async () => {
-    if (retryMessageId) {
-      setShowRetryModal(false);
-      await handleRetryMessage(retryMessageId);
-      setRetryMessageId(null);
-    }
-  };
-
-  const handleRetryCancel = () => {
-    setShowRetryModal(false);
-    setRetryMessageId(null);
-  };
+  const handleRetryClick = (messageId) => { setRetryMessageId(messageId); setShowRetryModal(true); };
+  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO: 재전송 */ setRetryMessageId(null);} };
+  const handleRetryCancel = () => { setShowRetryModal(false); setRetryMessageId(null); };
 
   const handleMessageChange = (e) => {
     const text = e.target.value;
     setNewMessage(text);
-    
-    // 비속어 감지
     if (detectProfanity(text)) {
       setHasProfanity(true);
       setProfanityWarning('부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
@@ -982,76 +792,56 @@ const ChatRoom = () => {
   const handleQuickAction = (action) => {
     const quickMessages = {
       '가격 협의 가능': '가격 협의 가능하신가요?',
-      '책 상태 확인': '책 상태를 더 자세히 알 수 있을까요?',
-      '거래 방법': '어떤 방법으로 거래하시나요?',
-      '배송 가능': '배송도 가능하신가요?'
+      '책 상태 확인': '책 상태를 더 자세히 알 수 있을까요?'
     };
-
     setNewMessage(quickMessages[action]);
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
-  const handleBack = () => {
-    navigate('/chat');
-  };
+  const handleBack = () => { navigate('/chat'); };
+  const formatTime = (timestamp) => { const date = new Date(timestamp); return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); };
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('ko-KR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  const handleReserve = () => {
-    setShowReserveModal(true);
-  };
-
+  /* -------------------------------- 예약/신고 -------------------------------- */
+  const handleReserve = () => { setShowReserveModal(true); };
   const handleReserveConfirm = () => {
+    if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
     setIsReserved(true);
     setReserveConfirmed(true);
     setShowReserveModal(false);
-    setMessages(prev => [
+    setMessages(prev => ([
       ...prev,
-      { id: Date.now(), type: 'system', content: `예약이 확정되었습니다!\n장소: ${selectedPlace}, 날짜: ${selectedDate?.date} (${selectedDate?.weather})`, timestamp: new Date().toLocaleString('ko-KR') }
-    ]);
-    
-    // QR 코드 생성 여부 즉시 묻기
+      {
+        id: Date.now(),
+        type: 'system',
+        message: `예약이 확정되었습니다!\n장소: ${selectedPlace}, 날짜: ${selectedDate?.date} (${selectedDate?.weather})`,
+        sentAt: new Date().toISOString()
+      }
+    ]));
     setShowQRQuestion(true);
-    
-    // TODO: 나의 거래 페이지에 예약 정보 자동 입력(모킹)
   };
 
-  const handleCancelReserve = () => {
-    setShowCancelModal(true);
-  };
-
+  const handleCancelReserve = () => { setShowCancelModal(true); };
   const handleCancelConfirm = () => {
     setIsReserved(false);
     setShowCancelModal(false);
-    setMessages(prev => [
+    setMessages(prev => ([
       ...prev,
-      { id: Date.now(), type: 'system', content: `예약이 취소되었습니다. 사유: ${cancelReason}`, timestamp: new Date().toLocaleString('ko-KR'), cancel: true }
-    ]);
+      {
+        id: Date.now(),
+        type: 'system',
+        message: `예약이 취소되었습니다. 사유: ${cancelReason}`,
+        cancel: true,
+        sentAt: new Date().toISOString()
+      }
+    ]));
     setCancelReason('');
   };
+  const handleCancelClose = () => { setShowCancelModal(false); setCancelReason(''); };
 
-  const handleCancelClose = () => {
-    setShowCancelModal(false);
-    setCancelReason('');
-  };
-
-  const handleExit = () => {
-    if(window.confirm('채팅방을 나가시겠습니까?')) {
-      navigate('/chat');
-    }
-  };
+  const handleExit = () => { if (window.confirm('채팅방을 나가시겠습니까?')) navigate('/chat'); };
 
   const getToday = () => {
     const d = new Date();
@@ -1059,62 +849,26 @@ const ChatRoom = () => {
   };
 
   const handleComplete = () => {
+    if (!isReserved && !isCompleted) return;
     if (!isCompleted) {
       setIsCompleted(true);
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now(), type: 'system', content: '거래가 완료되었습니다.', timestamp: new Date().toLocaleString('ko-KR') }
-      ]);
+      setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }]));
     } else {
       setIsCompleted(false);
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now(), type: 'system', content: '거래 완료가 취소되었습니다.', timestamp: new Date().toLocaleString('ko-KR') }
-      ]);
+      setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래 완료가 취소되었습니다.', sentAt: new Date().toISOString() }]));
     }
   };
 
-  const handleReport = () => {
-    setShowReportModal(true);
-    setReportReason('');
-  };
+  const handleReport = () => { setShowReportModal(true); setReportReason(''); };
+  const handleReportSubmit = (e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); };
+  const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
+  const handleReportStay = () => { setShowReportExitModal(false); };
 
-  const handleReportSubmit = (e) => {
-    e.preventDefault();
-    if (!reportReason) return;
-    setShowReportModal(false);
-    setShowReportExitModal(true);
-    // 실제 신고 API 연동은 추후 구현
-  };
-
-  const handleReportExit = () => {
-    setShowReportExitModal(false);
-    navigate('/chat');
-  };
-
-  const handleReportStay = () => {
-    setShowReportExitModal(false);
-  };
-
-  // QR 코드 관련 함수들
-  const handleQRCodeGenerate = () => {
-    setShowQRQuestion(true);
-  };
-
-  const handleQRCodeConfirm = () => {
-    setQrCodeGenerated(true);
-    setShowQRQuestion(false);
-    setShowQRModal(true);
-  };
-
-  const handleQRCodeCancel = () => {
-    setShowQRQuestion(false);
-  };
-
-  const handleQRCodeClose = () => {
-    setShowQRModal(false);
-  };
-
+  /* --------------------------------- QR 코드 -------------------------------- */
+  const handleQRCodeGenerate = () => { setShowQRQuestion(true); };
+  const handleQRCodeConfirm = () => { setQrCodeGenerated(true); setShowQRQuestion(false); setShowQRModal(true); };
+  const handleQRCodeCancel = () => { setShowQRQuestion(false); };
+  const handleQRCodeClose = () => { setShowQRModal(false); };
   const handleQRCodeDownload = () => {
     const svg = document.querySelector('#qr-code svg');
     if (svg) {
@@ -1122,56 +876,39 @@ const ChatRoom = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
-      
       img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        const link = document.createElement('a');
-        link.download = '결제QR코드.png';
-        link.href = canvas.toDataURL();
-        link.click();
+        canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0);
+        const link = document.createElement('a'); link.download = '결제QR코드.png'; link.href = canvas.toDataURL(); link.click();
       };
-      
       img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
     }
   };
-
-
-
   const generateQRData = () => {
-    const bookInfo = messages[0]?.content?.split(' - ') || [];
+    const bookInfo = messages[0]?.message?.split(' - ') || [];
     const bookTitle = bookInfo[0] || '알 수 없는 책';
     const priceText = bookInfo[1] || '0';
-    const price = priceText.replace(/[^0-9]/g, '') || '0'; // 숫자만 추출
-    
-    // 간편 결제 QR 코드 데이터 (토스페이먼츠, 카카오페이 등)
+    const price = priceText.replace(/[^0-9]/g, '') || '0';
     return {
       type: 'payment',
       amount: parseInt(price),
       currency: 'KRW',
       merchantId: 'hongbookstore',
-      orderId: `order_${id}_${Date.now()}`,
+      orderId: `order_${roomId ?? 'unknown'}_${Date.now()}`,
       description: `책 구매: ${bookTitle}`,
       timestamp: new Date().toISOString()
     };
   };
 
-
-
-  // 비속어 감지 함수
+  /* --------------------------------- 비속어 --------------------------------- */
   const detectProfanity = (text) => {
     const profanityList = [
-      '씨발', '개새끼', '병신', '미친', '바보', '멍청이', '돌아이', '등신',
-      'fuck', 'shit', 'bitch', 'asshole', 'damn', 'hell'
+      '씨발','개새끼','병신','미친','바보','멍청이','돌아이','등신',
+      'fuck','shit','bitch','asshole','damn','hell'
     ];
-    
     const lowerText = text.toLowerCase();
     return profanityList.some(word => lowerText.includes(word));
   };
 
-  // 메시지 상태 표시 컴포넌트
   const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
     const getStatusText = () => {
       switch (status) {
@@ -1181,7 +918,6 @@ const ChatRoom = () => {
         default: return '';
       }
     };
-
     const getStatusIcon = () => {
       switch (status) {
         case 'sending': return '⏳';
@@ -1190,392 +926,526 @@ const ChatRoom = () => {
         default: return '';
       }
     };
-
     return (
-      <MessageStatus isOwn={isOwn}>
-                        <StatusIcon $status={status}>
-          {getStatusIcon()}
-        </StatusIcon>
-        <span>{getStatusText()}</span>
-        {status === 'failed' && onRetry && (
-          <RetryButton onClick={onRetry} title="재전송">
-            <FaRedo size={10} />
-          </RetryButton>
-        )}
-      </MessageStatus>
+        <MessageStatus isOwn={isOwn}>
+          <StatusIcon $status={status}>{getStatusIcon()}</StatusIcon>
+          <span>{getStatusText()}</span>
+          {status === 'failed' && onRetry && (
+              <RetryButton onClick={onRetry} title="재전송">↻</RetryButton>
+          )}
+        </MessageStatus>
     );
   };
 
-  // 임시 장소 추천 (교내/교외)
-  const userLocationType = '교내'; // TODO: 실제 사용자/상대방 정보로 대체
-  const placeOptions = userLocationType === '교내'
-    ? ['홍문관 앞', '학생회관', '중앙도서관', '제2공학관']
-    : ['정문 앞 카페', '홍대입구역', '신촌역', '합정역'];
+  /* --------------------------- ✅ 스마트 예약 (날씨) -------------------------- */
 
-  // 임시 날씨/날짜 추천 (실제 API 연동 전 모킹)
-  const today = new Date();
-  const dateOptions = Array.from({length: 7}, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    // 임시 날씨: 2, 5일 뒤가 맑음, 나머지는 흐림
-    const weather = (i === 2 || i === 5) ? '맑음' : '흐림';
+  // 브라우저 위치(실패 시 서울 시청 좌표)
+  async function getCoords() {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve({ lat: 37.5665, lng: 126.9780 });
+      navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve({ lat: 37.5665, lng: 126.9780 }),
+          { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+  }
+
+  // 백엔드 주간 날씨 API
+  async function fetchWeeklyWeather({ lat, lng, sido }) {
+    const q = new URLSearchParams({ lat, lng, ...(sido ? { sido } : {}) }).toString();
+    const res = await fetch(`/api/weather/weekly?${q}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+    });
+    if (!res.ok) throw new Error('날씨 조회 실패');
+    return res.json();
+  }
+
+  // 모달 열릴 때 날씨 불러오기
+  useEffect(() => {
+    if (!showReserveModal) return;
+    (async () => {
+      try {
+        setWeatherLoading(true);
+        const { lat, lng } = await getCoords();
+        const sido = '서울'; // TODO: 역지오코딩으로 자동화 가능
+        const r = await fetchWeeklyWeather({ lat, lng, sido });
+        setWeeklyWeather(r);
+      } catch (e) {
+        console.error(e);
+        setWeeklyWeather(null);
+      } finally {
+        setWeatherLoading(false);
+      }
+    })();
+  }, [showReserveModal]);
+
+  // API 데이터를 UI용으로 정제
+  const dateOptions = (weeklyWeather?.days || []).map(d => {
+    const dt = new Date(d.date);
+    const label = dt.toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit', weekday:'short' });
+    const pop = d.popAvg ?? 0;               // 0~100
+    const weatherLabel = pop <= 20 ? '맑음' : pop <= 60 ? '구름' : '비';
     return {
-      date: d.toLocaleDateString('ko-KR', {month:'2-digit', day:'2-digit', weekday:'short'}),
-      weather
+      date: label, iso: d.date, pop, best: d.best,
+      am: d.popAm, pm: d.popPm, weather: weatherLabel
     };
   });
-  const bestDate = dateOptions.find(d => d.weather === '맑음') || dateOptions[0];
+
+  const bestDate = dateOptions.find(x => x.best) || [...dateOptions].sort((a,b)=>a.pop-b.pop)[0];
+
+  /* ---------------------------------- UI 가드 ---------------------------------- */
+
+  // 잘못된 방 주소로 접근 시 안내
+  if (chatId !== undefined && !roomId) {
+    return (
+        <div style={{maxWidth: 720, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 12, background: '#fff'}}>
+          <div style={{fontSize: 18, fontWeight: 700, marginBottom: 8}}>잘못된 채팅방 주소</div>
+          <div style={{color: '#666', marginBottom: 16}}>유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.</div>
+          <button
+              onClick={() => navigate('/chat')}
+              style={{padding: '10px 14px', borderRadius: 8, border: 'none', background: '#111827', color: '#fff', fontWeight: 700, cursor: 'pointer'}}
+          >
+            채팅 목록으로 이동
+          </button>
+        </div>
+    );
+  }
+
+  /* ---------------------------------- JSX ---------------------------------- */
 
   return (
-    <>
-      <div className="header-spacer" />
-      <ChatContainer>
-        <ChatHeader>
-          <HeaderLeft>
-            <BackButton onClick={handleBack}>
-              <FaArrowLeft />
-            </BackButton>
-            <ChatInfo>
-              <UserAvatar>
-                {chatUserInfo.avatar}
-              </UserAvatar>
-              <UserInfo>
-                <UserName>{chatUserInfo.name}</UserName>
-                <BookTitle>
-                  <FaBook size={12} />
-                  {chatUserInfo.bookTitle} - {chatUserInfo.price}원
-                </BookTitle>
-              </UserInfo>
-            </ChatInfo>
-          </HeaderLeft>
-          <HeaderRight style={{gap: 0}}>
-            <ChatMenuButton
-              onClick={handleReport}
-              title="신고하기"
-              onMouseEnter={() => setHovered('report')}
-              onMouseLeave={() => setHovered('')}
-            >
-              <FaExclamationTriangle style={{ color: iconColor('#ffb300', false, hovered==='report'), fontSize: '1.1em' }} />
-              {getLabel('report')}
-            </ChatMenuButton>
-            {isReserved ? (
-              <ChatMenuButton
-                onClick={handleCancelReserve}
-                title="예약 취소하기"
-                disabled={isCompleted}
-                onMouseEnter={() => setHovered('reserve-cancel')}
-                onMouseLeave={() => setHovered('')}
-              >
-                <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve-cancel'), fontSize: '1.1em' }} />
-                {getLabel('reserve-cancel')}
-              </ChatMenuButton>
-            ) : (
-              <ChatMenuButton
-                onClick={handleReserve}
-                title="예약하기"
-                disabled={isCompleted}
-                onMouseEnter={() => setHovered('reserve')}
-                onMouseLeave={() => setHovered('')}
-              >
-                <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve'), fontSize: '1.1em' }} />
-                {getLabel('reserve')}
-              </ChatMenuButton>
-            )}
-            <ChatMenuButton
-              onClick={handleComplete}
-              title={isCompleted ? "거래 완료 취소" : "거래 완료"}
-              disabled={!isReserved && !isCompleted}
-              onMouseEnter={() => setHovered(isCompleted ? 'complete-cancel' : 'complete')}
-              onMouseLeave={() => setHovered('')}
-            >
-              <FaCheckCircle style={{ color: iconColor('#1976d2', isCompleted, hovered===(isCompleted?'complete-cancel':'complete')), fontSize: '1.1em' }} />
-              {getLabel(isCompleted ? 'complete-cancel' : 'complete')}
-            </ChatMenuButton>
-            {isReserved && (
-              <ChatMenuButton
-                onClick={handleQRCodeGenerate}
-                title="결제 QR 코드 생성"
-                onMouseEnter={() => setHovered('qr')}
-                onMouseLeave={() => setHovered('')}
-              >
-                <FaQrcode style={{ color: iconColor('#28a745', qrCodeGenerated, hovered==='qr'), fontSize: '1.1em' }} />
-                {width > 600 && '결제QR'}
-              </ChatMenuButton>
-            )}
-            <ExitButton onClick={handleExit} title="채팅방 나가기">
-              <FaSignOutAlt /> {width > 600 && '나가기'}
-            </ExitButton>
-          </HeaderRight>
-        </ChatHeader>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fa', padding: '8px 0', fontSize: '0.95rem', color: '#666', gap: 8 }}>
-          <FaCalendarAlt style={{ opacity: 0.7 }} />
-          <span>{getToday()}</span>
-        </div>
-        {showCancelModal && (
-          <ModalOverlay>
-            <ModalBox>
-              <ModalTitle>예약 취소 사유를 입력하세요</ModalTitle>
-              <ModalTextarea
-                value={cancelReason}
-                onChange={e => setCancelReason(e.target.value)}
-                placeholder="예: 일정 변경, 거래 취소 등"
-              />
-              <ModalActions>
-                <ModalButton data-variant="cancel" onClick={handleCancelClose}>취소</ModalButton>
-                <ModalButton onClick={handleCancelConfirm} disabled={!cancelReason.trim()}>확인</ModalButton>
-              </ModalActions>
-            </ModalBox>
-          </ModalOverlay>
-        )}
-        {showReportModal && (
-          <ModalOverlay>
-            <ModalBox as="form" onSubmit={handleReportSubmit}>
-              <ModalTitle>신고 사유를 선택하세요</ModalTitle>
-              <ReportRadio>
-                <RadioInput type="radio" name="report" value="욕설/비방" checked={reportReason === '욕설/비방'} onChange={e => setReportReason(e.target.value)} />
-                욕설/비방
-              </ReportRadio>
-              <ReportRadio>
-                <RadioInput type="radio" name="report" value="사기/허위매물" checked={reportReason === '사기/허위매물'} onChange={e => setReportReason(e.target.value)} />
-                사기/허위매물
-              </ReportRadio>
-              <ReportRadio>
-                <RadioInput type="radio" name="report" value="스팸/광고" checked={reportReason === '스팸/광고'} onChange={e => setReportReason(e.target.value)} />
-                스팸/광고
-              </ReportRadio>
-              <ReportRadio>
-                <RadioInput type="radio" name="report" value="기타" checked={reportReason === '기타'} onChange={e => setReportReason(e.target.value)} />
-                기타
-              </ReportRadio>
-              <ModalActions>
-                <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
-                <ModalButton type="submit" disabled={!reportReason}>제출</ModalButton>
-              </ModalActions>
-            </ModalBox>
-          </ModalOverlay>
-        )}
-        {showReportExitModal && (
-          <ModalOverlay>
-            <ModalBox>
-              <ModalTitle>신고가 접수되었습니다.<br/>채팅방에서 나가시겠습니까?</ModalTitle>
-              <ModalActions>
-                <ModalButton data-variant="cancel" onClick={handleReportStay}>아니오</ModalButton>
-                <ModalButton onClick={handleReportExit}>예</ModalButton>
-              </ModalActions>
-            </ModalBox>
-          </ModalOverlay>
-        )}
-        {showReserveModal && (
-          <ModalOverlay>
-            <ReserveModalBox>
-              <ModalTitle>스마트 예약</ModalTitle>
-              <div style={{marginBottom:'1.2rem', fontWeight:500, color:'#333'}}>추천 거래 장소</div>
-              <PlaceList>
-                {placeOptions.map(place => (
-                  <PlaceItem key={place} selected={selectedPlace===place} onClick={()=>setSelectedPlace(place)}>
-                    <FaMapMarkerAlt style={{opacity:0.7}} /> {place}
-                  </PlaceItem>
-                ))}
-              </PlaceList>
-              <div style={{marginBottom:'1.2rem', fontWeight:500, color:'#333'}}>추천 날짜 (날씨 기반)</div>
-              <DateList>
-                {dateOptions.map(opt => (
-                  <DateItem key={opt.date} selected={selectedDate===opt} onClick={()=>setSelectedDate(opt)}>
-                    <FaCloudSun style={{opacity:0.7}} /> {opt.date} <span style={{fontSize:'0.95em', color:opt.weather==='맑음'?'#1976d2':'#888'}}>{opt.weather}</span>
-                  </DateItem>
-                ))}
-              </DateList>
-              <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
-                <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
-                <ModalButton onClick={handleReserveConfirm} disabled={!selectedPlace||!selectedDate}><FaCheckCircle /> 예약 확정</ModalButton>
-                <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
-              </div>
-              {showRoute && (
-                <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
-                  <b>예상 이동 경로/시간 안내</b><br/>
-                  (카카오맵/네이버지도 API 연동 예정, 현재는 임시 안내)<br/>
-                  <span style={{fontSize:'0.95em'}}>내 위치 → {selectedPlace} (예상 15분)</span>
-                </div>
-              )}
-              {reserveConfirmed && (
-                <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
-                  예약이 확정되었습니다!<br/>
-                  <FaQrcode style={{marginRight:6}}/> 다음 화면에서 결제 QR 코드 생성 여부를 선택할 수 있습니다.
-                </div>
-              )}
-            </ReserveModalBox>
-          </ModalOverlay>
-        )}
-        
-        {/* QR 코드 생성 여부 묻기 모달 */}
-        {showQRQuestion && (
-          <QRModal>
-            <QRModalContent>
-              <QRCodeQuestion>
-                <QRCodeQuestionText>💳 결제 QR 코드를 생성하시겠습니까?</QRCodeQuestionText>
-                <QRCodeQuestionDescription>
-                  간편 결제를 위한 QR 코드를 생성합니다.<br/>
-                  QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.<br/>
-                  추후 언제든지 헤더의 QR코드 버튼을 통해 다시 생성할 수 있습니다.
-                </QRCodeQuestionDescription>
-              </QRCodeQuestion>
-              <QRCodeActions>
-                <QRCodeButton className="close" onClick={handleQRCodeCancel}>
-                  나중에
-                </QRCodeButton>
-                <QRCodeButton className="download" onClick={handleQRCodeConfirm}>
-                  결제 QR 코드 생성
-                </QRCodeButton>
-              </QRCodeActions>
-            </QRModalContent>
-          </QRModal>
-        )}
+      <>
+        <div className="header-spacer" />
+        <ChatContainer>
+          <ChatHeader>
+            <HeaderLeft>
+              <BackButton onClick={() => navigate('/chat')}>
+                <FaArrowLeft />
+              </BackButton>
+              <ChatInfo>
+                <UserAvatar><FaUser /></UserAvatar>
+                <UserInfo>
+                  <UserName>{messages.length > 0 && messages[0].sender === 'other' ? '김학생' : '학생'}</UserName>
+                  <BookTitle>
+                    <FaBook size={12} />
+                    {messages.length > 0 && messages[0].message ? messages[0].message.split(' - ')[0] : ''}
+                  </BookTitle>
+                </UserInfo>
+              </ChatInfo>
+            </HeaderLeft>
 
-        {/* QR 코드 표시 모달 */}
-        {showQRModal && (
-          <QRModal>
-            <QRModalContent>
-              <h3>💳 간편 결제 QR 코드</h3>
-              <QRCodeContainer id="qr-code">
-                <QRCode 
-                  value={JSON.stringify(generateQRData())}
-                  size={200}
-                  level="M"
-                  includeMargin={true}
-                />
-              </QRCodeContainer>
-              <QRCodeInfo>
-                <QRCodeInfoItem>
-                  <QRCodeLabel>결제 금액:</QRCodeLabel>
-                  <QRCodeValue>{generateQRData().amount.toLocaleString()}원</QRCodeValue>
-                </QRCodeInfoItem>
-                <QRCodeInfoItem>
-                  <QRCodeLabel>상품명:</QRCodeLabel>
-                  <QRCodeValue>{generateQRData().description}</QRCodeValue>
-                </QRCodeInfoItem>
-                <QRCodeInfoItem>
-                  <QRCodeLabel>주문번호:</QRCodeLabel>
-                  <QRCodeValue>{generateQRData().orderId}</QRCodeValue>
-                </QRCodeInfoItem>
-                <QRCodeInfoItem>
-                  <QRCodeLabel>결제 수단:</QRCodeLabel>
-                  <QRCodeValue>토스페이먼츠 / 카카오페이</QRCodeValue>
-                </QRCodeInfoItem>
-                <QRCodeInfoItem>
-                  <QRCodeLabel>생성 시간:</QRCodeLabel>
-                  <QRCodeValue>{new Date(generateQRData().timestamp).toLocaleString('ko-KR')}</QRCodeValue>
-                </QRCodeInfoItem>
-              </QRCodeInfo>
-              <div style={{ 
-                background: '#f8f9fa', 
-                padding: '1rem', 
-                borderRadius: '8px', 
-                margin: '1rem 0',
-                fontSize: '0.9rem',
-                color: '#666'
-              }}>
-                💡 QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.
-              </div>
-              <QRCodeActions>
-                <QRCodeButton className="download" onClick={handleQRCodeDownload}>
-                  <FaDownload />
-                  다운로드
-                </QRCodeButton>
-                <QRCodeButton className="close" onClick={handleQRCodeClose}>
-                  닫기
-                </QRCodeButton>
-              </QRCodeActions>
-            </QRModalContent>
-          </QRModal>
-        )}
-        
-        <ChatMessages>
-          {messages.length > 0 ? (
-            messages.map(message => (
-              <MessageGroup key={message.id}>
-                {message.type === 'system' ? (
-                  <SystemMessage className={message.cancel ? 'cancel' : ''}>{message.content}</SystemMessage>
-                ) : (
-                  <>
-                    <Message isOwn={message.sender === 'own'}>
-                      {message.content}
-                    </Message>
-                    <MessageTime isOwn={message.sender === 'own'}>
-                      {formatTime(message.timestamp)}
-                    </MessageTime>
-                    {message.sender === 'own' && message.status && (
-                      <MessageStatusIndicator 
-                        status={message.status} 
-                        isOwn={true}
-                        onRetry={() => handleRetryClick(message.id)}
-                      />
+            <HeaderRight style={{gap: 0}}>
+              <ChatMenuButton
+                  onClick={() => { setShowReportModal(true); setReportReason(''); }}
+                  title="신고하기"
+                  onMouseEnter={() => setHovered('report')}
+                  onMouseLeave={() => setHovered('')}
+              >
+                <span style={{ color: iconColor('#ffb300', false, hovered==='report'), fontSize: '1.1em' }}>⚠️</span>
+                {getLabel('report')}
+              </ChatMenuButton>
+
+              {isReserved ? (
+                  <ChatMenuButton
+                      onClick={() => setShowCancelModal(true)}
+                      title="예약 취소하기"
+                      disabled={isCompleted}
+                      onMouseEnter={() => setHovered('reserve-cancel')}
+                      onMouseLeave={() => setHovered('')}
+                  >
+                    <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve-cancel'), fontSize: '1.1em' }} />
+                    {getLabel('reserve-cancel')}
+                  </ChatMenuButton>
+              ) : (
+                  <ChatMenuButton
+                      onClick={() => setShowReserveModal(true)}
+                      title="예약하기"
+                      disabled={isCompleted}
+                      onMouseEnter={() => setHovered('reserve')}
+                      onMouseLeave={() => setHovered('')}
+                  >
+                    <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve'), fontSize: '1.1em' }} />
+                    {getLabel('reserve')}
+                  </ChatMenuButton>
+              )}
+
+              <ChatMenuButton
+                  onClick={handleComplete}
+                  title={isCompleted ? "거래 완료 취소" : "거래 완료"}
+                  disabled={!isReserved && !isCompleted}
+                  onMouseEnter={() => setHovered(isCompleted ? 'complete-cancel' : 'complete')}
+                  onMouseLeave={() => setHovered('')}
+              >
+                <FaCheckCircle style={{ color: iconColor('#1976d2', isCompleted, hovered===(isCompleted?'complete-cancel':'complete')), fontSize: '1.1em' }} />
+                {getLabel(isCompleted ? 'complete-cancel' : 'complete')}
+              </ChatMenuButton>
+
+              {isReserved && (
+                  <ChatMenuButton
+                      onClick={() => setShowQRQuestion(true)}
+                      title="결제 QR 코드 생성"
+                      onMouseEnter={() => setHovered('qr')}
+                      onMouseLeave={() => setHovered('')}
+                  >
+                    <FaQrcode style={{ color: iconColor('#28a745', qrCodeGenerated, hovered==='qr'), fontSize: '1.1em' }} />
+                    {width > 600 && '결제QR'}
+                  </ChatMenuButton>
+              )}
+
+              <ExitButton onClick={() => { if(window.confirm('채팅방을 나가시겠습니까?')) navigate('/chat'); }} title="채팅방 나가기">
+                <FaSignOutAlt /> {width > 600 && '나가기'}
+              </ExitButton>
+            </HeaderRight>
+          </ChatHeader>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fa', padding: '8px 0', fontSize: '0.95rem', color: '#666', gap: 8 }}>
+            <FaCalendarAlt style={{ opacity: 0.7 }} />
+            <span>{getToday()}</span>
+          </div>
+
+          {/* 예약 취소 모달 */}
+          {showCancelModal && (
+              <ModalOverlay>
+                <ModalBox>
+                  <ModalTitle>예약 취소 사유를 입력하세요</ModalTitle>
+                  <ModalTextarea
+                      value={cancelReason}
+                      onChange={e => setCancelReason(e.target.value)}
+                      placeholder="예: 일정 변경, 거래 취소 등"
+                  />
+                  <ModalActions>
+                    <ModalButton data-variant="cancel" onClick={() => { setShowCancelModal(false); setCancelReason(''); }}>취소</ModalButton>
+                    <ModalButton onClick={handleCancelConfirm} disabled={!cancelReason.trim()}>확인</ModalButton>
+                  </ModalActions>
+                </ModalBox>
+              </ModalOverlay>
+          )}
+
+          {/* 신고 모달 */}
+          {showReportModal && (
+              <ModalOverlay>
+                <ModalBox as="form" onSubmit={(e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); }}>
+                  <ModalTitle>신고 사유를 선택하세요</ModalTitle>
+                  <ReportRadio><RadioInput type="radio" name="report" value="욕설/비방" checked={reportReason === '욕설/비방'} onChange={e => setReportReason(e.target.value)} />욕설/비방</ReportRadio>
+                  <ReportRadio><RadioInput type="radio" name="report" value="사기/허위매물" checked={reportReason === '사기/허위매물'} onChange={e => setReportReason(e.target.value)} />사기/허위매물</ReportRadio>
+                  <ReportRadio><RadioInput type="radio" name="report" value="스팸/광고" checked={reportReason === '스팸/광고'} onChange={e => setReportReason(e.target.value)} />스팸/광고</ReportRadio>
+                  <ReportRadio><RadioInput type="radio" name="report" value="기타" checked={reportReason === '기타'} onChange={e => setReportReason(e.target.value)} />기타</ReportRadio>
+                  <ModalActions>
+                    <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
+                    <ModalButton type="submit" disabled={!reportReason}>제출</ModalButton>
+                  </ModalActions>
+                </ModalBox>
+              </ModalOverlay>
+          )}
+
+          {/* 신고 후 나가기 확인 */}
+          {showReportExitModal && (
+              <ModalOverlay>
+                <ModalBox>
+                  <ModalTitle>신고가 접수되었습니다.<br/>채팅방에서 나가시겠습니까?</ModalTitle>
+                  <ModalActions>
+                    <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>아니오</ModalButton>
+                    <ModalButton onClick={() => { setShowReportExitModal(false); navigate('/chat'); }}>예</ModalButton>
+                  </ModalActions>
+                </ModalBox>
+              </ModalOverlay>
+          )}
+
+          {/* ✅ 스마트 예약 모달 */}
+          {showReserveModal && (
+              <ModalOverlay>
+                <ReserveModalBox>
+                  <ModalTitle>스마트 예약</ModalTitle>
+
+                  {/* 거래 방식 선택 */}
+                  <div style={{fontWeight:700, margin:'6px 0'}}>거래 방식</div>
+                  <div style={{display:'flex', gap:8, margin:'6px 0 12px'}}>
+                    <button
+                        onClick={()=>setMeetType('on')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='on'?'#0b63d1':'#e5e7eb'), background:meetType==='on'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='on'?'#0b63d1':'#334155'}}
+                    ><FaUniversity/> 교내</button>
+                    <button
+                        onClick={()=>setMeetType('off')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='off'?'#0b63d1':'#e5e7eb'), background:meetType==='off'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='off'?'#0b63d1':'#334155'}}
+                    ><FaSubway/> 교외</button>
+                  </div>
+
+                  {/* 판매자 설정 위치 노출 */}
+                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
+                    <div style={{fontWeight:800, marginBottom:6}}>판매자 설정 위치</div>
+                    {meetType==='on' ? (
+                        sellerDefault.oncampusPlaceCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaUniversity/>{ONCAMPUS_LABELS[sellerDefault.oncampusPlaceCode] || sellerDefault.oncampusPlaceCode}
+                      </span>
+                            : <span style={{color:'#64748b'}}>판매자가 교내 위치를 설정하지 않았습니다.</span>
+                    ) : (
+                        sellerDefault.offcampusStationCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaSubway/>{`${getLineByStation(sellerDefault.offcampusStationCode) || ''} · ${sellerDefault.offcampusStationCode}`}
+                      </span>
+                            : <span style={{color:'#64748b'}}>판매자가 교외 지하철역을 설정하지 않았습니다.</span>
                     )}
-                  </>
-                )}
-              </MessageGroup>
-            ))
-          ) : (
-            <NoMessages>
-              <FaUser size={40} style={{marginBottom: '15px', opacity: 0.5}} />
-              <h3>아직 메시지가 없습니다</h3>
-              <p>첫 번째 메시지를 보내보세요!</p>
-            </NoMessages>
+                  </div>
+
+                  {/* 교내 / 교외 입력 + 중간지점 추천 */}
+                  {meetType==='on' ? (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10}}>
+                          <select value={buyerCampusCode} onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
+                            <option value="">선택하세요</option>
+                            {CAMPUS_OPTIONS.map(code => <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>)}
+                          </select>
+                          <button onClick={()=>{
+                            if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
+                            if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
+                            const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
+                            if(!r) return alert('경로를 찾을 수 없습니다.');
+                            setCampusSuggest(r);
+                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                            <FaTrophy/> 중간지점 추천
+                          </button>
+                        </div>
+                        {campusSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                추천 중간지점: {campusSuggest.midLabel}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                최단 경로: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
+                              </div>
+                              <button onClick={()=>setSelectedPlace(`교내 · ${campusSuggest.midLabel}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> 이 장소 사용
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  ) : (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>구매자 교외 위치</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
+                          <select value={buyerLine} onChange={e=>{ setBuyerLine(e.target.value); setBuyerStation(''); setOffSuggest(null); }}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:160, fontWeight:700}}>
+                            <option value="">노선 선택</option>
+                            {Object.keys(SUBWAY_MAP).map(line => <option key={line} value={line}>{line}</option>)}
+                          </select>
+                          <select value={buyerStation} onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }} disabled={!buyerLine}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
+                            <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
+                            {(buyerLine ? SUBWAY_MAP[buyerLine] : []).map(st => <option key={st} value={st}>{st}</option>)}
+                          </select>
+                          <button onClick={()=>{
+                            if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
+                            if(!buyerStation) return alert('구매자 역을 선택하세요');
+                            const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
+                            if(!r) return alert('경로를 찾을 수 없습니다.');
+                            setOffSuggest(r);
+                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                            <FaTrophy/> 중간역 추천
+                          </button>
+                        </div>
+                        {offSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                추천 중간역: {getLineByStation(offSuggest.midStation) ? `${getLineByStation(offSuggest.midStation)} · ` : ''}{offSuggest.midStation}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                최적 경로: {offSuggest.path.join(' → ')}
+                              </div>
+                              <button onClick={()=>setSelectedPlace(`교외 · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> 이 장소 사용
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  )}
+
+                  {/* 선택된 장소 미리보기 */}
+                  <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
+                    <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> 선택된 장소</div>
+                    <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || '아직 선택되지 않았습니다.'}</div>
+                  </div>
+
+                  {/* ====== 추천 날짜 (기존 유지) ====== */}
+                  <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>추천 날짜 (강수확률 중심)</div>
+                  {weatherLoading && <div style={{color:'#555'}}>날씨 불러오는 중...</div>}
+                  {!weatherLoading && (
+                      <DateList>
+                        {dateOptions.map(opt => {
+                          const h = Math.max(0, Math.min(100, opt.pop));
+                          return (
+                              <DateItem key={opt.iso} selected={selectedDate?.iso===opt.iso} onClick={()=>setSelectedDate(opt)}>
+                                <MiniBarWrap><MiniBar style={{height: `${h}%`}}/></MiniBarWrap>
+                                <div style={{display:'flex', flexDirection:'column', gap:4}}>
+                                  <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                    <span style={{fontWeight:700}}>{opt.date}</span>
+                                    {opt.best && <span style={{fontSize:11, color:'#fff', background:'#16a34a', padding:'2px 6px', borderRadius:999}}>추천</span>}
+                                  </div>
+                                  <div style={{fontSize:13, color:'#374151'}}>
+                                    {opt.am!=null && opt.pm!=null
+                                        ? <>오전 {opt.am}% / 오후 {opt.pm}% (평균 {opt.pop}%)</>
+                                        : <>강수확률 {opt.pop}%</>}
+                                  </div>
+                                </div>
+                              </DateItem>
+                          );
+                        })}
+                      </DateList>
+                  )}
+                  {weeklyWeather?.recommendation && (
+                      <div style={{marginTop:'6px', fontWeight:600, color:'#111827'}}>{weeklyWeather.recommendation}</div>
+                  )}
+
+                  <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
+                    <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 확정</ModalButton>
+                    <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
+                  </div>
+
+                  {showRoute && (
+                      <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
+                        <b>예상 이동 경로/시간 안내</b><br/>
+                        (카카오맵/네이버지도 API 연동 예정, 현재는 임시 안내)<br/>
+                        <span style={{fontSize:'0.95em'}}>내 위치 → {selectedPlace || '선택된 장소 없음'} (예상 15분)</span>
+                      </div>
+                  )}
+
+                  {reserveConfirmed && (
+                      <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
+                        예약이 확정되었습니다!<br/>
+                        다음 화면에서 결제 QR 코드 생성 여부를 선택할 수 있습니다.
+                      </div>
+                  )}
+                </ReserveModalBox>
+              </ModalOverlay>
           )}
-          <div ref={messagesEndRef} />
-        </ChatMessages>
-        <ChatInput>
-          {profanityWarning && (
-            <ProfanityWarning>
-              <FaExclamationCircle />
-              {profanityWarning}
-            </ProfanityWarning>
+
+          {/* QR 코드 생성 여부 묻기 모달 */}
+          {showQRQuestion && (
+              <QRModal>
+                <QRModalContent>
+                  <QRCodeQuestion>
+                    <QRCodeQuestionText>💳 결제 QR 코드를 생성하시겠습니까?</QRCodeQuestionText>
+                    <QRCodeQuestionDescription>
+                      간편 결제를 위한 QR 코드를 생성합니다.<br/>
+                      QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.<br/>
+                      추후 언제든지 헤더의 QR코드 버튼을 통해 다시 생성할 수 있습니다.
+                    </QRCodeQuestionDescription>
+                  </QRCodeQuestion>
+                  <QRCodeActions>
+                    <QRCodeButton className="close" onClick={() => setShowQRQuestion(false)}>나중에</QRCodeButton>
+                    <QRCodeButton className="download" onClick={handleQRCodeConfirm}>결제 QR 코드 생성</QRCodeButton>
+                  </QRCodeActions>
+                </QRModalContent>
+              </QRModal>
           )}
-          <InputContainer>
-            <MessageInput
-              value={newMessage}
-              onChange={handleMessageChange}
-              onKeyPress={handleKeyPress}
-              placeholder="메시지를 입력하세요..."
-              rows={1}
-              hasProfanity={hasProfanity}
-            />
-            <SendButton 
-              onClick={handleSendMessage} 
-              disabled={!newMessage.trim() || loading || hasProfanity}
-            >
-              <FaPaperPlane />
-            </SendButton>
-          </InputContainer>
-          <QuickActions>
-            <QuickActionButton onClick={() => handleQuickAction('가격 협의 가능')}>
-              가격 협의 가능
-            </QuickActionButton>
-            <QuickActionButton onClick={() => handleQuickAction('책 상태 확인')}>
-              책 상태 확인
-            </QuickActionButton>
-          </QuickActions>
-        </ChatInput>
-      </ChatContainer>
-      {showRetryModal && (
-        <RetryModalOverlay onClick={handleRetryCancel}>
-          <RetryModalBox onClick={e => e.stopPropagation()}>
-            <RetryModalTitle>메시지 재전송</RetryModalTitle>
-            <RetryModalMessage>
-              전송에 실패한 메시지를 다시 전송하시겠습니까?
-            </RetryModalMessage>
-            <RetryModalActions>
-              <RetryModalButton className="cancel" onClick={handleRetryCancel}>
-                취소
-              </RetryModalButton>
-              <RetryModalButton className="confirm" onClick={handleRetryConfirm}>
-                재전송
-              </RetryModalButton>
-            </RetryModalActions>
-          </RetryModalBox>
-        </RetryModalOverlay>
-      )}
-    </>
+
+          {/* QR 코드 표시 모달 */}
+          {showQRModal && (
+              <QRModal>
+                <QRModalContent>
+                  <h3>💳 간편 결제 QR 코드</h3>
+                  <QRCodeContainer id="qr-code">
+                    <QRCode value={JSON.stringify(generateQRData())} size={200} level="M" includeMargin={true} />
+                  </QRCodeContainer>
+                  <QRCodeInfo>
+                    <QRCodeInfoItem><QRCodeLabel>결제 금액:</QRCodeLabel><QRCodeValue>{generateQRData().amount.toLocaleString()}원</QRCodeValue></QRCodeInfoItem>
+                    <QRCodeInfoItem><QRCodeLabel>상품명:</QRCodeLabel><QRCodeValue>{generateQRData().description}</QRCodeValue></QRCodeInfoItem>
+                    <QRCodeInfoItem><QRCodeLabel>주문번호:</QRCodeLabel><QRCodeValue>{generateQRData().orderId}</QRCodeValue></QRCodeInfoItem>
+                    <QRCodeInfoItem><QRCodeLabel>결제 수단:</QRCodeLabel><QRCodeValue>토스페이먼츠 / 카카오페이</QRCodeValue></QRCodeInfoItem>
+                    <QRCodeInfoItem><QRCodeLabel>생성 시간:</QRCodeLabel><QRCodeValue>{new Date(generateQRData().timestamp).toLocaleString('ko-KR')}</QRCodeValue></QRCodeInfoItem>
+                  </QRCodeInfo>
+                  <div style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px', margin: '1rem 0', fontSize: '0.9rem', color: '#666' }}>
+                    💡 QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.
+                  </div>
+                  <QRCodeActions>
+                    <QRCodeButton className="download" onClick={handleQRCodeDownload}><FaDownload />다운로드</QRCodeButton>
+                    <QRCodeButton className="close" onClick={() => setShowQRModal(false)}>닫기</QRCodeButton>
+                  </QRCodeActions>
+                </QRModalContent>
+              </QRModal>
+          )}
+
+          <ChatMessages>
+            {messages.length > 0 ? (
+                messages.map(message => (
+                    <MessageGroup key={message.messageId || message.id}>
+                      {message.type === 'system' ? (
+                          <SystemMessage className={message.cancel ? 'cancel' : ''}>
+                            {message.message}
+                          </SystemMessage>
+                      ) : (
+                          <>
+                            <Message isOwn={message.senderId === currentUserId}>
+                              {message.message}
+                            </Message>
+                            <MessageTime isOwn={message.senderId === currentUserId}>
+                              {formatTime(message.sentAt)}
+                            </MessageTime>
+                            {message.senderId === currentUserId && message.status && (
+                                <MessageStatusIndicator
+                                    status={message.status}
+                                    isOwn={true}
+                                    onRetry={() => setShowRetryModal(true)}
+                                />
+                            )}
+                          </>
+                      )}
+                    </MessageGroup>
+                ))
+            ) : (
+                <NoMessages />
+            )}
+            <div ref={messagesEndRef} />
+          </ChatMessages>
+
+          <ChatInput>
+            {profanityWarning && (
+                <ProfanityWarning>
+                  <FaExclamationCircle />
+                  {profanityWarning}
+                </ProfanityWarning>
+            )}
+            <InputContainer>
+              <MessageInput
+                  value={newMessage}
+                  onChange={handleMessageChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="메시지를 입력하세요..."
+                  rows={1}
+                  hasProfanity={hasProfanity}
+              />
+              <SendButton onClick={handleSendMessage} disabled={!newMessage.trim() || loading || hasProfanity || !roomId}>
+                <FaPaperPlane />
+              </SendButton>
+            </InputContainer>
+            <QuickActions>
+              <QuickActionButton onClick={() => handleQuickAction('가격 협의 가능')}>가격 협의 가능</QuickActionButton>
+              <QuickActionButton onClick={() => handleQuickAction('책 상태 확인')}>책 상태 확인</QuickActionButton>
+            </QuickActions>
+          </ChatInput>
+        </ChatContainer>
+
+        {/* 전송 재시도 모달 */}
+        {showRetryModal && (
+            <RetryModalOverlay onClick={() => setShowRetryModal(false)}>
+              <RetryModalBox onClick={e => e.stopPropagation()}>
+                <RetryModalTitle>메시지 재전송</RetryModalTitle>
+                <RetryModalMessage>전송에 실패한 메시지를 다시 전송하시겠습니까?</RetryModalMessage>
+                <RetryModalActions>
+                  <RetryModalButton className="cancel" onClick={() => setShowRetryModal(false)}>취소</RetryModalButton>
+                  <RetryModalButton className="confirm" onClick={() => setShowRetryModal(false)}>재전송</RetryModalButton>
+                </RetryModalActions>
+              </RetryModalBox>
+            </RetryModalOverlay>
+        )}
+      </>
   );
 };
 
-export default ChatRoom; 
+export default ChatRoom;

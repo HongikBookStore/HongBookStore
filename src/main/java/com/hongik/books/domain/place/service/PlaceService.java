@@ -14,6 +14,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -85,5 +87,87 @@ public class PlaceService {
                 .build());
 
         return new PlaceDto.Response(place); // ✅ 이 줄이 핵심
+    }
+
+    // 🗺️ 4. 좌표를 도로명 주소로 변환
+    public Map<String, String> getAddressFromCoordinates(double lat, double lng) {
+        String coords = lng + "," + lat; // 네이버 API는 "경도,위도" 형식
+        
+        String apiUrl = "https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc";
+        
+        URI uri = UriComponentsBuilder.fromUriString(apiUrl)
+                .queryParam("coords", coords)
+                .queryParam("sourcecrs", "epsg:4326")
+                .queryParam("targetcrs", "epsg:4326")
+                .queryParam("orders", "roadaddr")
+                .queryParam("output", "json")
+                .build()
+                .encode(StandardCharsets.UTF_8)
+                .toUri();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-NCP-APIGW-API-KEY-ID", clientId);
+        headers.set("X-NCP-APIGW-API-KEY", clientSecret);
+        headers.set("Content-Type", "application/json");
+
+        HttpEntity<String> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            
+            // JSON 응답을 파싱하여 주소 정보 추출
+            String responseBody = response.getBody();
+            if (responseBody != null && responseBody.contains("\"status\":{\"code\":0")) {
+                // 성공적인 응답인 경우 주소 정보 추출
+                Map<String, String> addressData = new HashMap<>();
+                
+                // 간단한 파싱 (실제로는 JSON 파서 사용 권장)
+                if (responseBody.contains("\"roadAddress\":")) {
+                    String roadAddress = extractJsonValue(responseBody, "roadAddress");
+                    addressData.put("address", roadAddress);
+                } else if (responseBody.contains("\"jibunAddress\":")) {
+                    String jibunAddress = extractJsonValue(responseBody, "jibunAddress");
+                    addressData.put("address", jibunAddress);
+                }
+                
+                // 상세 주소 정보
+                if (responseBody.contains("\"buildingName\":")) {
+                    String buildingName = extractJsonValue(responseBody, "buildingName");
+                    addressData.put("detailedAddress", buildingName);
+                }
+                
+                return addressData;
+            } else {
+                // 실패한 경우 기본 좌표 반환
+                Map<String, String> fallback = new HashMap<>();
+                fallback.put("address", String.format("위도: %.6f, 경도: %.6f", lat, lng));
+                return fallback;
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 오류 발생 시 기본 좌표 반환
+            Map<String, String> fallback = new HashMap<>();
+            fallback.put("address", String.format("위도: %.6f, 경도: %.6f", lat, lng));
+            return fallback;
+        }
+    }
+
+    // JSON 응답에서 특정 필드 값을 추출하는 헬퍼 메서드
+    private String extractJsonValue(String json, String fieldName) {
+        String pattern = "\"" + fieldName + "\":\"";
+        int startIndex = json.indexOf(pattern);
+        if (startIndex == -1) return "";
+        
+        startIndex += pattern.length();
+        int endIndex = json.indexOf("\"", startIndex);
+        if (endIndex == -1) return "";
+        
+        return json.substring(startIndex, endIndex);
     }
 }

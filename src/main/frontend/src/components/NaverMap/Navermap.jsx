@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef, memo } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, memo, useState } from 'react';
+import styled from 'styled-components';
 
 // 스크립트가 중복 로드되는 것을 방지하기 위한 전역 플래그
 let isNaverMapScriptLoaded = false;
@@ -7,7 +8,7 @@ const NaverMapComponent = forwardRef(({
                                           places = [],
                                           categories = [],
                                           onMapClick,
-                                          mapClickMode = false,
+                                          onPlaceClick,
                                           userLocation = null,
                                           routePath = null,
                                           showMyLocation = false
@@ -20,15 +21,14 @@ const NaverMapComponent = forwardRef(({
     const routeLineRef = useRef(null);
     const routeMarkersRef = useRef([]);
 
+
     const getCategoryIcon = (categoryId) => {
         switch (categoryId) {
             case 'restaurant': return '🍽️';
             case 'cafe': return '☕';
-            case 'bookstore': return '📚';
-            case 'library': return '📖';
-            case 'park': return '🌳';
-            case 'print': return '🖨️';
             case 'partner': return '🤝';
+            case 'convenience': return '🏪';
+            case 'other': return '📍';
             default: return '📍';
         }
     };
@@ -65,6 +65,7 @@ const NaverMapComponent = forwardRef(({
         }
 
         const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+        console.log('Naver Maps Client ID:', clientId); // 디버깅용
         if (!clientId) {
             console.error("Naver Maps Client ID가 .env 파일에 설정되지 않았습니다.");
             return;
@@ -73,10 +74,14 @@ const NaverMapComponent = forwardRef(({
         isNaverMapScriptLoaded = true;
 
         const script = document.createElement('script');
-        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
+        // 서브모듈 추가 및 타임아웃 설정
+        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
         script.async = true;
-        script.onerror = () => {
-            console.error('네이버 지도 스크립트 로드에 실패했습니다.');
+        
+        script.onerror = (error) => {
+            console.error('네이버 지도 스크립트 로드에 실패했습니다:', error);
+            console.error('Client ID:', clientId);
+            console.error('현재 도메인:', window.location.hostname);
             isNaverMapScriptLoaded = false;
         };
         script.onload = () => {
@@ -102,17 +107,14 @@ const NaverMapComponent = forwardRef(({
         if (!mapInstanceRef.current || !onMapClick) return;
 
         const listener = window.naver.maps.Event.addListener(mapInstanceRef.current, 'click', (e) => {
-            if (mapClickMode) {
-                // 주소 변환 API는 비용이 발생할 수 있으므로, 필요한 경우에만 호출하도록
-                // 부모 컴포넌트에서 관리하는 것이 좋습니다. 여기서는 좌표만 전달합니다.
-                onMapClick(e.coord.lat(), e.coord.lng());
-            }
+            // 지도 클릭 시 항상 좌표 정보를 전달
+            onMapClick(e.coord.lat(), e.coord.lng());
         });
 
         return () => {
             window.naver.maps.Event.removeListener(listener);
         };
-    }, [onMapClick, mapClickMode]);
+    }, [onMapClick]);
 
     // 장소 마커 업데이트 로직
     useEffect(() => {
@@ -138,32 +140,32 @@ const NaverMapComponent = forwardRef(({
                 }
             });
 
-            const infoWindow = new window.naver.maps.InfoWindow({
-                content: `<div style="padding:10px;"><h4>${place.name}</h4><p>${place.address}</p></div>`
-            });
-
+            // 마커 클릭 시 장소 상세 모달 열기
             window.naver.maps.Event.addListener(marker, 'click', () => {
-                infoWindowsRef.current.forEach(iw => iw.close());
-                infoWindow.open(mapInstanceRef.current, marker);
+                if (onPlaceClick) {
+                    onPlaceClick(place);
+                }
             });
 
             markersRef.current.push(marker);
-            infoWindowsRef.current.push(infoWindow);
         });
 
-    }, [places, categories]);
+    }, [places, categories, onPlaceClick]);
 
-    // 클릭 모드에 따른 커서 스타일 변경
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
-        const mapEl = mapInstanceRef.current.getElement();
-        if (mapEl) {
-            mapEl.style.cursor = mapClickMode ? 'crosshair' : 'grab';
-        }
-    }, [mapClickMode]);
+    // 클릭 모드에 따른 커서 스타일 변경 제거
+    // useEffect(() => {
+    //     if (!mapInstanceRef.current) return;
+    //     const mapEl = mapInstanceRef.current.getElement();
+    //     if (mapEl) {
+    //         mapEl.style.cursor = mapClickMode ? 'crosshair' : 'grab';
+    //     }
+    // }, [mapClickMode]);
+
+
 
     return <div id="map" ref={mapElementRef} style={{ width: '100%', height: '100%' }} />;
 });
 
 const MemoizedNaverMap = memo(NaverMapComponent);
+
 export default MemoizedNaverMap;

@@ -9,15 +9,13 @@ import { Loading } from './components/ui';
 import Marketplace from './pages/Marketplace/Marketplace.jsx';
 import MyPage from './pages/MyPage/MyPage.jsx';
 import Login from './pages/Login/Login.jsx';
-import Register from './pages/Register/Register.jsx';
-import FindId from './pages/FindId/FindId.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
 import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
 import MyTransactions from './pages/MyTransactions/MyTransactions.jsx';
-import BookWrite from './pages/BookWrite/BookWrite.jsx';
-import BookDetail from './pages/BookDetail/BookDetail';
+import PostWrite from './pages/PostWrite/PostWrite.jsx';
+import PostDetail from './pages/PostDetail/PostDetail';
 import ChatList from './pages/Chat/ChatList.jsx';
 import ChatRoom from './pages/Chat/ChatRoom.jsx';
 import MapPage from './pages/Map/Map.jsx';
@@ -26,6 +24,7 @@ import { WritingProvider } from './contexts/WritingContext';
 import { LocationProvider } from './contexts/LocationContext';
 
 import OAuth2RedirectHandler from './pages/Login/OAuth2RedirectHandler.jsx';
+import ChatRoomWrapper from './pages/Chat/ChatRoomWrapper.jsx'
 import FloatingChatBot from './components/ui/FloatingChatBot.jsx';
 import VerificationConfirmPage from './pages/VerificationConfirmPage/VerificationConfirmPage.jsx';
 
@@ -122,7 +121,7 @@ function App() {
                                     <MyBookstore />
                                 </>
                             } />
-                            <Route path="/my-bookstore" element={
+                            <Route path="/mybookstore" element={
                                 <>
                                     <Header />
                                     <MyBookstore />
@@ -137,13 +136,13 @@ function App() {
                             <Route path="/bookstore/add" element={
                                 <>
                                     <Header />
-                                    <BookWrite />
+                                    <PostWrite />
                                 </>
                             } />
-                            <Route path="/book/:id" element={
+                            <Route path="/posts/:id" element={
                                 <>
                                     <Header />
-                                    <BookDetail />
+                                    <PostDetail />
                                 </>
                             } />
                             <Route path="/chat" element={
@@ -152,7 +151,7 @@ function App() {
                                     <ChatList />
                                 </>
                             } />
-                            <Route path="/chat/:id" element={
+                            <Route path="/chat/:chatId" element={
                                 <>
                                     <Header />
                                     <ChatRoom />
@@ -177,25 +176,24 @@ function App() {
                                 </>
                             } />
                             <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
-                            <Route path="/find-id" element={<FindId />} />
+                            <Route path="/register" element={<Navigate to="/login" replace />} /> {/* 리다이렉트 처리 */}
 							<Route path="/verify-student" element={<VerificationConfirmPage />} />
                             <Route path="/marketplace/:id" element={
                                 <>
                                     <Header />
-                                    <BookDetail />
+                                    <PostDetail />
                                 </>
                             } />
-                            <Route path="/bookwrite/:id" element={
+                            <Route path="/postwrite/:id" element={
                                 <>
                                     <Header />
-                                    <BookWrite />
+                                    <PostWrite />
                                 </>
                             } />
-                            <Route path="/book-write" element={
+                            <Route path="/post-write" element={
                                 <>
                                     <Header />
-                                    <BookWrite />
+                                    <PostWrite />
                                 </>
                             } />
                             <Route path="/wanted/:id" element={

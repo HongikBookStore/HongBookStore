@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
-import { SearchButton, FilterButton } from '../../components/ui';
+import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton } from '../../components/ui';
 import axios from 'axios';
 
 const shimmer = keyframes`
@@ -123,7 +123,8 @@ const SearchBar = styled.div`
   }
 `;
 
-
+const SearchButton = styled(OriginalSearchButton)``;
+const FilterButton = styled(OriginalFilterButton)``;
 
 const SearchIcon = styled.div`
   position: absolute;
@@ -158,26 +159,6 @@ const SearchIcon = styled.div`
     bottom: 6px;
     right: 6px;
     transform: rotate(45deg);
-  }
-`;
-
-
-
-const SortButton = styled.button`
-  padding: 8px 16px;
-  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
-  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
-  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border-medium)'};
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  margin-right: 8px;
-
-  &:hover {
-    background: ${props => props.active ? 'var(--primary-dark)' : 'var(--gray-50)'};
-    border-color: var(--primary);
-    color: ${props => props.active ? 'white' : 'var(--primary)'};
   }
 `;
 
@@ -229,38 +210,6 @@ const FilterLabel = styled.label`
   margin-bottom: 0.5rem;
 `;
 
-const FilterRadioGroup = styled.div`
-  display: flex;
-  gap: 1rem;
-  flex-direction: row;
-  align-items: center;
-`;
-
-const FilterRadio = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-
-  &:hover {
-    background: #F9FAFB;
-  }
-
-  input[type="radio"] {
-    width: 1.2rem;
-    height: 1.2rem;
-    accent-color: var(--primary);
-    cursor: pointer;
-  }
-`;
-
 const FilterSelect = styled.select`
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
@@ -281,6 +230,40 @@ const FilterSelect = styled.select`
   &:hover {
     border-color: #D1D5DB;
   }
+`;
+
+const PriceInputGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const PriceInput = styled.input`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  text-align: right;
+  -moz-appearance: textfield; /* Firefox */
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+`;
+
+const FilterApplyButton = styled.button`
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
 `;
 
 const CategoryContainer = styled.div`
@@ -391,6 +374,13 @@ const BookImage = styled.div`
   transition: transform 0.3s ease;
   box-shadow: var(--shadow-sm);
 
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+
   &::after {
     content: '';
     position: absolute;
@@ -408,43 +398,13 @@ const BookImage = styled.div`
   }
 `;
 
-const LikeButton = styled.button`
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: ${props => props.$liked ? '#ff4757' : '#666'};
-  box-shadow: var(--shadow);
-  z-index: 2;
-
-  &:hover {
-    background: white;
-    transform: scale(1.1);
-    box-shadow: var(--shadow-lg);
-  }
-
-  &::before {
-    content: ${props => props.$liked ? '"❤️"' : '"🤍"'};
-    font-size: 1.2rem;
-  }
-`;
-
 const BookInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
 `;
 
-const BookTitle = styled.h3`
+const BookCardTitle = styled.h3`
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
@@ -454,6 +414,13 @@ const BookTitle = styled.h3`
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+`;
+
+const BookSeller = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  font-weight: 500;
 `;
 
 const BookAuthor = styled.p`
@@ -471,57 +438,14 @@ const BookPrice = styled.div`
   flex-wrap: wrap;
 `;
 
-const CurrentPrice = styled.span`
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--primary);
-`;
-
-const OriginalPrice = styled.span`
+const LikeCount = styled.span`
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.9rem;
   color: var(--text-light);
-  text-decoration: line-through;
-`;
-
-const DiscountBadge = styled.span`
-  background: #ff6b6b;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-left: 0.5rem;
-`;
-
-const BookMeta = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-`;
-
-const Condition = styled.span`
-  background: ${props => props.$bgColor};
-  color: ${props => props.$color};
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid ${props => props.$color}20;
-`;
-
-const Location = styled.span`
-  color: var(--text-light);
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-
-  &::before {
-    content: '📍';
-  }
+  &::before { content: '❤'; color: #ff4757; }
 `;
 
 const SkeletonCard = styled.div`
@@ -558,6 +482,89 @@ const SkeletonText = styled.div`
   }
 `;
 
+const CurrentPrice = styled.span`
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+`;
+
+const OriginalPrice = styled.span`
+  font-size: 0.9rem;
+  color: var(--text-light);
+  text-decoration: line-through;
+`;
+
+const DiscountBadge = styled.span`
+  background: #ff6b6b;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+`;
+
+const LikeButton = styled.button`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: ${props => props.$liked ? '#ff4757' : '#666'};
+  box-shadow: var(--shadow);
+  z-index: 2;
+
+  &:hover {
+    background: white;
+    transform: scale(1.1);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &::before {
+    content: ${props => props.$liked ? '"❤️"' : '"🤍"'};
+    font-size: 1.2rem;
+  }
+`;
+
+const BookMeta = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+`;
+
+const Condition = styled.span`
+  background: ${props => props.$bgColor};
+  color: ${props => props.$color};
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid ${props => props.$color}20;
+`;
+
+const Location = styled.span`
+  color: var(--text-light);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  &::before {
+    content: '📍';
+  }
+`;
+
 const LoadingGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -571,6 +578,64 @@ const LoadingGrid = styled.div`
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+`;
+
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+`;
+
+const NoResultsMessage = styled.div`
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-light);
+  font-size: 1.1rem;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--border);
+  margin: 2rem 0;
+  
+  .icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+  }
+  
+  .title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  
+  .description {
+    color: var(--text-light);
+    line-height: 1.6;
+  }
+`;
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 3rem;
+  gap: 0.5rem;
+`;
+
+const PageButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  background: ${props => props.$active ? 'var(--primary)' : 'white'};
+  color: ${props => props.$active ? 'white' : 'var(--text)'};
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: ${props => props.$active ? '600' : '400'};
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 `;
 
@@ -596,18 +661,38 @@ const PopularSectionTitle = styled.h2`
 `;
 
 // 할인율에 따른 책 상태 반환 함수
-// 현재는 할인율을 기준으로 책 상태를 자동 판단하고 있습니다:
+// 현재는 할인율을 기준으로 책 상태를 자동 판단:
 // - 할인율 20% 이하: 상 (좋은 상태)
 // - 할인율 21-40%: 중 (보통 상태)  
 // - 할인율 41% 이상: 하 (낮은 상태)
 // 
-// TODO: 실제 구현 시에는 사용자가 직접 책 상태를 평가할 수 있도록 
-// 별도의 상태 입력 필드를 제공해야 합니다.
+// TODO: 실제 구현 시에는 사용자가 직접 책 상태를 평가할 수 있도록 별도의 상태 입력 필드를 제공
 const getBookCondition = (discountRate) => {
   if (discountRate <= 20) return { text: '상', color: '#28a745', bgColor: '#d4edda' };
   if (discountRate <= 40) return { text: '중', color: '#ffc107', bgColor: '#fff3cd' };
   return { text: '하', color: '#dc3545', bgColor: '#f8d7da' };
 };
+
+// 에러 메시지 컴포넌트
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: #dc3545;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 1rem;
+  margin: 2rem 0;
+  font-size: 1rem;
+  line-height: 1.5;
+`;
+
+// 로딩 메시지 컴포넌트
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+  font-size: 1.1rem;
+`;
 
 const CATEGORIES = {
   '전공': {
@@ -633,195 +718,6 @@ const CATEGORIES = {
     '교직': ['교직']
   }
 };
-
-const MOCK_BOOKS = [
-  {
-    id: 1,
-    title: '컴퓨터구조론',
-    author: '홍길동',
-    category: { major: '공과대학', sub: '컴퓨터공학' },
-    price: 18000,
-    status: 'available',
-    image: '',
-    views: 120,
-    createdAt: '2024-06-25',
-    likes: 5,
-    discountRate: 8,
-    location: '교내'
-  },
-  {
-    id: 2,
-    title: '전자회로',
-    author: '이공학',
-    category: { major: '공과대학', sub: '전자전기공학' },
-    price: 15000,
-    status: 'available',
-    image: '',
-    views: 80,
-    createdAt: '2024-06-24',
-    likes: 2,
-    discountRate: 15,
-    location: '교외'
-  },
-  {
-    id: 3,
-    title: '경영학원론',
-    author: '김경영',
-    category: { major: '경영대학', sub: '' },
-    price: 12000,
-    status: 'available',
-    image: '',
-    views: 60,
-    createdAt: '2024-06-23',
-    likes: 10,
-    discountRate: 25,
-    location: '교내'
-  },
-  {
-    id: 4,
-    title: '신소재공학개론',
-    author: '박신소',
-    category: { major: '공과대학', sub: '신소재공학' },
-    price: 17000,
-    status: 'available',
-    image: '',
-    views: 30,
-    createdAt: '2024-06-22',
-    likes: 1,
-    discountRate: 40,
-    location: '교외'
-  },
-  {
-    id: 5,
-    title: '화학공학실험',
-    author: '최화학',
-    category: { major: '공과대학', sub: '화학공학' },
-    price: 20000,
-    status: 'available',
-    image: '',
-    views: 50,
-    createdAt: '2024-06-21',
-    likes: 3,
-    discountRate: 55,
-    location: '교내'
-  }
-];
-
-// 인기 도서 데이터 (좋아요 수와 조회수를 기준으로 인기 도서 생성)
-const POPULAR_BOOKS = [
-  {
-    id: 101,
-    title: '컴퓨터구조론',
-    author: '홍길동',
-    category: { major: '공과대학', sub: '컴퓨터공학' },
-    price: 15000,
-    status: 'available',
-    image: '',
-    views: 250,
-    createdAt: '2024-06-20',
-    likes: 15,
-    discountRate: 10,
-    location: '교내'
-  },
-  {
-    id: 102,
-    title: '전자회로',
-    author: '이공학',
-    category: { major: '공과대학', sub: '전자전기공학' },
-    price: 18000,
-    status: 'available',
-    image: '',
-    views: 200,
-    createdAt: '2024-06-19',
-    likes: 12,
-    discountRate: 15,
-    location: '교외'
-  },
-  {
-    id: 103,
-    title: '경영학원론',
-    author: '김경영',
-    category: { major: '경영대학', sub: '' },
-    price: 12000,
-    status: 'available',
-    image: '',
-    views: 180,
-    createdAt: '2024-06-18',
-    likes: 10,
-    discountRate: 20,
-    location: '교내'
-  },
-  {
-    id: 104,
-    title: '미적분학',
-    author: '박수학',
-    category: { major: '사범대학', sub: '수학교육과' },
-    price: 14000,
-    status: 'available',
-    image: '',
-    views: 160,
-    createdAt: '2024-06-17',
-    likes: 8,
-    discountRate: 12,
-    location: '교내'
-  },
-  {
-    id: 105,
-    title: '영어회화',
-    author: '최영어',
-    category: { major: '문과대학', sub: '영어영문학과' },
-    price: 10000,
-    status: 'available',
-    image: '',
-    views: 140,
-    createdAt: '2024-06-16',
-    likes: 7,
-    discountRate: 25,
-    location: '교외'
-  },
-  {
-    id: 106,
-    title: '디자인사',
-    author: '정디자인',
-    category: { major: '미술대학', sub: '시각디자인전공' },
-    price: 16000,
-    status: 'available',
-    image: '',
-    views: 120,
-    createdAt: '2024-06-15',
-    likes: 6,
-    discountRate: 18,
-    location: '교내'
-  },
-  {
-    id: 107,
-    title: '건축학개론',
-    author: '한건축',
-    category: { major: '건축도시대학', sub: '건축학전공' },
-    price: 20000,
-    status: 'available',
-    image: '',
-    views: 110,
-    createdAt: '2024-06-14',
-    likes: 5,
-    discountRate: 8,
-    location: '교내'
-  },
-  {
-    id: 108,
-    title: '화학공학실험',
-    author: '최화학',
-    category: { major: '공과대학', sub: '화학공학' },
-    price: 18000,
-    status: 'available',
-    image: '',
-    views: 100,
-    createdAt: '2024-06-13',
-    likes: 4,
-    discountRate: 15,
-    location: '교외'
-  }
-];
 
 const SectionHeader = styled.div`
   display: flex;
@@ -887,35 +783,6 @@ const PopularBooksGrid = styled.div`
   }
 `;
 
-const NoResultsMessage = styled.div`
-  text-align: center;
-  padding: 4rem 2rem;
-  color: var(--text-light);
-  font-size: 1.1rem;
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  border: 2px dashed var(--border);
-  margin: 2rem 0;
-  
-  .icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    color: var(--text-light);
-  }
-  
-  .title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text);
-  }
-  
-  .description {
-    color: var(--text-light);
-    line-height: 1.6;
-  }
-`;
-
 const SearchResultsSection = styled.div`
   margin-top: 2rem;
   animation: ${fadeIn} 0.6s ease-out;
@@ -974,145 +841,271 @@ const BackButton = styled.button`
   }
 `;
 
-const PageWrapper = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  width: 100%;
-`;
+// 인증 토큰을 가져오는 헬퍼 함수
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+// 이미지 로딩 실패 시 안정적으로 대체 컨텐츠를 보여주기 위한 별도 컴포넌트
+const BookImageWithFallback = ({ src, alt }) => {
+  const [hasError, setHasError] = useState(false);
+
+  // 부모 컴포넌트에서 src prop이 변경될 때마다 에러 상태를 초기화
+  useEffect(() => {
+    if (src) {
+      setHasError(false);
+    }
+  }, [src]);
+
+  const handleError = () => {
+    setHasError(true);
+  };
+
+  return (
+    <BookImage className="book-image">
+      {src && !hasError ? (
+        <img src={src} alt={alt} onError={handleError} />
+      ) : (
+        <div style={{ color: 'white', textAlign: 'center' }}>📚<br/>이미지 없음</div>
+      )}
+    </BookImage>
+  );
+};
 
 const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMainCategory, setSelectedMainCategory] = useState('전체');
-  const [selectedSubCategory, setSelectedSubCategory] = useState('전체');
-  const [selectedDetailCategory, setSelectedDetailCategory] = useState('전체');
-  const [likedBooks, setLikedBooks] = useState(new Set());
-  const [activeSubMenu, setActiveSubMenu] = useState('booksale');
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [locationFilter, setLocationFilter] = useState('전체');
-  const [showAllPopularBooks, setShowAllPopularBooks] = useState(false);
-  const [showAllRecentBooks, setShowAllRecentBooks] = useState(false);
-  const filterRef = useRef();
-  const [pendingMainCategory, setPendingMainCategory] = useState('전체');
-  const [pendingSubCategory, setPendingSubCategory] = useState('전체');
-  const [pendingDetailCategory, setPendingDetailCategory] = useState('전체');
 
-  // API 데이터를 저장할 상태
-  const [posts, setPosts] = useState([]);
-  const [pageInfo, setPageInfo] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // API 데이터 상태
+  const [posts, setPosts] = useState([]); // API로부터 받아온 게시글 목록
+  const [page, setPage] = useState(0); // 현재 페이지 번호 (무한 스크롤용)
+  const [hasMore, setHasMore] = useState(true); // 더 불러올 데이터가 있는지 여부
+  const [isLoading, setIsLoading] = useState(true); // 데이터 로딩 상태
+  const [likedPostIds, setLikedPostIds] = useState(new Set()); // 찜한 게시글 ID Set
+  const [error, setError] = useState(''); // 에러 상태
+
+  // 검색어 입력 상태 분리
+  const [searchQuery, setSearchQuery] = useState(''); // 사용자가 입력하는 검색어 (UI 표시용)
 
   // 검색 및 필터 상태
-  const [searchInput, setSearchInput] = useState('');
-  const [sortBy, setSortBy] = useState('createdAt,desc'); // 백엔드 API와 정렬값 맞추기
+  const [searchParams, setSearchParams] = useState({
+    query: '',
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+    sort: 'createdAt,desc',
+  });
+
+  // '적용하기'를 누르기 전 임시 필터 값
+  const [tempFilters, setTempFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+  });
+  
+  const [filterOpen, setFilterOpen] = useState(false); // 필터 팝오버 표시 여부
+  const filterRef = useRef();
+  const observerRef = useRef(); // Intersection Observer를 위한 ref
+
+  // 내가 찜한 글 목록을 불러와서 Set에 저장하는 함수
+  const fetchMyLikes = useCallback(async () => {
+    // 로그인 상태가 아니면 실행하지 않음
+    if (!localStorage.getItem('accessToken')) return;
+    try {
+      const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
+      const likedIds = new Set(response.data.map(post => post.postId));
+      setLikedPostIds(likedIds);
+    } catch (error) {
+      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
+    }
+  }, []);
 
   // API 호출 로직
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (params, pageToFetch = 0) => {
     setIsLoading(true);
+     if (pageToFetch === 0) { // 새 검색일 경우 에러 상태 초기화
+      setError('');
+    }
     try {
-      const params = {
-        page: 0, // TODO: 페이지네이션 UI 구현 시 현재 페이지 상태와 연결
-        size: 12, // 한 번에 12개씩
-        sort: sortBy,
-        // TODO: 백엔드에 검색 기능 추가 후, 검색어 파라미터도 추가
-        // query: searchInput, 
+      const activeParams = {
+        page: pageToFetch,
+        size: 12,
+        sort: params.sort,
       };
-      const response = await axios.get('/api/posts', { params });
-      setPosts(response.data.content);
-      setPageInfo({
-        totalPages: response.data.totalPages,
-        totalElements: response.data.totalElements,
-        currentPage: response.data.number,
+      if (params.query) activeParams.query = params.query;
+      if (params.category) activeParams.category = params.category;
+      if (params.minPrice) activeParams.minPrice = params.minPrice;
+      if (params.maxPrice) activeParams.maxPrice = params.maxPrice;
+
+      const response = await axios.get('/api/posts', { 
+        params: activeParams,
+        timeout: 10000
       });
+
+      // 첫 페이지인지 추가 페이지인지에 따라 다르게 처리
+      setPosts(prev => pageToFetch === 0 ? response.data.content : [...prev, ...response.data.content]);
+      setHasMore(!response.data.last); // 마지막 페이지인지 확인
+      setPage(pageToFetch + 1); // 다음에 로드할 페이지 번호 설정
+
     } catch (error) {
       console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
+      if (error.code === 'ECONNABORTED') {
+        setError('요청 시간이 초과되었어요. 네트워크 상태를 확인해주세요 📡');
+      } else if (error.response?.status === 404) {
+        setError('해당 페이지를 찾을 수 없어요 🤔');
+      } else if (error.response?.status >= 500) {
+        setError('서버에 문제가 발생했어요. 잠시 후 다시 시도해주세요 🛠️');
+      } else {
+        setError('게시글을 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요 😅');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [sortBy]); // 정렬 기준이 바뀔 때마다 API를 다시 호출
+  }, []);
 
-  // 컴포넌트가 처음 마운트되거나, 정렬 기준이 바뀔 때 API 호출
+  // 검색 조건이 바뀔 때마다, 데이터를 초기화하고 첫 페이지부터 다시 로드
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    setPosts([]); // 기존 목록 비우기
+    setPage(0);   // 페이지 번호 0으로 초기화
+    setHasMore(true); // 더 불러올 데이터가 있다고 가정
+    fetchPosts(searchParams, 0); // 새 검색으로 API 호출
+  }, [searchParams, fetchPosts]);
 
-  const handleBookClick = (postId) => {
-    navigate(`/posts/${postId}`);
-  };
+  // 컴포넌트가 처음 마운트될 때 찜 목록도 함께 불러옴
+  useEffect(() => {
+    fetchMyLikes();
+  }, [fetchMyLikes]);
 
-  const handleSubMenuClick = (menu) => {
-    setActiveSubMenu(menu);
-    switch (menu) {
-      case 'booksale':
-        navigate('/bookstore/add');
-        break;
-      case 'wanted':
-        navigate('/wanted');
-        break;
-      case 'mybookstore':
-        navigate('/bookstore');
-        break;
-      case 'chat':
-        navigate('/chat');
-        break;
-      default:
-        break;
-    }
-  };
+  // 무한 스크롤을 위한 Intersection Observer 설정
+  useEffect(() => {
+    const currentObserverRef = observerRef.current; // cleanup을 위한 ref 저장
 
-  const handlePendingMajorChange = (e) => {
-    const selectedValue = e.target.value;
-    setPendingMainCategory(selectedValue);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // 타겟 요소가 화면에 보이고, 더 불러올 데이터가 있으며, 로딩 중이 아닐 때 다음 페이지 로드
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          fetchPosts(searchParams, page); // 현재 page 사용
+        }
+      },
+      { threshold: 0.5 } // 타겟이 50% 보였을 때 실행
+    );
+
+    if (currentObserverRef) observer.observe(currentObserverRef);
     
-    if (selectedValue === '전체') {
-      setPendingSubCategory('');
-      setPendingDetailCategory('');
-    } else {
-      const firstSub = Object.keys(CATEGORIES[selectedValue])[0];
-      setPendingSubCategory(firstSub);
-      setPendingDetailCategory(CATEGORIES[selectedValue][firstSub][0]);
-    }
-  };
+    return () => {
+      // cleanup 시 저장된 ref 사용
+      if (currentObserverRef) observer.unobserve(currentObserverRef);
+    };
 
-  const handlePendingSubChange = (e) => {
-    const selectedValue = e.target.value;
-    setPendingSubCategory(selectedValue);
+  }, [hasMore, isLoading, fetchPosts, searchParams, page]);
+
+  // 찜하기/찜취소 핸들러
+  const handleLikeToggle = async (e, postId) => {
+    e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
+    if (!localStorage.getItem('accessToken')) {
+      alert("로그인이 필요한 기능이에요! 😊");
+      navigate('/login');
+      return;
+    }
+
+    const isLiked = likedPostIds.has(postId);
     
-    if (selectedValue === '') {
-      setPendingDetailCategory('');
-    } else {
-      setPendingDetailCategory(CATEGORIES[pendingMainCategory][selectedValue][0]);
+    // UI 낙관적 업데이트
+    setLikedPostIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) newSet.delete(postId);
+      else newSet.add(postId);
+      return newSet;
+    });
+    // 목록 카드의 찜 수를 낙관적으로 반영
+    setPosts(prev => prev.map(p => {
+      if (p.postId !== postId) return p;
+      const current = p.likeCount ?? 0;
+      const next = isLiked ? Math.max(0, current - 1) : current + 1;
+      return { ...p, likeCount: next };
+    }));
+    // 많이 찜한 순 정렬 중이면, 현재 페이지 데이터만 즉시 재정렬
+    if (searchParams.sort === 'likeCount,desc') {
+      setPosts(prev => {
+        const next = [...prev];
+        next.sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0));
+        return next;
+      });
+    }
+
+    try {
+      if (isLiked) {
+        await axios.delete(`/api/posts/${postId}/like`, { 
+          headers: getAuthHeader(),
+          timeout: 5000 
+      });
+      } else {
+        await axios.post(`/api/posts/${postId}/like`, null, { 
+          headers: getAuthHeader(),
+          timeout: 5000
+        });
+      }
+    } catch (error) {
+      console.error("찜 처리 실패:", error);
+      // API 실패 시 UI 원상 복구
+      setLikedPostIds(prev => {
+        const newSet = new Set(prev);
+        if (isLiked) newSet.add(postId);
+        else newSet.delete(postId);
+        return newSet;
+      });
+      // likeCount도 원상 복구
+      setPosts(prev => prev.map(p => {
+        if (p.postId !== postId) return p;
+        const current = p.likeCount ?? 0;
+        const next = isLiked ? current + 1 : Math.max(0, current - 1);
+        return { ...p, likeCount: next };
+      }));
+      if (searchParams.sort === 'likeCount,desc') {
+        setPosts(prev => {
+          const next = [...prev];
+          next.sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0));
+          return next;
+        });
+      }
+      alert("찜하기 처리 중 오류가 발생했어요. 다시 시도해주세요! 😅");
     }
   };
 
-  const handlePendingDetailChange = (e) => {
-    setPendingDetailCategory(e.target.value);
+  const handleBookClick = (postId) => navigate(`/posts/${postId}`);
+  
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setSearchParams(prev => ({ ...prev, query: searchQuery }));
   };
 
-  const handleApplyCategory = () => {
-    setSelectedMainCategory(pendingMainCategory);
-    setSelectedSubCategory(pendingSubCategory);
-    setSelectedDetailCategory(pendingDetailCategory);
+  // 검색어 입력 핸들러 추가
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
   };
 
-  const handleSearch = () => {
-    // TODO: 백엔드에 검색 기능이 추가되면, 여기서 fetchPosts를 다시 호출
-    setSearchQuery(searchInput);
+  const handleSortChange = (e) => {
+    setSearchParams(prev => ({...prev, sort: e.target.value}));
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+  const handleCategoryChange = (e) => {
+    setSearchParams(prev => ({...prev, category: e.target.value}));
+  }
+
+  const handleApplyFilters = () => {
+    setSearchParams(prev => ({
+      ...prev,
+      minPrice: tempFilters.minPrice,
+      maxPrice: tempFilters.maxPrice,
+    }));
+    setFilterOpen(false);
   };
 
-  // 로딩 상태일 때 스켈레톤 UI를 보여주는 함수
-  const renderSkeletonCards = (count = 8) => (
+  // 스켈레톤 카드 렌더링 함수
+  const renderSkeletonCards = (count = 4) => (
     <LoadingGrid>
       {Array.from({ length: count }, (_, index) => (
-        <SkeletonCard key={index}>
+        <SkeletonCard key={`skeleton-${index}`}>
           <SkeletonImage />
           <SkeletonText />
           <SkeletonText />
@@ -1122,258 +1115,211 @@ const Marketplace = () => {
     </LoadingGrid>
   );
 
-  // 실제 데이터를 받아와서 책 카드를 그리는 함수
+  // 카테고리 옵션 생성 함수
+  const renderCategoryOptions = () => {
+    const options = [];
+    Object.keys(CATEGORIES).forEach(majorCategory => {
+      Object.keys(CATEGORIES[majorCategory]).forEach(college => {
+        CATEGORIES[majorCategory][college].forEach(department => {
+          options.push(
+            <option key={`${majorCategory}-${college}-${department}`} value={department}>
+              {majorCategory} &gt; {college} &gt; {department}
+            </option>
+          );
+        });
+      });
+    });
+    return options;
+  };
+
+  // 책 카드 렌더링 함수
   const renderBookCard = (post) => (
     <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
-      <BookImage className="book-image">
-        <img src={post.thumbnailUrl} alt={post.postTitle} />
-      </BookImage>
-      {/* <LikeButton /> */}
+      <BookImageWithFallback src={post.thumbnailUrl} alt={post.postTitle} />
+      <LikeButton
+        $liked={likedPostIds.has(post.postId)}
+        onClick={(e) => handleLikeToggle(e, post.postId)}
+      />
       <BookInfo>
         <BookCardTitle>{post.postTitle}</BookCardTitle>
-        <BookSeller>{post.sellerNickname}</BookSeller>
+        {post.author && <BookAuthor>{post.author}</BookAuthor>}
         <BookPrice>
-          {post.price.toLocaleString()}원
+          {post.price?.toLocaleString() || '0'}원
+          <LikeCount>{(post.likeCount ?? 0).toLocaleString()}</LikeCount>
         </BookPrice>
-        {/* TODO: 상세 DTO가 아니므로, 할인율, 책 상태 등은 표시할 수 없어. 필요하다면 목록 DTO에 추가해야 해. */}
       </BookInfo>
     </BookCard>
   );
 
-  // 검색 필터링 함수
-  const filterBooksBySearch = (books, query) => {
-    if (!query.trim()) return books;
-    
-    const searchTerms = query.toLowerCase().trim().split(' ').filter(term => term.length > 0);
-    
-    return books.filter(book => {
-      const title = book.title.toLowerCase();
-      const author = book.author.toLowerCase();
-      
-      // 모든 검색어가 제목이나 저자에 포함되어야 함
-      return searchTerms.every(term => 
-        title.includes(term) || author.includes(term)
-      );
-    });
-  };
+  // 필터 팝오버 외부 클릭 시 닫기 핸들러
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setFilterOpen(false);
+      }
+    };
 
-  // 필터링 및 정렬
-  const searchFilteredBooks = filterBooksBySearch(MOCK_BOOKS, searchQuery);
-  const filteredBooks = searchFilteredBooks.filter(book => {
-    const matchesMain = selectedMainCategory === '전체' || book.category?.main === selectedMainCategory;
-    const matchesSub = selectedSubCategory && selectedSubCategory !== '' ? book.category?.sub === selectedSubCategory : true;
-    const matchesDetail = selectedDetailCategory && selectedDetailCategory !== '' ? book.category?.detail === selectedDetailCategory : true;
-    const matchesLocation = locationFilter === '전체' || book.location === locationFilter;
-    return matchesMain && matchesSub && matchesDetail && matchesLocation;
-  });
-
-  const sortedBooks = [...filteredBooks].sort((a, b) => {
-    if (sortBy === 'createdAt') {
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    } else if (sortBy === 'likes') {
-      return b.likes - a.likes;
-    } else if (sortBy === 'price') {
-      return a.price - b.price;
+    if (filterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
-    return 0;
-  });
+  }, [filterOpen]);
 
-  // 학과 필터링 함수
-  const filterBooksByCategory = (books) => {
-    if (selectedMainCategory === '전체') {
-      return books;
+  // Enter 키로 검색 실행하는 핸들러
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setSearchParams(prev => ({ ...prev, query: searchQuery }));
     }
-    
-    return books.filter(book => {
-      const matchesMain = book.category?.main === selectedMainCategory;
-      const matchesSub = selectedSubCategory && selectedSubCategory !== '' ? book.category?.sub === selectedSubCategory : true;
-      const matchesDetail = selectedDetailCategory && selectedDetailCategory !== '' ? book.category?.detail === selectedDetailCategory : true;
-      return matchesMain && matchesSub && matchesDetail;
-    });
   };
-
-  // 최근 등록된 책 리스트 (학과 필터 적용)
-  const recentBooks = [...MOCK_BOOKS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const filteredRecentBooks = filterBooksByCategory(recentBooks);
-  const displayedRecentBooks = showAllRecentBooks ? filteredRecentBooks : filteredRecentBooks.slice(0, 6);
-
-  // 인기 도서 리스트 (학과 필터 적용)
-  const filteredPopularBooks = filterBooksByCategory(POPULAR_BOOKS);
-  const displayedPopularBooks = showAllPopularBooks ? filteredPopularBooks : filteredPopularBooks.slice(0, 6);
 
   return (
     <MarketplaceContainer>
       <Header>
         <Title>책거래게시판</Title>
+        <Description>선배들의 지식을 저렴하게 얻어보세요! 📚</Description>
       </Header>
       <PageWrapper>
-        <SidebarMenu active={activeSubMenu} onMenuClick={handleSubMenuClick} />
+        <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <Controls>
-            <SearchBar>
+            <SearchBar as="form" onSubmit={handleSearch}>
               <SearchIcon />
-              <input
-                type="text"
-                placeholder="책 제목이나 저자를 검색해보세요"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={handleSearchInputChange}
+                onKeyDown={handleSearchKeyPress}
+                placeholder="책 제목, 저자, 글 제목으로 검색" 
               />
-              <SearchButton onClick={handleSearch}>
-                검색
-              </SearchButton>
+              <SearchButton type="submit">검색</SearchButton>
             </SearchBar>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }} ref={filterRef}>
               <FilterButton onClick={() => setFilterOpen(v => !v)}>
                 <FilterIcon />
-                필터
+                필터 및 정렬
               </FilterButton>
               {filterOpen && (
-                <FilterPopover ref={filterRef}>
-                  <FilterSection>
-                    <FilterLabel>거래 지역</FilterLabel>
-                    <FilterRadioGroup>
-                      <FilterRadio>
-                        <input type="radio" name="location" value="전체" checked={locationFilter === '전체'} onChange={() => setLocationFilter('전체')} /> 전체
-                      </FilterRadio>
-                      <FilterRadio>
-                        <input type="radio" name="location" value="교내" checked={locationFilter === '교내'} onChange={() => setLocationFilter('교내')} /> 교내
-                      </FilterRadio>
-                      <FilterRadio>
-                        <input type="radio" name="location" value="교외" checked={locationFilter === '교외'} onChange={() => setLocationFilter('교외')} /> 교외
-                      </FilterRadio>
-                    </FilterRadioGroup>
-                  </FilterSection>
+                <FilterPopover>
                   <FilterSection>
                     <FilterLabel>정렬 기준</FilterLabel>
-                    <FilterSelect value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                      <option value="createdAt">최신 순</option>
-                      <option value="likes">인기 순</option>
-                      <option value="price">낮은 가격 순</option>
-                      <option value="price">상태 순</option>
-
+                    <FilterSelect value={searchParams.sort} onChange={handleSortChange}>
+                      <option value="createdAt,desc">최신순</option>
+                      <option value="price,asc">낮은 가격순</option>
+                      <option value="price,desc">높은 가격순</option>
+                      <option value="views,desc">조회순</option>
+                      <option value="likeCount,desc">많이 찜한 순</option>
                     </FilterSelect>
                   </FilterSection>
+                  <FilterSection>
+                    <FilterLabel>가격 범위</FilterLabel>
+                    <PriceInputGroup>
+                      <PriceInput 
+                        type="number" 
+                        placeholder="최소 금액" 
+                        value={tempFilters.minPrice} 
+                        onChange={e => setTempFilters(p => ({...p, minPrice: e.target.value}))} 
+                      />
+                      <span>~</span>
+                      <PriceInput 
+                        type="number" 
+                        placeholder="최대 금액" 
+                        value={tempFilters.maxPrice} 
+                        onChange={e => setTempFilters(p => ({...p, maxPrice: e.target.value}))} 
+                      />
+                    </PriceInputGroup>
+                  </FilterSection>
+                  <FilterApplyButton onClick={handleApplyFilters}>적용하기</FilterApplyButton>
                 </FilterPopover>
               )}
             </div>
           </Controls>
 
-          {/* 카테고리 선택 및 적용 영역 */}
           <CategoryContainer>
-            <CategorySelect value={pendingMainCategory} onChange={handlePendingMajorChange}>
-              <option value="전체">전체</option>
-              {Object.keys(CATEGORIES).map(mainCategory => (
-                <option key={mainCategory} value={mainCategory}>{mainCategory}</option>
-              ))}
+            <CategorySelect onChange={handleCategoryChange} value={searchParams.category}>
+              <option value="">전체 카테고리</option>
+              {/* 카테고리 옵션 동적 생성 - 실제로 렌더링되도록 함수 호출 */}
+              {renderCategoryOptions()}
             </CategorySelect>
-            {pendingMainCategory && pendingMainCategory !== '전체' && (
-              <CategorySelect value={pendingSubCategory} onChange={handlePendingSubChange}>
-                <option value="">전체</option>
-                {Object.keys(CATEGORIES[pendingMainCategory]).map(subCategory => (
-                  <option key={subCategory} value={subCategory}>{subCategory}</option>
-                ))}
-              </CategorySelect>
-            )}
-            {pendingSubCategory && pendingSubCategory !== '' && CATEGORIES[pendingMainCategory]?.[pendingSubCategory]?.length > 0 && (
-              <CategorySelect value={pendingDetailCategory} onChange={handlePendingDetailChange}>
-                <option value="">전체</option>
-                {CATEGORIES[pendingMainCategory][pendingSubCategory].map(detailCategory => (
-                  <option key={detailCategory} value={detailCategory}>{detailCategory}</option>
-                ))}
-              </CategorySelect>
-            )}
-            <button style={{marginLeft: '1rem', padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: 'var(--primary)', color: 'white', fontWeight: 600, fontSize: '1rem', cursor: 'pointer'}} onClick={handleApplyCategory}>적용</button>
           </CategoryContainer>
 
-          {/* 검색 결과가 있을 때는 검색 결과만 표시 */}
-          {searchQuery && (
-            <SearchResultsSection>
-              <SearchResultsHeader>
-                <BackButton onClick={handleBackToMarketplace}>
-                  <span className="icon">←</span>
-                  책 거래 게시판으로 돌아가기
-                </BackButton>
-                <SearchResultsTitle>
-                  <span className="search-term">"{searchQuery}"</span> 검색 결과
-                  <span className="result-count"> ({sortedBooks.length}개)</span>
-                </SearchResultsTitle>
-              </SearchResultsHeader>
-              
-              {isLoading ? (
-                renderSkeletonCards()
-              ) : sortedBooks.length > 0 ? (
-                <BookGrid>
-                  {sortedBooks.map(renderBookCard)}
-                </BookGrid>
-              ) : (
-                <NoResultsMessage>
-                  <div className="icon">🔍</div>
-                  <div className="title">검색 결과가 없습니다</div>
-                  <div className="description">
-                    <strong>"{searchQuery}"</strong>에 대한 검색 결과를 찾을 수 없습니다.<br />
-                    다른 키워드로 검색하거나 카테고리를 변경해보세요.
-                  </div>
-                </NoResultsMessage>
-              )}
-            </SearchResultsSection>
+          {/* 에러 메시지 표시 */}
+          {error && (
+            <ErrorMessage>
+              <div>{error}</div>
+              <button 
+                onClick={() => {
+                  setError('');
+                  fetchPosts(searchParams, 0);
+                }}
+                style={{ 
+                  marginTop: '1rem', 
+                  padding: '0.5rem 1rem', 
+                  background: '#dc3545', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer'
+                }}
+              >
+                다시 시도하기
+              </button>
+            </ErrorMessage>
           )}
 
-          {/* 검색 중이 아닐 때만 인기 도서와 최근 등록된 책 표시 */}
-          {!searchQuery && (
-            <>
-              {/* 인기 도서 리스트 */}
-              <SectionContainer>
-                <SectionHeader>
-                  <PopularSectionTitle>
-                    {selectedMainCategory === '전체' ? (
-                      '인기 도서'
-                    ) : (
-                      <>
-                        <span style={{ color: 'var(--primary)', fontWeight: '700' }}>
-                          {selectedDetailCategory || selectedSubCategory || selectedMainCategory}
-                        </span>
-                        {' '}인기 도서
-                      </>
-                    )}
-                  </PopularSectionTitle>
-                </SectionHeader>
-                <PopularBooksGrid>
-                  {displayedPopularBooks.map(renderBookCard)}
-                </PopularBooksGrid>
-                <div style={{ textAlign: 'center', marginTop: '2rem', marginBottom: '3rem' }}>
-                  <ViewMoreButton onClick={() => setShowAllPopularBooks(prev => !prev)}>
-                    {showAllPopularBooks ? '더보기 취소' : '더보기'}
-                  </ViewMoreButton>
-                </div>
-              </SectionContainer>
+          {/* 게시글 목록 표시 */}
+          {posts.length > 0 && <BookGrid>{posts.map(renderBookCard)}</BookGrid>}
 
-              {/* 최근 등록된 책 리스트 */}
-              <SectionContainer>
-                <SectionHeader>
-                  <SectionTitle>
-                    {selectedMainCategory === '전체' ? (
-                      '최근 등록된 책'
-                    ) : (
-                      <>
-                        <span style={{ color: 'var(--primary)', fontWeight: '700' }}>
-                          {selectedDetailCategory || selectedSubCategory || selectedMainCategory}
-                        </span>
-                        {' '}최근 등록된 책
-                      </>
-                    )}
-                  </SectionTitle>
-                </SectionHeader>
-                <BookGrid>
-                  {displayedRecentBooks.map(renderBookCard)}
-                </BookGrid>
-                <div style={{ textAlign: 'center', marginTop: '2rem', marginBottom: '3rem' }}>
-                  <ViewMoreButton onClick={() => setShowAllRecentBooks(prev => !prev)}>
-                    {showAllRecentBooks ? '더보기 취소' : '더보기'}
-                  </ViewMoreButton>
-                </div>
-              </SectionContainer>
+          {/* 로딩 및 결과 없음 상태 표시 */}
+          {isLoading && posts.length === 0 && (
+            <LoadingMessage>
+              <div>📖 책들을 찾고 있어요...</div>
+            </LoadingMessage>
+          )}
+
+          {!isLoading && posts.length === 0 && !error && (
+            <NoResultsMessage>
+              <div className="icon">🔍</div>
+              <div className="title">검색 결과가 없어요</div>
+              <div className="description">
+                다른 키워드로 검색하거나 필터를 변경해보세요.<br/>
+                혹시 새로운 책을 등록해보는 건 어떨까요? 😊
+              </div>
+            </NoResultsMessage>
+          )}
+          
+          {/* 무한 스크롤 로딩 표시 */}
+          {isLoading && posts.length > 0 && (
+            <>
+              {renderSkeletonCards(4)}
+              <LoadingMessage>
+                <div>📚 더 많은 책들을 불러오고 있어요...</div>
+              </LoadingMessage>
             </>
+          )}
+          
+          {/* 무한 스크롤 트리거 요소 */}
+          <div 
+            ref={observerRef} 
+            style={{ 
+              height: '50px', 
+              display: hasMore ? 'block' : 'none' 
+            }} 
+          />
+          
+          {/* 더 이상 불러올 데이터가 없을 때 메시지 */}
+          {!hasMore && posts.length > 0 && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '2rem', 
+              color: 'var(--text-light)',
+              borderTop: '1px solid var(--border)',
+              marginTop: '2rem'
+            }}>
+              🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
+            </div>
           )}
         </div>
       </PageWrapper>
@@ -1381,4 +1327,4 @@ const Marketplace = () => {
   );
 };
 
-export default Marketplace; 
+export default Marketplace;

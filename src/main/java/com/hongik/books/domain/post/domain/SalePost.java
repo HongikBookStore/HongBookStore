@@ -11,9 +11,12 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 판매 게시글 정보를 담는 SalePost Entity
@@ -25,6 +28,10 @@ public class SalePost {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "post_id")
     private Long id;
+
+    // PostImage와의 1:N 관계 설정
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostImage> postImages = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false)
@@ -70,6 +77,10 @@ public class SalePost {
     @ColumnDefault("0") // DB 기본값을 0으로 설정
     private int views = 0;
 
+    // 해당 게시글을 찜한 수 (정렬용 가상 컬럼)
+    @Formula("(select count(pl.post_like_id) from post_like pl where pl.post_id = post_id)")
+    private long likeCount;
+
     private String locationName;
 
     @Column(precision = 10, scale = 8)
@@ -77,6 +88,15 @@ public class SalePost {
 
     @Column(precision = 11, scale = 8)
     private BigDecimal longitude;
+
+    // ✅ 추가: 교내/교외 기본 위치 코드
+    // 교내 동/건물 코드 (예: "R", "A", "T"...)
+    @Column(length = 64, nullable = false)
+    private String oncampusPlaceCode;
+
+    // 교외 지하철역 코드 (노선 포함, 예: "HONGDAE_2")
+    @Column(length = 64, nullable = false)
+    private String offcampusStationCode;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -89,7 +109,8 @@ public class SalePost {
     public SalePost(User seller, Book book, String postTitle, String postContent,
                     Integer price, SaleStatus status, String locationName,
                     BigDecimal latitude, BigDecimal longitude,
-                    Condition writingCondition, Condition tearCondition, Condition waterCondition, boolean negotiable) {
+                    Condition writingCondition, Condition tearCondition, Condition waterCondition, boolean negotiable,
+                    String oncampusPlaceCode, String offcampusStationCode) {
         this.seller = seller;
         this.book = book;
         this.postTitle = postTitle;
@@ -103,6 +124,8 @@ public class SalePost {
         this.tearCondition = tearCondition;
         this.waterCondition = waterCondition;
         this.negotiable = negotiable;
+        this.oncampusPlaceCode = oncampusPlaceCode;
+        this.offcampusStationCode = offcampusStationCode;
     }
 
     public enum SaleStatus {
@@ -122,9 +145,24 @@ public class SalePost {
         this.tearCondition = request.getTearCondition();
         this.waterCondition = request.getWaterCondition();
         this.negotiable = request.isNegotiable();
+        // 위치 코드는 "작성 시 필수" 요구라 수정 DTO에는 반영 안 함(필요 시 별도 DTO로 추가)
     }
 
     public void increaseViewCount() {
         this.views++;
+    }
+
+    // 연관관계 편의 메서드: 게시글에 이미지를 추가할 때 사용
+    public void addPostImage(PostImage postImage) {
+        this.postImages.add(postImage);
+    }
+
+    /**
+     * 게시글의 상태를 변경하는 메서드
+     * 서비스 레이어에서 직접 status 필드를 변경하는 대신, 이 메서드를 통해 상태 변경을 요청
+     * @param newStatus 새로운 판매 상태
+     */
+    public void changeStatus(SaleStatus newStatus) {
+        this.status = newStatus;
     }
 }

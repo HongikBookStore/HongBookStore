@@ -1,14 +1,8 @@
 package com.hongik.books.domain.post.dto;
 
-import com.hongik.books.domain.book.domain.Book;
 import com.hongik.books.domain.post.domain.Condition;
-import com.hongik.books.domain.post.domain.SalePost;
-import com.hongik.books.domain.user.domain.User;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * 판매 게시글 생성을 요청할 때 사용하는 DTO
@@ -22,7 +16,6 @@ public class SalePostCreateRequestDTO {
     private String bookTitle;
     private String author;
     private String publisher;
-    private String coverImageUrl;
     private int originalPrice; // 정가
 
     // SalePost 정보
@@ -33,4 +26,8 @@ public class SalePostCreateRequestDTO {
     private Condition tearCondition;    // 찢어짐 상태
     private Condition waterCondition;   // 물흘림 상태
     private boolean negotiable;         // 가격 협의 여부
+
+    // ✅ 추가: 교내/교외 기본 위치 코드
+    private String oncampusPlaceCode;     // 예: "R", "A" ...
+    private String offcampusStationCode;  // 예: "HONGDAE_2"
 }

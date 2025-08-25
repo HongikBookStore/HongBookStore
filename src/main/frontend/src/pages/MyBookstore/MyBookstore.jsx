@@ -172,9 +172,18 @@ const BookImage = styled.div`
   justify-content: center;
   margin-bottom: 15px;
   color: #999;
+  overflow: hidden; /* 이미지가 컨테이너를 넘지 않도록 */
 `;
 
-const BookTitle = styled.h3`
+/* BookImage 안에 들어갈 실제 이미지 스타일 */
+const BookImageImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+`;
+
+const BookCardTitle = styled.h3`
   font-size: 1.2rem;
   margin-bottom: 8px;
   color: #333;
@@ -344,6 +353,15 @@ const CompactBookImage = styled.div`
   justify-content: center;
   color: #999;
   flex-shrink: 0;
+  overflow: hidden; /* 이미지가 컨테이너를 넘지 않도록 */
+  
+  /* 내부 이미지 스타일 */
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+  }
 `;
 
 const CompactBookInfo = styled.div`
@@ -517,6 +535,16 @@ const CircleIconButton = styled.button`
   }
 `;
 
+/* 로딩 스피너 컴포넌트 */
+const LoadingSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.1rem;
+`;
+
 // 인증 토큰을 가져오는 헬퍼 함수
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken');
@@ -533,151 +561,50 @@ const statusMap = {
 const MyBookstore = () => {
   const [activeTab, setActiveTab] = useState('all'); // 기본 탭을 '전체'로
   const [myPosts, setMyPosts] = useState([]);
+
   const [showAllMyBooks, setShowAllMyBooks] = useState(false);
-  const [showAllWishlist, setShowAllWishlist] = useState(false);
+  const [wishlist, setWishlist] = useState([]); // 찜 목록 상태
   const [showAllRecent, setShowAllRecent] = useState(false);
   const [showAllWanted, setShowAllWanted] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState({ myPosts: true, wishlist: true });
+  const [error, setError] = useState({ myPosts: null, wishlist: null }); // 에러 상태 관리
   const navigate = useNavigate();
 
   // 내 판매글 목록을 불러오는 API 호출 함수
   const fetchMyPosts = useCallback(async () => {
-    setLoading(true);
+    setLoading(prev => ({ ...prev, myPosts: true }));
+    setError(prev => ({ ...prev, myPosts: null })); // 에러 초기화
     try {
-      const response = await axios.get('/api/posts/my', { headers: getAuthHeader() });
+      const response = await axios.get('/api/my/posts', { headers: getAuthHeader() });
       setMyPosts(response.data);
     } catch (error) {
       console.error("내 판매글 목록을 불러오는 데 실패했습니다.", error);
-      // TODO: 401 Unauthorized 에러 시 로그인 페이지로 리다이렉트 처리
+      setError(prev => ({ ...prev, myPosts: '내 판매글을 불러오는 데 실패했습니다.' })); // 에러 상태 설정
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, myPosts: false }));
     }
   }, []);
 
-  // 임시 데이터 - 찜한 책
-  const [wishlist, setWishlist] = useState([
-    {
-      id: 101,
-      title: '클린 코드',
-      author: '로버트 C. 마틴',
-      price: 30000,
-      status: 'SALE',
-      createdAt: '2024-01-12',
-      image: null
-    },
-    {
-      id: 102,
-      title: '함께 자라기',
-      author: '김창준',
-      price: 18000,
-      status: 'SALE',
-      createdAt: '2024-01-11',
-      image: null
-    },
-    {
-      id: 103,
-      title: '객체지향의 사실과 오해',
-      author: '조영호',
-      price: 22000,
-      status: 'SALE',
-      createdAt: '2024-01-10',
-      image: null
-    },
-    {
-      id: 104,
-      title: '테스트 주도 개발',
-      author: '켄트 벡',
-      price: 28000,
-      status: 'SALE',
-      createdAt: '2024-01-09',
-      image: null
+  // 내 찜 목록을 불러오는 API 호출 함수
+  const fetchWishlist = useCallback(async () => {
+    setLoading(prev => ({ ...prev, wishlist: true }));
+    setError(prev => ({ ...prev, wishlist: null })); // 에러 초기화
+    try {
+      const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
+      setWishlist(response.data);
+    } catch (error) {
+      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
+      setError(prev => ({ ...prev, wishlist: '찜 목록을 불러오는 데 실패했습니다.' })); // 에러 상태 설정
+    } finally {
+      setLoading(prev => ({ ...prev, wishlist: false }));
     }
-  ]);
-
-  // 임시 데이터 - 최근 본 책
-  const mockRecentBooks = [
-    {
-      id: 201,
-      title: '모던 자바스크립트',
-      author: '이웅모',
-      price: 35000,
-      viewedAt: '2024-01-15 14:30',
-      image: null
-    },
-    {
-      id: 202,
-      title: '파이썬 알고리즘',
-      author: '박상현',
-      price: 25000,
-      viewedAt: '2024-01-15 13:15',
-      image: null
-    },
-    {
-      id: 203,
-      title: '데이터베이스 설계',
-      author: '김연희',
-      price: 32000,
-      viewedAt: '2024-01-15 12:45',
-      image: null
-    },
-    {
-      id: 204,
-      title: 'Docker 입문',
-      author: '이재홍',
-      price: 28000,
-      viewedAt: '2024-01-15 11:20',
-      image: null
-    },
-    {
-      id: 205,
-      title: 'Git 완벽 가이드',
-      author: '전병진',
-      price: 22000,
-      viewedAt: '2024-01-15 10:30',
-      image: null
-    }
-  ];
-
-  // 임시 데이터 - 구해요 글
-  const mockWantedPosts = [
-    {
-      id: 301,
-      title: '자바의 정석 구합니다',
-      author: '김학생',
-      budget: '15000원',
-      createdAt: '2024-01-15',
-      status: 'ACTIVE'
-    },
-    {
-      id: 302,
-      title: '스프링 관련 책 구해요',
-      author: '이학생',
-      budget: '20000원',
-      createdAt: '2024-01-14',
-      status: 'ACTIVE'
-    },
-    {
-      id: 303,
-      title: '알고리즘 책 구합니다',
-      author: '박학생',
-      budget: '18000원',
-      createdAt: '2024-01-13',
-      status: 'ACTIVE'
-    },
-    {
-      id: 304,
-      title: '프론트엔드 책 구해요',
-      author: '최학생',
-      budget: '25000원',
-      createdAt: '2024-01-12',
-      status: 'ACTIVE'
-    }
-  ];
+  }, []);
 
   // 컴포넌트 마운트 시 API 호출
   useEffect(() => {
     fetchMyPosts();
-  }, [fetchMyPosts]);
+    fetchWishlist();
+  }, [fetchMyPosts, fetchWishlist]);
 
   // 탭에 따라 게시글을 필터링하는 함수
   const getFilteredBooks = () => {
@@ -691,8 +618,8 @@ const MyBookstore = () => {
     return myPosts.filter(post => post.status === statusMapping[activeTab]);
   };
 
-  const handleEditBook = (bookId) => {
-    navigate(`/bookwrite/${bookId}`);
+  const handleEditBook = (postId) => {
+    navigate(`/postwrite/${postId}`);
   };
 
   // 게시글 삭제 핸들러
@@ -709,9 +636,7 @@ const MyBookstore = () => {
     }
   };
 
-  const handleViewBook = (bookId) => {
-    navigate(`/marketplace/${bookId}`);
-  };
+  const handleViewBook = (postId) => navigate(`/posts/${postId}`);
 
   const handleAddBook = () => {
     navigate('/book-write');
@@ -721,12 +646,17 @@ const MyBookstore = () => {
     navigate('/my-transactions');
   };
 
-  const handleRemoveFromWishlist = (bookId) => {
+  // 찜 해제 핸들러
+  const handleRemoveFromWishlist = async (postId) => {
     if (window.confirm('찜을 해제하시겠습니까?')) {
-      // 실제로는 API 호출
-      console.log('찜 목록에서 제거:', bookId);
-      // 상태에서 제거
-      setWishlist(prev => prev.filter(book => book.id !== bookId));
+      try {
+        await axios.delete(`/api/posts/${postId}/like`, { headers: getAuthHeader() });
+        alert("찜이 해제되었습니다.");
+        fetchWishlist(); // 찜 목록 새로고침
+      } catch (error) {
+        console.error("찜 해제에 실패했습니다.", error);
+        alert("찜 해제 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -781,10 +711,7 @@ const MyBookstore = () => {
           {/* 1. 내가 등록한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle>
-                <FaBook />
-                내가 등록한 책
-              </SectionTitle>
+              <SectionTitle><FaBook /> 내가 등록한 책</SectionTitle>
               <ViewMoreButton onClick={() => setShowAllMyBooks(!showAllMyBooks)}>
                 {showAllMyBooks ? '접기' : '더보기'}
                 <FaArrowRight style={{ transform: showAllMyBooks ? 'rotate(90deg)' : 'none' }} />
@@ -807,8 +734,20 @@ const MyBookstore = () => {
                 </Tab>
               </TabList>
 
-              {loading ? (
-                <NoBooks><h3>목록을 불러오는 중...</h3></NoBooks>
+              {/* 로딩과 에러 상태를 더 명확하게 처리 */}
+              {loading.myPosts ? (
+                <LoadingSpinner>
+                  <FaBook style={{ marginRight: '8px' }} />
+                  목록을 불러오는 중...
+                </LoadingSpinner>
+              ) : error.myPosts ? (
+                <EmptyState>
+                  <EmptyIcon><FaBook /></EmptyIcon>
+                  <h3>{error.myPosts}</h3>
+                  <button onClick={fetchMyPosts} style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                    다시 시도
+                  </button>
+                </EmptyState>
               ) : filteredBooks.length > 0 ? (
                 <BookGrid>
                   {filteredBooks.map(post => (
@@ -855,7 +794,8 @@ const MyBookstore = () => {
               ) : (
                 <NoBooks>
                   <EmptyIcon><FaBook /></EmptyIcon>
-                  <h3>{statusMap[activeTab]}인 책이 없습니다</h3>
+                  {/* 탭에 따른 메시지 조건 수정 */}
+                  <h3>{activeTab === 'all' ? '등록한 책이 없습니다' : `${statusMap[activeTab] || '해당 상태'}인 책이 없습니다`}</h3>
                 </NoBooks>
               )}
             </TabSection>
@@ -864,165 +804,60 @@ const MyBookstore = () => {
           {/* 2. 찜한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle>
-                <FaHeart />
-                찜한 책 ({wishlist.length})
-              </SectionTitle>
-              <ViewMoreButton onClick={() => setShowAllWishlist(!showAllWishlist)}>
-                {showAllWishlist ? '접기' : '더보기'}
-                <FaArrowRight style={{ transform: showAllWishlist ? 'rotate(90deg)' : 'none' }} />
-              </ViewMoreButton>
+              <SectionTitle><FaHeart /> 찜한 책 ({Array.isArray(wishlist) ? wishlist.length : 0})</SectionTitle> {/* 배열 체크 추가 */}
             </SectionHeader>
-
-            {wishlist.length > 0 ? (
+            {/* 수정: 로딩과 에러 상태를 더 명확하게 처리 */}
+            {loading.wishlist ? (
+              <LoadingSpinner>
+                <FaHeart style={{ marginRight: '8px' }} />
+                찜 목록을 불러오는 중...
+              </LoadingSpinner>
+            ) : error.wishlist ? (
+              <EmptyState>
+                <EmptyIcon><FaHeart /></EmptyIcon>
+                <h3>{error.wishlist}</h3>
+                <button onClick={fetchWishlist} style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                  다시 시도
+                </button>
+              </EmptyState>
+            ) : Array.isArray(wishlist) && wishlist.length > 0 ? (
+              // 배열 체크 추가
               <CompactList>
-                {(showAllWishlist ? wishlist : wishlist.slice(0, 3)).map(book => (
-                  <CompactBookCard key={book.id}>
+                {wishlist.map(item => (
+                  <CompactBookCard key={item.postId}>
                     <CompactBookImage>
-                      {book.image ? (
-                        <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                      ) : (
-                        <FaBook size={20} />
-                      )}
+                      {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.postTitle} /> : <FaBook size={20} />}
                     </CompactBookImage>
                     <CompactBookInfo>
-                      <CompactBookTitle>{book.title}</CompactBookTitle>
+                      <CompactBookTitle>{item.postTitle}</CompactBookTitle>
                       <CompactBookMeta>
-                        <span><FaUser size={10} /> {book.author}</span>
-                        <span><FaClock size={10} /> {book.createdAt}</span>
+                        <span><FaUser size={10} /> {item.sellerNickname}</span>
+                        <span><FaClock size={10} /> {new Date(item.createdAt).toLocaleDateString()}</span>
                       </CompactBookMeta>
-                      <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
+                      <CompactBookPrice>{item.price.toLocaleString()}원</CompactBookPrice>
                     </CompactBookInfo>
-                    <CompactBookStatus $status={book.status}>
-                      {book.status === 'SALE' ? '판매중' : '예약중'}
-                    </CompactBookStatus>
-                    <CompactBookActions>
-                      <ActionButton onClick={() => handleViewBook(book.id)}>
-                        <FaSearch /> 보기
-                      </ActionButton>
-                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(book.id)}>
-                        <FaHeart /> 찜 해제
-                      </ActionButton>
-                    </CompactBookActions>
+                    <BookActions>
+                      <ActionButton onClick={() => handleViewBook(item.postId)}><FaEye /> 보기</ActionButton>
+                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)}><FaHeart /> 찜 해제</ActionButton>
+                    </BookActions>
                   </CompactBookCard>
                 ))}
               </CompactList>
             ) : (
               <EmptyState>
-                <EmptyIcon>
-                  <FaHeart />
-                </EmptyIcon>
+                <EmptyIcon><FaHeart /></EmptyIcon>
                 <h3>찜한 책이 없습니다</h3>
-                <p>마켓플레이스에서 책을 찜해보세요!</p>
               </EmptyState>
             )}
           </SectionContainer>
+
+          {/* TODO: 최근 본 책, 구해요 글 섹션은 각각의 API가 만들어진 후에 연동 */}
 
           {/* 3. 최근 본 책 */}
-          <SectionContainer>
-            <SectionHeader>
-              <SectionTitle>
-                <FaRegEye />
-                최근 본 책 ({mockRecentBooks.length})
-              </SectionTitle>
-              <ViewMoreButton onClick={() => setShowAllRecent(!showAllRecent)}>
-                {showAllRecent ? '접기' : '더보기'}
-                <FaArrowRight style={{ transform: showAllRecent ? 'rotate(90deg)' : 'none' }} />
-              </ViewMoreButton>
-            </SectionHeader>
-
-            {mockRecentBooks.length > 0 ? (
-              <CompactList>
-                {(showAllRecent ? mockRecentBooks : mockRecentBooks.slice(0, 3)).map(book => (
-                  <CompactBookCard key={book.id}>
-                    <CompactBookImage>
-                      {book.image ? (
-                        <img src={book.image} alt={book.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                      ) : (
-                        <FaBook size={20} />
-                      )}
-                    </CompactBookImage>
-                    
-                    <CompactBookInfo>
-                      <CompactBookTitle>{book.title}</CompactBookTitle>
-                      <CompactBookMeta>
-                        <span><FaUser size={10} /> {book.author}</span>
-                        <span><FaClock size={10} /> {book.viewedAt}</span>
-                      </CompactBookMeta>
-                      <CompactBookPrice>{book.price.toLocaleString()}원</CompactBookPrice>
-                    </CompactBookInfo>
-                    
-                    <CompactBookActions>
-                      <ActionButton onClick={() => handleViewBook(book.id)}>
-                        <FaSearch /> 보기
-                      </ActionButton>
-                    </CompactBookActions>
-                  </CompactBookCard>
-                ))}
-              </CompactList>
-            ) : (
-              <EmptyState>
-                <EmptyIcon>
-                  <FaRegEye />
-                </EmptyIcon>
-                <h3>최근 본 책이 없습니다</h3>
-                <p>마켓플레이스에서 책을 둘러보세요!</p>
-              </EmptyState>
-            )}
-          </SectionContainer>
+          
 
           {/* 4. 구해요 글 */}
-          <SectionContainer>
-            <SectionHeader>
-              <SectionTitle>
-                <FaHandPaper />
-                내가 등록한 구해요 글 ({mockWantedPosts.length})
-              </SectionTitle>
-              <ViewMoreButton onClick={() => setShowAllWanted(!showAllWanted)}>
-                {showAllWanted ? '접기' : '더보기'}
-                <FaArrowRight style={{ transform: showAllWanted ? 'rotate(90deg)' : 'none' }} />
-              </ViewMoreButton>
-            </SectionHeader>
-
-            {mockWantedPosts.length > 0 ? (
-              <CompactList>
-                {(showAllWanted ? mockWantedPosts : mockWantedPosts.slice(0, 3)).map(wanted => (
-                  <WantedCard key={wanted.id}>
-                    <WantedIcon>
-                      <FaHandPaper />
-                    </WantedIcon>
-                    
-                    <WantedInfo>
-                      <WantedTitle>{wanted.title}</WantedTitle>
-                      <WantedMeta>
-                        <span><FaUser size={10} /> {wanted.author}</span>
-                        <span><FaClock size={10} /> {wanted.createdAt}</span>
-                      </WantedMeta>
-                    </WantedInfo>
-                    
-                    <WantedBudget>{wanted.budget}</WantedBudget>
-                    
-                    <CompactBookActions>
-                      <ActionButton onClick={() => handleEditWanted(wanted.id)}>
-                        <FaEdit /> 수정
-                      </ActionButton>
-                      <ActionButton className="delete" onClick={() => handleDeleteWanted(wanted.id)}>
-                        <FaTrash /> 삭제
-                      </ActionButton>
-                    </CompactBookActions>
-                  </WantedCard>
-                ))}
-              </CompactList>
-            ) : (
-              <EmptyState>
-                <EmptyIcon>
-                  <FaHandPaper />
-                </EmptyIcon>
-                <h3>등록한 구해요 글이 없습니다</h3>
-                <p>원하는 책을 구해요에 등록해보세요!</p>
-              </EmptyState>
-            )}
-          </SectionContainer>
+          
         </BookstoreContainer>
       </MainContent>
     </PageWrapper>

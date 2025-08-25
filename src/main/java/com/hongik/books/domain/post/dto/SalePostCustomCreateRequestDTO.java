@@ -10,11 +10,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class SalePostCustomCreateRequestDTO {
-    // Book 정보 (ISBN, coverImageUrl 없음)
+    // Book 정보
     private String bookTitle;
     private String author;
     private String publisher;
     private int originalPrice;
+
     // SalePost 정보
     private String postTitle;
     private String postContent;
@@ -23,4 +24,8 @@ public class SalePostCustomCreateRequestDTO {
     private Condition tearCondition;
     private Condition waterCondition;
     private boolean negotiable;
+
+    // ✅ 추가: 교내/교외 기본 위치 코드
+    private String oncampusPlaceCode;     // 예: "R", "A" ...
+    private String offcampusStationCode;  // 예: "HONGDAE_2"
 }
