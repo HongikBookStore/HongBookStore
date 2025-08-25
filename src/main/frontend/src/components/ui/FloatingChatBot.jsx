@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
-import ChatBotContent from '../ChatBotModal/ChatBotModal';
+import ChatBotContent from '../ChatBotModal/ChatBotContent';
 import { useTranslation } from 'react-i18next';
 
 const fadeIn = keyframes`

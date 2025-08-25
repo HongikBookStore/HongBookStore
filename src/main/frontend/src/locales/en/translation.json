@@ -176,5 +176,49 @@
   "withdrawConfirmMessage": "Are you sure you want to withdraw?\n\nAll data will be permanently deleted and cannot be recovered.",
   "withdrawSuccess": "Account has been successfully withdrawn.",
   "incorrectPasswordForWithdraw": "Password is incorrect.",
-  "withdrawFailed": "Withdrawal failed."
+  "withdrawFailed": "Withdrawal failed.",
+  "chatbot": {
+    "title": "AI Chatbot",
+    "welcome": "Hello! I'm the HongBookStore AI chatbot. How can I help you?",
+    "reset": "Reset Conversation",
+    "back": "Go Back",
+    "questions": {
+      "sellBook": "I want to sell a book.",
+      "buyBook": "I want to buy a book.",
+      "safeTrade": "How to trade safely?",
+      "bookPrice": "How do I set book prices?",
+      "accountIssues": "I have account-related issues.",
+      "wantedBoard": "What is the wanted board?",
+      "myBookstore": "What is my bookstore?",
+      "tradeChat": "What is trade chat?",
+      "forgotTrade": "I forgot my trade appointment.",
+      "mapFeature": "What is the map feature?",
+      "locationMismatch": "My location is different from the recommended trade location."
+    },
+    "answers": {
+      "sellBook": "To sell a book:\n\n1. Click 'Book Registration' in the top menu\n2. Enter book information and condition\n3. Set the price and register\n4. Wait for purchase inquiries via chat\n\nWe automatically recommend appropriate prices based on book condition.",
+      "buyBook": "To buy a book:\n\n1. Click 'Marketplace' in the top menu\n2. Search for the book you want\n3. Check book details\n4. Proceed with the trade via chat with the seller\n\nYou can also find wanted books in the 'Wanted Board'.",
+      "safeTrade": "Tips for safe trading:\n\n• Meet in public places (library, cafe, etc.)\n• We recommend cash transactions\n• Always check book condition before trading\n• Stop the trade if anything seems suspicious\n\nWe do not guarantee transactions.",
+      "bookPrice": "How to set book prices:\n\n• Select book condition on the registration page for automatic price recommendations\n• Check demand in the 'Wanted Board'\n• Set reasonable prices based on market prices",
+      "accountIssues": "Please select your account issue.",
+      "wantedBoard": "The wanted board is where you can find books you want:\n\n• Register books you want, and sellers can contact you\n• Freely set book condition and desired price\n• Identify books with high demand",
+      "myBookstore": "My bookstore is where you manage your registered books:\n\n• Modify the status of your registered books\n• Manage sold books\n• Check your bookstore statistics",
+      "tradeChat": "Trade chat is where buyers and sellers communicate:\n\n• Ask questions about books\n• Negotiate trade conditions\n• Set appointment time and location",
+      "forgotTrade": "If you forgot your trade appointment:\n\n• Check your trade history in 'My Transactions'\n• Review appointment details in chat history\n• Contact the seller again to reschedule",
+      "mapFeature": "The map feature allows you to share and categorize places around campus:\n\n• Users share information about places needed for campus life\n• Find various campus life locations, not just trade locations\n• Check ratings and reviews for places",
+      "locationMismatch": "If your location is different from actual:\n\n• Click 'Location Management' in My Page\n• Add a new location with 'Add New Location'\n• Set as default location for automatic recommendations"
+    },
+    "subQuestions": {
+      "withdraw": "Account Withdrawal",
+      "findId": "Find ID",
+      "findPassword": "Find Password",
+      "studentVerification": "Student Verification"
+    },
+    "subAnswers": {
+      "withdraw": "How to withdraw your account:\n\n1. Click 'Account Withdrawal' in My Page\n2. Enter your password for verification\n3. Review and agree to the withdrawal terms\n\nAll data will be permanently deleted upon withdrawal.",
+      "findId": "How to find your ID:\n\n1. Click 'Find ID' on the login page\n2. Enter the email you used during registration\n3. We'll send your ID to your email",
+      "findPassword": "How to find your password:\n\n1. Click 'Find Password' on the login page\n2. Enter your ID and email\n3. We'll send a temporary password to your email",
+      "studentVerification": "How to verify student status:\n\n1. Click 'School Email Verification' in My Page\n2. Enter your g.hongik.ac.kr email\n3. Check your email and enter the verification code\n\nOnce verified, you can use all services including second-hand trading without restrictions."
+    }
+  }
 } 
