@@ -5,6 +5,55 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
+/* =========================
+   헬퍼: userId 보장하기
+   ========================= */
+// JWT payload 파싱
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+        atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+// localStorage에 userId가 없으면 JWT에서 복구하거나(없으면 프롬프트) 저장
+async function ensureUserId() {
+  let uid = localStorage.getItem('userId');
+  if (uid) return uid;
+
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    const payload = parseJwt(token);
+    if (payload) {
+      uid = String(
+          payload.userId ?? payload.id ?? payload.user_id ?? payload.uid ?? payload.sub ?? ''
+      );
+      if (uid && uid !== 'undefined' && uid !== 'null') {
+        localStorage.setItem('userId', uid);
+        if (payload.nickname) localStorage.setItem('nickname', payload.nickname);
+        return uid;
+      }
+    }
+  }
+
+  // 개발/테스트 편의용(운영 배포 시 제거 권장)
+  const typed = window.prompt('userId가 없습니다. 테스트용 userId를 입력하세요', '1');
+  if (typed) {
+    localStorage.setItem('userId', typed);
+    return typed;
+  }
+  return null;
+}
+
 const WriteContainer = styled.div`
   max-width: 1600px;
   width: 100vw;
@@ -275,11 +324,12 @@ const InputTypeButtons = styled.div`
   margin-bottom: 1rem;
 `;
 
+/* !! 중요: JSX에서 $active로 쓰고 있으니 styled에서도 $active로 읽어야 함 */
 const InputTypeButton = styled.button`
   padding: 0.75rem 1.5rem;
-  border: 2px solid ${props => props.active ? '#007bff' : '#ddd'};
-  background: ${props => props.active ? '#007bff' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
+  border: 2px solid ${props => props.$active ? '#007bff' : '#ddd'};
+  background: ${props => props.$active ? '#007bff' : 'white'};
+  color: ${props => props.$active ? 'white' : '#333'};
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
@@ -288,7 +338,7 @@ const InputTypeButton = styled.button`
 
   &:hover {
     border-color: #007bff;
-    background: ${props => props.active ? '#0056b3' : '#f8f9ff'};
+    background: ${props => props.$active ? '#0056b3' : '#f8f9ff'};
   }
 `;
 
@@ -452,33 +502,29 @@ const WantedWrite = () => {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
+  const [submitting, setSubmitting] = useState(false); // 제출 상태 추가
+
   const navigate = useNavigate();
   const location = useLocation();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  // 컴포넌트 마운트 시 글쓰기 시작
   useEffect(() => {
     startWriting('wanted');
-    
-    // 컴포넌트 언마운트 시 글쓰기 종료
     return () => {
       stopWriting();
     };
   }, [startWriting, stopWriting]);
 
-  // 폼 데이터 변경 감지
   useEffect(() => {
-    const hasChanges = Object.values(formData).some(value => 
-      value && value.toString().trim() !== ''
+    const hasChanges = Object.values(formData).some(value =>
+        value && value.toString().trim() !== ''
     );
     setHasUnsavedChanges(hasChanges);
     setUnsavedChanges(hasChanges);
   }, [formData, setUnsavedChanges]);
 
-  // 브라우저 뒤로가기/앞으로가기 감지
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
@@ -487,30 +533,25 @@ const WantedWrite = () => {
       }
     };
 
-    // 브라우저 뒤로가기/앞으로가기 감지
     const handlePopState = (e) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        setPendingNavigation('/wanted'); // 기본적으로 구해요 페이지로 이동
+        setPendingNavigation('/wanted');
         setShowWarningModal(true);
-        // 히스토리 상태를 다시 추가하여 뒤로가기 방지
         window.history.pushState(null, '', window.location.pathname);
       }
     };
 
-    // 임시저장 이벤트 처리 (구해요 글은 임시저장 기능이 없으므로 바로 나가기)
     const handleSaveDraftEvent = async () => {
-      // 구해요 글은 임시저장 기능이 없으므로 바로 나가기
+      // 임시저장 기능 없음
       console.log('구해요 글은 임시저장 기능이 없습니다.');
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('saveDraft', handleSaveDraftEvent);
-    
-    // 페이지 로드 시 히스토리 상태 추가
     window.history.pushState(null, '', window.location.pathname);
-    
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
@@ -526,22 +567,22 @@ const WantedWrite = () => {
 
   const handleMajorChange = (e) => {
     const mainCategory = e.target.value;
-    const firstSub = Object.keys(CATEGORIES[mainCategory])[0];
-    const firstDetail = CATEGORIES[mainCategory][firstSub][0];
+    const firstSub = mainCategory ? Object.keys(CATEGORIES[mainCategory])[0] : '';
+    const firstDetail = mainCategory && firstSub ? CATEGORIES[mainCategory][firstSub][0] : '';
     setFormData(prev => ({
       ...prev,
       mainCategory,
-      subCategory: firstSub,
-      detailCategory: firstDetail
+      subCategory: firstSub || '',
+      detailCategory: firstDetail || ''
     }));
   };
   const handleSubChange = (e) => {
     const subCategory = e.target.value;
-    const firstDetail = CATEGORIES[formData.mainCategory][subCategory][0];
+    const firstDetail = formData.mainCategory && subCategory ? CATEGORIES[formData.mainCategory][subCategory][0] : '';
     setFormData(prev => ({
       ...prev,
       subCategory,
-      detailCategory: firstDetail
+      detailCategory: firstDetail || ''
     }));
   };
   const handleDetailChange = (e) => {
@@ -553,29 +594,84 @@ const WantedWrite = () => {
     if (!formData.title.trim()) newErrors.title = '제목을 입력해주세요';
     if (!formData.author.trim()) newErrors.author = '저자를 입력해주세요';
     if (!formData.condition) newErrors.condition = '상태를 선택해주세요';
-    if (!formData.price || parseInt(formData.price) <= 0) newErrors.price = '희망 가격을 입력해주세요';
+    const priceNum = Number(formData.price);
+    if (!priceNum || priceNum <= 0) newErrors.price = '희망 가격을 입력해주세요';
     if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = '카테고리를 선택해주세요';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // 실제 API 연동: 등록/수정
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    if (isEdit) {
-      // 실제로는 API 호출
-      alert('구해요 글이 수정되었습니다!');
+
+    const token = localStorage.getItem('accessToken');
+    const userId = await ensureUserId(); // ✅ userId 보장
+    if (!userId) {
+      alert('로그인이 필요합니다. (userId가 없습니다)');
+      return;
+    }
+
+    // ✅ 백엔드 규격에 맞게 전송
+    const topCategory = formData.mainCategory || '교양';
+    const dept =
+        topCategory === '전공'
+            ? (formData.detailCategory || formData.subCategory || '').trim()
+            : '';
+
+    const basePayload = {
+      title: formData.title.trim(),
+      author: formData.author.trim(),
+      condition: formData.condition,
+      price: Number(formData.price),
+      category: topCategory,
+      content: '' // 설명 칸 없으므로 공란
+    };
+    // 전공일 때만 department 필드 포함
+    const payload = (topCategory === '전공' && dept)
+        ? { ...basePayload, department: dept }
+        : basePayload;
+
+    try {
+      setSubmitting(true);
+      const url = isEdit ? `/api/wanted/${id}` : '/api/wanted';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': String(userId),            // ✅ 필수 헤더
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`요청 실패 (${res.status}) ${txt}`);
+      }
+
+      // 생성(201)은 body가 있을 수 있고, 수정(204)은 body 없음
+      if (!isEdit) {
+        await res.json().catch(() => ({}));
+      }
+
+      // 성공 처리
       stopWriting();
-      navigate('/mybookstore');
-    } else {
-      // 실제로는 API 호출
-      alert('구해요 글이 등록되었습니다!');
-      stopWriting();
-      navigate('/wanted');
+      setUnsavedChanges(false);
+      setHasUnsavedChanges(false);
+      navigate(isEdit ? '/mybookstore' : '/wanted');
+    } catch (err) {
+      console.error(err);
+      alert(isEdit ? '수정 중 오류가 발생했습니다.' : '등록 중 오류가 발생했습니다.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // 안전한 네비게이션 함수
+  // 안전 네비게이션
   const safeNavigate = (path) => {
     if (hasUnsavedChanges) {
       setPendingNavigation(path);
@@ -585,19 +681,16 @@ const WantedWrite = () => {
     }
   };
 
-  // 경고 모달에서 나가기 선택
   const handleConfirmExit = () => {
     setShowWarningModal(false);
     if (pendingNavigation) {
       navigate(pendingNavigation);
       setPendingNavigation(null);
     } else {
-      // pendingNavigation이 없으면 기본적으로 구해요 페이지로 이동
       navigate('/wanted');
     }
   };
 
-  // 경고 모달에서 취소 선택
   const handleCancelExit = () => {
     setShowWarningModal(false);
     setPendingNavigation(null);
@@ -607,11 +700,9 @@ const WantedWrite = () => {
     safeNavigate('/wanted');
   };
 
-  // 책 검색 함수
+  // 책 검색 (모의)
   const handleBookSearch = async () => {
     if (!searchQuery.trim()) return;
-    
-    // 임시 검색 결과 (실제로는 API 호출)
     const mockResults = [
       {
         isbn: '9788966262472',
@@ -634,15 +725,13 @@ const WantedWrite = () => {
         publisher: '도우출판',
         publishedDate: '2016-02-10'
       }
-    ].filter(book => 
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.isbn.includes(searchQuery)
+    ].filter(book =>
+        book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        book.isbn.includes(searchQuery)
     );
-    
     setSearchResults(mockResults);
   };
 
-  // 책 선택 함수
   const handleBookSelect = (book) => {
     setSelectedBook(book);
     setFormData(prev => ({
@@ -653,257 +742,255 @@ const WantedWrite = () => {
     }));
   };
 
-  // 책 검색 모달 닫기
   const handleCloseBookSearch = () => {
     setShowBookSearch(false);
     setSearchQuery('');
     setSearchResults([]);
   };
 
-  // 책 검색 모달 열기
   const handleOpenBookSearch = () => {
     setShowBookSearch(true);
   };
 
   return (
-    <>
-      <div className="header-spacer" />
-      <WriteContainer>
-        <WriteHeader>
-          <BackButton onClick={handleCancel}>
-            <FaArrowLeft /> 뒤로가기
-          </BackButton>
-          <WriteTitle>구해요 글 작성</WriteTitle>
-        </WriteHeader>
-        <WriteForm onSubmit={handleSubmit}>
-          <FormSection>
-            <SectionTitle>
-              <FaBook /> 기본 정보
-            </SectionTitle>
-            
-            <InputTypeSelector>
-              <Label>입력 방식 선택 <Required>*</Required></Label>
-              <InputTypeButtons>
-                <InputTypeButton
-                  type="button"
-                  $active={inputType === 'title'}
-                  onClick={() => setInputType('title')}
-                >
-                  책 제목으로 입력
-                </InputTypeButton>
-                <InputTypeButton
-                  type="button"
-                  $active={inputType === 'isbn'}
-                  onClick={() => setInputType('isbn')}
-                >
-                  ISBN으로 검색
-                </InputTypeButton>
-              </InputTypeButtons>
-            </InputTypeSelector>
+      <>
+        <div className="header-spacer" />
+        <WriteContainer>
+          <WriteHeader>
+            <BackButton onClick={handleCancel}>
+              <FaArrowLeft /> 뒤로가기
+            </BackButton>
+            <WriteTitle>구해요 글 작성</WriteTitle>
+          </WriteHeader>
+          <WriteForm onSubmit={handleSubmit}>
+            <FormSection>
+              <SectionTitle>
+                <FaBook /> 기본 정보
+              </SectionTitle>
 
-            {inputType === 'title' ? (
-              <FormGroup>
-                <Label>제목 <Required>*</Required></Label>
-                <Input 
-                  type="text" 
-                  name="title" 
-                  value={formData.title} 
-                  onChange={handleInputChange} 
-                  placeholder="원하는 책의 제목을 입력해주세요" 
-                />
-                {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-              </FormGroup>
-            ) : (
-              <FormGroup>
-                <Label>ISBN 검색 <Required>*</Required></Label>
-                {selectedBook ? (
-                  <SelectedBookDisplay>
-                    <BookTitle>{selectedBook.title}</BookTitle>
-                    <BookInfo>
-                      저자: {selectedBook.author} | 출판사: {selectedBook.publisher} | ISBN: {selectedBook.isbn}
-                    </BookInfo>
-                    <button
+              <InputTypeSelector>
+                <Label>입력 방식 선택 <Required>*</Required></Label>
+                <InputTypeButtons>
+                  <InputTypeButton
                       type="button"
-                      onClick={() => setSelectedBook(null)}
-                      style={{
-                        marginTop: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        background: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      다시 선택
-                    </button>
-                  </SelectedBookDisplay>
-                ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Input
-                      type="text"
-                      placeholder="ISBN 또는 책 제목으로 검색"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleOpenBookSearch}
-                      style={{
-                        padding: '0.75rem 1rem',
-                        background: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <FaSearch />
-                    </button>
-                  </div>
-                )}
-                {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-              </FormGroup>
-            )}
-
-            <FormGroup>
-              <Label>저자 <Required>*</Required></Label>
-              <Input type="text" name="author" value={formData.author} onChange={handleInputChange} placeholder="저자를 입력해주세요" />
-              {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
-            </FormGroup>
-            <FormGroup>
-              <Label>상태 <Required>*</Required></Label>
-              <Select name="condition" value={formData.condition} onChange={handleInputChange}>
-                <option value="">상태를 선택해주세요</option>
-                <option value="상">상</option>
-                <option value="중">중</option>
-                <option value="하">하</option>
-              </Select>
-              {errors.condition && <ErrorMessage>{errors.condition}</ErrorMessage>}
-            </FormGroup>
-            <FormGroup>
-              <Label>희망 가격 <Required>*</Required></Label>
-              <Input type="number" name="price" value={formData.price} onChange={handleInputChange} placeholder="희망 가격을 입력해주세요" min="0" />
-              {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
-            </FormGroup>
-            <FormGroup>
-              <Label>카테고리 <Required>*</Required></Label>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <Select value={formData.mainCategory} onChange={handleMajorChange}>
-                  <option value="">대분류</option>
-                  {Object.keys(CATEGORIES).map(main => (
-                    <option key={main} value={main}>{main}</option>
-                  ))}
-                </Select>
-                {formData.mainCategory && (
-                  <Select value={formData.subCategory} onChange={handleSubChange}>
-                    <option value="">중분류</option>
-                    {Object.keys(CATEGORIES[formData.mainCategory]).map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                  </Select>
-                )}
-                {formData.subCategory && CATEGORIES[formData.mainCategory]?.[formData.subCategory]?.length > 0 && (
-                  <Select value={formData.detailCategory} onChange={handleDetailChange}>
-                    <option value="">소분류</option>
-                    {CATEGORIES[formData.mainCategory][formData.subCategory].map(detail => (
-                      <option key={detail} value={detail}>{detail}</option>
-                    ))}
-                  </Select>
-                )}
-              </div>
-              {errors.category && <ErrorMessage>{errors.category}</ErrorMessage>}
-            </FormGroup>
-          </FormSection>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-            <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
-            <SubmitButton type="submit">{isEdit ? '수정' : '등록'}</SubmitButton>
-          </div>
-        </WriteForm>
-      </WriteContainer>
-
-      {/* 책 검색 모달 */}
-      {showBookSearch && (
-        <BookSearchModal>
-          <BookSearchContent>
-            <h3>책 검색</h3>
-            <SearchInput
-              type="text"
-              placeholder="ISBN 또는 책 제목으로 검색하세요"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleBookSearch()}
-            />
-            <button
-              onClick={handleBookSearch}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginBottom: '1rem'
-              }}
-            >
-              검색
-            </button>
-            
-            {searchResults.length > 0 && (
-              <BookList>
-                {searchResults.map((book, index) => (
-                  <BookItem
-                    key={index}
-                    onClick={() => handleBookSelect(book)}
-                    className={selectedBook?.isbn === book.isbn ? 'selected' : ''}
+                      $active={inputType === 'title'}
+                      onClick={() => setInputType('title')}
                   >
-                    <BookTitle>{book.title}</BookTitle>
-                    <BookInfo>
-                      저자: {book.author} | 출판사: {book.publisher} | ISBN: {book.isbn}
-                    </BookInfo>
-                  </BookItem>
-                ))}
-              </BookList>
-            )}
-            
-            <ModalButtons>
-              <ModalButton
-                type="button"
-                className="secondary"
-                onClick={handleCloseBookSearch}
-              >
-                취소
-              </ModalButton>
-              <ModalButton
-                type="button"
-                className="primary"
-                onClick={() => {
-                  if (selectedBook) {
-                    handleCloseBookSearch();
-                  }
-                }}
-                disabled={!selectedBook}
-              >
-                선택 완료
-              </ModalButton>
-            </ModalButtons>
-          </BookSearchContent>
-        </BookSearchModal>
-      )}
+                    책 제목으로 입력
+                  </InputTypeButton>
+                  <InputTypeButton
+                      type="button"
+                      $active={inputType === 'isbn'}
+                      onClick={() => setInputType('isbn')}
+                  >
+                    ISBN으로 검색
+                  </InputTypeButton>
+                </InputTypeButtons>
+              </InputTypeSelector>
 
-      {/* 경고 모달 */}
-      <WarningModal
-        isOpen={showWarningModal}
-        onClose={handleCancelExit}
-        onConfirm={handleConfirmExit}
-        onCancel={handleCancelExit}
-        type="wanted"
-        showSaveDraft={false}
-      />
-    </>
+              {inputType === 'title' ? (
+                  <FormGroup>
+                    <Label>제목 <Required>*</Required></Label>
+                    <Input
+                        type="text"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        placeholder="원하는 책의 제목을 입력해주세요"
+                    />
+                    {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
+                  </FormGroup>
+              ) : (
+                  <FormGroup>
+                    <Label>ISBN 검색 <Required>*</Required></Label>
+                    {selectedBook ? (
+                        <SelectedBookDisplay>
+                          <BookTitle>{selectedBook.title}</BookTitle>
+                          <BookInfo>
+                            저자: {selectedBook.author} | 출판사: {selectedBook.publisher} | ISBN: {selectedBook.isbn}
+                          </BookInfo>
+                          <button
+                              type="button"
+                              onClick={() => setSelectedBook(null)}
+                              style={{
+                                marginTop: '0.5rem',
+                                padding: '0.25rem 0.5rem',
+                                background: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer'
+                              }}
+                          >
+                            다시 선택
+                          </button>
+                        </SelectedBookDisplay>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <Input
+                              type="text"
+                              placeholder="ISBN 또는 책 제목으로 검색"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              style={{ flex: 1 }}
+                          />
+                          <button
+                              type="button"
+                              onClick={handleOpenBookSearch}
+                              style={{
+                                padding: '0.75rem 1rem',
+                                background: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer'
+                              }}
+                          >
+                            <FaSearch />
+                          </button>
+                        </div>
+                    )}
+                    {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
+                  </FormGroup>
+              )}
+
+              <FormGroup>
+                <Label>저자 <Required>*</Required></Label>
+                <Input type="text" name="author" value={formData.author} onChange={handleInputChange} placeholder="저자를 입력해주세요" />
+                {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>상태 <Required>*</Required></Label>
+                <Select name="condition" value={formData.condition} onChange={handleInputChange}>
+                  <option value="">상태를 선택해주세요</option>
+                  <option value="상">상</option>
+                  <option value="중">중</option>
+                  <option value="하">하</option>
+                </Select>
+                {errors.condition && <ErrorMessage>{errors.condition}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>희망 가격 <Required>*</Required></Label>
+                <Input type="number" name="price" value={formData.price} onChange={handleInputChange} placeholder="희망 가격을 입력해주세요" min="0" />
+                {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>카테고리 <Required>*</Required></Label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <Select value={formData.mainCategory} onChange={handleMajorChange}>
+                    <option value="">대분류</option>
+                    {Object.keys(CATEGORIES).map(main => (
+                        <option key={main} value={main}>{main}</option>
+                    ))}
+                  </Select>
+                  {formData.mainCategory && (
+                      <Select value={formData.subCategory} onChange={handleSubChange}>
+                        <option value="">중분류</option>
+                        {Object.keys(CATEGORIES[formData.mainCategory]).map(sub => (
+                            <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                      </Select>
+                  )}
+                  {formData.subCategory && CATEGORIES[formData.mainCategory]?.[formData.subCategory]?.length > 0 && (
+                      <Select value={formData.detailCategory} onChange={handleDetailChange}>
+                        <option value="">소분류</option>
+                        {CATEGORIES[formData.mainCategory][formData.subCategory].map(detail => (
+                            <option key={detail} value={detail}>{detail}</option>
+                        ))}
+                      </Select>
+                  )}
+                </div>
+                {errors.category && <ErrorMessage>{errors.category}</ErrorMessage>}
+              </FormGroup>
+            </FormSection>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
+              <SubmitButton type="submit" disabled={submitting}>{isEdit ? (submitting ? '수정 중...' : '수정') : (submitting ? '등록 중...' : '등록')}</SubmitButton>
+            </div>
+          </WriteForm>
+        </WriteContainer>
+
+        {/* 책 검색 모달 */}
+        {showBookSearch && (
+            <BookSearchModal>
+              <BookSearchContent>
+                <h3>책 검색</h3>
+                <SearchInput
+                    type="text"
+                    placeholder="ISBN 또는 책 제목으로 검색하세요"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleBookSearch()}
+                />
+                <button
+                    onClick={handleBookSearch}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      marginBottom: '1rem'
+                    }}
+                >
+                  검색
+                </button>
+
+                {searchResults.length > 0 && (
+                    <BookList>
+                      {searchResults.map((book, index) => (
+                          <BookItem
+                              key={index}
+                              onClick={() => handleBookSelect(book)}
+                              className={selectedBook?.isbn === book.isbn ? 'selected' : ''}
+                          >
+                            <BookTitle>{book.title}</BookTitle>
+                            <BookInfo>
+                              저자: {book.author} | 출판사: {book.publisher} | ISBN: {book.isbn}
+                            </BookInfo>
+                          </BookItem>
+                      ))}
+                    </BookList>
+                )}
+
+                <ModalButtons>
+                  <ModalButton
+                      type="button"
+                      className="secondary"
+                      onClick={handleCloseBookSearch}
+                  >
+                    취소
+                  </ModalButton>
+                  <ModalButton
+                      type="button"
+                      className="primary"
+                      onClick={() => {
+                        if (selectedBook) {
+                          handleCloseBookSearch();
+                        }
+                      }}
+                      disabled={!selectedBook}
+                  >
+                    선택 완료
+                  </ModalButton>
+                </ModalButtons>
+              </BookSearchContent>
+            </BookSearchModal>
+        )}
+
+        {/* 경고 모달 */}
+        <WarningModal
+            isOpen={showWarningModal}
+            onClose={handleCancelExit}
+            onConfirm={handleConfirmExit}
+            onCancel={handleCancelExit}
+            type="wanted"
+            showSaveDraft={false}
+        />
+      </>
   );
 };
 
-export default WantedWrite; 
+export default WantedWrite;

@@ -9,17 +9,51 @@ import UserCategory from '../../components/UserCategory/UserCategory';
 import PlaceDetailModal from '../../components/PlaceDetailModal/PlaceDetailModal';
 import { useLocation } from '../../contexts/LocationContext';
 
-// --- 백엔드 API 호출 함수들 ---
+/* ==================== axios 인스턴스 ==================== */
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE ??
+    (window.location.port === '5173' ? 'http://localhost:8080' : '');
 
-// 장소 검색 API (기존과 동일)
+const getToken = () => {
+  return (
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('ACCESS_TOKEN') ||
+      sessionStorage.getItem('accessToken') ||
+      ''
+  );
+};
+
+const api = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true,
+});
+
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+api.interceptors.response.use(
+    (res) => res,
+    (err) => {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message || err?.message || '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+      console.warn('[API ERROR]', status, msg);
+      return Promise.reject(err);
+    }
+);
+
+/* ==================== 백엔드 API ==================== */
+
+// 장소 검색
 const searchPlacesFromBackend = async (query) => {
   if (!query.trim()) return [];
-  const API_URL = `/api/places/search`;
   try {
-    const response = await axios.get(API_URL, { params: { query } });
-    const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    if (responseData && Array.isArray(responseData.items)) {
-      return responseData.items.map(item => ({
+    const { data } = await api.get('/api/places/search', { params: { query } });
+    const res = typeof data === 'string' ? JSON.parse(data) : data;
+    if (res && Array.isArray(res.items)) {
+      return res.items.map(item => ({
         id: item.address + item.title,
         name: item.title.replace(/<[^>]*>?/g, ''),
         address: item.roadAddress || item.address,
@@ -29,58 +63,127 @@ const searchPlacesFromBackend = async (query) => {
       }));
     }
     return [];
-  } catch (error) {
-    console.error("Backend Search API Error:", error);
+  } catch (e) {
+    console.error('Backend Search API Error:', e);
     return [];
   }
 };
 
-// DB에 저장된 모든 장소를 가져오는 함수
+// 저장된 장소 전체
 const getPlacesFromBackend = async () => {
   try {
-    const response = await axios.get('/api/places');
-    // 백엔드가 [{id, name, category, address, description, lat, lng, ...}] 형태로 준다고 가정
-    return Array.isArray(response.data) ? response.data : [];
-  } catch (error) {
-    console.error("Error fetching places from DB:", error);
+    const { data } = await api.get('/api/places');
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('Error fetching places from DB:', e);
     alert('저장된 장소를 불러오는 데 실패했습니다.');
     return [];
   }
 };
 
-// 새 장소를 DB에 저장
+// 장소 저장
 const savePlaceToBackend = async (placeData) => {
   try {
-    const response = await axios.post('/api/places', placeData);
-    return response.data; // 저장된 place 객체(생성된 id 포함) 리턴 가정
-  } catch (error) {
-    console.error("Error saving place to DB:", error);
+    const { data } = await api.post('/api/places', placeData);
+    return data;
+  } catch (e) {
+    console.error('Error saving place to DB:', e);
     alert('장소 저장에 실패했습니다.');
     return null;
   }
 };
 
-// 좌표 -> 도로명 주소 (현재 화면에선 사용 안하지만 남겨둠)
+// 좌표 -> 주소 (미사용 보류)
 const getAddressFromCoordinates = async (lat, lng) => {
   try {
-    const response = await axios.get('/api/places/geocode', { params: { lat, lng } });
-    return response.data;
-  } catch (error) {
-    console.error("Error getting address from coordinates:", error);
+    const { data } = await api.get('/api/places/geocode', { params: { lat, lng } });
+    return data;
+  } catch (e) {
+    console.error('Error getting address from coordinates:', e);
     return null;
   }
 };
+
+// 사용자 카테고리
+const getUserCategories = async () => {
+  const { data } = await api.get('/api/user-categories');
+  return Array.isArray(data) ? data : [];
+};
+
+// 카테고리 생성 (서버는 JSON {name} 기대)
+const createUserCategory = async (name) => {
+  const { data } = await api.post('/api/user-categories', { name });
+  return data;
+};
+
+const renameUserCategory = async (id, name) => {
+  const { data } = await api.patch(`/api/user-categories/${id}`, { name });
+  return data;
+};
+
+const deleteUserCategory = async (id) => {
+  await api.delete(`/api/user-categories/${id}`);
+};
+
+const addPlaceIntoUserCategory = async (categoryId, placeId) => {
+  try {
+    await api.post(`/api/user-categories/${categoryId}/places/${placeId}`);
+  } catch {
+    await api.post(`/api/user-categories/${categoryId}/places`, { placeId });
+  }
+};
+
+const removePlaceFromUserCategory = async (categoryId, placeId) => {
+  try {
+    await api.delete(`/api/user-categories/${categoryId}/places/${placeId}`);
+  } catch {
+    await api.delete(`/api/user-categories/${categoryId}/places`, { data: { placeId } });
+  }
+};
+
+// 카테고리에 속한 장소 목록 불러오기 (여러 스펙 대응)
+const getPlacesOfUserCategory = async (categoryId) => {
+  const tryList = [
+    () => api.get(`/api/user-categories/${categoryId}/places`),
+    () => api.get(`/api/user-categories/${categoryId}`),             // { id, name, places: [...] } 가능성
+    () => api.get(`/api/user-categories/${categoryId}/place-list`),
+  ];
+  let lastErr;
+  for (const fn of tryList) {
+    try {
+      const { data } = await fn();
+      // 응답 정규화
+      const arr = Array.isArray(data) ? data
+          : Array.isArray(data?.places) ? data.places
+              : Array.isArray(data?.items) ? data.items
+                  : [];
+
+      // 요소 정규화: {id, name, address, lat, lng} 로 맞춤
+      const norm = arr.map((raw) => {
+        const p = raw?.place || raw; // { place: {...} } 형태 대응
+        const id = p.id ?? p.placeId ?? p.place_id;
+        const name = p.name ?? p.placeName ?? p.title ?? '';
+        const address = p.address ?? p.roadAddress ?? p.addr ?? '';
+        const lat = typeof p.lat === 'number' ? p.lat : (typeof p.latitude === 'number' ? p.latitude : null);
+        const lng = typeof p.lng === 'number' ? p.lng : (typeof p.longitude === 'number' ? p.longitude : null);
+        return { id, name, address, lat, lng };
+      });
+      return norm;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+};
+
+/* ==================== 컴포넌트 ==================== */
 
 const MapPage = () => {
   const { userLocation } = useLocation();
   const mapRef = useRef(null);
 
+  // 장소 유형 필터(고정 목록)
   const [selectedType, setSelectedType] = useState('all');
-  const [userCategories, setUserCategories] = useState([
-    { id: 1, name: '자주 가는 곳' },
-    { id: 2, name: '맛집 리스트' },
-    { id: 3, name: '스터디 카페' }
-  ]);
   const [categories] = useState([
     { id: 'restaurant', name: '음식점', icon: '🍽️', color: '#FF6B6B' },
     { id: 'cafe', name: '카페', icon: '☕', color: '#4ECDC4' },
@@ -88,9 +191,18 @@ const MapPage = () => {
     { id: 'convenience', name: '편의점', icon: '🏪', color: '#FFD93D' },
     { id: 'other', name: '기타', icon: '📍', color: '#9E9E9E' }
   ]);
-  // ✅ 하드코딩 제거: DB에서만 로드
+
+  // DB 장소
   const [places, setPlaces] = useState([]);
 
+  // 사용자 카테고리 & 선택 상태
+  const [userCategories, setUserCategories] = useState([]);
+  const [selectedUserCategoryId, setSelectedUserCategoryId] = useState(null);
+  const [selectedUserCategoryName, setSelectedUserCategoryName] = useState('');
+  const [selectedCategoryPlaces, setSelectedCategoryPlaces] = useState([]);
+  const [loadingSelectedCat, setLoadingSelectedCat] = useState(false);
+
+  // 기타 UI 상태
   const [showAddPlace, setShowAddPlace] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showPlaceDetail, setShowPlaceDetail] = useState(false);
@@ -105,33 +217,49 @@ const MapPage = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [loadingDB, setLoadingDB] = useState(false);
+  const [loadingCats, setLoadingCats] = useState(false);
 
-  // ✅ 컴포넌트 마운트 시 DB에서 장소 로드 + 초기 위치 이동
+  // 초기 로드
   useEffect(() => {
-    const load = async () => {
+    const loadPlaces = async () => {
       setLoadingDB(true);
       const savedPlaces = await getPlacesFromBackend();
       setPlaces(savedPlaces);
       setLoadingDB(false);
     };
-    load();
+    const loadUserCats = async () => {
+      setLoadingCats(true);
+      try {
+        const cats = await getUserCategories();
+        setUserCategories(cats || []);
+      } catch (e) {
+        console.error('유저 카테고리 로드 실패:', e);
+        setUserCategories([]);
+      } finally {
+        setLoadingCats(false);
+      }
+    };
+    loadPlaces();
+    loadUserCats();
 
-    // 지도의 초기 위치를 상수역으로 설정
+    // 초기 지도 위치(상수역)
     const sangsuStation = { lat: 37.5484, lng: 126.9244 };
     const timer = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.moveToLocation(sangsuStation.lat, sangsuStation.lng, 16);
-      }
+      mapRef.current?.moveToLocation(sangsuStation.lat, sangsuStation.lng, 16);
     }, 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // DB 재조회
+  // 장소 재조회
   const refreshFromDB = async () => {
     setLoadingDB(true);
     const savedPlaces = await getPlacesFromBackend();
     setPlaces(savedPlaces);
     setLoadingDB(false);
+    // 선택된 사용자 카테고리도 갱신
+    if (selectedUserCategoryId) {
+      await handleSelectUserCategory(selectedUserCategoryId, selectedUserCategoryName);
+    }
   };
 
   // 검색 디바운스
@@ -143,8 +271,8 @@ const MapPage = () => {
           const results = await searchPlacesFromBackend(searchQuery);
           setSearchResults(results);
           setShowSearchResults(true);
-        } catch (error) {
-          console.error('Search error:', error);
+        } catch (e) {
+          console.error('Search error:', e);
           setSearchResults([]);
         } finally {
           setIsSearching(false);
@@ -158,7 +286,7 @@ const MapPage = () => {
     return () => clearTimeout(debounce);
   }, [searchQuery]);
 
-  // 드롭다운 외부 클릭 시 닫기
+  // 드롭다운 외부 클릭 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showTypeDropdown && !event.target.closest('.type-filter-dropdown')) {
@@ -172,9 +300,7 @@ const MapPage = () => {
   const handleSearchResultClick = (place) => {
     setShowSearchResults(false);
     setSearchQuery('');
-    if (mapRef.current) {
-      mapRef.current.moveToLocation(place.lat, place.lng, 16);
-    }
+    mapRef.current?.moveToLocation(place.lat, place.lng, 16);
     setNewPlace({
       name: place.name,
       category: 'restaurant',
@@ -187,22 +313,18 @@ const MapPage = () => {
     setShowAddPlace(true);
   };
 
-  // ✅ '장소 추가' 시 백엔드 저장 성공 시만 상태 반영
+  // 장소 저장
   const addPlace = async () => {
     if (!newPlace.name.trim() || !newPlace.address.trim()) {
       alert('장소 이름과 주소를 입력해주세요.');
       return;
     }
-
     const fullAddress = newPlace.detailedAddress.trim()
         ? `${newPlace.address} - ${newPlace.detailedAddress}`
         : newPlace.address;
 
-    // 좌표 준비 (검색 클릭으로 좌표가 세팅된 경우가 일반적)
-    let coordinates = newPlace.coordinates;
+    const coordinates = newPlace.coordinates;
     if (!coordinates) {
-      // 주소 -> 좌표 변환이 필요하면 백엔드에 forward geocoding 엔드포인트를 추가하는 것을 추천
-      // 일단 좌표가 없으면 추가 중단 (임의 좌표 저장 지양)
       alert('좌표가 없습니다. 검색을 통해 위치를 먼저 지정하세요.');
       return;
     }
@@ -219,13 +341,9 @@ const MapPage = () => {
     const savedPlace = await savePlaceToBackend(placeData);
     if (!savedPlace) return;
 
-    // 목록 갱신 (DB 기준으로 정확히 맞추고 싶다면 refreshFromDB() 호출해도 됨)
     setPlaces(prev => [...prev, savedPlace]);
     setSelectedType('all');
-
-    if (mapRef.current) {
-      mapRef.current.moveToLocation(savedPlace.lat, savedPlace.lng, 16);
-    }
+    mapRef.current?.moveToLocation(savedPlace.lat, savedPlace.lng, 16);
 
     setNewPlace({
       name: '', category: 'restaurant', address: '', detailedAddress: '',
@@ -234,44 +352,123 @@ const MapPage = () => {
     setShowAddPlace(false);
   };
 
-  const startAddPlace = () => {
-    setNewPlace({
-      name: '', category: 'restaurant', address: '', detailedAddress: '',
-      description: '', photos: [], coordinates: null
-    });
-    setShowAddPlace(true);
-  };
-
   const handleMapClick = useCallback((lat, lng) => {
     console.log(`지도 클릭: 위도 ${lat}, 경도 ${lng}`);
   }, []);
 
-  // 카테고리 필터
-  const mapPlaces = places.filter(place => {
+  // 장소 유형 필터
+  const typeFilteredPlaces = places.filter(place => {
     if (selectedType === 'all') return true;
-    // 백엔드 category가 위에서 정의한 id와 동일하다고 가정
     return place.category === selectedType;
   });
 
-  // 사용자 카테고리 관리
-  const handleAddUserCategory = (name) => {
-    const newCategory = { id: Date.now(), name };
-    setUserCategories([...userCategories, newCategory]);
-  };
-  const handleDeleteUserCategory = (categoryId) => {
-    setUserCategories(userCategories.filter(cat => cat.id !== categoryId));
-  };
-  const handleUpdateUserCategory = (categoryId, newName) => {
-    setUserCategories(userCategories.map(cat => cat.id === categoryId ? { ...cat, name: newName } : cat));
+  // 사용자 카테고리 선택/해제
+  const handleSelectUserCategory = async (categoryId, categoryName) => {
+    setSelectedUserCategoryId(categoryId);
+    setSelectedUserCategoryName(categoryName ?? (userCategories.find(c => c.id === categoryId)?.name || ''));
+    setLoadingSelectedCat(true);
+    try {
+      const list = await getPlacesOfUserCategory(categoryId);
+      setSelectedCategoryPlaces(list);
+    } catch (e) {
+      console.error('선택한 카테고리의 장소 조회 실패:', e);
+      setSelectedCategoryPlaces([]);
+      alert('카테고리에 담긴 장소를 불러오지 못했습니다.');
+    } finally {
+      setLoadingSelectedCat(false);
+    }
   };
 
-  const handleAddPlaceToCategory = (placeId, categoryId) => {
-    console.log('Add place', placeId, 'to category', categoryId);
+  const clearSelectedUserCategory = () => {
+    setSelectedUserCategoryId(null);
+    setSelectedUserCategoryName('');
+    setSelectedCategoryPlaces([]);
+  };
+
+  // 최종 맵 표시 목록 = 장소유형 필터 + (선택된 사용자 카테고리 필터)
+  const finalPlaceList = (() => {
+    if (!selectedUserCategoryId) return typeFilteredPlaces;
+    const idset = new Set(selectedCategoryPlaces.map(p => p.id));
+    const filtered = typeFilteredPlaces.filter(p => idset.has(p.id));
+    return filtered;
+  })();
+
+  // 사용자 카테고리 조작
+  const handleAddUserCategory = async (name) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    try {
+      const created = await createUserCategory(trimmed);
+      setUserCategories(prev => [...prev, created]);
+    } catch (e) {
+      console.error('카테고리 추가 실패:', e);
+      alert('카테고리 추가에 실패했습니다.\n로그인 여부 또는 서버 로그를 확인해주세요.');
+    }
+  };
+
+  const handleDeleteUserCategory = async (categoryId) => {
+    try {
+      await deleteUserCategory(categoryId);
+      setUserCategories(prev => prev.filter(cat => cat.id !== categoryId));
+      if (selectedUserCategoryId === categoryId) clearSelectedUserCategory();
+    } catch (e) {
+      console.error('카테고리 삭제 실패:', e);
+      alert('카테고리 삭제에 실패했습니다.');
+    }
+  };
+
+  const handleUpdateUserCategory = async (categoryId, newName) => {
+    const trimmed = (newName || '').trim();
+    if (!trimmed) return;
+    try {
+      const updated = await renameUserCategory(categoryId, trimmed);
+      setUserCategories(prev => prev.map(cat => cat.id === categoryId ? updated : cat));
+      if (selectedUserCategoryId === categoryId) setSelectedUserCategoryName(updated.name);
+    } catch (e) {
+      console.error('카테고리 이름 변경 실패:', e);
+      alert('카테고리 이름 변경에 실패했습니다.');
+    }
+  };
+
+  const handleAddPlaceToCategory = async (placeId, categoryId) => {
+    try {
+      await addPlaceIntoUserCategory(categoryId, placeId);
+      if (selectedUserCategoryId === categoryId) {
+        // 선택된 카테고리일 경우 즉시 반영
+        await handleSelectUserCategory(categoryId, selectedUserCategoryName);
+      }
+    } catch (e) {
+      console.error('카테고리에 장소 담기 실패:', e);
+      alert('카테고리에 장소를 담는 데 실패했습니다.');
+    }
+  };
+
+  const handleRemovePlaceFromSelectedCategory = async (placeId) => {
+    if (!selectedUserCategoryId) return;
+    try {
+      await removePlaceFromUserCategory(selectedUserCategoryId, placeId);
+      setSelectedCategoryPlaces(prev => prev.filter(p => p.id !== placeId));
+    } catch (e) {
+      console.error('카테고리에서 제거 실패:', e);
+      alert('카테고리에서 장소 제거에 실패했습니다.');
+    }
   };
 
   const handlePlaceClick = (place) => {
     setSelectedPlace(place);
     setShowPlaceDetail(true);
+  };
+
+  // 사이드바 보조 드롭다운(백업 UI): onSelectCategory 콜백이 없을 경우 대비
+  const handleBackupSelectChange = async (e) => {
+    const value = e.target.value;
+    if (value === '') {
+      clearSelectedUserCategory();
+    } else {
+      const id = Number(value);
+      const name = userCategories.find(c => c.id === id)?.name || '';
+      await handleSelectUserCategory(id, name);
+    }
   };
 
   return (
@@ -280,21 +477,89 @@ const MapPage = () => {
           <SidebarHeader>
             <h2>홍익지도</h2>
             <HeaderButtons>
-              <AddButton onClick={startAddPlace}>
-                <FaPlus /> 장소 추가하기
-              </AddButton>
               <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
                 <FaSyncAlt /> {loadingDB ? '불러오는 중...' : '새로고침'}
               </AddButton>
             </HeaderButtons>
+
+            {!loadingCats && userCategories.length === 0 && (
+                <HintBanner>
+                  카테고리가 없습니다. 아래에서 새 카테고리를 추가해 주세요. (로그인이 필요할 수 있어요)
+                </HintBanner>
+            )}
           </SidebarHeader>
 
+          {/* 사용자 카테고리 리스트 (기존 컴포넌트).
+            아이템 클릭 시 props.onSelectCategory?.(category) 만 호출해주면 즉시 연동됩니다. */}
           <UserCategory
               categories={userCategories}
               onAddCategory={handleAddUserCategory}
               onDeleteCategory={handleDeleteUserCategory}
               onUpdateCategory={handleUpdateUserCategory}
+              loading={loadingCats}
+              onSelectCategory={(cat) => handleSelectUserCategory(cat.id, cat.name)}
           />
+
+          {/* 백업 UI: 드롭다운으로도 선택 가능 (onSelectCategory가 없을 때 사용) */}
+          {userCategories.length > 0 && (
+              <BackupSelectWrap>
+                <label>선택한 카테고리(보기/필터)</label>
+                <select value={selectedUserCategoryId ?? ''} onChange={handleBackupSelectChange}>
+                  <option value="">-- 전체(선택 해제) --</option>
+                  {userCategories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </BackupSelectWrap>
+          )}
+
+          {/* 선택한 카테고리의 장소 목록 표시 */}
+          {selectedUserCategoryId && (
+              <SelectedCategoryPanel>
+                <SelectedCatHeader>
+                  <span>선택한 카테고리: <b>{selectedUserCategoryName}</b></span>
+                  <SelectedCatButtons>
+                    <SmallBtn onClick={() => handleSelectUserCategory(selectedUserCategoryId, selectedUserCategoryName)}>
+                      새로고침
+                    </SmallBtn>
+                    <SmallBtn onClick={clearSelectedUserCategory}>선택 해제</SmallBtn>
+                  </SelectedCatButtons>
+                </SelectedCatHeader>
+
+                {loadingSelectedCat ? (
+                    <EmptyText>불러오는 중...</EmptyText>
+                ) : selectedCategoryPlaces.length === 0 ? (
+                    <EmptyText>이 카테고리에 담긴 장소가 없습니다.</EmptyText>
+                ) : (
+                    <PlaceList>
+                      {selectedCategoryPlaces.map(p => {
+                        // DB에서 전체 places와 매칭 (좌표 보정)
+                        const full = places.find(pp => String(pp.id) === String(p.id)) || p;
+                        return (
+                            <PlaceItem key={p.id}>
+                              <PlaceMain onClick={() => {
+                                if (full?.lat && full?.lng) {
+                                  mapRef.current?.moveToLocation(full.lat, full.lng, 16);
+                                }
+                                const openObj = full?.id ? full : null;
+                                if (openObj) handlePlaceClick(full);
+                              }}>
+                                <FaMapMarkerAlt />
+                                <div>
+                                  <div className="name">{full?.name || p.name}</div>
+                                  <div className="addr">{full?.address || p.address}</div>
+                                </div>
+                              </PlaceMain>
+                              <RemoveBtn title="카테고리에서 제거" onClick={() => handleRemovePlaceFromSelectedCategory(p.id)}>
+                                <IoMdClose />
+                              </RemoveBtn>
+                            </PlaceItem>
+                        );
+                      })}
+                    </PlaceList>
+                )}
+              </SelectedCategoryPanel>
+          )}
         </Sidebar>
 
         <StyledMapContainer>
@@ -366,7 +631,7 @@ const MapPage = () => {
 
           <NaverMap
               ref={mapRef}
-              places={mapPlaces}
+              places={finalPlaceList}
               categories={categories}
               onMapClick={handleMapClick}
               userLocation={userLocation}
@@ -452,7 +717,7 @@ const MapPageContainer = styled.div`
 `;
 
 const Sidebar = styled.div`
-  width: 350px;
+  width: 360px;
   height: 100%;
   padding: 20px;
   overflow-y: auto;
@@ -492,7 +757,7 @@ const MapSearchContainer = styled.div`
 `;
 
 const SidebarHeader = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
   h2 {
     margin: 0 0 15px 0;
@@ -521,6 +786,85 @@ const AddButton = styled.button`
   font-weight: 500;
   transition: background-color 0.2s ease;
   &:hover { background: #0056b3; }
+`;
+
+const HintBanner = styled.div`
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fff4e5;
+  border: 1px solid #ffe0b2;
+  border-radius: 8px;
+  color: #8a6d3b;
+`;
+
+const BackupSelectWrap = styled.div`
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+  label { font-size: 13px; color: #444; }
+  select {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+  }
+`;
+
+const SelectedCategoryPanel = styled.div`
+  margin-top: 14px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fafafa;
+`;
+
+const SelectedCatHeader = styled.div`
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  display: flex; align-items: center; justify-content: space-between;
+  b { color: #222; }
+`;
+
+const SelectedCatButtons = styled.div`
+  display: flex; gap: 8px;
+`;
+
+const SmallBtn = styled.button`
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  &:hover { background: #f1f3f5; }
+`;
+
+const PlaceList = styled.div`
+  max-height: 240px;
+  overflow: auto;
+`;
+
+const PlaceItem = styled.div`
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  border-top: 1px solid #f0f0f0;
+  &:first-child { border-top: none; }
+`;
+
+const PlaceMain = styled.div`
+  display: flex; gap: 10px; align-items: flex-start;
+  cursor: pointer;
+  svg { margin-top: 3px; min-width: 16px; }
+  .name { font-weight: 600; font-size: 14px; color: #222; }
+  .addr { font-size: 12px; color: #666; margin-top: 2px; }
+  &:hover .name { text-decoration: underline; }
+`;
+
+const RemoveBtn = styled.button`
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid #e0e0e0; background: #fff; color: #666;
+  cursor: pointer;
+  &:hover { background: #ffecec; color: #d00; border-color: #f5c2c7; }
 `;
 
 const MapSearchInput = styled.input`
@@ -740,6 +1084,12 @@ const Button = styled.button`
   color: white; border: none; border-radius: 8px; cursor: pointer;
   font-size: 16px; font-weight: 500; transition: background-color 0.2s ease;
   &:hover { background: #0056b3; }
+`;
+
+const EmptyText = styled.div`
+  padding: 16px 12px;
+  color: #666;
+  font-size: 13px;
 `;
 
 const CategorySection = styled.div` margin-bottom: 16px; `;

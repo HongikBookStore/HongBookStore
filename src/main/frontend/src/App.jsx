@@ -12,6 +12,7 @@ import Login from './pages/Login/Login.jsx';
 import Search from './pages/Search/Search.jsx';
 import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
+import WantedDetail from './pages/WantedDetail/WantedDetail.jsx';
 import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
 import MyTransactions from './pages/MyTransactions/MyTransactions.jsx';
 import PostWrite from './pages/PostWrite/PostWrite.jsx';
@@ -196,18 +197,45 @@ function App() {
                                     <PostWrite />
                                 </>
                             } />
-                            <Route path="/wanted/:id" element={
-                                <>
-                                    <Header />
-                                    <WantedWrite />
-                                </>
-                            } />
-                            <Route path="/wantedwrite/:id" element={
-                                <>
-                                    <Header />
-                                    <WantedWrite />
-                                </>
-                            } />
+                            <Route
+                                path="/wanted"
+                                element={
+                                    <>
+                                        <Header />
+                                        <Wanted />
+                                    </>
+                                }
+                            />
+
+                            <Route
+                                path="/wanted/write"
+                                element={
+                                    <>
+                                        <Header />
+                                        <WantedWrite />
+                                    </>
+                                }
+                            />
+
+                            <Route
+                                path="/wanted/write/:id"
+                                element={
+                                    <>
+                                        <Header />
+                                        <WantedWrite />
+                                    </>
+                                }
+                            />
+
+                            <Route
+                                path="/wanted/:id"
+                                element={
+                                    <>
+                                        <Header />
+                                        <WantedDetail />
+                                    </>
+                                }
+                            />
                             <Route path="/oauth/callback" element={<OAuth2RedirectHandler />} />
                             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
                         </Routes>
