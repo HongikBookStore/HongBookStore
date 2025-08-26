@@ -43,7 +43,6 @@ public class WantedController {
         return ResponseEntity.status(HttpStatus.CREATED).body(id);
     }
 
-    /** 수정 */
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(
             @RequestHeader("X-User-Id") Long userId,
@@ -52,5 +51,15 @@ public class WantedController {
     ) {
         wantedService.update(userId, id, dto);
         return ResponseEntity.noContent().build();
+    }
+
+    /** 삭제 */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id
+    ) {
+        wantedService.delete(userId, id);
     }
 }

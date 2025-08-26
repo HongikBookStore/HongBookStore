@@ -6,6 +6,7 @@ import com.hongik.books.domain.wanted.domain.Wanted;
 import com.hongik.books.domain.wanted.dto.*;
 import com.hongik.books.domain.wanted.repository.WantedRepository;
 import com.hongik.books.domain.wanted.repository.WantedSpecifications;
+import com.hongik.books.domain.comment.repository.WantedCommentRepository; // ✅ 추가
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,16 +20,17 @@ public class WantedService {
 
     private final WantedRepository wantedRepository;
     private final UserRepository userRepository;
+    private final WantedCommentRepository wantedCommentRepository; // ✅ 추가
 
     public Page<WantedSummaryResponseDTO> search(
             String category, String department, String keyword,
             int page, int size, String sort
     ) {
         Sort s = switch (sort) {
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
+            case "priceAsc" -> Sort.by(Sort.Direction.ASC, "price");
             case "priceDesc" -> Sort.by(Sort.Direction.DESC, "price");
-            case "priceAsc"  -> Sort.by(Sort.Direction.ASC,  "price");
-            case "oldest"    -> Sort.by(Sort.Direction.ASC,  "createdAt");
-            default /*latest*/ -> Sort.by(Sort.Direction.DESC, "createdAt");
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
         Pageable pageable = PageRequest.of(page, size, s);
 
@@ -67,13 +69,14 @@ public class WantedService {
 
     @Transactional
     public void update(Long userId, Long id, WantedUpdateRequestDTO dto) {
-        Wanted wanted = wantedRepository.findById(id)
+        Wanted w = wantedRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("구해요 글을 찾을 수 없습니다: " + id));
-        if (!wanted.getRequester().getId().equals(userId)) {
-            throw new IllegalStateException("본인이 작성한 글만 수정할 수 있습니다.");
+
+        if (w.getRequester() == null || w.getRequester().getId() == null || !w.getRequester().getId().equals(userId)) {
+            throw new SecurityException("권한이 없습니다.");
         }
 
-        wanted.update(
+        w.update(
                 dto.getTitle(),
                 dto.getAuthor(),
                 dto.getCondition(),
@@ -86,5 +89,24 @@ public class WantedService {
 
     private String emptyToNull(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    @Transactional
+    public void delete(Long userId, Long id) {
+        // 1) 글 존재 확인
+        Wanted w = wantedRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("구해요 글을 찾을 수 없습니다: " + id));
+
+        // 2) 작성자 본인 확인
+        if (w.getRequester() == null || w.getRequester().getId() == null || !w.getRequester().getId().equals(userId)) {
+            throw new SecurityException("권한이 없습니다.");
+        }
+
+        // 3) 댓글을 '자식 → 부모' 순으로 먼저 삭제 (self-FK 충돌 예방)
+        wantedCommentRepository.deleteChildrenByWantedId(id);
+        wantedCommentRepository.deleteParentsByWantedId(id);
+
+        // 4) 글 삭제
+        wantedRepository.delete(w);
     }
 }
