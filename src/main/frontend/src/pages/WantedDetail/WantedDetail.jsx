@@ -202,21 +202,61 @@ export default function WantedDetail() {
     const onDelete = async () => {
         try {
             const token = localStorage.getItem('accessToken');
+
+            // 로컬스토리지에서 userId 확보 (userId가 없으면 user JSON에서 보조 추출)
+            let userId = localStorage.getItem('userId');
+            if (!userId) {
+                const userJson = localStorage.getItem('user');
+                if (userJson) {
+                    try {
+                        userId = JSON.parse(userJson)?.id;
+                    } catch (_) {
+                        /* ignore JSON parse error */
+                    }
+                }
+            }
+
             const res = await fetch(`/api/wanted/${id}`, {
                 method: 'DELETE',
-                headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                headers: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    ...(userId ? { 'X-User-Id': String(userId) } : {}),
+                },
             });
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || `삭제 실패 (${res.status})`);
+
+            // 성공 (백엔드가 204 No Content 반환)
+            if (res.status === 204) {
+                setShowDeleteModal(false);
+                navigate('/wanted');
+                return;
             }
-            setShowDeleteModal(false);
-            navigate('/wanted');
+
+            // 실패 처리: 서버 메시지 우선 파싱
+            let message = `삭제 실패 (${res.status})`;
+            const ct = res.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+                const data = await res.json().catch(() => null);
+                if (data?.message) message = data.message;
+            } else {
+                const text = await res.text().catch(() => '');
+                if (text) message = text;
+            }
+            throw new Error(message);
         } catch (err) {
-            console.error(err);
-            alert('삭제 중 오류가 발생했습니다.');
+            console.error('❌ onDelete error:', err);
+            const msg = String(err?.message || '');
+
+            if (msg.includes('권한') || msg.includes('403')) {
+                alert('삭제 권한이 없습니다. 본인이 작성한 글만 삭제할 수 있습니다.');
+            } else if (msg.includes('401')) {
+                alert('로그인이 필요합니다. 다시 로그인해 주세요.');
+                navigate('/login');
+            } else {
+                alert(msg || '삭제 중 오류가 발생했습니다.');
+            }
         }
     };
+
 
     const openDelete = () => {
         setShowDeleteModal(true);
