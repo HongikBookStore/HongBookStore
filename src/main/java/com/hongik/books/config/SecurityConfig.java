@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 "/api/naver/**",
                                 "/actuator/health",
                                 "/api/directions/**",
+                                "/api/notifications/stream", // 👈 추가
                                 "/", "/login", "/oauth2/**", "/error"
                         ).permitAll()
                         // 인증 관련 API는 모두 허용
