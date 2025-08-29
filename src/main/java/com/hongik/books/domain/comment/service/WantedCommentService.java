@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import com.hongik.books.domain.notification.service.NotificationService;
+import com.hongik.books.domain.wanted.repository.WantedRepository;
+
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -32,6 +35,8 @@ import java.util.*;
 public class WantedCommentService {
 
     private final WantedCommentRepository commentRepository;
+    private final WantedRepository wantedRepository;
+    private final NotificationService notificationService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -96,6 +101,19 @@ public class WantedCommentService {
                         .build()
         );
 
+        // ✅ SSE 알림: 글 작성자에게 새 댓글 알림
+        try {
+            var wanted = wantedRepository.findById(wantedId).orElse(null);
+            if (wanted != null && wanted.getRequester() != null) {
+                notificationService.notifyWantedComment(
+                        wanted.getRequester().getId(),
+                        wantedId,
+                        alias,                   // 익명N
+                        req.getContent()
+                );
+            }
+        } catch (Exception ignore) {}
+
         var base = WantedCommentDto.from(saved);
         return WantedCommentDto.builder()
                 .id(base.getId())
@@ -126,6 +144,19 @@ public class WantedCommentService {
                         .authorNickname(alias)
                         .build()
         );
+
+        // ✅ SSE 알림: 글 작성자에게 새 댓글 알림
+        try {
+            var wanted = wantedRepository.findById(wantedId).orElse(null);
+            if (wanted != null && wanted.getRequester() != null) {
+                notificationService.notifyWantedComment(
+                        wanted.getRequester().getId(),
+                        wantedId,
+                        alias,                   // 익명N
+                        req.getContent()
+                );
+            }
+        } catch (Exception ignore) {}
 
         var base = WantedCommentDto.from(saved);
         return WantedCommentDto.builder()

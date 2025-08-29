@@ -13,6 +13,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.stereotype.Controller;
+import com.hongik.books.domain.notification.service.NotificationService;
+
 
 import java.util.List;
 
@@ -26,6 +28,8 @@ public class ChatMessageController {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate template;
     private final ChatRoomRepository chatRoomRepository; // ✅ 추가
+    private final NotificationService notificationService; // SSE 알림
+
 
     // 1. REST: 이전 메시지 조회
     @ResponseBody // Controller + ResponseBody로 REST 응답 지원
@@ -63,6 +67,17 @@ public class ChatMessageController {
                 .build();
 
         chatMessageRepository.save(chatMessage);
+
+        // ✅ SSE 알림: 수신자에게 새 메시지 알림 전송
+        try {
+            notificationService.notifyChatMessage(
+                    receiver.getId(),
+                    room.getId(),
+                    salePost.getId(),
+                    sender.getEmail(), // 혹은 getUsername()/getNickname() 있으면 바꿔도 됨
+                    dto.getMessage()
+            );
+        } catch (Exception ignore) {}
 
         // 메시지 저장 후, 구독자들에게 실시간 전달
         // ChatMessageResponse로 변환해서 내려주면 프론트 일관성 ↑
