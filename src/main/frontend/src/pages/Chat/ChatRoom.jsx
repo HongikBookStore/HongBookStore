@@ -1,15 +1,14 @@
-// ✅ ChatRoom.jsx — chatId가 없거나 유효하지 않을 때 API/WS 호출을 전부 차단한 복붙용 완성본
+// ✅ ChatRoom.jsx — chatId가 없거나 유효하지 않을 때 API/WS 호출을 전부 차단 + 예약 백엔드 연동 + QR 전부 제거
 
 import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import styled from 'styled-components';
 import {
   FaPaperPlane, FaUser, FaBook, FaArrowLeft, FaSignOutAlt, FaCalendarAlt,
   FaRegClock, FaCheckCircle, FaEye, FaExclamationCircle, FaMapMarkerAlt,
-  FaRoute, FaQrcode, FaDownload, FaUniversity, FaSubway, FaTrophy
+  FaRoute, FaUniversity, FaSubway, FaTrophy
 } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import Stomp from 'stompjs';
-import QRCode from 'react-qr-code';
 import { AuthCtx } from '../../contexts/AuthContext';
 
 /* ----------------------------- styled components ----------------------------- */
@@ -401,6 +400,11 @@ const DateItem = styled.button`
   &:hover { border-color: var(--primary); color: var(--primary); background: #eaf0ff; }
 `;
 
+const getUniqueStations = (line) => {
+  const arr = SUBWAY_MAP[line] || [];
+  return Array.from(new Set(arr)); // 순서 유지 + 중복 제거
+};
+
 /* ✅ 강수확률 미니 막대 스타일 */
 const MiniBarWrap = styled.div`
   height: 70px; width: 10px; border-radius: 6px;
@@ -410,36 +414,6 @@ const MiniBarWrap = styled.div`
 const MiniBar = styled.div`
   width:100%; border-radius:4px; background:#1d4ed8; transition: height .4s;
 `;
-
-/* QR 모달 */
-const QRModal = styled.div`
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
-`;
-const QRModalContent = styled.div`
-  background: white; border-radius: 12px; padding: 2rem; max-width: 400px; width: 100%;
-  text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-`;
-const QRCodeContainer = styled.div`
-  display: flex; justify-content: center; margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;
-`;
-const QRCodeInfo = styled.div` margin: 1rem 0; text-align: left; `;
-const QRCodeInfoItem = styled.div`
-  display: flex; justify-content: space-between; margin: 0.5rem 0; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;
-  &:last-child { border-bottom: none; }
-`;
-const QRCodeLabel = styled.span` font-weight: 600; color: #333; `;
-const QRCodeValue = styled.span` color: #666; `;
-const QRCodeActions = styled.div` display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; `;
-const QRCodeButton = styled.button`
-  display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 8px;
-  cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
-  &.download { background: #007bff; color: white; &:hover { background: #0056b3; } }
-  &.close { background: #6c757d; color: white; &:hover { background: #5a6268; } }
-`;
-const QRCodeQuestion = styled.div` margin: 1rem 0; padding: 1rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3; `;
-const QRCodeQuestionText = styled.div` font-weight: 600; color: #1976d2; margin-bottom: 0.5rem; `;
-const QRCodeQuestionDescription = styled.div` font-size: 0.9rem; color: #424242; `;
 
 /* ---------------------------------- hooks ---------------------------------- */
 function useWindowWidth() {
@@ -452,18 +426,15 @@ function useWindowWidth() {
   return width;
 }
 
-/* =================== 교내/교외 중간지점 추천 헬퍼(네 자바 로직 이식) =================== */
+/* =================== 교내/교외 중간지점 추천 헬퍼 =================== */
 
-/** 교내: 코드 → 라벨 */
 const ONCAMPUS_LABELS = {
   A:'A동', B:'B동', C:'C동', D:'D동', E:'E동', F:'F동', G:'G동', H:'H동',
   I:'I동', J:'J동', K:'K동', L:'L동', M:'M동', MH:'MH', P:'P동', Q:'Q동', R:'R동',
   S:'S동', T:'제2공학관(T동)', U:'U동', X:'운동장(X)', Z1:'정문(Z1)', Z2:'후문(Z2)', Z3:'측문(Z3)', Z4:'측문(Z4)', '신기숙사':'신기숙사'
 };
-/** 교내 드롭다운 옵션 */
 const CAMPUS_OPTIONS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','MH','P','Q','R','S','T','U','X','Z1','Z2','Z3','Z4','신기숙사'];
 
-/** 교내 그래프 (자바 코드 1:1 이식) */
 function buildCampusGraph() {
   const g = {};
   const add = (a,b,w)=>{ g[a]=g[a]||[]; g[b]=g[b]||[]; g[a].push({to:b,w}); g[b].push({to:a,w}); };
@@ -499,7 +470,7 @@ function recommendOnCampus(aCode, bCode) {
   return { path, midCode: mid, midLabel: ONCAMPUS_LABELS[mid] || mid };
 }
 
-/** 교외: 노선/역 데이터 (자바 코드 1:1 이식) */
+/** 교외 노선/역 */
 const SUBWAY_MAP = {
   '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
   '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
@@ -534,7 +505,6 @@ function buildStationGraphAndLineMap() {
 }
 const { graph: ST_GRAPH, stationLines: ST_LINES } = buildStationGraphAndLineMap();
 
-/** 자바 로직 동일: 환승/패널티 가중 Dijkstra */
 function dijkstraWeighted(start, end, transferCost = 10, penalizePenalty = 10) {
   if (!ST_GRAPH[start] || !ST_GRAPH[end]) return null;
   const penalized = new Set(["공항철도","경의중앙선","신분당선","수인분당선"]);
@@ -564,11 +534,61 @@ function recommendOffCampus(aStation, bStation){
   return { path, midStation: mid };
 }
 
+/* ----------------------------- 예약 API ------------------------------ */
+async function apiGetReservation(roomId) {
+  const token = localStorage.getItem('accessToken') || '';
+  const res = await fetch(`/api/chat/rooms/${roomId}/reservation`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (res.status === 204) return null;
+  if (!res.ok) throw new Error('예약 조회 실패');
+  return res.json();
+}
+async function apiUpsertReservation(roomId, payload) {
+  const token = localStorage.getItem('accessToken') || '';
+  const res = await fetch(`/api/chat/rooms/${roomId}/reservation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('예약 저장 실패');
+  return res.json();
+}
+async function apiCancelReservation(roomId, reservationId, reason) {
+  const token = localStorage.getItem('accessToken') || '';
+  const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/cancel`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reason })
+  });
+  if (!res.ok) throw new Error('예약 취소 실패');
+  return res.json();
+}
+async function apiCompleteReservation(roomId, reservationId) {
+  const token = localStorage.getItem('accessToken') || '';
+  const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/complete`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('거래 완료 처리 실패');
+  return res.json();
+}
+
+/* ----------------------------- utils ------------------------------ */
+function normalizeDateTime(input) {
+  if (!input) return input;
+  // 'YYYY-MM-DD' → 'YYYY-MM-DDT12:00:00'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return `${input}T12:00:00`;
+  // 'YYYY-MM-DD HH:mm:ss' → 'YYYY-MM-DDTHH:mm:ss'
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(input)) return input.replace(' ', 'T');
+  return input;
+}
+
 /* ----------------------------- component start ------------------------------ */
 
 const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
 
-const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 사용합니다 */) => {
+const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -583,6 +603,7 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
   }, [chatId]);
 
   const [isReserved, setIsReserved] = useState(false);
+  const [reservationId, setReservationId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
@@ -601,11 +622,6 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
   const [selectedDate, setSelectedDate] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [reserveConfirmed, setReserveConfirmed] = useState(false);
-
-  // ✅ QR
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [showQRQuestion, setShowQRQuestion] = useState(false);
-  const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
 
   const width = useWindowWidth();
   const [receiverId, setReceiverId] = useState(null);
@@ -727,6 +743,36 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
     loadPreviousMessages();
   }, [roomId]);
 
+  /* ------------------------------ 예약 상태 로드 ------------------------------ */
+  useEffect(() => {
+    if (!roomId) return;
+    (async () => {
+      try {
+        const r = await apiGetReservation(roomId);
+        if (!r) {
+          setReservationId(null);
+          setIsReserved(false);
+          setIsCompleted(false);
+          return;
+        }
+        setReservationId(r.id);
+        setIsReserved(r.status === 'CONFIRMED');
+        setIsCompleted(r.status === 'COMPLETED');
+        if (r.placeLabel) setSelectedPlace(r.placeLabel);
+        if (r.reservedAt) {
+          const parsed = new Date(r.reservedAt.toString().replace(' ', 'T'));
+          setSelectedDate({
+            date: parsed.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }),
+            iso: normalizeDateTime(r.reservedAt),
+            weather: null
+          });
+        }
+      } catch (e) {
+        console.error('예약 조회 실패', e);
+      }
+    })();
+  }, [roomId]);
+
   /* -------------------------------- STOMP -------------------------------- */
   useEffect(() => {
     // ❗ roomId 없으면 연결 금지
@@ -806,38 +852,78 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
 
   /* -------------------------------- 예약/신고 -------------------------------- */
   const handleReserve = () => { setShowReserveModal(true); };
-  const handleReserveConfirm = () => {
+
+  const handleReserveConfirm = async () => {
     if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
-    setIsReserved(true);
-    setReserveConfirmed(true);
-    setShowReserveModal(false);
-    setMessages(prev => ([
-      ...prev,
-      {
-        id: Date.now(),
-        type: 'system',
-        message: `예약이 확정되었습니다!\n장소: ${selectedPlace}, 날짜: ${selectedDate?.date} (${selectedDate?.weather})`,
-        sentAt: new Date().toISOString()
-      }
-    ]));
-    setShowQRQuestion(true);
+    try {
+      // meetType에 따라 한쪽만 보냄
+      const base = {
+        meetType,
+        placeLabel: selectedPlace,
+        reservedAt: normalizeDateTime(selectedDate.iso)
+      };
+      const payload =
+          meetType === 'on'
+              ? {
+                ...base,
+                oncampusPlaceCode: campusSuggest?.midCode || sellerDefault.oncampusPlaceCode || null,
+                offcampusStationCode: null
+              }
+              : {
+                ...base,
+                oncampusPlaceCode: null,
+                offcampusStationCode: offSuggest?.midStation || sellerDefault.offcampusStationCode || null
+              };
+
+      const res = await apiUpsertReservation(roomId, payload);
+      setReservationId(res.id);
+      setIsReserved(res.status === 'CONFIRMED');
+      setIsCompleted(res.status === 'COMPLETED');
+      setReserveConfirmed(true);
+      setShowReserveModal(false);
+
+      const when = res.reservedAt
+          ? new Date(res.reservedAt.toString().replace(' ', 'T')).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
+          : '';
+
+      setMessages(prev => ([
+        ...prev,
+        {
+          id: Date.now(),
+          type: 'system',
+          message: `예약이 확정되었습니다!\n장소: ${res.placeLabel || selectedPlace}, 날짜: ${when}`,
+          sentAt: new Date().toISOString()
+        }
+      ]));
+    } catch (e) {
+      console.error(e);
+      alert('예약 저장에 실패했습니다.');
+    }
   };
 
   const handleCancelReserve = () => { setShowCancelModal(true); };
-  const handleCancelConfirm = () => {
-    setIsReserved(false);
-    setShowCancelModal(false);
-    setMessages(prev => ([
-      ...prev,
-      {
-        id: Date.now(),
-        type: 'system',
-        message: `예약이 취소되었습니다. 사유: ${cancelReason}`,
-        cancel: true,
-        sentAt: new Date().toISOString()
-      }
-    ]));
-    setCancelReason('');
+
+  const handleCancelConfirm = async () => {
+    try {
+      if (!reservationId) { setShowCancelModal(false); return; }
+      await apiCancelReservation(roomId, reservationId, cancelReason || '');
+      setIsReserved(false);
+      setShowCancelModal(false);
+      setMessages(prev => ([
+        ...prev,
+        {
+          id: Date.now(),
+          type: 'system',
+          message: `예약이 취소되었습니다.${cancelReason ? ` 사유: ${cancelReason}` : ''}`,
+          cancel: true,
+          sentAt: new Date().toISOString()
+        }
+      ]));
+      setCancelReason('');
+    } catch (e) {
+      console.error(e);
+      alert('예약 취소에 실패했습니다.');
+    }
   };
   const handleCancelClose = () => { setShowCancelModal(false); setCancelReason(''); };
 
@@ -848,14 +934,20 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
     return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
   };
 
-  const handleComplete = () => {
-    if (!isReserved && !isCompleted) return;
-    if (!isCompleted) {
+  const handleComplete = async () => {
+    if (!reservationId) return;
+    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
+    try {
+      await apiCompleteReservation(roomId, reservationId);
+      setIsReserved(false);
       setIsCompleted(true);
-      setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }]));
-    } else {
-      setIsCompleted(false);
-      setMessages(prev => ([...prev, { id: Date.now(), type: 'system', message: '거래 완료가 취소되었습니다.', sentAt: new Date().toISOString() }]));
+      setMessages(prev => ([
+        ...prev,
+        { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+      ]));
+    } catch (e) {
+      console.error(e);
+      alert('거래 완료 처리에 실패했습니다.');
     }
   };
 
@@ -864,82 +956,8 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
   const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
   const handleReportStay = () => { setShowReportExitModal(false); };
 
-  /* --------------------------------- QR 코드 -------------------------------- */
-  const handleQRCodeGenerate = () => { setShowQRQuestion(true); };
-  const handleQRCodeConfirm = () => { setQrCodeGenerated(true); setShowQRQuestion(false); setShowQRModal(true); };
-  const handleQRCodeCancel = () => { setShowQRQuestion(false); };
-  const handleQRCodeClose = () => { setShowQRModal(false); };
-  const handleQRCodeDownload = () => {
-    const svg = document.querySelector('#qr-code svg');
-    if (svg) {
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0);
-        const link = document.createElement('a'); link.download = '결제QR코드.png'; link.href = canvas.toDataURL(); link.click();
-      };
-      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-    }
-  };
-  const generateQRData = () => {
-    const bookInfo = messages[0]?.message?.split(' - ') || [];
-    const bookTitle = bookInfo[0] || '알 수 없는 책';
-    const priceText = bookInfo[1] || '0';
-    const price = priceText.replace(/[^0-9]/g, '') || '0';
-    return {
-      type: 'payment',
-      amount: parseInt(price),
-      currency: 'KRW',
-      merchantId: 'hongbookstore',
-      orderId: `order_${roomId ?? 'unknown'}_${Date.now()}`,
-      description: `책 구매: ${bookTitle}`,
-      timestamp: new Date().toISOString()
-    };
-  };
-
-  /* --------------------------------- 비속어 --------------------------------- */
-  const detectProfanity = (text) => {
-    const profanityList = [
-      '씨발','개새끼','병신','미친','바보','멍청이','돌아이','등신',
-      'fuck','shit','bitch','asshole','damn','hell'
-    ];
-    const lowerText = text.toLowerCase();
-    return profanityList.some(word => lowerText.includes(word));
-  };
-
-  const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
-    const getStatusText = () => {
-      switch (status) {
-        case 'sending': return '전송 중...';
-        case 'read': return '읽음';
-        case 'failed': return '전송 실패';
-        default: return '';
-      }
-    };
-    const getStatusIcon = () => {
-      switch (status) {
-        case 'sending': return '⏳';
-        case 'read': return <FaEye size={10} />;
-        case 'failed': return <FaExclamationCircle size={10} />;
-        default: return '';
-      }
-    };
-    return (
-        <MessageStatus isOwn={isOwn}>
-          <StatusIcon $status={status}>{getStatusIcon()}</StatusIcon>
-          <span>{getStatusText()}</span>
-          {status === 'failed' && onRetry && (
-              <RetryButton onClick={onRetry} title="재전송">↻</RetryButton>
-          )}
-        </MessageStatus>
-    );
-  };
-
   /* --------------------------- ✅ 스마트 예약 (날씨) -------------------------- */
 
-  // 브라우저 위치(실패 시 서울 시청 좌표)
   async function getCoords() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) return resolve({ lat: 37.5665, lng: 126.9780 });
@@ -951,7 +969,6 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
     });
   }
 
-  // 백엔드 주간 날씨 API
   async function fetchWeeklyWeather({ lat, lng, sido }) {
     const q = new URLSearchParams({ lat, lng, ...(sido ? { sido } : {}) }).toString();
     const res = await fetch(`/api/weather/weekly?${q}`, {
@@ -961,7 +978,6 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
     return res.json();
   }
 
-  // 모달 열릴 때 날씨 불러오기
   useEffect(() => {
     if (!showReserveModal) return;
     (async () => {
@@ -980,14 +996,16 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
     })();
   }, [showReserveModal]);
 
-  // API 데이터를 UI용으로 정제
+  // API 데이터를 UI용으로 정제 (예약 전송용 iso는 항상 datetime으로 보정)
   const dateOptions = (weeklyWeather?.days || []).map(d => {
-    const dt = new Date(d.date);
+    const isoRaw = d.date;
+    const iso = normalizeDateTime(isoRaw); // <-- 여기서 T12:00:00 보정
+    const dt = new Date(iso.replace(' ', 'T'));
     const label = dt.toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit', weekday:'short' });
-    const pop = d.popAvg ?? 0;               // 0~100
+    const pop = d.popAvg ?? 0;
     const weatherLabel = pop <= 20 ? '맑음' : pop <= 60 ? '구름' : '비';
     return {
-      date: label, iso: d.date, pop, best: d.best,
+      date: label, iso, pop, best: d.best,
       am: d.popAm, pm: d.popPm, weather: weatherLabel
     };
   });
@@ -996,7 +1014,6 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
 
   /* ---------------------------------- UI 가드 ---------------------------------- */
 
-  // 잘못된 방 주소로 접근 시 안내
   if (chatId !== undefined && !roomId) {
     return (
         <div style={{maxWidth: 720, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 12, background: '#fff'}}>
@@ -1081,18 +1098,6 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                 {getLabel(isCompleted ? 'complete-cancel' : 'complete')}
               </ChatMenuButton>
 
-              {isReserved && (
-                  <ChatMenuButton
-                      onClick={() => setShowQRQuestion(true)}
-                      title="결제 QR 코드 생성"
-                      onMouseEnter={() => setHovered('qr')}
-                      onMouseLeave={() => setHovered('')}
-                  >
-                    <FaQrcode style={{ color: iconColor('#28a745', qrCodeGenerated, hovered==='qr'), fontSize: '1.1em' }} />
-                    {width > 600 && '결제QR'}
-                  </ChatMenuButton>
-              )}
-
               <ExitButton onClick={() => { if(window.confirm('채팅방을 나가시겠습니까?')) navigate('/chat'); }} title="채팅방 나가기">
                 <FaSignOutAlt /> {width > 600 && '나가기'}
               </ExitButton>
@@ -1162,10 +1167,12 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                   <div style={{fontWeight:700, margin:'6px 0'}}>거래 방식</div>
                   <div style={{display:'flex', gap:8, margin:'6px 0 12px'}}>
                     <button
+                        type="button"
                         onClick={()=>setMeetType('on')}
                         style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='on'?'#0b63d1':'#e5e7eb'), background:meetType==='on'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='on'?'#0b63d1':'#334155'}}
                     ><FaUniversity/> 교내</button>
                     <button
+                        type="button"
                         onClick={()=>setMeetType('off')}
                         style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='off'?'#0b63d1':'#e5e7eb'), background:meetType==='off'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='off'?'#0b63d1':'#334155'}}
                     ><FaSubway/> 교외</button>
@@ -1194,12 +1201,19 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                       <>
                         <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
                         <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10}}>
-                          <select value={buyerCampusCode} onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
-                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
-                            <option value="">선택하세요</option>
-                            {CAMPUS_OPTIONS.map(code => <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>)}
+                          <select
+                              value={buyerStation}
+                              onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }}
+                              disabled={!buyerLine}
+                              style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}
+                          >
+                            <option key="placeholder" value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
+                            {getUniqueStations(buyerLine).map(st => (
+                                <option key={st} value={st}>{st}</option>
+                            ))}
                           </select>
-                          <button onClick={()=>{
+
+                          <button type="button" onClick={()=>{
                             if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
                             if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
                             const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
@@ -1217,7 +1231,7 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                               <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
                                 최단 경로: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
                               </div>
-                              <button onClick={()=>setSelectedPlace(`교내 · ${campusSuggest.midLabel}`)}
+                              <button type="button" onClick={()=>setSelectedPlace(`교내 · ${campusSuggest.midLabel}`)}
                                       style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
                                 <FaMapMarkerAlt/> 이 장소 사용
                               </button>
@@ -1238,7 +1252,7 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                             <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
                             {(buyerLine ? SUBWAY_MAP[buyerLine] : []).map(st => <option key={st} value={st}>{st}</option>)}
                           </select>
-                          <button onClick={()=>{
+                          <button type="button" onClick={()=>{
                             if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
                             if(!buyerStation) return alert('구매자 역을 선택하세요');
                             const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
@@ -1256,7 +1270,7 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                               <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
                                 최적 경로: {offSuggest.path.join(' → ')}
                               </div>
-                              <button onClick={()=>setSelectedPlace(`교외 · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
+                              <button type="button" onClick={()=>setSelectedPlace(`교외 · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
                                       style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
                                 <FaMapMarkerAlt/> 이 장소 사용
                               </button>
@@ -1271,7 +1285,7 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
                     <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || '아직 선택되지 않았습니다.'}</div>
                   </div>
 
-                  {/* ====== 추천 날짜 (기존 유지) ====== */}
+                  {/* 추천 날짜 */}
                   <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>추천 날짜 (강수확률 중심)</div>
                   {weatherLoading && <div style={{color:'#555'}}>날씨 불러오는 중...</div>}
                   {!weatherLoading && (
@@ -1317,58 +1331,11 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
 
                   {reserveConfirmed && (
                       <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
-                        예약이 확정되었습니다!<br/>
-                        다음 화면에서 결제 QR 코드 생성 여부를 선택할 수 있습니다.
+                        예약이 확정되었습니다!
                       </div>
                   )}
                 </ReserveModalBox>
               </ModalOverlay>
-          )}
-
-          {/* QR 코드 생성 여부 묻기 모달 */}
-          {showQRQuestion && (
-              <QRModal>
-                <QRModalContent>
-                  <QRCodeQuestion>
-                    <QRCodeQuestionText>💳 결제 QR 코드를 생성하시겠습니까?</QRCodeQuestionText>
-                    <QRCodeQuestionDescription>
-                      간편 결제를 위한 QR 코드를 생성합니다.<br/>
-                      QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.<br/>
-                      추후 언제든지 헤더의 QR코드 버튼을 통해 다시 생성할 수 있습니다.
-                    </QRCodeQuestionDescription>
-                  </QRCodeQuestion>
-                  <QRCodeActions>
-                    <QRCodeButton className="close" onClick={() => setShowQRQuestion(false)}>나중에</QRCodeButton>
-                    <QRCodeButton className="download" onClick={handleQRCodeConfirm}>결제 QR 코드 생성</QRCodeButton>
-                  </QRCodeActions>
-                </QRModalContent>
-              </QRModal>
-          )}
-
-          {/* QR 코드 표시 모달 */}
-          {showQRModal && (
-              <QRModal>
-                <QRModalContent>
-                  <h3>💳 간편 결제 QR 코드</h3>
-                  <QRCodeContainer id="qr-code">
-                    <QRCode value={JSON.stringify(generateQRData())} size={200} level="M" includeMargin={true} />
-                  </QRCodeContainer>
-                  <QRCodeInfo>
-                    <QRCodeInfoItem><QRCodeLabel>결제 금액:</QRCodeLabel><QRCodeValue>{generateQRData().amount.toLocaleString()}원</QRCodeValue></QRCodeInfoItem>
-                    <QRCodeInfoItem><QRCodeLabel>상품명:</QRCodeLabel><QRCodeValue>{generateQRData().description}</QRCodeValue></QRCodeInfoItem>
-                    <QRCodeInfoItem><QRCodeLabel>주문번호:</QRCodeLabel><QRCodeValue>{generateQRData().orderId}</QRCodeValue></QRCodeInfoItem>
-                    <QRCodeInfoItem><QRCodeLabel>결제 수단:</QRCodeLabel><QRCodeValue>토스페이먼츠 / 카카오페이</QRCodeValue></QRCodeInfoItem>
-                    <QRCodeInfoItem><QRCodeLabel>생성 시간:</QRCodeLabel><QRCodeValue>{new Date(generateQRData().timestamp).toLocaleString('ko-KR')}</QRCodeValue></QRCodeInfoItem>
-                  </QRCodeInfo>
-                  <div style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px', margin: '1rem 0', fontSize: '0.9rem', color: '#666' }}>
-                    💡 QR 코드를 스캔하면 바로 결제 페이지로 이동합니다.
-                  </div>
-                  <QRCodeActions>
-                    <QRCodeButton className="download" onClick={handleQRCodeDownload}><FaDownload />다운로드</QRCodeButton>
-                    <QRCodeButton className="close" onClick={() => setShowQRModal(false)}>닫기</QRCodeButton>
-                  </QRCodeActions>
-                </QRModalContent>
-              </QRModal>
           )}
 
           <ChatMessages>
@@ -1447,5 +1414,43 @@ const ChatRoom = (/* props 받더라도 내부에서 라우트 파라미터를 �
       </>
   );
 };
+
+const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
+  const getStatusText = () => {
+    switch (status) {
+      case 'sending': return '전송 중...';
+      case 'read': return '읽음';
+      case 'failed': return '전송 실패';
+      default: return '';
+    }
+  };
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'sending': return '⏳';
+      case 'read': return <FaEye size={10} />;
+      case 'failed': return <FaExclamationCircle size={10} />;
+      default: return '';
+    }
+  };
+  return (
+      <MessageStatus isOwn={isOwn}>
+        <StatusIcon $status={status}>{getStatusIcon()}</StatusIcon>
+        <span>{getStatusText()}</span>
+        {status === 'failed' && onRetry && (
+            <RetryButton onClick={onRetry} title="재전송">↻</RetryButton>
+        )}
+      </MessageStatus>
+  );
+};
+
+/* --------------------------------- 비속어 --------------------------------- */
+function detectProfanity(text) {
+  const profanityList = [
+    '씨발','개새끼','병신','미친','바보','멍청이','돌아이','등신',
+    'fuck','shit','bitch','asshole','damn','hell'
+  ];
+  const lowerText = text.toLowerCase();
+  return profanityList.some(word => lowerText.includes(word));
+}
 
 export default ChatRoom;
