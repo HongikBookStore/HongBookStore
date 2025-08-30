@@ -1,8 +1,6 @@
-// ChatList.jsx — 판매자/구매자 필터 정상화 + 상태/정렬/스타일 수정 + 예약상태 보강 (복붙용)
-
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import styled from 'styled-components';
-import { FaArrowLeft, FaSearch, FaBook, FaExclamationCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaSearch, FaBook, FaExclamationCircle, FaCheckCircle } from 'react-icons/fa';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrCreateChatRoom } from '../../api/chat';
@@ -153,6 +151,10 @@ const ChatItem = styled.div`
     background: #fff3cd;
     border-left: 4px solid #ffc107;
   `}
+  ${props => props.$isCompleted && `
+    background: #dcfce7;
+    border-left: 4px solid #22c55e;
+  `}
   ${props => props.$hasUnread && `
     background: #e3f2fd;
   `}
@@ -204,7 +206,11 @@ const TradeStatus = styled.div`
       case 'reserved':
         return 'background: #ffe066; color: #856404;';
       case 'completed':
-        return 'background: #b6fcd5; color: #155724;';
+        return `
+          background: #bbf7d0;
+          color: #166534;
+          border: 1px solid #86efac;
+        `;
       case 'in_progress':
       default:
         return 'background: #cce5ff; color: #004085;';
@@ -228,6 +234,13 @@ const SmallBtn = styled.button`
   padding: 4px 8px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;
   background: #f8f9fa; color: #333; font-size: 0.8rem;
   &:hover { background: #e9ecef; }
+`;
+
+/* ✅ 후기 완료 배지 */
+const ReviewDoneBadge = styled.div`
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7;
 `;
 
 // 후기 모달
@@ -311,7 +324,7 @@ function normalizeRoom(raw, myId) {
   const sellerName = raw.sellerName ?? raw.seller?.username ?? raw.seller?.name;
   const counterpartyName =
       role === 'seller' ? (buyerName || raw.userName) :
-          role === 'buyer' ? (sellerName || raw.userName) :
+          role === 'buyer'  ? (sellerName || raw.userName) :
               (raw.userName || '상대방');
 
   const userAvatar = (counterpartyName || '?').slice(0, 1).toUpperCase();
@@ -343,7 +356,9 @@ function normalizeRoom(raw, myId) {
     unreadCount: isNaN(unread) ? 0 : unread,
     salePostId: raw.salePostId ?? raw.postId,
     tradeStatus,
-    isReserved: tradeStatus === 'reserved'
+    isReserved: tradeStatus === 'reserved',
+    // ✅ 서버가 이미 알려줄 수도 있는 필드(있으면 활용)
+    hasMyReview: raw.hasMyReview === true || raw.myReviewedAt != null
   };
 }
 
@@ -367,6 +382,21 @@ const ChatListPage = () => {
 
   // 🔹 roomId -> reservation 객체(또는 null) 캐시
   const [reservationMap, setReservationMap] = useState({});
+
+  // ✅ 내가 이미 작성한 후기 여부(로컬 캐시) — key: `${postId}:${role}`
+  const [reviewDoneMap, setReviewDoneMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('reviewDoneMap') || '{}');
+    } catch { return {}; }
+  });
+  const setReviewDone = (postId, role) => {
+    const key = `${postId}:${role}`;
+    setReviewDoneMap(prev => {
+      const next = { ...prev, [key]: true };
+      localStorage.setItem('reviewDoneMap', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // URL ?bookId=xxxxx 처리
   useEffect(() => {
@@ -496,9 +526,8 @@ const ChatListPage = () => {
         )
         : tabFiltered;
 
-    return searched; // ← 정렬 없이 그대로 반환 (백엔드 순서 유지)
+    return searched; // 정렬 없이 그대로 (백엔드 순서 유지)
   }, [rooms, activeTab, searchTerm]);
-
 
   const handleBack = () => navigate('/marketplace');
 
@@ -526,11 +555,11 @@ const ChatListPage = () => {
     }
   };
 
+  // (유지) 추후 쓸 수 있는 API 헬퍼
   const getAuthHeader = () => {
     const token = localStorage.getItem('accessToken');
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
-
   const patchPostStatus = async (postId, status, buyerId) => {
     try {
       const payload = buyerId ? { status, buyerId } : { status };
@@ -543,6 +572,7 @@ const ChatListPage = () => {
   };
 
   const openReviewForChat = (chat) => {
+    if (chat.tradeStatus !== 'completed') return; // 버튼이 안 보이지만 방어
     if (!chat?.salePostId) {
       alert('연결된 판매글 정보를 확인할 수 없습니다.');
       return;
@@ -570,6 +600,8 @@ const ChatListPage = () => {
         ratingKeywords: kw,
         role: reviewModal.role
       });
+      // ✅ 로컬/화면 상태에 "후기 완료" 반영
+      setReviewDone(reviewModal.postId, reviewModal.role);
       alert('후기가 저장되었습니다.');
       setReviewModal({ open: false, postId: null, role: null });
     } catch (e) {
@@ -617,53 +649,63 @@ const ChatListPage = () => {
                     <p>잠시 후 다시 시도해 주세요.</p>
                   </EmptyState>
               ) : filteredChatRooms.length > 0 ? (
-                  filteredChatRooms.map((chat) => (
-                      <ChatItem
-                          key={chat.id}
-                          onClick={() => handleChatClick(chat.id)}
-                          $isReserved={chat.isReserved}
-                          $hasUnread={chat.unreadCount > 0}
-                      >
-                        <UserAvatar>{chat.userAvatar}</UserAvatar>
-                        <ChatInfo>
-                          <UserName>{chat.userName}</UserName>
-                          <BookTitle>
-                            <FaBook style={{ color: '#666' }} />
-                            {chat.bookTitle}
-                          </BookTitle>
-                          <TradeStatus $status={chat.tradeStatus}>{getStatusText(chat.tradeStatus)}</TradeStatus>
-                          <LastMessage>{chat.lastMessage}</LastMessage>
-                        </ChatInfo>
-                        <ChatMeta>
-                          <LastTime>{chat.lastTime || ''}</LastTime>
-                          {chat.unreadCount > 0 && (
-                              <UnreadCount>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</UnreadCount>
-                          )}
-                        </ChatMeta>
+                  filteredChatRooms.map((chat) => {
+                    const isCompleted = chat.tradeStatus === 'completed';
+                    const counterpartyId =
+                        chat.role === 'seller' ? chat.buyerId :
+                            chat.role === 'buyer'  ? chat.sellerId : null;
 
-                        {chat.role === 'seller' && chat.salePostId && (
-                            <RowActions onClick={(e) => e.stopPropagation()}>
-                              {chat.isReserved ? (
-                                  <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'FOR_SALE')}>예약 해제</SmallBtn>
-                              ) : (
-                                  <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'RESERVED')}>예약중</SmallBtn>
-                              )}
-                              {chat.buyerId && (
-                                  <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'SOLD_OUT', chat.buyerId)}>판매완료</SmallBtn>
-                              )}
-                              <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
-                              {chat.buyerId && <SmallBtn onClick={() => navigate(`/users/${chat.buyerId}`)}>프로필</SmallBtn>}
-                            </RowActions>
-                        )}
+                    // ✅ 후기 완료 여부 계산 (서버 필드 + 로컬 캐시)
+                    const roleForReview = chat.role === 'seller' ? 'BUYER'
+                        : chat.role === 'buyer'  ? 'SELLER'
+                            : null;
+                    const reviewKey = chat.salePostId && roleForReview ? `${chat.salePostId}:${roleForReview}` : null;
+                    const alreadyReviewed = !!(chat.hasMyReview || (reviewKey && reviewDoneMap[reviewKey] === true));
 
-                        {chat.role === 'buyer' && (
-                            <RowActions onClick={(e) => e.stopPropagation()}>
-                              <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
-                              {chat.sellerId && <SmallBtn onClick={() => navigate(`/users/${chat.sellerId}`)}>프로필</SmallBtn>}
-                            </RowActions>
-                        )}
-                      </ChatItem>
-                  ))
+                    return (
+                        <ChatItem
+                            key={chat.id}
+                            onClick={() => handleChatClick(chat.id)}
+                            $isReserved={chat.isReserved}
+                            $isCompleted={isCompleted}
+                            $hasUnread={chat.unreadCount > 0}
+                        >
+                          <UserAvatar>{chat.userAvatar}</UserAvatar>
+                          <ChatInfo>
+                            <UserName>{chat.userName}</UserName>
+                            <BookTitle>
+                              <FaBook style={{ color: '#666' }} />
+                              {chat.bookTitle}
+                            </BookTitle>
+                            <TradeStatus $status={chat.tradeStatus}>{getStatusText(chat.tradeStatus)}</TradeStatus>
+                            <LastMessage>{chat.lastMessage}</LastMessage>
+                          </ChatInfo>
+
+                          <ChatMeta>
+                            <LastTime>{chat.lastTime || ''}</LastTime>
+                            {chat.unreadCount > 0 && (
+                                <UnreadCount>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</UnreadCount>
+                            )}
+                          </ChatMeta>
+
+                          {/* ✅ 진행중/예약완료: 프로필만
+                        ✅ 거래완료 & 후기 미작성: 후기 버튼
+                        ✅ 거래완료 & 후기 작성: "후기 완료" 배지 */}
+                          <RowActions onClick={(e) => e.stopPropagation()}>
+                            {isCompleted && (alreadyReviewed ? (
+                                <ReviewDoneBadge title="후기 작성 완료">
+                                  <FaCheckCircle /> 후기 완료
+                                </ReviewDoneBadge>
+                            ) : (
+                                <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
+                            ))}
+                            {counterpartyId && (
+                                <SmallBtn onClick={() => navigate(`/users/${counterpartyId}`)}>프로필</SmallBtn>
+                            )}
+                          </RowActions>
+                        </ChatItem>
+                    );
+                  })
               ) : (
                   <EmptyState>
                     <EmptyIcon />

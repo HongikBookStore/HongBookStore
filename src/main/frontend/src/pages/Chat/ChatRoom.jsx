@@ -1,5 +1,3 @@
-// ✅ ChatRoom.jsx — chatId가 없거나 유효하지 않을 때 API/WS 호출을 전부 차단 + 예약 백엔드 연동 + QR 전부 제거
-
 import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import styled from 'styled-components';
 import {
@@ -400,11 +398,6 @@ const DateItem = styled.button`
   &:hover { border-color: var(--primary); color: var(--primary); background: #eaf0ff; }
 `;
 
-const getUniqueStations = (line) => {
-  const arr = SUBWAY_MAP[line] || [];
-  return Array.from(new Set(arr)); // 순서 유지 + 중복 제거
-};
-
 /* ✅ 강수확률 미니 막대 스타일 */
 const MiniBarWrap = styled.div`
   height: 70px; width: 10px; border-radius: 6px;
@@ -504,6 +497,10 @@ function buildStationGraphAndLineMap() {
   return { graph, stationLines };
 }
 const { graph: ST_GRAPH, stationLines: ST_LINES } = buildStationGraphAndLineMap();
+const getUniqueStations = (line) => {
+  const arr = SUBWAY_MAP[line] || [];
+  return Array.from(new Set(arr));
+};
 
 function dijkstraWeighted(start, end, transferCost = 10, penalizePenalty = 10) {
   if (!ST_GRAPH[start] || !ST_GRAPH[end]) return null;
@@ -577,11 +574,40 @@ async function apiCompleteReservation(roomId, reservationId) {
 /* ----------------------------- utils ------------------------------ */
 function normalizeDateTime(input) {
   if (!input) return input;
-  // 'YYYY-MM-DD' → 'YYYY-MM-DDT12:00:00'
   if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return `${input}T12:00:00`;
-  // 'YYYY-MM-DD HH:mm:ss' → 'YYYY-MM-DDTHH:mm:ss'
   if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(input)) return input.replace(' ', 'T');
   return input;
+}
+
+// 공통 헤더
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken') || '';
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// sale_post 상태 변경
+async function patchPostStatus(postId, status, buyerId) {
+  if (!postId || !status) return;
+  const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
+  const body = buyerId ? { status, buyerId } : { status };
+  const res = await fetch(`/api/posts/${postId}/status`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(()=> '');
+    throw new Error(t || '게시글 상태 변경 실패');
+  }
+  return res.json().catch(()=> ({}));
+}
+
+// 최신 게시글 조회
+async function fetchPost(postId) {
+  if (!postId) return null;
+  const res = await fetch(`/api/posts/${postId}`, { headers: getAuthHeader() });
+  if (!res.ok) throw new Error('게시글 조회 실패');
+  return res.json();
 }
 
 /* ----------------------------- component start ------------------------------ */
@@ -596,7 +622,7 @@ const ChatRoom = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
 
-  // ✅ chatId → 유효한 숫자 roomId로 변환 (없거나 NaN이면 null)
+  // ✅ chatId → 유효한 숫자 roomId로 변환
   const roomId = useMemo(() => {
     const n = Number(chatId);
     return Number.isFinite(n) && n > 0 ? n : null;
@@ -627,9 +653,25 @@ const ChatRoom = () => {
   const [receiverId, setReceiverId] = useState(null);
   const [senderId, setSenderId] = useState(null);
   const [salePostId, setSalePostId] = useState(null);
+
+  // ✅ 추가: 게시글 상태 및 참여자
+  const [postStatus, setPostStatus] = useState(null);
+  const [buyerId, setBuyerId] = useState(null);
+  const [sellerId, setSellerId] = useState(null);
+
   const stompClient = useRef(null);
   const { user } = useContext(AuthCtx);
   const currentUserId = user?.id;
+
+  // ✅ 역할 계산
+  const isBuyer = useMemo(
+      () => !!currentUserId && !!buyerId && currentUserId === buyerId,
+      [currentUserId, buyerId]
+  );
+  const isSeller = useMemo(
+      () => !!currentUserId && !!sellerId && currentUserId === sellerId,
+      [currentUserId, sellerId]
+  );
 
   // ✅ 날씨 상태
   const [weeklyWeather, setWeeklyWeather] = useState(null);
@@ -643,10 +685,10 @@ const ChatRoom = () => {
 
   // ✅ 교내/교외 입력 + 추천 상태
   const [meetType, setMeetType] = useState('on'); // 'on' | 'off'
-  const [buyerCampusCode, setBuyerCampusCode] = useState('');
+  const [buyerCampusCode, setBuyerCampusCode] = useState(''); // 교내 선택
   const [campusSuggest, setCampusSuggest] = useState(null);
-  const [buyerLine, setBuyerLine] = useState('');
-  const [buyerStation, setBuyerStation] = useState('');
+  const [buyerLine, setBuyerLine] = useState(''); // 교외 노선
+  const [buyerStation, setBuyerStation] = useState(''); // 교외 역
   const [offSuggest, setOffSuggest] = useState(null);
 
   // 버튼 텍스트 반응형
@@ -706,12 +748,15 @@ const ChatRoom = () => {
         setSenderId(sender);
         setReceiverId(receiver);
         setSalePostId(room.salePostId);
+        setBuyerId(room.buyerId);
+        setSellerId(room.sellerId);
 
-        // ✅ 판매자 기본 위치 로드 (게시글 상세에서 가져옴)
+        // ✅ 판매자 기본 위치 + 게시글 상태 로드
         if (room.salePostId) {
           const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
           if (postRes.ok) {
             const post = await postRes.json();
+            setPostStatus(post.status || null);
             setSellerDefault({
               oncampusPlaceCode: post.oncampusPlaceCode || null,
               offcampusStationCode: post.offcampusStationCode || null
@@ -783,7 +828,7 @@ const ChatRoom = () => {
 
     const ws = new WebSocket(WS_ENDPOINT);
     const stomp = Stomp.over(ws);
-    stomp.debug = () => {}; // 필요시 로그 활성화
+    stomp.debug = () => {};
 
     stomp.connect({}, () => {
       stomp.subscribe(`/sub/chat/room/${roomId}`, (message) => {
@@ -800,7 +845,7 @@ const ChatRoom = () => {
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
-    if (!roomId) return; // ❗ 가드
+    if (!roomId) return;
     const client = stompClient.current;
     if (!client || !client.connected) return;
 
@@ -847,15 +892,40 @@ const ChatRoom = () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
-  const handleBack = () => { navigate('/chat'); };
-  const formatTime = (timestamp) => { const date = new Date(timestamp); return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); };
+  const getToday = () => {
+    const d = new Date();
+    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  };
 
-  /* -------------------------------- 예약/신고 -------------------------------- */
-  const handleReserve = () => { setShowReserveModal(true); };
+  /* -------------------------------- 예약/신고/완료 -------------------------------- */
+
+  // ✅ 예약 버튼 누르기 전에 게시글 상태 가드 (구매자 전용 UI)
+  const handleReserve = async () => {
+    if (!salePostId) { setShowReserveModal(true); return; }
+    try {
+      const latest = await fetchPost(salePostId);
+      const st = latest?.status || postStatus;
+      setPostStatus(st || null);
+      if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
+      if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
+    } catch (e) {
+      console.warn('게시글 상태 확인 실패:', e);
+      // 조회 실패 시에도 모달은 열어줌
+    }
+    setShowReserveModal(true);
+  };
 
   const handleReserveConfirm = async () => {
     if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
     try {
+      // 한번 더 최신 상태 확인(경쟁 예약 대비)
+      if (salePostId) {
+        const latest = await fetchPost(salePostId);
+        const st = latest?.status || postStatus;
+        if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
+        if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
+      }
+
       // meetType에 따라 한쪽만 보냄
       const base = {
         meetType,
@@ -881,6 +951,16 @@ const ChatRoom = () => {
       setIsCompleted(res.status === 'COMPLETED');
       setReserveConfirmed(true);
       setShowReserveModal(false);
+
+      // ✅ 게시글 상태를 reserved로 변경 (buyerId 포함)
+      try {
+        const buyerForPatch = buyerId || currentUserId;
+        await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
+        setPostStatus('reserved');
+      } catch (e) {
+        console.error('게시글 상태 reserved 설정 실패:', e);
+        alert('예약은 완료되었지만, 게시글 상태 업데이트에 실패했습니다.');
+      }
 
       const when = res.reservedAt
           ? new Date(res.reservedAt.toString().replace(' ', 'T')).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
@@ -920,27 +1000,31 @@ const ChatRoom = () => {
         }
       ]));
       setCancelReason('');
+      // (선택) 예약 취소 시 post.status 되돌리려면 여기서 PATCH 처리
     } catch (e) {
       console.error(e);
       alert('예약 취소에 실패했습니다.');
     }
   };
-  const handleCancelClose = () => { setShowCancelModal(false); setCancelReason(''); };
-
-  const handleExit = () => { if (window.confirm('채팅방을 나가시겠습니까?')) navigate('/chat'); };
-
-  const getToday = () => {
-    const d = new Date();
-    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  };
 
   const handleComplete = async () => {
     if (!reservationId) return;
+    if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
     if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
     try {
       await apiCompleteReservation(roomId, reservationId);
       setIsReserved(false);
       setIsCompleted(true);
+
+      // ✅ 게시글 상태를 sold_out으로 변경
+      try {
+        await patchPostStatus(salePostId, 'sold_out');
+        setPostStatus('sold_out');
+      } catch (e) {
+        console.error('게시글 상태 sold_out 설정 실패:', e);
+        alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다.');
+      }
+
       setMessages(prev => ([
         ...prev,
         { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
@@ -955,6 +1039,9 @@ const ChatRoom = () => {
   const handleReportSubmit = (e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); };
   const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
   const handleReportStay = () => { setShowReportExitModal(false); };
+
+  const handleBack = () => { navigate('/chat'); };
+  const formatTime = (timestamp) => { const date = new Date(timestamp); return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); };
 
   /* --------------------------- ✅ 스마트 예약 (날씨) -------------------------- */
 
@@ -984,7 +1071,7 @@ const ChatRoom = () => {
       try {
         setWeatherLoading(true);
         const { lat, lng } = await getCoords();
-        const sido = '서울'; // TODO: 역지오코딩으로 자동화 가능
+        const sido = '서울'; // TODO: 역지오코딩 자동화
         const r = await fetchWeeklyWeather({ lat, lng, sido });
         setWeeklyWeather(r);
       } catch (e) {
@@ -996,10 +1083,10 @@ const ChatRoom = () => {
     })();
   }, [showReserveModal]);
 
-  // API 데이터를 UI용으로 정제 (예약 전송용 iso는 항상 datetime으로 보정)
+  // API 데이터를 UI용으로 정제
   const dateOptions = (weeklyWeather?.days || []).map(d => {
     const isoRaw = d.date;
-    const iso = normalizeDateTime(isoRaw); // <-- 여기서 T12:00:00 보정
+    const iso = normalizeDateTime(isoRaw);
     const dt = new Date(iso.replace(' ', 'T'));
     const label = dt.toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit', weekday:'short' });
     const pop = d.popAvg ?? 0;
@@ -1053,6 +1140,7 @@ const ChatRoom = () => {
             </HeaderLeft>
 
             <HeaderRight style={{gap: 0}}>
+              {/* 신고 버튼 (모두 노출) */}
               <ChatMenuButton
                   onClick={() => { setShowReportModal(true); setReportReason(''); }}
                   title="신고하기"
@@ -1063,40 +1151,48 @@ const ChatRoom = () => {
                 {getLabel('report')}
               </ChatMenuButton>
 
+              {/* ✅ 예약/예약취소 버튼: 예약은 구매자 전용, 취소는 구매자+판매자 */}
               {isReserved ? (
-                  <ChatMenuButton
-                      onClick={() => setShowCancelModal(true)}
-                      title="예약 취소하기"
-                      disabled={isCompleted}
-                      onMouseEnter={() => setHovered('reserve-cancel')}
-                      onMouseLeave={() => setHovered('')}
-                  >
-                    <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve-cancel'), fontSize: '1.1em' }} />
-                    {getLabel('reserve-cancel')}
-                  </ChatMenuButton>
+                  (isBuyer || isSeller) && (
+                      <ChatMenuButton
+                          onClick={handleCancelReserve}
+                          title="예약 취소하기"
+                          disabled={isCompleted}
+                          onMouseEnter={() => setHovered('reserve-cancel')}
+                          onMouseLeave={() => setHovered('')}
+                      >
+                        <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve-cancel'), fontSize: '1.1em' }} />
+                        {getLabel('reserve-cancel')}
+                      </ChatMenuButton>
+                  )
               ) : (
-                  <ChatMenuButton
-                      onClick={() => setShowReserveModal(true)}
-                      title="예약하기"
-                      disabled={isCompleted}
-                      onMouseEnter={() => setHovered('reserve')}
-                      onMouseLeave={() => setHovered('')}
-                  >
-                    <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve'), fontSize: '1.1em' }} />
-                    {getLabel('reserve')}
-                  </ChatMenuButton>
+                  isBuyer && (
+                      <ChatMenuButton
+                          onClick={handleReserve}
+                          title="예약하기"
+                          disabled={isCompleted || postStatus === 'reserved' || postStatus === 'sold_out'}
+                          onMouseEnter={() => setHovered('reserve')}
+                          onMouseLeave={() => setHovered('')}
+                      >
+                        <FaRegClock style={{ color: iconColor('#bfa100', false, hovered==='reserve'), fontSize: '1.1em' }} />
+                        {getLabel('reserve')}
+                      </ChatMenuButton>
+                  )
               )}
 
-              <ChatMenuButton
-                  onClick={handleComplete}
-                  title={isCompleted ? "거래 완료 취소" : "거래 완료"}
-                  disabled={!isReserved && !isCompleted}
-                  onMouseEnter={() => setHovered(isCompleted ? 'complete-cancel' : 'complete')}
-                  onMouseLeave={() => setHovered('')}
-              >
-                <FaCheckCircle style={{ color: iconColor('#1976d2', isCompleted, hovered===(isCompleted?'complete-cancel':'complete')), fontSize: '1.1em' }} />
-                {getLabel(isCompleted ? 'complete-cancel' : 'complete')}
-              </ChatMenuButton>
+              {/* ✅ 거래 완료 버튼: 판매자 전용, 예약 상태에서만 활성화 */}
+              {isSeller && (
+                  <ChatMenuButton
+                      onClick={handleComplete}
+                      title="거래 완료"
+                      disabled={!isReserved || isCompleted}
+                      onMouseEnter={() => setHovered('complete')}
+                      onMouseLeave={() => setHovered('')}
+                  >
+                    <FaCheckCircle style={{ color: iconColor('#1976d2', isCompleted, hovered==='complete'), fontSize: '1.1em' }} />
+                    {getLabel('complete')}
+                  </ChatMenuButton>
+              )}
 
               <ExitButton onClick={() => { if(window.confirm('채팅방을 나가시겠습니까?')) navigate('/chat'); }} title="채팅방 나가기">
                 <FaSignOutAlt /> {width > 600 && '나가기'}
@@ -1200,16 +1296,15 @@ const ChatRoom = () => {
                   {meetType==='on' ? (
                       <>
                         <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
-                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10}}>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
                           <select
-                              value={buyerStation}
-                              onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }}
-                              disabled={!buyerLine}
-                              style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}
+                              value={buyerCampusCode}
+                              onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
+                              style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:200, fontWeight:700}}
                           >
-                            <option key="placeholder" value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
-                            {getUniqueStations(buyerLine).map(st => (
-                                <option key={st} value={st}>{st}</option>
+                            <option value="">건물/지점 선택</option>
+                            {CAMPUS_OPTIONS.map(code => (
+                                <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>
                             ))}
                           </select>
 
@@ -1250,7 +1345,7 @@ const ChatRoom = () => {
                           <select value={buyerStation} onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }} disabled={!buyerLine}
                                   style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
                             <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
-                            {(buyerLine ? SUBWAY_MAP[buyerLine] : []).map(st => <option key={st} value={st}>{st}</option>)}
+                            {(buyerLine ? getUniqueStations(buyerLine) : []).map(st => <option key={st} value={st}>{st}</option>)}
                           </select>
                           <button type="button" onClick={()=>{
                             if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
