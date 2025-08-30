@@ -113,7 +113,6 @@
   "passwordResetSuccess": "비밀번호가 성공적으로 변경되었습니다. 잠시 후 로그인 페이지로 이동합니다.",
   "invalidToken": "유효하지 않은 접근입니다.",
   "ok": "확인",
-  "myTransactions": "나의 거래",
   "aiChat": "AI 챗봇",
   "notifications": "알림",
   "test": "테스트",

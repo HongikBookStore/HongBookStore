@@ -7,163 +7,50 @@ import WarningModal from '../../components/WarningModal/WarningModal';
 import WantedComments from '../../components/Comments/WantedComments';
 
 const PageWrapper = styled.div`
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    width: 100%;
+    display: flex; flex-direction: row; align-items: flex-start; width: 100%;
 `;
-
-const Container = styled.div`
-    padding: 28px;
-    box-sizing: border-box;
-`;
-
+const Container = styled.div` padding: 28px; box-sizing: border-box; `;
 const TopBar = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 18px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px;
 `;
-
 const BackButton = styled.button`
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #6c757d;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; background: #6c757d; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
     &:hover { background: #5a6268; }
 `;
-
-const Actions = styled.div`
-    display: flex;
-    gap: 8px;
-`;
-
+const Actions = styled.div` display: flex; gap: 8px; `;
 const Button = styled.button`
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid ${p => (p.$variant === 'danger' ? '#dc3545' : '#e5e7eb')};
+    padding: 10px 14px; border-radius: 10px; border: 1px solid ${p => (p.$variant === 'danger' ? '#dc3545' : '#e5e7eb')};
     background: ${p => (p.$variant === 'primary' ? '#0d6efd' : p.$variant === 'danger' ? '#fff5f5' : '#fff')};
     color: ${p => (p.$variant === 'primary' ? '#fff' : p.$variant === 'danger' ? '#dc3545' : '#111')};
-    font-weight: 700;
-    cursor: pointer;
-    transition: .15s ease;
-    &:hover{
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,.06);
-    }
+    font-weight: 700; cursor: pointer; transition: .15s ease;
+    &:hover{ transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
     &:disabled{ opacity: .6; cursor: not-allowed; transform:none; box-shadow:none; }
 `;
-
-const HeaderCard = styled.div`
-    background: #fff;
-    border: 1px solid #e9ecef;
-    border-radius: 14px;
-    padding: 22px;
-    margin-bottom: 18px;
-`;
-
-const Title = styled.h1`
-    font-size: 1.9rem;
-    margin: 0 0 10px 0;
-    color: #222;
-`;
-
-const MetaRow = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-`;
-
+const HeaderCard = styled.div` background: #fff; border: 1px solid #e9ecef; border-radius: 14px; padding: 22px; margin-bottom: 18px; `;
+const Title = styled.h1` font-size: 1.9rem; margin: 0 0 10px 0; color: #222; `;
+const MetaRow = styled.div` display: flex; flex-wrap: wrap; gap: 8px; `;
 const Chip = styled.span`
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid #e5e7eb;
-    background: #f8fafc;
-    color: #374151;
-    font-weight: 600;
-    font-size: 0.9rem;
-    border-radius: 999px;
-    padding: 6px 12px;
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb; background: #f8fafc; color: #374151; font-weight: 600; font-size: 0.9rem; border-radius: 999px; padding: 6px 12px;
 `;
-
-const PriceChip = styled(Chip)`
-    background: #eef5ff;
-    border-color: #d7e7ff;
-    color: #0d6efd;
-`;
-
+const PriceChip = styled(Chip)` background: #eef5ff; border-color: #d7e7ff; color: #0d6efd; `;
 const ConditionChip = styled(Chip)`
-    background: ${({$lv}) =>
-            $lv === '상' ? '#eaf7ee' : $lv === '중' ? '#fff6e5' : '#fdeaea'};
-    border-color: ${({$lv}) =>
-            $lv === '상' ? '#cfeedd' : $lv === '중' ? '#ffe7bf' : '#f7c7c7'};
-    color: ${({$lv}) =>
-            $lv === '상' ? '#2e7d32' : $lv === '중' ? '#b26a00' : '#c62828'};
+    background: ${({$lv}) => $lv === '상' ? '#eaf7ee' : $lv === '중' ? '#fff6e5' : '#fdeaea'};
+    border-color: ${({$lv}) => $lv === '상' ? '#cfeedd' : $lv === '중' ? '#ffe7bf' : '#f7c7c7'};
+    color: ${({$lv}) => $lv === '상' ? '#2e7d32' : $lv === '중' ? '#b26a00' : '#c62828'};
 `;
-
-const SubMeta = styled.div`
-    display: flex; flex-wrap: wrap; gap: 14px;
-    margin-top: 10px; color: #6b7280; font-size: .92rem;
-`;
-
+const SubMeta = styled.div` display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; color: #6b7280; font-size: .92rem; `;
 const Layout = styled.div`
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 18px;
-    margin-top: 6px;
+    display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-top: 6px;
     @media (max-width: 980px){ grid-template-columns: 1fr; }
 `;
-
-const Card = styled.div`
-    background: #fff;
-    border: 1px solid #e9ecef;
-    border-radius: 14px;
-    padding: 22px;
-`;
-
-const SectionTitle = styled.h3`
-    margin: 0 0 12px 0; font-size: 1.15rem; color: #333; display:flex; align-items:center; gap:8px;
-`;
-
-const BodyText = styled.div`
-    color: #374151;
-    line-height: 1.7;
-    white-space: pre-wrap;
-`;
-
-const InfoGrid = styled.div`
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    @media (max-width: 600px){ grid-template-columns: 1fr; }
-`;
-
-const InfoItem = styled.div`
-    border: 1px solid #eef2f6;
-    border-radius: 10px;
-    padding: 14px;
-    background: #fafcff;
-`;
-
-const Label = styled.div`
-    color: #6b7280; font-size: .9rem; margin-bottom: 6px;
-`;
-
-const Value = styled.div`
-    color: #222; font-weight: 700;
-`;
-
-const Small = styled.div`
-    font-size: .86rem; color: #6b7280;
-`;
+const Card = styled.div` background: #fff; border: 1px solid #e9ecef; border-radius: 14px; padding: 22px; `;
+const SectionTitle = styled.h3` margin: 0 0 12px 0; font-size: 1.15rem; color: #333; display:flex; align-items:center; gap:8px; `;
+const BodyText = styled.div` color: #374151; line-height: 1.7; white-space: pre-wrap; `;
+const InfoGrid = styled.div` display: grid; grid-template-columns: 1fr 1fr; gap: 12px; @media (max-width: 600px){ grid-template-columns: 1fr; } `;
+const InfoItem = styled.div` border: 1px solid #eef2f6; border-radius: 10px; padding: 14px; background: #fafcff; `;
+const Label = styled.div` color: #6b7280; font-size: .9rem; margin-bottom: 6px; `;
+const Value = styled.div` color: #222; font-weight: 700; `;
+const Small = styled.div` font-size: .86rem; color: #6b7280; `;
 
 export default function WantedDetail() {
     const { id } = useParams();
@@ -202,17 +89,11 @@ export default function WantedDetail() {
     const onDelete = async () => {
         try {
             const token = localStorage.getItem('accessToken');
-
-            // 로컬스토리지에서 userId 확보 (userId가 없으면 user JSON에서 보조 추출)
             let userId = localStorage.getItem('userId');
             if (!userId) {
                 const userJson = localStorage.getItem('user');
                 if (userJson) {
-                    try {
-                        userId = JSON.parse(userJson)?.id;
-                    } catch (_) {
-                        /* ignore JSON parse error */
-                    }
+                    try { userId = JSON.parse(userJson)?.id; } catch {}
                 }
             }
 
@@ -224,14 +105,12 @@ export default function WantedDetail() {
                 },
             });
 
-            // 성공 (백엔드가 204 No Content 반환)
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
                 return;
             }
 
-            // 실패 처리: 서버 메시지 우선 파싱
             let message = `삭제 실패 (${res.status})`;
             const ct = res.headers.get('content-type') || '';
             if (ct.includes('application/json')) {
@@ -245,7 +124,6 @@ export default function WantedDetail() {
         } catch (err) {
             console.error('❌ onDelete error:', err);
             const msg = String(err?.message || '');
-
             if (msg.includes('권한') || msg.includes('403')) {
                 alert('삭제 권한이 없습니다. 본인이 작성한 글만 삭제할 수 있습니다.');
             } else if (msg.includes('401')) {
@@ -257,10 +135,8 @@ export default function WantedDetail() {
         }
     };
 
-
     const openDelete = () => {
         setShowDeleteModal(true);
-        // WarningModal 렌더 실패 대비 폴백
         setTimeout(() => {
             const mounted = document.querySelector('[data-warning-modal-open="true"]');
             if (!mounted) {
@@ -275,9 +151,7 @@ export default function WantedDetail() {
             <PageWrapper>
                 <SidebarMenu />
                 <MainContent>
-                    <Container>
-                        <Card>불러오는 중…</Card>
-                    </Container>
+                    <Container><Card>불러오는 중…</Card></Container>
                 </MainContent>
             </PageWrapper>
         );
@@ -290,23 +164,18 @@ export default function WantedDetail() {
                 <MainContent>
                     <Container>
                         <Card>해당 글을 찾을 수 없습니다.</Card>
-                        <div style={{ marginTop: 12 }}>
-                            <Button onClick={() => navigate('/wanted')}>목록으로</Button>
-                        </div>
+                        <div style={{ marginTop: 12 }}><Button onClick={() => navigate('/wanted')}>목록으로</Button></div>
                     </Container>
                 </MainContent>
             </PageWrapper>
         );
     }
 
-    // ⬇️ 여기서부터는 data가 존재하므로 안전하게 파생값 계산
-    const condition = (data.condition || '').trim(); // '상/중/하'
-    const displayAuthor =
-        data.requesterNickname || data.requesterName || data.author || '익명 사용자';
+    const condition = (data.condition || '').trim();
+    const displayAuthor = data.requesterNickname || data.requesterName || data.author || '익명 사용자';
     const createdAt = data.createdAt ? new Date(data.createdAt) : null;
     const views = typeof data.views !== 'undefined' ? Number(data.views) : null;
 
-    // 🔹 카테고리/학과 표시용 텍스트
     const rawCategory = (data.category || '').trim();
     const displayCategory = data.department
         ? `${(rawCategory.split('>')[0]?.trim() || rawCategory || '전공')} / ${data.department}`
@@ -318,9 +187,7 @@ export default function WantedDetail() {
             <MainContent>
                 <Container>
                     <TopBar>
-                        <BackButton onClick={() => navigate(-1)}>
-                            <FaArrowLeft /> 뒤로가기
-                        </BackButton>
+                        <BackButton onClick={() => navigate(-1)}><FaArrowLeft /> 뒤로가기</BackButton>
                         <Actions>
                             <Button onClick={() => navigate('/wanted')}>목록</Button>
                             {mine && (
@@ -332,16 +199,14 @@ export default function WantedDetail() {
                         </Actions>
                     </TopBar>
 
-                    {/* 헤더 박스 */}
+                    {/* 헤더 */}
                     <HeaderCard>
                         <Title>{data.title}</Title>
-
                         <MetaRow>
                             <Chip><FaUser /> {displayAuthor}</Chip>
                             <ConditionChip $lv={condition}><FaTag /> 상태: {condition || '미지정'}</ConditionChip>
                             <PriceChip><FaTag /> 희망가: {Number(data.price || 0).toLocaleString()}원</PriceChip>
                         </MetaRow>
-
                         <SubMeta>
                             {displayCategory && <span><FaBook /> {displayCategory}</span>}
                             {createdAt && <span><FaClock /> 작성일: {createdAt.toLocaleString('ko-KR')}</span>}
@@ -354,42 +219,26 @@ export default function WantedDetail() {
                         <div>
                             <Card>
                                 <SectionTitle><FaBook /> 요청 내용</SectionTitle>
-                                {data.content
-                                    ? <BodyText>{data.content}</BodyText>
-                                    : <Small>작성된 설명이 없습니다.</Small>}
+                                {data.content ? (
+                                    <BodyText>{data.content}</BodyText>
+                                ) : (
+                                    <Small>작성된 설명이 없습니다.</Small>
+                                )}
                             </Card>
 
-                            {/* ⬇️ 댓글 모듈 추가 */}
+                            {/* 댓글 */}
                             <WantedComments wantedId={id} />
                         </div>
 
                         <Card>
                             <SectionTitle><FaTag /> 요청 요약</SectionTitle>
                             <InfoGrid>
-                                <InfoItem>
-                                    <Label>책 제목</Label>
-                                    <Value>{data.title || '-'}</Value>
-                                </InfoItem>
-                                <InfoItem>
-                                    <Label>저자</Label>
-                                    <Value>{data.author || '-'}</Value>
-                                </InfoItem>
-                                <InfoItem>
-                                    <Label>상태</Label>
-                                    <Value>{condition || '-'}</Value>
-                                </InfoItem>
-                                <InfoItem>
-                                    <Label>희망 가격</Label>
-                                    <Value>{Number(data.price || 0).toLocaleString()}원</Value>
-                                </InfoItem>
-                                <InfoItem>
-                                    <Label>카테고리</Label>
-                                    <Value>{displayCategory || '-'}</Value>
-                                </InfoItem>
-                                <InfoItem>
-                                    <Label>작성자</Label>
-                                    <Value>{displayAuthor}</Value>
-                                </InfoItem>
+                                <InfoItem><Label>책 제목</Label><Value>{data.title || '-'}</Value></InfoItem>
+                                <InfoItem><Label>저자</Label><Value>{data.author || '-'}</Value></InfoItem>
+                                <InfoItem><Label>상태</Label><Value>{condition || '-'}</Value></InfoItem>
+                                <InfoItem><Label>희망 가격</Label><Value>{Number(data.price || 0).toLocaleString()}원</Value></InfoItem>
+                                <InfoItem><Label>카테고리</Label><Value>{displayCategory || '-'}</Value></InfoItem>
+                                <InfoItem><Label>작성자</Label><Value>{displayAuthor}</Value></InfoItem>
                             </InfoGrid>
                         </Card>
                     </Layout>

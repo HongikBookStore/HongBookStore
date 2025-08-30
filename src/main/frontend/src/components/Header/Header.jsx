@@ -651,9 +651,9 @@ const Header = () => {
                       책 거래 게시판
                     </NavLinkItem>
                     <NavLinkItem
-                        to="/my-transactions"
-                        className={location.pathname === '/my-transactions' ? 'active' : ''}
-                        onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}
+                        to="/bookstore"
+                        className={location.pathname === '/bookstore' ? 'active' : ''}
+                        onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}
                     >
                       나의 거래
                     </NavLinkItem>
@@ -740,8 +740,8 @@ const Header = () => {
                         <DropdownItem to="/mypage" onClick={(e) => { e.preventDefault(); safeNavigate('/mypage'); }}>
                           {t('mypage')}
                         </DropdownItem>
-                        <DropdownItem to="/my-transactions" onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
-                          {t('myTransactions')}
+                        <DropdownItem to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
+                          {t('나의 거래')}
                         </DropdownItem>
                         <LogoutButton onClick={handleLogout}>
                           {t('logout')}
@@ -806,8 +806,8 @@ const Header = () => {
                     <MobileNavLink to="/mypage" onClick={(e) => { e.preventDefault(); safeNavigate('/mypage'); }}>
                       {t('mypage')}
                     </MobileNavLink>
-                    <MobileNavLink to="/my-transactions" onClick={(e) => { e.preventDefault(); safeNavigate('/my-transactions'); }}>
-                      {t('myTransactions')}
+                    <MobileNavLink to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
+                      {t('bookstore')}
                     </MobileNavLink>
                     <MobileNavLink as="button" onClick={handleLogout}>
                       {t('logout')}

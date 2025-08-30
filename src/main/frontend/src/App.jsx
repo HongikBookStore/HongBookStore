@@ -14,7 +14,6 @@ import Wanted from './pages/Wanted/Wanted.jsx';
 import WantedWrite from './pages/WantedWrite/WantedWrite.jsx';
 import WantedDetail from './pages/WantedDetail/WantedDetail.jsx';
 import MyBookstore from './pages/MyBookstore/MyBookstore.jsx';
-import MyTransactions from './pages/MyTransactions/MyTransactions.jsx';
 import PostWrite from './pages/PostWrite/PostWrite.jsx';
 import PostDetail from './pages/PostDetail/PostDetail';
 import ChatList from './pages/Chat/ChatList.jsx';
@@ -127,12 +126,6 @@ function App() {
                                 <>
                                     <Header />
                                     <MyBookstore />
-                                </>
-                            } />
-                            <Route path="/my-transactions" element={
-                                <>
-                                    <Header />
-                                    <MyTransactions />
                                 </>
                             } />
                             <Route path="/bookstore/add" element={

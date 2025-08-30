@@ -1,7 +1,9 @@
+// src/pages/Wanted/WantedWrite.jsx
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaBook, FaGraduationCap, FaTag, FaMoneyBillWave, FaSave, FaArrowLeft, FaSearch } from 'react-icons/fa';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { FaBook, FaArrowLeft, FaSearch } from 'react-icons/fa';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
@@ -54,6 +56,42 @@ async function ensureUserId() {
   return null;
 }
 
+// 인증 헤더
+const getAuthHeader = () => {
+  const token = localStorage.getItem('accessToken');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// 공백 구분된 ISBN에서 우선순위 선택
+const pickIsbn = (raw) => {
+  const tokens = String(raw || '')
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => t.replace(/[^\dXx]/g, ''));
+  const isbn13 = tokens.find((t) => /^\d{13}$/.test(t));
+  const isbn10 = tokens.find((t) => /^\d{9}[\dXx]$/.test(t));
+  return isbn13 || isbn10 || tokens[0] || '';
+};
+
+// 카카오/알라딘 등 포맷을 표준 구조로
+const toBookArray = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data.documents)) return data.documents;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.results)) return data.results;
+  if (Array.isArray(data)) return data;
+  return [];
+};
+const normalizeBook = (doc) => ({
+  title: doc?.title ?? '',
+  author: Array.isArray(doc?.authors) ? doc.authors.filter(Boolean).join(', ') : (doc?.author ?? ''),
+  publisher: doc?.publisher ?? '',
+  isbn: pickIsbn(doc?.isbn),
+  thumbnail: doc?.thumbnail ?? '',
+});
+
+/* -------------------- styled -------------------- */
 const WriteContainer = styled.div`
   max-width: 1600px;
   width: 100vw;
@@ -70,393 +108,91 @@ const WriteContainer = styled.div`
     padding-top: 12px;
   }
 `;
-
 const WriteHeader = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 30px;
+  display: flex; align-items: center; gap: 15px; margin-bottom: 30px;
 `;
-
 const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 15px;
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9rem;
+  display: flex; align-items: center; gap: 8px; padding: 10px 15px;
+  background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9rem;
   transition: background 0.3s;
-
-  &:hover {
-    background: #5a6268;
-  }
+  &:hover { background: #5a6268; }
 `;
-
-const WriteTitle = styled.h1`
-  font-size: 2rem;
-  color: #333;
-`;
-
+const WriteTitle = styled.h1` font-size: 2rem; color: #333; `;
 const WriteForm = styled.form`
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 30px;
-  width: 100%;
-  box-sizing: border-box;
-  @media (max-width: 600px) {
-    padding: 10px;
-  }
+  background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 30px; width: 100%; box-sizing: border-box;
+  @media (max-width: 600px){ padding: 10px; }
 `;
-
-const FormSection = styled.div`
-  margin-bottom: 25px;
-`;
-
+const FormSection = styled.div` margin-bottom: 25px; `;
 const SectionTitle = styled.h3`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.2rem;
-  color: #333;
-  margin-bottom: 15px;
+  display: flex; align-items: center; gap: 8px; font-size: 1.2rem; color: #333; margin-bottom: 15px;
 `;
-
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-`;
-
-const Label = styled.label`
-  display: block;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 8px;
-`;
-
-const Required = styled.span`
-  color: #dc3545;
-  margin-left: 5px;
-`;
-
+const FormGroup = styled.div` margin-bottom: 20px; `;
+const Label = styled.label` display: block; font-weight: 600; color: #555; margin-bottom: 8px; `;
+const Required = styled.span` color: #dc3545; margin-left: 5px; `;
 const Input = styled.input`
-  width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  outline: none;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
-
-  &:focus {
-    border-color: #007bff;
-  }
+  width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; outline: none; transition: border-color 0.3s; box-sizing: border-box;
+  &:focus { border-color: #007bff; }
 `;
-
 const Select = styled.select`
-  width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  outline: none;
-  background: white;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
-
-  &:focus {
-    border-color: #007bff;
-  }
+  width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; outline: none; background: white; transition: border-color 0.3s; box-sizing: border-box;
+  &:focus { border-color: #007bff; }
 `;
-
 const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 150px;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  outline: none;
-  resize: vertical;
-  font-family: inherit;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
-
-  &:focus {
-    border-color: #007bff;
-  }
+  width: 100%; min-height: 150px; padding: 12px 15px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; outline: none; resize: vertical; font-family: inherit; transition: border-color 0.3s; box-sizing: border-box;
+  &:focus { border-color: #007bff; }
 `;
-
-const TagSection = styled.div`
-  margin-bottom: 20px;
-`;
-
-const TagInput = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-`;
-
-const TagInputField = styled.input`
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 0.9rem;
-`;
-
-const AddTagButton = styled.button`
-  padding: 8px 15px;
-  background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.3s;
-
-  &:hover {
-    background: #218838;
-  }
-`;
-
-const TagsList = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`;
-
-const TagItem = styled.span`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: #e9ecef;
-  color: #495057;
-  border-radius: 15px;
-  font-size: 0.9rem;
-`;
-
-const RemoveTagButton = styled.button`
-  background: none;
-  border: none;
-  color: #dc3545;
-  cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0;
-  margin-left: 5px;
-
-  &:hover {
-    color: #c82333;
-  }
-`;
-
-const PriceRangeSection = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
-`;
-
+const ErrorMessage = styled.div` color: #dc3545; font-size: 0.9rem; margin-top: 5px; `;
 const CancelButton = styled.button`
-  padding: 12px 24px;
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s;
-
-  &:hover {
-    background: #5a6268;
-  }
+  padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;
+  transition: background 0.3s; &:hover { background: #5a6268; }
 `;
-
 const SubmitButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
+  display: flex; align-items: center; gap: 8px; padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;
   transition: background 0.3s;
-
-  &:hover {
-    background: #0056b3;
-  }
-
-  &:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
+  &:hover { background: #0056b3; }
+  &:disabled { background: #ccc; cursor: not-allowed; }
 `;
-
-const ErrorMessage = styled.div`
-  color: #dc3545;
-  font-size: 0.9rem;
-  margin-top: 5px;
-`;
-
-const InputTypeSelector = styled.div`
-  margin-bottom: 1rem;
-`;
-
-const InputTypeButtons = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-`;
-
-/* !! 중요: JSX에서 $active로 쓰고 있으니 styled에서도 $active로 읽어야 함 */
+const InputTypeSelector = styled.div` margin-bottom: 1rem; `;
+const InputTypeButtons = styled.div` display: flex; gap: 1rem; margin-bottom: 1rem; `;
 const InputTypeButton = styled.button`
   padding: 0.75rem 1.5rem;
   border: 2px solid ${props => props.$active ? '#007bff' : '#ddd'};
   background: ${props => props.$active ? '#007bff' : 'white'};
   color: ${props => props.$active ? 'white' : '#333'};
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.2s;
-
-  &:hover {
-    border-color: #007bff;
-    background: ${props => props.$active ? '#0056b3' : '#f8f9ff'};
-  }
+  border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.2s;
+  &:hover { border-color: #007bff; background: ${props => props.$active ? '#0056b3' : '#f8f9ff'}; }
 `;
 
+/* --- 검색 모달 스타일 --- */
 const BookSearchModal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
 `;
-
 const BookSearchContent = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
+  background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 640px; max-height: 80vh; overflow-y: auto;
 `;
-
 const SearchInput = styled.input`
-  width: 100%;
-  padding: 1rem;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  margin-bottom: 1rem;
-
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-  }
+  width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 0.75rem;
+  &:focus{ outline: none; border-color: #007bff; }
 `;
-
-const BookList = styled.div`
-  max-height: 400px;
-  overflow-y: auto;
-`;
-
+const BookList = styled.div` max-height: 420px; overflow-y: auto; `;
 const BookItem = styled.div`
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    border-color: #007bff;
-    background: #f8f9ff;
-  }
-
-  &.selected {
-    border-color: #007bff;
-    background: #e3f2fd;
-  }
+  display:flex; gap:12px; align-items:flex-start;
+  padding: 0.9rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 0.5rem; cursor: pointer; transition: all .2s;
+  &:hover { border-color: #007bff; background: #f8f9ff; }
 `;
-
-const BookTitle = styled.div`
-  font-weight: 600;
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
-`;
-
-const BookInfo = styled.div`
-  color: #666;
-  font-size: 0.9rem;
-`;
-
-const ModalButtons = styled.div`
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1rem;
-`;
-
+const BookTitle = styled.div` font-weight: 700; font-size: 1.05rem; margin-bottom: 0.15rem; `;
+const BookInfo = styled.div` color: #666; font-size: 0.9rem; `;
+const ModalButtons = styled.div` display:flex; gap: 0.5rem; justify-content:flex-end; margin-top: 1rem; `;
 const ModalButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &.primary {
-    background: #007bff;
-    color: white;
-
-    &:hover {
-      background: #0056b3;
-    }
-  }
-
-  &.secondary {
-    background: #6c757d;
-    color: white;
-
-    &:hover {
-      background: #5a6268;
-    }
-  }
+  padding: 0.6rem 1rem; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;
+  &.secondary { background:#6c757d; color:#fff; } &.secondary:hover{ background:#5a6268; }
 `;
-
 const SelectedBookDisplay = styled.div`
-  padding: 1rem;
-  background: #f8f9fa;
-  border: 2px solid #007bff;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  padding: 1rem; background: #f8f9fa; border: 2px solid #007bff; border-radius: 8px; margin-bottom: 1rem;
 `;
 
+/* -------------------- 카테고리 -------------------- */
 const CATEGORIES = {
   '전공': {
     '경영대학': ['경영학부'],
@@ -482,82 +218,106 @@ const CATEGORIES = {
   }
 };
 
-const WantedWrite = () => {
+export default function WantedWrite() {
   const [formData, setFormData] = useState({
     title: '',
-    isbn: '',
+    isbn: '',            // 검색으로 채움(현재 API 전송 X)
     author: '',
     condition: '',
     price: '',
     mainCategory: '',
     subCategory: '',
     detailCategory: '',
+    content: '',         // ✅ 본문
   });
   const [errors, setErrors] = useState({});
-  const [inputType, setInputType] = useState('title'); // 'title' or 'isbn'
+  const [inputType, setInputType] = useState('title'); // 'title' | 'search'
   const [showBookSearch, setShowBookSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedBook, setSelectedBook] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [submitting, setSubmitting] = useState(false); // 제출 상태 추가
+  const [submitting, setSubmitting] = useState(false);
 
   const navigate = useNavigate();
-  const location = useLocation();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
   const { id } = useParams();
   const isEdit = Boolean(id);
 
   useEffect(() => {
     startWriting('wanted');
-    return () => {
-      stopWriting();
-    };
+    return () => { stopWriting(); };
   }, [startWriting, stopWriting]);
 
   useEffect(() => {
-    const hasChanges = Object.values(formData).some(value =>
-        value && value.toString().trim() !== ''
-    );
+    const hasChanges = Object.values(formData).some(v => v && v.toString().trim() !== '');
     setHasUnsavedChanges(hasChanges);
     setUnsavedChanges(hasChanges);
   }, [formData, setUnsavedChanges]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
+    const beforeUnload = (e) => { if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; } };
+    const onPop = () => {
       if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    const handlePopState = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
         setPendingNavigation('/wanted');
         setShowWarningModal(true);
         window.history.pushState(null, '', window.location.pathname);
       }
     };
-
-    const handleSaveDraftEvent = async () => {
-      // 임시저장 기능 없음
-      console.log('구해요 글은 임시저장 기능이 없습니다.');
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-    window.addEventListener('saveDraft', handleSaveDraftEvent);
+    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('popstate', onPop);
     window.history.pushState(null, '', window.location.pathname);
-
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('saveDraft', handleSaveDraftEvent);
+      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('popstate', onPop);
     };
   }, [hasUnsavedChanges]);
+
+  // 수정 모드: 기존 데이터 가져오기(필요 시)
+  useEffect(() => {
+    if (!isEdit) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/wanted/${id}`);
+        if (!res.ok) throw new Error('상세 불러오기 실패');
+        const ct = res.headers.get('content-type') || '';
+        const json = ct.includes('application/json') ? await res.json() : null;
+        const detail = json?.data || json || {};
+
+        // 카테고리 역매핑
+        let mainCategory = detail.category || '';
+        if (!mainCategory) mainCategory = detail.department ? '전공' : '교양';
+        let subCategory = '';
+        let detailCategory = '';
+        if (mainCategory === '전공' && detail.department) {
+          for (const [sub, list] of Object.entries(CATEGORIES['전공'])) {
+            if (list.includes(detail.department)) { subCategory = sub; detailCategory = detail.department; break; }
+          }
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          title: detail.title || '',
+          isbn: detail.isbn || '',
+          author: detail.author || '',
+          condition: detail.condition || '',
+          price: detail.price != null ? String(detail.price) : '',
+          mainCategory,
+          subCategory,
+          detailCategory,
+          content: detail.content || '',
+        }));
+
+        // 수정 진입 시 입력 방식은 수동으로(선택 사항)
+        setInputType('title');
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [isEdit, id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -569,34 +329,66 @@ const WantedWrite = () => {
     const mainCategory = e.target.value;
     const firstSub = mainCategory ? Object.keys(CATEGORIES[mainCategory])[0] : '';
     const firstDetail = mainCategory && firstSub ? CATEGORIES[mainCategory][firstSub][0] : '';
-    setFormData(prev => ({
-      ...prev,
-      mainCategory,
-      subCategory: firstSub || '',
-      detailCategory: firstDetail || ''
-    }));
+    setFormData(prev => ({ ...prev, mainCategory, subCategory: firstSub || '', detailCategory: firstDetail || '' }));
   };
   const handleSubChange = (e) => {
     const subCategory = e.target.value;
     const firstDetail = formData.mainCategory && subCategory ? CATEGORIES[formData.mainCategory][subCategory][0] : '';
+    setFormData(prev => ({ ...prev, subCategory, detailCategory: firstDetail || '' }));
+  };
+  const handleDetailChange = (e) => { setFormData(prev => ({ ...prev, detailCategory: e.target.value })); };
+
+  /* ---------- 책 검색 로직 (이식) ---------- */
+  const openSearch = () => setShowBookSearch(true);
+  const closeSearch = () => { setShowBookSearch(false); setSearchQuery(''); setSearchResults([]); setSearchLoading(false); };
+
+  const handleBookSearch = async () => {
+    if (!searchQuery.trim()) { alert('검색어를 입력해줘! 🔍'); return; }
+    setSearchLoading(true);
+    try {
+      const res = await axios.get('/api/search/books', {
+        params: { query: searchQuery.trim() },
+        headers: getAuthHeader()
+      });
+      const results = toBookArray(res?.data).map(normalizeBook);
+      setSearchResults(results);
+      if (results.length === 0) alert('검색 결과가 없어! 다른 키워드로 시도해봐 📚');
+    } catch (err) {
+      console.error('책 검색 실패:', err);
+      alert('책 검색 중 오류가 발생했어! 다시 시도해줘 😅');
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleBookSelect = (book) => {
     setFormData(prev => ({
       ...prev,
-      subCategory,
-      detailCategory: firstDetail || ''
+      title: book.title || '',
+      isbn: book.isbn || '',
+      author: book.author || '',
     }));
-  };
-  const handleDetailChange = (e) => {
-    setFormData(prev => ({ ...prev, detailCategory: e.target.value }));
+    closeSearch();
   };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = '제목을 입력해주세요';
-    if (!formData.author.trim()) newErrors.author = '저자를 입력해주세요';
+
+    if (inputType === 'search') {
+      if (!formData.title.trim()) newErrors.title = '책을 검색해서 선택해줘! 📚';
+      if (!formData.author.trim()) newErrors.author = '저자 정보가 필요해! 📘';
+      // isbn은 현재 서버 전송은 안 하지만, 있으면 좋음
+    } else {
+      if (!formData.title.trim()) newErrors.title = '제목을 입력해주세요';
+      if (!formData.author.trim()) newErrors.author = '저자를 입력해주세요';
+    }
+
     if (!formData.condition) newErrors.condition = '상태를 선택해주세요';
     const priceNum = Number(formData.price);
     if (!priceNum || priceNum <= 0) newErrors.price = '희망 가격을 입력해주세요';
     if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = '카테고리를 선택해주세요';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -608,10 +400,7 @@ const WantedWrite = () => {
 
     const token = localStorage.getItem('accessToken');
     const userId = await ensureUserId(); // ✅ userId 보장
-    if (!userId) {
-      alert('로그인이 필요합니다. (userId가 없습니다)');
-      return;
-    }
+    if (!userId) { alert('로그인이 필요합니다. (userId가 없습니다)'); return; }
 
     // ✅ 백엔드 규격에 맞게 전송
     const topCategory = formData.mainCategory || '교양';
@@ -626,9 +415,10 @@ const WantedWrite = () => {
       condition: formData.condition,
       price: Number(formData.price),
       category: topCategory,
-      content: '' // 설명 칸 없으므로 공란
+      content: formData.content?.trim() || ''
+      // ⚠️ 서버 준비되면 다음 줄의 주석 해제(현재는 보내지 않음)
+      // ,isbn: formData.isbn?.trim() || ''
     };
-    // 전공일 때만 department 필드 포함
     const payload = (topCategory === '전공' && dept)
         ? { ...basePayload, department: dept }
         : basePayload;
@@ -642,7 +432,7 @@ const WantedWrite = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': String(userId),            // ✅ 필수 헤더
+          'X-User-Id': String(userId),
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify(payload)
@@ -653,12 +443,8 @@ const WantedWrite = () => {
         throw new Error(`요청 실패 (${res.status}) ${txt}`);
       }
 
-      // 생성(201)은 body가 있을 수 있고, 수정(204)은 body 없음
-      if (!isEdit) {
-        await res.json().catch(() => ({}));
-      }
+      if (!isEdit) { await res.json().catch(() => ({})); }
 
-      // 성공 처리
       stopWriting();
       setUnsavedChanges(false);
       setHasUnsavedChanges(false);
@@ -680,7 +466,6 @@ const WantedWrite = () => {
       navigate(path);
     }
   };
-
   const handleConfirmExit = () => {
     setShowWarningModal(false);
     if (pendingNavigation) {
@@ -690,83 +475,21 @@ const WantedWrite = () => {
       navigate('/wanted');
     }
   };
-
-  const handleCancelExit = () => {
-    setShowWarningModal(false);
-    setPendingNavigation(null);
-  };
-
-  const handleCancel = () => {
-    safeNavigate('/wanted');
-  };
-
-  // 책 검색 (모의)
-  const handleBookSearch = async () => {
-    if (!searchQuery.trim()) return;
-    const mockResults = [
-      {
-        isbn: '9788966262472',
-        title: '자바의 정석',
-        author: '남궁성',
-        publisher: '도우출판',
-        publishedDate: '2016-01-15'
-      },
-      {
-        isbn: '9788994492032',
-        title: '자바의 정석 (기초편)',
-        author: '남궁성',
-        publisher: '도우출판',
-        publishedDate: '2015-03-20'
-      },
-      {
-        isbn: '9788966262489',
-        title: '자바의 정석 (고급편)',
-        author: '남궁성',
-        publisher: '도우출판',
-        publishedDate: '2016-02-10'
-      }
-    ].filter(book =>
-        book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        book.isbn.includes(searchQuery)
-    );
-    setSearchResults(mockResults);
-  };
-
-  const handleBookSelect = (book) => {
-    setSelectedBook(book);
-    setFormData(prev => ({
-      ...prev,
-      title: book.title,
-      isbn: book.isbn,
-      author: book.author
-    }));
-  };
-
-  const handleCloseBookSearch = () => {
-    setShowBookSearch(false);
-    setSearchQuery('');
-    setSearchResults([]);
-  };
-
-  const handleOpenBookSearch = () => {
-    setShowBookSearch(true);
-  };
+  const handleCancelExit = () => { setShowWarningModal(false); setPendingNavigation(null); };
+  const handleCancel = () => { safeNavigate('/wanted'); };
 
   return (
       <>
         <div className="header-spacer" />
         <WriteContainer>
           <WriteHeader>
-            <BackButton onClick={handleCancel}>
-              <FaArrowLeft /> 뒤로가기
-            </BackButton>
+            <BackButton onClick={handleCancel}><FaArrowLeft /> 뒤로가기</BackButton>
             <WriteTitle>구해요 글 작성</WriteTitle>
           </WriteHeader>
+
           <WriteForm onSubmit={handleSubmit}>
             <FormSection>
-              <SectionTitle>
-                <FaBook /> 기본 정보
-              </SectionTitle>
+              <SectionTitle><FaBook /> 기본 정보</SectionTitle>
 
               <InputTypeSelector>
                 <Label>입력 방식 선택 <Required>*</Required></Label>
@@ -776,90 +499,97 @@ const WantedWrite = () => {
                       $active={inputType === 'title'}
                       onClick={() => setInputType('title')}
                   >
-                    책 제목으로 입력
+                    직접 입력(제목/저자)
                   </InputTypeButton>
                   <InputTypeButton
                       type="button"
-                      $active={inputType === 'isbn'}
-                      onClick={() => setInputType('isbn')}
+                      $active={inputType === 'search'}
+                      onClick={() => setInputType('search')}
                   >
-                    ISBN으로 검색
+                    ISBN/제목으로 검색
                   </InputTypeButton>
                 </InputTypeButtons>
               </InputTypeSelector>
 
               {inputType === 'title' ? (
-                  <FormGroup>
-                    <Label>제목 <Required>*</Required></Label>
-                    <Input
-                        type="text"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleInputChange}
-                        placeholder="원하는 책의 제목을 입력해주세요"
-                    />
-                    {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-                  </FormGroup>
+                  <>
+                    <FormGroup>
+                      <Label>제목 <Required>*</Required></Label>
+                      <Input
+                          type="text"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          placeholder="원하는 책의 제목을 입력해주세요"
+                      />
+                      {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label>저자 <Required>*</Required></Label>
+                      <Input
+                          type="text"
+                          name="author"
+                          value={formData.author}
+                          onChange={handleInputChange}
+                          placeholder="저자를 입력해주세요"
+                      />
+                      {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
+                    </FormGroup>
+                  </>
               ) : (
-                  <FormGroup>
-                    <Label>ISBN 검색 <Required>*</Required></Label>
-                    {selectedBook ? (
+                  <>
+                    <FormGroup>
+                      <Label>책 검색 <Required>*</Required></Label>
+                      <button
+                          type="button"
+                          onClick={openSearch}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            background: '#007bff',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                      >
+                        <FaSearch /> 책 검색하기
+                      </button>
+                    </FormGroup>
+
+                    {formData.title && (
                         <SelectedBookDisplay>
-                          <BookTitle>{selectedBook.title}</BookTitle>
+                          <BookTitle>{formData.title}</BookTitle>
                           <BookInfo>
-                            저자: {selectedBook.author} | 출판사: {selectedBook.publisher} | ISBN: {selectedBook.isbn}
+                            저자: {formData.author || '-'} {formData.isbn ? `| ISBN: ${formData.isbn}` : ''}
                           </BookInfo>
                           <button
                               type="button"
-                              onClick={() => setSelectedBook(null)}
+                              onClick={() => { setFormData(prev => ({ ...prev, title: '', author: '', isbn: '' })); }}
                               style={{
                                 marginTop: '0.5rem',
-                                padding: '0.25rem 0.5rem',
+                                padding: '0.35rem 0.7rem',
                                 background: '#dc3545',
-                                color: 'white',
+                                color: '#fff',
                                 border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '0.8rem',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
                                 cursor: 'pointer'
                               }}
                           >
                             다시 선택
                           </button>
                         </SelectedBookDisplay>
-                    ) : (
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <Input
-                              type="text"
-                              placeholder="ISBN 또는 책 제목으로 검색"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              style={{ flex: 1 }}
-                          />
-                          <button
-                              type="button"
-                              onClick={handleOpenBookSearch}
-                              style={{
-                                padding: '0.75rem 1rem',
-                                background: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer'
-                              }}
-                          >
-                            <FaSearch />
-                          </button>
-                        </div>
                     )}
+
                     {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
-                  </FormGroup>
+                    {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
+                  </>
               )}
 
-              <FormGroup>
-                <Label>저자 <Required>*</Required></Label>
-                <Input type="text" name="author" value={formData.author} onChange={handleInputChange} placeholder="저자를 입력해주세요" />
-                {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
-              </FormGroup>
               <FormGroup>
                 <Label>상태 <Required>*</Required></Label>
                 <Select name="condition" value={formData.condition} onChange={handleInputChange}>
@@ -870,11 +600,20 @@ const WantedWrite = () => {
                 </Select>
                 {errors.condition && <ErrorMessage>{errors.condition}</ErrorMessage>}
               </FormGroup>
+
               <FormGroup>
                 <Label>희망 가격 <Required>*</Required></Label>
-                <Input type="number" name="price" value={formData.price} onChange={handleInputChange} placeholder="희망 가격을 입력해주세요" min="0" />
+                <Input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    placeholder="희망 가격을 입력해주세요"
+                    min="0"
+                />
                 {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
               </FormGroup>
+
               <FormGroup>
                 <Label>카테고리 <Required>*</Required></Label>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -903,10 +642,24 @@ const WantedWrite = () => {
                 </div>
                 {errors.category && <ErrorMessage>{errors.category}</ErrorMessage>}
               </FormGroup>
+
+              {/* ✅ 요청 내용 */}
+              <FormGroup>
+                <Label>요청 내용</Label>
+                <TextArea
+                    name="content"
+                    value={formData.content}
+                    onChange={handleInputChange}
+                    placeholder={`예) 교양 수업 과제로 급하게 필요합니다.\n가능하면 밑줄/필기 적은 책이면 좋겠어요.`}
+                />
+              </FormGroup>
             </FormSection>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
               <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
-              <SubmitButton type="submit" disabled={submitting}>{isEdit ? (submitting ? '수정 중...' : '수정') : (submitting ? '등록 중...' : '등록')}</SubmitButton>
+              <SubmitButton type="submit" disabled={submitting}>
+                {isEdit ? (submitting ? '수정 중...' : '수정') : (submitting ? '등록 중...' : '등록')}
+              </SubmitButton>
             </div>
           </WriteForm>
         </WriteContainer>
@@ -915,65 +668,55 @@ const WantedWrite = () => {
         {showBookSearch && (
             <BookSearchModal>
               <BookSearchContent>
-                <h3>책 검색</h3>
+                <h3>📚 책 검색</h3>
                 <SearchInput
                     type="text"
                     placeholder="ISBN 또는 책 제목으로 검색하세요"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleBookSearch()}
+                    onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
                 />
                 <button
                     onClick={handleBookSearch}
+                    disabled={searchLoading}
                     style={{
-                      padding: '0.5rem 1rem',
+                      padding: '0.6rem 1rem',
                       background: '#007bff',
-                      color: 'white',
+                      color: '#fff',
                       border: 'none',
-                      borderRadius: '4px',
+                      borderRadius: '8px',
                       cursor: 'pointer',
-                      marginBottom: '1rem'
+                      marginBottom: '0.8rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}
                 >
-                  검색
+                  <FaSearch /> {searchLoading ? '검색 중...' : '검색'}
                 </button>
 
-                {searchResults.length > 0 && (
-                    <BookList>
-                      {searchResults.map((book, index) => (
-                          <BookItem
-                              key={index}
-                              onClick={() => handleBookSelect(book)}
-                              className={selectedBook?.isbn === book.isbn ? 'selected' : ''}
-                          >
-                            <BookTitle>{book.title}</BookTitle>
-                            <BookInfo>
-                              저자: {book.author} | 출판사: {book.publisher} | ISBN: {book.isbn}
-                            </BookInfo>
-                          </BookItem>
-                      ))}
-                    </BookList>
-                )}
+                <BookList>
+                  {(Array.isArray(searchResults) ? searchResults : []).map((book, idx) => (
+                      <BookItem key={idx} onClick={() => handleBookSelect(book)}>
+                        {book.thumbnail && (
+                            <img
+                                src={book.thumbnail}
+                                alt={book.title}
+                                style={{ width: 48, height: 70, objectFit: 'cover', borderRadius: 4 }}
+                            />
+                        )}
+                        <div>
+                          <BookTitle>{book.title}</BookTitle>
+                          <BookInfo>저자: {book.author || '정보 없음'} | 출판사: {book.publisher || '정보 없음'}</BookInfo>
+                          {book.isbn && <BookInfo>ISBN: {book.isbn}</BookInfo>}
+                        </div>
+                      </BookItem>
+                  ))}
+                </BookList>
 
                 <ModalButtons>
-                  <ModalButton
-                      type="button"
-                      className="secondary"
-                      onClick={handleCloseBookSearch}
-                  >
-                    취소
-                  </ModalButton>
-                  <ModalButton
-                      type="button"
-                      className="primary"
-                      onClick={() => {
-                        if (selectedBook) {
-                          handleCloseBookSearch();
-                        }
-                      }}
-                      disabled={!selectedBook}
-                  >
-                    선택 완료
+                  <ModalButton type="button" className="secondary" onClick={closeSearch}>
+                    닫기
                   </ModalButton>
                 </ModalButtons>
               </BookSearchContent>
@@ -991,6 +734,4 @@ const WantedWrite = () => {
         />
       </>
   );
-};
-
-export default WantedWrite;
+}
