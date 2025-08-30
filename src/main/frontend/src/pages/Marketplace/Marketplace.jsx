@@ -245,7 +245,7 @@ const PriceInput = styled.input`
   border-radius: 0.75rem;
   font-size: 0.95rem;
   text-align: right;
-  -moz-appearance: textfield; /* Firefox */
+  -moz-appearance: textfield;
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -314,7 +314,7 @@ const BookGrid = styled.div`
   gap: 2rem;
   width: 100%;
   animation: ${fadeIn} 0.6s ease-out 0.4s backwards;
-  
+
   @media (max-width: 900px) {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1.5rem;
@@ -570,7 +570,7 @@ const LoadingGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
   width: 100%;
-  
+
   @media (max-width: 900px) {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1.5rem;
@@ -597,20 +597,20 @@ const NoResultsMessage = styled.div`
   border-radius: var(--radius-lg);
   border: 2px dashed var(--border);
   margin: 2rem 0;
-  
+
   .icon {
     font-size: 3rem;
     margin-bottom: 1rem;
     color: var(--text-light);
   }
-  
+
   .title {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--text);
   }
-  
+
   .description {
     color: var(--text-light);
     line-height: 1.6;
@@ -660,13 +660,30 @@ const PopularSectionTitle = styled.h2`
   margin: 0;
 `;
 
-// 할인율에 따른 책 상태 반환 함수
-// 현재는 할인율을 기준으로 책 상태를 자동 판단:
-// - 할인율 20% 이하: 상 (좋은 상태)
-// - 할인율 21-40%: 중 (보통 상태)  
-// - 할인율 41% 이상: 하 (낮은 상태)
-// 
-// TODO: 실제 구현 시에는 사용자가 직접 책 상태를 평가할 수 있도록 별도의 상태 입력 필드를 제공
+// ✅ 상태 딱지
+const StatusBadge = styled.div`
+  position: absolute;
+  right: 1rem;
+  top: 3.5rem;        /* 하트 버튼(40px) 아래로 살짝 내려 배치 */
+  z-index: 1;
+  pointer-events: none;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  ${({ $variant }) => $variant === 'reserved' ? `
+    background: #ffe066;
+    color: #614b00;
+    border: 1px solid #ffd43b;
+  ` : `
+    background: #bbf7d0;
+    color: #166534;
+    border: 1px solid #86efac;
+  `}
+`;
+
+// 할인율에 따른 책 상태 반환 (UI용 예시)
 const getBookCondition = (discountRate) => {
   if (discountRate <= 20) return { text: '상', color: '#28a745', bgColor: '#d4edda' };
   if (discountRate <= 40) return { text: '중', color: '#ffc107', bgColor: '#fff3cd' };
@@ -772,7 +789,7 @@ const PopularBooksGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
   margin-bottom: 3rem;
-  
+
   @media (max-width: 900px) {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1.5rem;
@@ -802,12 +819,12 @@ const SearchResultsTitle = styled.h3`
   font-weight: 700;
   color: var(--text);
   margin: 0;
-  
+
   .search-term {
     color: var(--primary);
     font-weight: 800;
   }
-  
+
   .result-count {
     color: var(--text-light);
     font-weight: 400;
@@ -828,49 +845,58 @@ const BackButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  
+
   &:hover {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
     transform: translateY(-1px);
   }
-  
+
   .icon {
     font-size: 1.1rem;
   }
 `;
 
-// 인증 토큰을 가져오는 헬퍼 함수
+// 인증 토큰 헬퍼
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
-// 이미지 로딩 실패 시 안정적으로 대체 컨텐츠를 보여주기 위한 별도 컴포넌트
+// 이미지 Fallback
 const BookImageWithFallback = ({ src, alt }) => {
   const [hasError, setHasError] = useState(false);
-
-  // 부모 컴포넌트에서 src prop이 변경될 때마다 에러 상태를 초기화
-  useEffect(() => {
-    if (src) {
-      setHasError(false);
-    }
-  }, [src]);
-
-  const handleError = () => {
-    setHasError(true);
-  };
-
+  useEffect(() => { if (src) setHasError(false); }, [src]);
   return (
-    <BookImage className="book-image">
-      {src && !hasError ? (
-        <img src={src} alt={alt} onError={handleError} />
-      ) : (
-        <div style={{ color: 'white', textAlign: 'center' }}>📚<br/>이미지 없음</div>
-      )}
-    </BookImage>
+      <BookImage className="book-image">
+        {src && !hasError ? (
+            <img src={src} alt={alt} onError={() => setHasError(true)} />
+        ) : (
+            <div style={{ color: 'white', textAlign: 'center' }}>📚<br/>이미지 없음</div>
+        )}
+      </BookImage>
   );
+};
+
+/* ✅ 여러 API 케이스를 흡수하는 상태 정규화 */
+const normalizePostStatus = (post) => {
+  const raw =
+      (post.status ??
+          post.tradeStatus ??
+          post.saleStatus ??
+          post.postStatus ??
+          post.state ??
+          '').toString().toLowerCase();
+
+  // boolean/flag 우선 반영
+  if (post.isCompleted === true) return 'sold_out';
+  if (post.isReserved === true) return 'reserved';
+
+  if (!raw) return null;
+  if (['sold_out','soldout','completed','complete','done','ended','closed','sold-out'].includes(raw)) return 'sold_out';
+  if (['reserved','reservation','booked','holding','hold','on_hold'].includes(raw)) return 'reserved';
+  return null;
 };
 
 const Marketplace = () => {
@@ -878,15 +904,15 @@ const Marketplace = () => {
   const navigate = useNavigate();
 
   // API 데이터 상태
-  const [posts, setPosts] = useState([]); // API로부터 받아온 게시글 목록
-  const [page, setPage] = useState(0); // 현재 페이지 번호 (무한 스크롤용)
-  const [hasMore, setHasMore] = useState(true); // 더 불러올 데이터가 있는지 여부
-  const [isLoading, setIsLoading] = useState(true); // 데이터 로딩 상태
-  const [likedPostIds, setLikedPostIds] = useState(new Set()); // 찜한 게시글 ID Set
-  const [error, setError] = useState(''); // 에러 상태
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [likedPostIds, setLikedPostIds] = useState(new Set());
+  const [error, setError] = useState('');
 
-  // 검색어 입력 상태 분리
-  const [searchQuery, setSearchQuery] = useState(''); // 사용자가 입력하는 검색어 (UI 표시용)
+  // 검색어 입력 상태
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 검색 및 필터 상태
   const [searchParams, setSearchParams] = useState({
@@ -897,19 +923,13 @@ const Marketplace = () => {
     sort: 'createdAt,desc',
   });
 
-  // '적용하기'를 누르기 전 임시 필터 값
-  const [tempFilters, setTempFilters] = useState({
-    minPrice: '',
-    maxPrice: '',
-  });
-  
-  const [filterOpen, setFilterOpen] = useState(false); // 필터 팝오버 표시 여부
+  // 임시 필터
+  const [tempFilters, setTempFilters] = useState({ minPrice: '', maxPrice: '' });
+  const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef();
-  const observerRef = useRef(); // Intersection Observer를 위한 ref
+  const observerRef = useRef();
 
-  // 내가 찜한 글 목록을 불러와서 Set에 저장하는 함수
   const fetchMyLikes = useCallback(async () => {
-    // 로그인 상태가 아니면 실행하지 않음
     if (!localStorage.getItem('accessToken')) return;
     try {
       const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
@@ -920,12 +940,9 @@ const Marketplace = () => {
     }
   }, []);
 
-  // API 호출 로직
   const fetchPosts = useCallback(async (params, pageToFetch = 0) => {
     setIsLoading(true);
-     if (pageToFetch === 0) { // 새 검색일 경우 에러 상태 초기화
-      setError('');
-    }
+    if (pageToFetch === 0) setError('');
     try {
       const activeParams = {
         page: pageToFetch,
@@ -937,16 +954,14 @@ const Marketplace = () => {
       if (params.minPrice) activeParams.minPrice = params.minPrice;
       if (params.maxPrice) activeParams.maxPrice = params.maxPrice;
 
-      const response = await axios.get('/api/posts', { 
+      const response = await axios.get('/api/posts', {
         params: activeParams,
         timeout: 10000
       });
 
-      // 첫 페이지인지 추가 페이지인지에 따라 다르게 처리
       setPosts(prev => pageToFetch === 0 ? response.data.content : [...prev, ...response.data.content]);
-      setHasMore(!response.data.last); // 마지막 페이지인지 확인
-      setPage(pageToFetch + 1); // 다음에 로드할 페이지 번호 설정
-
+      setHasMore(!response.data.last);
+      setPage(pageToFetch + 1);
     } catch (error) {
       console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
       if (error.code === 'ECONNABORTED') {
@@ -963,45 +978,35 @@ const Marketplace = () => {
     }
   }, []);
 
-  // 검색 조건이 바뀔 때마다, 데이터를 초기화하고 첫 페이지부터 다시 로드
   useEffect(() => {
-    setPosts([]); // 기존 목록 비우기
-    setPage(0);   // 페이지 번호 0으로 초기화
-    setHasMore(true); // 더 불러올 데이터가 있다고 가정
-    fetchPosts(searchParams, 0); // 새 검색으로 API 호출
+    setPosts([]);
+    setPage(0);
+    setHasMore(true);
+    fetchPosts(searchParams, 0);
   }, [searchParams, fetchPosts]);
 
-  // 컴포넌트가 처음 마운트될 때 찜 목록도 함께 불러옴
   useEffect(() => {
     fetchMyLikes();
   }, [fetchMyLikes]);
 
-  // 무한 스크롤을 위한 Intersection Observer 설정
   useEffect(() => {
-    const currentObserverRef = observerRef.current; // cleanup을 위한 ref 저장
-
+    const currentObserverRef = observerRef.current;
     const observer = new IntersectionObserver(
-      (entries) => {
-        // 타겟 요소가 화면에 보이고, 더 불러올 데이터가 있으며, 로딩 중이 아닐 때 다음 페이지 로드
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
-          fetchPosts(searchParams, page); // 현재 page 사용
-        }
-      },
-      { threshold: 0.5 } // 타겟이 50% 보였을 때 실행
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore && !isLoading) {
+            fetchPosts(searchParams, page);
+          }
+        },
+        { threshold: 0.5 }
     );
-
     if (currentObserverRef) observer.observe(currentObserverRef);
-    
     return () => {
-      // cleanup 시 저장된 ref 사용
       if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-
   }, [hasMore, isLoading, fetchPosts, searchParams, page]);
 
-  // 찜하기/찜취소 핸들러
   const handleLikeToggle = async (e, postId) => {
-    e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
+    e.stopPropagation();
     if (!localStorage.getItem('accessToken')) {
       alert("로그인이 필요한 기능이에요! 😊");
       navigate('/login');
@@ -1009,22 +1014,18 @@ const Marketplace = () => {
     }
 
     const isLiked = likedPostIds.has(postId);
-    
-    // UI 낙관적 업데이트
     setLikedPostIds(prev => {
       const newSet = new Set(prev);
       if (isLiked) newSet.delete(postId);
       else newSet.add(postId);
       return newSet;
     });
-    // 목록 카드의 찜 수를 낙관적으로 반영
     setPosts(prev => prev.map(p => {
       if (p.postId !== postId) return p;
       const current = p.likeCount ?? 0;
       const next = isLiked ? Math.max(0, current - 1) : current + 1;
       return { ...p, likeCount: next };
     }));
-    // 많이 찜한 순 정렬 중이면, 현재 페이지 데이터만 즉시 재정렬
     if (searchParams.sort === 'likeCount,desc') {
       setPosts(prev => {
         const next = [...prev];
@@ -1035,26 +1036,24 @@ const Marketplace = () => {
 
     try {
       if (isLiked) {
-        await axios.delete(`/api/posts/${postId}/like`, { 
+        await axios.delete(`/api/posts/${postId}/like`, {
           headers: getAuthHeader(),
-          timeout: 5000 
-      });
+          timeout: 5000
+        });
       } else {
-        await axios.post(`/api/posts/${postId}/like`, null, { 
+        await axios.post(`/api/posts/${postId}/like`, null, {
           headers: getAuthHeader(),
           timeout: 5000
         });
       }
     } catch (error) {
       console.error("찜 처리 실패:", error);
-      // API 실패 시 UI 원상 복구
       setLikedPostIds(prev => {
         const newSet = new Set(prev);
         if (isLiked) newSet.add(postId);
         else newSet.delete(postId);
         return newSet;
       });
-      // likeCount도 원상 복구
       setPosts(prev => prev.map(p => {
         if (p.postId !== postId) return p;
         const current = p.likeCount ?? 0;
@@ -1073,58 +1072,37 @@ const Marketplace = () => {
   };
 
   const handleBookClick = (postId) => navigate(`/posts/${postId}`);
-  
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setSearchParams(prev => ({ ...prev, query: searchQuery }));
-  };
-
-  // 검색어 입력 핸들러 추가
-  const handleSearchInputChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const handleSortChange = (e) => {
-    setSearchParams(prev => ({...prev, sort: e.target.value}));
-  };
-
-  const handleCategoryChange = (e) => {
-    setSearchParams(prev => ({...prev, category: e.target.value}));
-  }
-
+  const handleSearch = (e) => { e.preventDefault(); setSearchParams(prev => ({ ...prev, query: searchQuery })); };
+  const handleSearchInputChange = (e) => setSearchQuery(e.target.value);
+  const handleSortChange = (e) => setSearchParams(prev => ({...prev, sort: e.target.value}));
+  const handleCategoryChange = (e) => setSearchParams(prev => ({...prev, category: e.target.value}));
   const handleApplyFilters = () => {
-    setSearchParams(prev => ({
-      ...prev,
-      minPrice: tempFilters.minPrice,
-      maxPrice: tempFilters.maxPrice,
-    }));
+    setSearchParams(prev => ({ ...prev, minPrice: tempFilters.minPrice, maxPrice: tempFilters.maxPrice }));
     setFilterOpen(false);
   };
 
-  // 스켈레톤 카드 렌더링 함수
   const renderSkeletonCards = (count = 4) => (
-    <LoadingGrid>
-      {Array.from({ length: count }, (_, index) => (
-        <SkeletonCard key={`skeleton-${index}`}>
-          <SkeletonImage />
-          <SkeletonText />
-          <SkeletonText />
-          <SkeletonText />
-        </SkeletonCard>
-      ))}
-    </LoadingGrid>
+      <LoadingGrid>
+        {Array.from({ length: count }, (_, index) => (
+            <SkeletonCard key={`skeleton-${index}`}>
+              <SkeletonImage />
+              <SkeletonText />
+              <SkeletonText />
+              <SkeletonText />
+            </SkeletonCard>
+        ))}
+      </LoadingGrid>
   );
 
-  // 카테고리 옵션 생성 함수
   const renderCategoryOptions = () => {
     const options = [];
     Object.keys(CATEGORIES).forEach(majorCategory => {
       Object.keys(CATEGORIES[majorCategory]).forEach(college => {
         CATEGORIES[majorCategory][college].forEach(department => {
           options.push(
-            <option key={`${majorCategory}-${college}-${department}`} value={department}>
-              {majorCategory} &gt; {college} &gt; {department}
-            </option>
+              <option key={`${majorCategory}-${college}-${department}`} value={department}>
+                {majorCategory} &gt; {college} &gt; {department}
+              </option>
           );
         });
       });
@@ -1132,42 +1110,52 @@ const Marketplace = () => {
     return options;
   };
 
-  // 책 카드 렌더링 함수
-  const renderBookCard = (post) => (
-    <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
-      <BookImageWithFallback src={post.thumbnailUrl} alt={post.postTitle} />
-      <LikeButton
-        $liked={likedPostIds.has(post.postId)}
-        onClick={(e) => handleLikeToggle(e, post.postId)}
-      />
-      <BookInfo>
-        <BookCardTitle>{post.postTitle}</BookCardTitle>
-        {post.author && <BookAuthor>{post.author}</BookAuthor>}
-        <BookPrice>
-          {post.price?.toLocaleString() || '0'}원
-          <LikeCount>{(post.likeCount ?? 0).toLocaleString()}</LikeCount>
-        </BookPrice>
-      </BookInfo>
-    </BookCard>
-  );
+  // ✅ 상태 딱지 포함 카드 렌더링
+  const renderBookCard = (post) => {
+    const normStatus = normalizePostStatus(post); // 'reserved' | 'sold_out' | null
+    const badgeText = normStatus === 'reserved' ? '예약중' : normStatus === 'sold_out' ? '거래완료' : null;
 
-  // 필터 팝오버 외부 클릭 시 닫기 핸들러
+    return (
+        <BookCard key={post.postId} onClick={() => handleBookClick(post.postId)}>
+          <BookImageWithFallback src={post.thumbnailUrl} alt={post.postTitle} />
+
+          {/* 하트 버튼 */}
+          <LikeButton
+              $liked={likedPostIds.has(post.postId)}
+              onClick={(e) => handleLikeToggle(e, post.postId)}
+          />
+
+          {/* ✅ 상태 배지 (오른쪽 위, 하트 아래) */}
+          {badgeText && (
+              <StatusBadge $variant={normStatus}>
+                {badgeText}
+              </StatusBadge>
+          )}
+
+          <BookInfo>
+            <BookCardTitle>{post.postTitle}</BookCardTitle>
+            {post.author && <BookAuthor>{post.author}</BookAuthor>}
+            <BookPrice>
+              {post.price?.toLocaleString() || '0'}원
+              <LikeCount>{(post.likeCount ?? 0).toLocaleString()}</LikeCount>
+            </BookPrice>
+          </BookInfo>
+        </BookCard>
+    );
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (filterRef.current && !filterRef.current.contains(event.target)) {
         setFilterOpen(false);
       }
     };
-
     if (filterOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [filterOpen]);
 
-  // Enter 키로 검색 실행하는 핸들러
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -1176,154 +1164,147 @@ const Marketplace = () => {
   };
 
   return (
-    <MarketplaceContainer>
-      <Header>
-        <Title>책거래게시판</Title>
-        <Description>선배들의 지식을 저렴하게 얻어보세요! 📚</Description>
-      </Header>
-      <PageWrapper>
-        <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Controls>
-            <SearchBar as="form" onSubmit={handleSearch}>
-              <SearchIcon />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={handleSearchInputChange}
-                onKeyDown={handleSearchKeyPress}
-                placeholder="책 제목, 저자, 글 제목으로 검색" 
-              />
-              <SearchButton type="submit">검색</SearchButton>
-            </SearchBar>
-            <div style={{ position: 'relative' }} ref={filterRef}>
-              <FilterButton onClick={() => setFilterOpen(v => !v)}>
-                <FilterIcon />
-                필터 및 정렬
-              </FilterButton>
-              {filterOpen && (
-                <FilterPopover>
-                  <FilterSection>
-                    <FilterLabel>정렬 기준</FilterLabel>
-                    <FilterSelect value={searchParams.sort} onChange={handleSortChange}>
-                      <option value="createdAt,desc">최신순</option>
-                      <option value="price,asc">낮은 가격순</option>
-                      <option value="price,desc">높은 가격순</option>
-                      <option value="views,desc">조회순</option>
-                      <option value="likeCount,desc">많이 찜한 순</option>
-                    </FilterSelect>
-                  </FilterSection>
-                  <FilterSection>
-                    <FilterLabel>가격 범위</FilterLabel>
-                    <PriceInputGroup>
-                      <PriceInput 
-                        type="number" 
-                        placeholder="최소 금액" 
-                        value={tempFilters.minPrice} 
-                        onChange={e => setTempFilters(p => ({...p, minPrice: e.target.value}))} 
-                      />
-                      <span>~</span>
-                      <PriceInput 
-                        type="number" 
-                        placeholder="최대 금액" 
-                        value={tempFilters.maxPrice} 
-                        onChange={e => setTempFilters(p => ({...p, maxPrice: e.target.value}))} 
-                      />
-                    </PriceInputGroup>
-                  </FilterSection>
-                  <FilterApplyButton onClick={handleApplyFilters}>적용하기</FilterApplyButton>
-                </FilterPopover>
-              )}
-            </div>
-          </Controls>
-
-          <CategoryContainer>
-            <CategorySelect onChange={handleCategoryChange} value={searchParams.category}>
-              <option value="">전체 카테고리</option>
-              {/* 카테고리 옵션 동적 생성 - 실제로 렌더링되도록 함수 호출 */}
-              {renderCategoryOptions()}
-            </CategorySelect>
-          </CategoryContainer>
-
-          {/* 에러 메시지 표시 */}
-          {error && (
-            <ErrorMessage>
-              <div>{error}</div>
-              <button 
-                onClick={() => {
-                  setError('');
-                  fetchPosts(searchParams, 0);
-                }}
-                style={{ 
-                  marginTop: '1rem', 
-                  padding: '0.5rem 1rem', 
-                  background: '#dc3545', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer'
-                }}
-              >
-                다시 시도하기
-              </button>
-            </ErrorMessage>
-          )}
-
-          {/* 게시글 목록 표시 */}
-          {posts.length > 0 && <BookGrid>{posts.map(renderBookCard)}</BookGrid>}
-
-          {/* 로딩 및 결과 없음 상태 표시 */}
-          {isLoading && posts.length === 0 && (
-            <LoadingMessage>
-              <div>📖 책들을 찾고 있어요...</div>
-            </LoadingMessage>
-          )}
-
-          {!isLoading && posts.length === 0 && !error && (
-            <NoResultsMessage>
-              <div className="icon">🔍</div>
-              <div className="title">검색 결과가 없어요</div>
-              <div className="description">
-                다른 키워드로 검색하거나 필터를 변경해보세요.<br/>
-                혹시 새로운 책을 등록해보는 건 어떨까요? 😊
+      <MarketplaceContainer>
+        <Header>
+          <Title>책거래게시판</Title>
+          <Description>선배들의 지식을 저렴하게 얻어보세요! 📚</Description>
+        </Header>
+        <PageWrapper>
+          <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Controls>
+              <SearchBar as="form" onSubmit={handleSearch}>
+                <SearchIcon />
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchInputChange}
+                    onKeyDown={handleSearchKeyPress}
+                    placeholder="책 제목, 저자, 글 제목으로 검색"
+                />
+                <SearchButton type="submit">검색</SearchButton>
+              </SearchBar>
+              <div style={{ position: 'relative' }} ref={filterRef}>
+                <FilterButton onClick={() => setFilterOpen(v => !v)}>
+                  <FilterIcon />
+                  필터 및 정렬
+                </FilterButton>
+                {filterOpen && (
+                    <FilterPopover>
+                      <FilterSection>
+                        <FilterLabel>정렬 기준</FilterLabel>
+                        <FilterSelect value={searchParams.sort} onChange={handleSortChange}>
+                          <option value="createdAt,desc">최신순</option>
+                          <option value="price,asc">낮은 가격순</option>
+                          <option value="price,desc">높은 가격순</option>
+                          <option value="views,desc">조회순</option>
+                          <option value="likeCount,desc">많이 찜한 순</option>
+                        </FilterSelect>
+                      </FilterSection>
+                      <FilterSection>
+                        <FilterLabel>가격 범위</FilterLabel>
+                        <PriceInputGroup>
+                          <PriceInput
+                              type="number"
+                              placeholder="최소 금액"
+                              value={tempFilters.minPrice}
+                              onChange={e => setTempFilters(p => ({...p, minPrice: e.target.value}))}
+                          />
+                          <span>~</span>
+                          <PriceInput
+                              type="number"
+                              placeholder="최대 금액"
+                              value={tempFilters.maxPrice}
+                              onChange={e => setTempFilters(p => ({...p, maxPrice: e.target.value}))}
+                          />
+                        </PriceInputGroup>
+                      </FilterSection>
+                      <FilterApplyButton onClick={handleApplyFilters}>적용하기</FilterApplyButton>
+                    </FilterPopover>
+                )}
               </div>
-            </NoResultsMessage>
-          )}
-          
-          {/* 무한 스크롤 로딩 표시 */}
-          {isLoading && posts.length > 0 && (
-            <>
-              {renderSkeletonCards(4)}
-              <LoadingMessage>
-                <div>📚 더 많은 책들을 불러오고 있어요...</div>
-              </LoadingMessage>
-            </>
-          )}
-          
-          {/* 무한 스크롤 트리거 요소 */}
-          <div 
-            ref={observerRef} 
-            style={{ 
-              height: '50px', 
-              display: hasMore ? 'block' : 'none' 
-            }} 
-          />
-          
-          {/* 더 이상 불러올 데이터가 없을 때 메시지 */}
-          {!hasMore && posts.length > 0 && (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '2rem', 
-              color: 'var(--text-light)',
-              borderTop: '1px solid var(--border)',
-              marginTop: '2rem'
-            }}>
-              🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
-            </div>
-          )}
-        </div>
-      </PageWrapper>
-    </MarketplaceContainer>
+            </Controls>
+
+            <CategoryContainer>
+              <CategorySelect onChange={handleCategoryChange} value={searchParams.category}>
+                <option value="">전체 카테고리</option>
+                {renderCategoryOptions()}
+              </CategorySelect>
+            </CategoryContainer>
+
+            {error && (
+                <ErrorMessage>
+                  <div>{error}</div>
+                  <button
+                      onClick={() => {
+                        setError('');
+                        fetchPosts(searchParams, 0);
+                      }}
+                      style={{
+                        marginTop: '1rem',
+                        padding: '0.5rem 1rem',
+                        background: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer'
+                      }}
+                  >
+                    다시 시도하기
+                  </button>
+                </ErrorMessage>
+            )}
+
+            {posts.length > 0 && <BookGrid>{posts.map(renderBookCard)}</BookGrid>}
+
+            {isLoading && posts.length === 0 && (
+                <LoadingMessage>
+                  <div>📖 책들을 찾고 있어요...</div>
+                </LoadingMessage>
+            )}
+
+            {!isLoading && posts.length === 0 && !error && (
+                <NoResultsMessage>
+                  <div className="icon">🔍</div>
+                  <div className="title">검색 결과가 없어요</div>
+                  <div className="description">
+                    다른 키워드로 검색하거나 필터를 변경해보세요.<br/>
+                    혹시 새로운 책을 등록해보는 건 어떨까요? 😊
+                  </div>
+                </NoResultsMessage>
+            )}
+
+            {isLoading && posts.length > 0 && (
+                <>
+                  {renderSkeletonCards(4)}
+                  <LoadingMessage>
+                    <div>📚 더 많은 책들을 불러오고 있어요...</div>
+                  </LoadingMessage>
+                </>
+            )}
+
+            <div
+                ref={observerRef}
+                style={{
+                  height: '50px',
+                  display: hasMore ? 'block' : 'none'
+                }}
+            />
+
+            {!hasMore && posts.length > 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: 'var(--text-light)',
+                  borderTop: '1px solid var(--border)',
+                  marginTop: '2rem'
+                }}>
+                  🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
+                </div>
+            )}
+          </div>
+        </PageWrapper>
+      </MarketplaceContainer>
   );
 };
 

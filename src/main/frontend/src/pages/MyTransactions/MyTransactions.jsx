@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { 
-  FaArrowLeft, 
-  FaQrcode, 
-  FaMapMarkerAlt, 
-  FaClock, 
-  FaUser, 
-  FaBook, 
+import {
+  FaArrowLeft,
+  FaQrcode,
+  FaMapMarkerAlt,
+  FaClock,
+  FaUser,
+  FaBook,
   FaMoneyBillWave,
   FaTimes,
   FaCheck,
@@ -26,6 +26,15 @@ import wowGood from '../../assets/wow/wow_good.png';
 import wowBest from '../../assets/wow/wow_best.png';
 import axios from 'axios';
 import { createPeerReview } from '../../api/peerReviews';
+
+/* ===================== 상태 정규화 유틸 (백/프론트 혼합 대응) ===================== */
+const normalizeStatus = (raw) => {
+  const s = String(raw || '').toLowerCase();
+  if (['reserved', 'confirm', 'confirmed'].includes(s)) return 'RESERVED';
+  if (['sold_out', 'completed', 'complete'].includes(s)) return 'COMPLETED';
+  if (['cancelled', 'canceled', 'reservation_cancelled', 'reservation_canceled'].includes(s)) return 'CANCELLED';
+  return 'OTHER';
+};
 
 const TransactionsContainer = styled.div`
   max-width: 1200px;
@@ -315,7 +324,7 @@ const FilterButton = styled.button`
   &:hover {
     border-color: #007bff;
     color: #007bff;
-    
+
     &.active {
       color: white;
     }
@@ -697,7 +706,12 @@ const MyTransactions = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/posts/my', { headers: getAuthHeader() });
-      setTransactions(response.data);
+      setTransactions(
+          (Array.isArray(response.data) ? response.data : []).map(t => ({
+            ...t,
+            _uiStatus: normalizeStatus(t.status),
+          }))
+      );
     } catch (error) {
       console.error("내 판매글 목록을 불러오는 데 실패했습니다.", error);
       // TODO: 401 Unauthorized 에러 시 로그인 페이지로 리다이렉트 처리
@@ -727,10 +741,10 @@ const MyTransactions = () => {
         const res = await axios.get('/api/chat/rooms/me', { headers: getAuthHeader() });
         const rooms = Array.isArray(res.data) ? res.data : [];
         const candidates = rooms
-          .filter(r => r.salePostId === postId)
-          .map(r => ({ buyerId: r.buyerId, salePostId: r.salePostId, buyerNickname: r.buyerNickname, buyerProfileImageUrl: r.buyerProfileImageUrl }))
-          // 중복 buyerId 제거
-          .filter((v, i, arr) => arr.findIndex(x => x.buyerId === v.buyerId) === i);
+            .filter(r => r.salePostId === postId)
+            .map(r => ({ buyerId: r.buyerId, salePostId: r.salePostId, buyerNickname: r.buyerNickname, buyerProfileImageUrl: r.buyerProfileImageUrl }))
+            // 중복 buyerId 제거
+            .filter((v, i, arr) => arr.findIndex(x => x.buyerId === v.buyerId) === i);
         setBuyerCandidates(candidates);
         setBuyerLoading(false);
       } catch (e) {
@@ -765,8 +779,9 @@ const MyTransactions = () => {
     try {
       setConfirmingBuyer(true);
       await axios.patch(`/api/posts/${buyerModal.postId}/status`,
-        { status: 'SOLD_OUT', buyerId: selectedBuyerId },
-        { headers: getAuthHeader() }
+          // 백엔드가 소문자를 기대하면 'sold_out'로 변경하세요.
+          { status: 'SOLD_OUT', buyerId: selectedBuyerId },
+          { headers: getAuthHeader() }
       );
       alert('거래완료로 변경되었습니다.');
       closeBuyerModal();
@@ -784,14 +799,14 @@ const MyTransactions = () => {
   };
 
   const regenerateQRCode = (transactionId) => {
-    // QR 코드 재생성 로직
+    // QR 코드 재생성 로직 (로컬 상태 업데이트)
     const newQRCode = `transaction_${transactionId}_qr_code_data_${Date.now()}`;
-    setTransactions(prev => 
-      prev.map(t => 
-        t.id === transactionId 
-          ? { ...t, qrCode: newQRCode }
-          : t
-      )
+    setTransactions(prev =>
+        prev.map(t =>
+            t.id === transactionId
+                ? { ...t, qrCode: newQRCode }
+                : t
+        )
     );
   };
 
@@ -799,13 +814,13 @@ const MyTransactions = () => {
   const openReasonModal = (type, transactionId) => { setModal({ open: true, type, transactionId }); setReason(''); };
   const closeModal = () => { setModal({ open: false, type: '', transactionId: null }); setReason(''); };
 
-  // 사유 입력 후 취소/예약취소
+  // 사유 입력 후 취소/예약취소 (로컬 반영용)
   const handleReasonSubmit = () => {
     if (!reason.trim()) return;
     if (modal.type === 'cancel') {
-      setTransactions(prev => prev.map(t => t.id === modal.transactionId ? { ...t, status: 'CANCELLED', reason } : t));
+      setTransactions(prev => prev.map(t => t.id === modal.transactionId ? { ...t, status: 'CANCELLED', _uiStatus: 'CANCELLED', reason } : t));
     } else if (modal.type === 'reserve-cancel') {
-      setTransactions(prev => prev.map(t => t.id === modal.transactionId ? { ...t, status: 'RESERVATION_CANCELLED', reason } : t));
+      setTransactions(prev => prev.map(t => t.id === modal.transactionId ? { ...t, status: 'CANCELLED', _uiStatus: 'CANCELLED', reason } : t));
     }
     closeModal();
   };
@@ -813,61 +828,55 @@ const MyTransactions = () => {
   // 기존 핸들러에서 모달로 변경
   const handleCancelReservation = (transactionId) => { openReasonModal('reserve-cancel', transactionId); };
 
-  // 필터링 및 정렬 로직
-  const allTransactions = transactions;
-  
+  // ===================== 필터/정렬 =====================
   const getFilteredTransactions = () => {
-    if (!allTransactions || allTransactions.length === 0) {
-      return [];
-    }
-    
-    let filtered = [];
-    
-    switch (activeFilter) {
-      case 'reserved':
-        filtered = allTransactions.filter(t => t.status === 'RESERVED');
-        // 예약된 거래: 가까운 거래 일자 순으로 정렬
-        return filtered.sort((a, b) => {
-          const dateA = new Date(`${a.reservationDate} ${a.reservationTime}`);
-          const dateB = new Date(`${b.reservationDate} ${b.reservationTime}`);
-          return dateA - dateB;
+    if (!transactions || transactions.length === 0) return [];
+
+    const withUI = transactions.map(t => ({ ...t, _uiStatus: t._uiStatus || normalizeStatus(t.status) }));
+
+    const reserved = withUI
+        .filter(t => t._uiStatus === 'RESERVED')
+        .sort((a, b) => {
+          const aDt = new Date(`${a.reservationDate || ''} ${a.reservationTime || ''}`);
+          const bDt = new Date(`${b.reservationDate || ''} ${b.reservationTime || ''}`);
+          return aDt - bDt;
         });
-      case 'completed':
-        filtered = allTransactions.filter(t => t.status === 'COMPLETED');
-        // 완료된 거래: 최근 거래한 일자 순으로 정렬
-        return filtered.sort((a, b) => {
-          const dateA = new Date(a.completedDate);
-          const dateB = new Date(b.completedDate);
-          return dateB - dateA; // 최신순
+
+    const completed = withUI
+        .filter(t => t._uiStatus === 'COMPLETED')
+        .sort((a, b) => {
+          const aDt = new Date(a.completedDate || a.soldAt || a.updatedAt || 0);
+          const bDt = new Date(b.completedDate || b.soldAt || b.updatedAt || 0);
+          return bDt - aDt; // 최신순
         });
-      case 'all':
-        // 전체 거래: 예약된 거래는 예약일순, 완료된 거래는 완료일순
-        const reserved = allTransactions.filter(t => t.status === 'RESERVED').sort((a, b) => {
-          const dateA = new Date(`${a.reservationDate} ${a.reservationTime}`);
-          const dateB = new Date(`${b.reservationDate} ${b.reservationTime}`);
-          return dateA - dateB;
+
+    if (activeFilter === 'reserved') return reserved;
+    if (activeFilter === 'completed') return completed;
+
+    // all: 예약 + 완료 (원한다면 취소도 포함 가능)
+    const cancelled = withUI
+        .filter(t => t._uiStatus === 'CANCELLED')
+        .sort((a, b) => {
+          const aDt = new Date(a.updatedAt || 0);
+          const bDt = new Date(b.updatedAt || 0);
+          return bDt - aDt;
         });
-        const completed = allTransactions.filter(t => t.status === 'COMPLETED').sort((a, b) => {
-          const dateA = new Date(a.completedDate);
-          const dateB = new Date(b.completedDate);
-          return dateB - dateA;
-        });
-        return [...reserved, ...completed];
-      default:
-        return filtered;
-    }
+
+    // 필요 시 [...reserved, ...completed, ...cancelled] 로 변경
+    return [...reserved, ...completed];
   };
 
   const sortedTransactions = getFilteredTransactions();
-  
+
   // 필터별 개수 계산
   const getFilterCounts = () => {
-    if (!allTransactions || allTransactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       return { reserved: 0, completed: 0, all: 0 };
     }
-    const reserved = allTransactions.filter(t => t.status === 'RESERVED').length;
-    const completed = allTransactions.filter(t => t.status === 'COMPLETED').length;
-    const all = allTransactions.length;
+    const withUI = transactions.map(t => t._uiStatus || normalizeStatus(t.status));
+    const reserved = withUI.filter(s => s === 'RESERVED').length;
+    const completed = withUI.filter(s => s === 'COMPLETED').length;
+    const all = transactions.length;
     return { reserved, completed, all };
   };
 
@@ -919,16 +928,17 @@ const MyTransactions = () => {
       });
       // 로컬 UI 업데이트
       setTransactions(prev => prev.map(t =>
-        (t.id === ratingModal.transactionId)
-          ? {
-              ...t,
-              myReview: {
-                rating: label,
-                ratingScore: payload.ratingScore,
-                ratingKeywords: selectedKeywords
+          (t.id === ratingModal.transactionId)
+              ? {
+                ...t,
+                myReview: {
+                  rating: label,
+                  ratingScore: payload.ratingScore,
+                  ratingKeywords: selectedKeywords
+                },
+                _uiStatus: t._uiStatus || normalizeStatus(t.status),
               }
-            }
-          : t
+              : t
       ));
     } catch (e) {
       console.error('후기 저장 실패', e);
@@ -982,10 +992,11 @@ const MyTransactions = () => {
           ...t,
           location: { ...t.location, name: place },
           reservationDate: date,
-          reservationTime: time
+          reservationTime: time,
+          _uiStatus: t._uiStatus || normalizeStatus(t.status),
         };
       }
-      return t;
+      return { ...t, _uiStatus: t._uiStatus || normalizeStatus(t.status) };
     }));
   }, []);
 
@@ -1028,413 +1039,426 @@ const MyTransactions = () => {
   };
 
   return (
-    <>
-      <div className="header-spacer" />
-      <TransactionsContainer>
-        <Header>
-          <BackButton onClick={handleBack}>
-            <FaArrowLeft /> 뒤로가기
-          </BackButton>
-          <PageTitle>나의 거래</PageTitle>
-        </Header>
+      <>
+        <div className="header-spacer" />
+        <TransactionsContainer>
+          <Header>
+            <BackButton onClick={handleBack}>
+              <FaArrowLeft /> 뒤로가기
+            </BackButton>
+            <PageTitle>나의 거래</PageTitle>
+          </Header>
 
-        <FilterContainer>
-          <FilterButton 
-            className={activeFilter === 'reserved' ? 'active' : ''}
-            onClick={() => setActiveFilter('reserved')}
-          >
-            <FaRegClock />
-            예약된 거래
-            <FilterCount>{getFilterCounts().reserved}</FilterCount>
-          </FilterButton>
-          <FilterButton 
-            className={activeFilter === 'completed' ? 'active' : ''}
-            onClick={() => setActiveFilter('completed')}
-          >
-            <FaCheckCircle />
-            완료된 거래
-            <FilterCount>{getFilterCounts().completed}</FilterCount>
-          </FilterButton>
-          <FilterButton 
-            className={activeFilter === 'all' ? 'active' : ''}
-            onClick={() => setActiveFilter('all')}
-          >
-            <FaList />
-            전체 거래
-            <FilterCount>{getFilterCounts().all}</FilterCount>
-          </FilterButton>
-        </FilterContainer>
+          <FilterContainer>
+            <FilterButton
+                className={activeFilter === 'reserved' ? 'active' : ''}
+                onClick={() => setActiveFilter('reserved')}
+            >
+              <FaRegClock />
+              예약된 거래
+              <FilterCount>{getFilterCounts().reserved}</FilterCount>
+            </FilterButton>
+            <FilterButton
+                className={activeFilter === 'completed' ? 'active' : ''}
+                onClick={() => setActiveFilter('completed')}
+            >
+              <FaCheckCircle />
+              완료된 거래
+              <FilterCount>{getFilterCounts().completed}</FilterCount>
+            </FilterButton>
+            <FilterButton
+                className={activeFilter === 'all' ? 'active' : ''}
+                onClick={() => setActiveFilter('all')}
+            >
+              <FaList />
+              전체 거래
+              <FilterCount>{getFilterCounts().all}</FilterCount>
+            </FilterButton>
+          </FilterContainer>
 
-        {sortedTransactions.length > 0 ? (
-          sortedTransactions.map(transaction => (
-            <CompactTransactionCard key={transaction.id} onClick={() => openDetailModal(transaction)}>
-              <CompactCardContent>
-                <BookImage>
-                  <FaBook size={24} />
-                </BookImage>
-                <CompactBookInfo>
-                  <CompactBookTitle>{transaction.bookTitle}</CompactBookTitle>
-                  <CompactMeta>
-                    <CompactMetaItem>
-                      <FaUser />
-                      {transaction.buyer}
-                    </CompactMetaItem>
-                    <CompactMetaItem>
-                      <FaCalendarAlt />
-                      {transaction.status === 'COMPLETED' ? transaction.completedDate : transaction.reservationDate}
-                    </CompactMetaItem>
-                    <CompactMetaItem>
-                      <FaClock />
-                      {transaction.status === 'COMPLETED' ? '완료' : transaction.reservationTime}
-                    </CompactMetaItem>
-                  </CompactMeta>
-                  <CompactPrice>{transaction.price.toLocaleString()}원</CompactPrice>
-                </CompactBookInfo>
-                <CompactStatus status={transaction.status}>
-                  {transaction.status === 'RESERVED' && '예약됨'}
-                  {transaction.status === 'COMPLETED' && '완료'}
-                  {transaction.status === 'CANCELLED' && '취소됨'}
-                </CompactStatus>
-              </CompactCardContent>
-              <CompactActions onClick={(e) => e.stopPropagation()}>
-                <CompactActionButton 
-                  className="primary"
-                  onClick={() => navigate(`/chat/${transaction.buyerId}`)}
-                >
-                  <FaUser /> 채팅
-                </CompactActionButton>
-                {transaction.status === 'RESERVED' ? (
-                  <>
-                    <CompactActionButton 
-                      className="secondary"
-                      onClick={() => handleCompleteTransaction(transaction.id)}
-                      disabled={!!transaction.myReview}
-                    >
-                      <FaCheck /> {transaction.myReview ? '후기' : '완료'}
-                    </CompactActionButton>
-                    <CompactActionButton 
-                      className="danger"
-                      onClick={() => handleCancelReservation(transaction.id)}
-                    >
-                      <FaTimes /> 취소
-                    </CompactActionButton>
-                  </>
-                ) : (
-                  <CompactActionButton 
-                    className="secondary"
-                    onClick={() => handleCompleteTransaction(transaction.id)}
-                  >
-                    <FaCheck /> 후기
-                  </CompactActionButton>
-                )}
-              </CompactActions>
-            </CompactTransactionCard>
-          ))
-        ) : (
-          <EmptyState>
-            <EmptyIcon>
-              {activeFilter === 'reserved' && <FaRegClock />}
-              {activeFilter === 'completed' && <FaCheckCircle />}
-              {activeFilter === 'all' && <FaList />}
-            </EmptyIcon>
-            <h3>
-              {activeFilter === 'reserved' && '예약된 거래가 없습니다'}
-              {activeFilter === 'completed' && '완료된 거래가 없습니다'}
-              {activeFilter === 'all' && '거래 내역이 없습니다'}
-            </h3>
-            <p>
-              {activeFilter === 'reserved' && '채팅방에서 예약을 진행하면 여기서 확인할 수 있습니다.'}
-              {activeFilter === 'completed' && '거래를 완료하면 여기서 확인할 수 있습니다.'}
-              {activeFilter === 'all' && '채팅방에서 거래를 진행하면 여기서 확인할 수 있습니다.'}
-            </p>
-          </EmptyState>
+          {sortedTransactions.length > 0 ? (
+              sortedTransactions.map(transaction => {
+                const ui = transaction._uiStatus || normalizeStatus(transaction.status);
+                return (
+                    <CompactTransactionCard key={transaction.id} onClick={() => openDetailModal(transaction)}>
+                      <CompactCardContent>
+                        <BookImage>
+                          <FaBook size={24} />
+                        </BookImage>
+                        <CompactBookInfo>
+                          <CompactBookTitle>{transaction.bookTitle}</CompactBookTitle>
+                          <CompactMeta>
+                            <CompactMetaItem>
+                              <FaUser />
+                              {transaction.buyer}
+                            </CompactMetaItem>
+                            <CompactMetaItem>
+                              <FaCalendarAlt />
+                              {ui === 'COMPLETED'
+                                  ? (transaction.completedDate || transaction.soldAt || '-')
+                                  : (transaction.reservationDate || '-')}
+                            </CompactMetaItem>
+                            <CompactMetaItem>
+                              <FaClock />
+                              {ui === 'COMPLETED' ? '완료' : (transaction.reservationTime || '-')}
+                            </CompactMetaItem>
+                          </CompactMeta>
+                          <CompactPrice>{(transaction.price ?? 0).toLocaleString()}원</CompactPrice>
+                        </CompactBookInfo>
+                        <CompactStatus status={ui}>
+                          {ui === 'RESERVED' && '예약됨'}
+                          {ui === 'COMPLETED' && '완료'}
+                          {ui === 'CANCELLED' && '취소됨'}
+                          {ui === 'OTHER' && (transaction.status || '기타')}
+                        </CompactStatus>
+                      </CompactCardContent>
+                      <CompactActions onClick={(e) => e.stopPropagation()}>
+                        <CompactActionButton
+                            className="primary"
+                            onClick={() => navigate(`/chat/${transaction.buyerId}`)}
+                        >
+                          <FaUser /> 채팅
+                        </CompactActionButton>
+                        {ui === 'RESERVED' ? (
+                            <>
+                              <CompactActionButton
+                                  className="secondary"
+                                  onClick={() => handleCompleteTransaction(transaction.id)}
+                                  disabled={!!transaction.myReview}
+                              >
+                                <FaCheck /> {transaction.myReview ? '후기' : '완료'}
+                              </CompactActionButton>
+                              <CompactActionButton
+                                  className="danger"
+                                  onClick={() => handleCancelReservation(transaction.id)}
+                              >
+                                <FaTimes /> 취소
+                              </CompactActionButton>
+                            </>
+                        ) : (
+                            <CompactActionButton
+                                className="secondary"
+                                onClick={() => handleCompleteTransaction(transaction.id)}
+                            >
+                              <FaCheck /> 후기
+                            </CompactActionButton>
+                        )}
+                      </CompactActions>
+                    </CompactTransactionCard>
+                );
+              })
+          ) : (
+              <EmptyState>
+                <EmptyIcon>
+                  {activeFilter === 'reserved' && <FaRegClock />}
+                  {activeFilter === 'completed' && <FaCheckCircle />}
+                  {activeFilter === 'all' && <FaList />}
+                </EmptyIcon>
+                <h3>
+                  {activeFilter === 'reserved' && '예약된 거래가 없습니다'}
+                  {activeFilter === 'completed' && '완료된 거래가 없습니다'}
+                  {activeFilter === 'all' && '거래 내역이 없습니다'}
+                </h3>
+                <p>
+                  {activeFilter === 'reserved' && '채팅방에서 예약을 진행하면 여기서 확인할 수 있습니다.'}
+                  {activeFilter === 'completed' && '거래를 완료하면 여기서 확인할 수 있습니다.'}
+                  {activeFilter === 'all' && '채팅방에서 거래를 진행하면 여기서 확인할 수 있습니다.'}
+                </p>
+              </EmptyState>
+          )}
+        </TransactionsContainer>
+
+        {modal.open && (
+            <ModalOverlay>
+              <ModalBox>
+                <ModalTitle>취소 사유를 입력하세요</ModalTitle>
+                <ModalTextarea value={reason} onChange={e => setReason(e.target.value)} placeholder="사유를 입력하세요..." />
+                <ModalActions>
+                  <ModalButton className="cancel" onClick={closeModal}>취소</ModalButton>
+                  <ModalButton onClick={handleReasonSubmit} disabled={!reason.trim()}>확인</ModalButton>
+                </ModalActions>
+              </ModalBox>
+            </ModalOverlay>
         )}
-      </TransactionsContainer>
 
-      {modal.open && (
-        <ModalOverlay>
-          <ModalBox>
-            <ModalTitle>취소 사유를 입력하세요</ModalTitle>
-            <ModalTextarea value={reason} onChange={e => setReason(e.target.value)} placeholder="사유를 입력하세요..." />
-            <ModalActions>
-              <ModalButton className="cancel" onClick={closeModal}>취소</ModalButton>
-              <ModalButton onClick={handleReasonSubmit} disabled={!reason.trim()}>확인</ModalButton>
-            </ModalActions>
-          </ModalBox>
-        </ModalOverlay>
-      )}
-
-      {ratingModal.open && (
-        <ModalOverlay>
-          <RatingModalBox>
-            <Stepper>1 / 2단계</Stepper>
-            <ModalTitle>별점을 선택해 주세요 (0.5 단위)</ModalTitle>
-            <StarRow>
-              {[1,2,3,4,5].map(n => (
-                <Star key={n}
-                  selected={starRating != null && Math.floor(starRating) >= n}
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const half = x < rect.width / 2;
-                    const s = half ? n - 0.5 : n;
-                    setStarRating(s);
-                    const lbl = s < 1.5 ? 'worst' : s < 2.5 ? 'bad' : s < 3.5 ? 'good' : 'best';
-                    setSelectedRating(lbl);
-                    setSelectedKeywords([]);
-                  }}
-                  title={`${n}번째 별 (왼쪽 클릭: ${n - 0.5}★, 오른쪽 클릭: ${n}★)`}
-                >★</Star>
-              ))}
-            </StarRow>
-            {starRating != null && (
-              <div style={{textAlign:'center', color:'#333', marginBottom:8}}>
-                선택한 별점: <b>{Number(starRating).toFixed(2)}★</b> · 라벨: <b>{selectedRating}</b>
-              </div>
-            )}
-            {starRating != null && (
-              <>
-                <Stepper>2 / 2단계</Stepper>
-                <div style={{marginTop:12, fontWeight:500, color:'#333'}}>키워드를 선택해 주세요 (복수 선택 가능)</div>
-                <KeywordList>
-                  {ratingKeywords[selectedRating]?.map(kw => (
-                    <KeywordChip
-                      key={kw}
-                      className={selectedKeywords.includes(kw) ? 'selected' : ''}
-                      onClick={() => setSelectedKeywords(selectedKeywords.includes(kw)
-                        ? selectedKeywords.filter(k => k !== kw)
-                        : [...selectedKeywords, kw])}
-                    >
-                      {kw}
-                    </KeywordChip>
+        {ratingModal.open && (
+            <ModalOverlay>
+              <RatingModalBox>
+                <Stepper>1 / 2단계</Stepper>
+                <ModalTitle>별점을 선택해 주세요 (0.5 단위)</ModalTitle>
+                <StarRow>
+                  {[1,2,3,4,5].map(n => (
+                      <Star key={n}
+                            selected={starRating != null && Math.floor(starRating) >= n}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const x = e.clientX - rect.left;
+                              const half = x < rect.width / 2;
+                              const s = half ? n - 0.5 : n;
+                              setStarRating(s);
+                              const lbl = s < 1.5 ? 'worst' : s < 2.5 ? 'bad' : s < 3.5 ? 'good' : 'best';
+                              setSelectedRating(lbl);
+                              setSelectedKeywords([]);
+                            }}
+                            title={`${n}번째 별 (왼쪽 클릭: ${n - 0.5}★, 오른쪽 클릭: ${n}★)`}
+                      >★</Star>
                   ))}
-                </KeywordList>
-              </>
-            )}
-            <ModalActions>
-              <ModalButton className="cancel" onClick={closeRatingModal}>취소</ModalButton>
-              <ModalButton onClick={handleRatingSubmit} disabled={!(starRating != null)}>확인</ModalButton>
-            </ModalActions>
-          </RatingModalBox>
-        </ModalOverlay>
-      )}
-
-      {reviewModal.open && reviewModal.review && (
-        <ModalOverlay>
-          <RatingModalBox>
-            <ModalTitle>상대방이 남긴 거래 후기</ModalTitle>
-            <div style={{marginBottom:8}}>
-              <b>평가:</b> {ratingOptions.find(r => r.value === reviewModal.review.rating)?.label} ({Number(reviewModal.review.ratingScore).toFixed(2)}★)
-            </div>
-            {reviewModal.review.ratingKeywords && reviewModal.review.ratingKeywords.length > 0 && (
-              <div style={{marginTop:6, fontSize:'0.96rem'}}>
-                <b>키워드:</b> {reviewModal.review.ratingKeywords.join(', ')}
-              </div>
-            )}
-            <ModalActions>
-              <ModalButton onClick={closeReviewModal}>닫기</ModalButton>
-            </ModalActions>
-          </RatingModalBox>
-        </ModalOverlay>
-      )}
-
-      {/* 구매자 선택 모달 */}
-      {buyerModal.open && (
-        <ModalOverlay>
-          <RatingModalBox>
-            <ModalTitle>구매자 선택</ModalTitle>
-            {buyerLoading ? (
-              <div style={{margin:'8px 0 16px', color:'#555'}}>후보를 불러오는 중...</div>
-            ) : buyerCandidates.length === 0 ? (
-              <div style={{margin:'8px 0 16px', color:'#555'}}>
-                연결된 채팅방에서 구매자 후보를 찾지 못했습니다. 아래에 구매자 ID를 직접 입력해 주세요.
-              </div>
-            ) : (
-              <div style={{margin:'8px 0 16px'}}>
-                아래 후보 중 구매자를 선택해 주세요.
-              </div>
-            )}
-            {buyerError && (
-              <div style={{margin:'0 0 12px', color:'#d32f2f'}}>{buyerError}</div>
-            )}
-            {!buyerLoading && buyerCandidates.length > 0 && (
-              <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:180, overflowY:'auto', marginBottom:12}}>
-                {buyerCandidates.map(c => (
-                  <label key={c.buyerId} style={{display:'flex', alignItems:'center', gap:8}}>
-                    <input type="radio" name="buyer" value={c.buyerId}
-                      checked={selectedBuyerId === c.buyerId}
-                      onChange={() => setSelectedBuyerId(c.buyerId)} />
-                    {c.buyerProfileImageUrl ? (
-                      <img src={c.buyerProfileImageUrl} alt="buyer" style={{width:28,height:28,borderRadius:'50%',objectFit:'cover',border:'1px solid #eee'}} />
-                    ) : (
-                      <span style={{width:28,height:28,borderRadius:'50%',background:'#eee',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#666'}}>👤</span>
-                    )}
-                    <span>구매자 ID: {c.buyerId}{c.buyerNickname ? ` (닉네임: ${c.buyerNickname})` : ''}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <div style={{marginBottom:12}}>
-              <input
-                type="number"
-                placeholder="직접 입력: 구매자 ID"
-                value={selectedBuyerId ?? ''}
-                onChange={e => setSelectedBuyerId(e.target.value ? Number(e.target.value) : null)}
-                style={{width:'100%', padding:'10px 12px', border:'1px solid #ddd', borderRadius:8}}
-              />
-            </div>
-            <ModalActions>
-              <ModalButton className="cancel" onClick={closeBuyerModal} disabled={confirmingBuyer}>취소</ModalButton>
-              <ModalButton onClick={handleConfirmBuyer} disabled={!selectedBuyerId || confirmingBuyer}>
-                {confirmingBuyer ? '처리 중...' : '확인'}
-              </ModalButton>
-            </ModalActions>
-          </RatingModalBox>
-        </ModalOverlay>
-      )}
-
-      {/* 상세 보기 모달 */}
-      {showDetailModal && selectedTransaction && (
-        <DetailModal onClick={closeDetailModal}>
-          <DetailModalContent onClick={(e) => e.stopPropagation()}>
-            <DetailModalHeader>
-              <DetailModalTitle>거래 상세 정보</DetailModalTitle>
-              <CloseButton onClick={closeDetailModal}>×</CloseButton>
-            </DetailModalHeader>
-            
-            <TransactionCard>
-              <TransactionHeader>
-                <BookInfo>
-                  <BookTitle>{selectedTransaction.bookTitle}</BookTitle>
-                  <TransactionMeta>
-                    <MetaItem>
-                      <FaUser />
-                      구매자: {selectedTransaction.buyer}
-                    </MetaItem>
-                    <MetaItem>
-                      <FaCalendarAlt />
-                      예약일: {selectedTransaction.reservationDate}
-                    </MetaItem>
-                    <MetaItem>
-                      <FaClock />
-                      예약시간: {selectedTransaction.reservationTime}
-                    </MetaItem>
-                  </TransactionMeta>
-                  <Price>{selectedTransaction.price.toLocaleString()}원</Price>
-                </BookInfo>
-              </TransactionHeader>
-
-              <TransactionContent>
-                <QRCodeSection style={selectedTransaction.myReview ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
-                  <QRCodeTitle>
-                    <FaQrcode /> 결제 QR 코드
-                  </QRCodeTitle>
-                  <QRCodeContainer>
-                    <QRCode value={selectedTransaction.qrCode} size={120} />
-                  </QRCodeContainer>
-                  <RegenerateButton onClick={() => regenerateQRCode(selectedTransaction.id)} disabled={!!selectedTransaction.myReview}>
-                    <FaSyncAlt /> QR 코드 재생성
-                  </RegenerateButton>
-                  {selectedTransaction.myReview && (
-                    <div style={{color:'#dc3545', marginTop:8, fontWeight:500, fontSize:'0.97rem'}}>
-                      거래가 완료되어 QR코드를 사용할 수 없습니다
+                </StarRow>
+                {starRating != null && (
+                    <div style={{textAlign:'center', color:'#333', marginBottom:8}}>
+                      선택한 별점: <b>{Number(starRating).toFixed(2)}★</b> · 라벨: <b>{selectedRating}</b>
                     </div>
-                  )}
-                </QRCodeSection>
+                )}
+                {starRating != null && (
+                    <>
+                      <Stepper>2 / 2단계</Stepper>
+                      <div style={{marginTop:12, fontWeight:500, color:'#333'}}>키워드를 선택해 주세요 (복수 선택 가능)</div>
+                      <KeywordList>
+                        {ratingKeywords[selectedRating]?.map(kw => (
+                            <KeywordChip
+                                key={kw}
+                                className={selectedKeywords.includes(kw) ? 'selected' : ''}
+                                onClick={() => setSelectedKeywords(selectedKeywords.includes(kw)
+                                    ? selectedKeywords.filter(k => k !== kw)
+                                    : [...selectedKeywords, kw])}
+                            >
+                              {kw}
+                            </KeywordChip>
+                        ))}
+                      </KeywordList>
+                    </>
+                )}
+                <ModalActions>
+                  <ModalButton className="cancel" onClick={closeRatingModal}>취소</ModalButton>
+                  <ModalButton onClick={handleRatingSubmit} disabled={!(starRating != null)}>확인</ModalButton>
+                </ModalActions>
+              </RatingModalBox>
+            </ModalOverlay>
+        )}
 
-                <RouteSection>
-                  <RouteTitle>
-                    <FaRoute /> 약속 장소 경로
-                  </RouteTitle>
-                  <LocationInfo>
-                    <LocationName>{selectedTransaction.location.name}</LocationName>
-                    <LocationAddress>{selectedTransaction.location.address}</LocationAddress>
-                  </LocationInfo>
-                  <RouteInfo>
-                    <RouteIcon>
-                      {selectedTransaction.route.type === '지하철' && <FaRoute />}
-                      {selectedTransaction.route.type === '버스' && <FaRoute />}
-                      {selectedTransaction.route.type === '도보' && <FaLocationArrow />}
-                    </RouteIcon>
-                    <RouteDetails>
-                      <RouteType>{selectedTransaction.route.type}</RouteType>
-                      <RouteDescription>{selectedTransaction.route.description}</RouteDescription>
-                    </RouteDetails>
-                    <RouteTime>{selectedTransaction.route.duration}</RouteTime>
-                  </RouteInfo>
-                </RouteSection>
-              </TransactionContent>
-
-              <ActionButtons>
-                <ActionButton 
-                  className="reserve-cancel"
-                  onClick={() => handleCancelReservation(selectedTransaction.id)}
-                >
-                  <FaTimes /> 예약 취소
-                </ActionButton>
-                <ActionButton 
-                  className="complete"
-                  onClick={() => handleCompleteTransaction(selectedTransaction.id)}
-                  disabled={!!selectedTransaction.myReview}
-                >
-                  <FaCheck /> {selectedTransaction.myReview ? '거래 후기' : '거래 완료'}
-                </ActionButton>
-                <ActionButton 
-                  className="chat"
-                  onClick={() => navigate(`/chat/${selectedTransaction.buyerId}`)}
-                >
-                  <FaUser /> 채팅방으로 가기
-                </ActionButton>
-              </ActionButtons>
-
-              {selectedTransaction.reason && (
-                <div style={{background:'#fff3cd', color:'#856404', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
-                  <b>취소/예약취소 사유:</b> {selectedTransaction.reason}
+        {reviewModal.open && reviewModal.review && (
+            <ModalOverlay>
+              <RatingModalBox>
+                <ModalTitle>상대방이 남긴 거래 후기</ModalTitle>
+                <div style={{marginBottom:8}}>
+                  <b>평가:</b> {ratingOptions.find(r => r.value === reviewModal.review.rating)?.label} ({Number(reviewModal.review.ratingScore).toFixed(2)}★)
                 </div>
-              )}
-
-              {selectedTransaction.rating && (
-                <div style={{background:'#e6f0ff', color:'#007bff', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
-                  <b>평가:</b> {ratingOptions.find(r => r.value === selectedTransaction.rating)?.label} ({Number(selectedTransaction.ratingScore).toFixed(2)}★)
-                  {selectedTransaction.ratingKeywords && selectedTransaction.ratingKeywords.length > 0 && (
+                {reviewModal.review.ratingKeywords && reviewModal.review.ratingKeywords.length > 0 && (
                     <div style={{marginTop:6, fontSize:'0.96rem'}}>
-                      <b>키워드:</b> {selectedTransaction.ratingKeywords.join(', ')}
+                      <b>키워드:</b> {reviewModal.review.ratingKeywords.join(', ')}
                     </div>
-                  )}
-                </div>
-              )}
+                )}
+                <ModalActions>
+                  <ModalButton onClick={closeReviewModal}>닫기</ModalButton>
+                </ModalActions>
+              </RatingModalBox>
+            </ModalOverlay>
+        )}
 
-              {/* 예약 정보 표시 및 수정 */}
-              {editReservationId === selectedTransaction.id ? (
-                <TransactionReservationForm onSubmit={e => handleEditReservationSave(selectedTransaction.id, e)}>
-                  <TransactionReservationLabel>거래 장소</TransactionReservationLabel>
-                  <TransactionReservationInput name="place" value={editReservation.place} onChange={handleEditReservationChange} placeholder="거래 장소를 입력하세요" />
-                  <TransactionReservationLabel>예약 일자</TransactionReservationLabel>
-                  <TransactionReservationInput name="date" value={editReservation.date} onChange={handleEditReservationChange} placeholder="예: 2024-07-01" type="date" />
-                  <TransactionReservationLabel>예약 시간</TransactionReservationLabel>
-                  <TransactionReservationInput name="time" value={editReservation.time} onChange={handleEditReservationChange} placeholder="예: 14:00" type="time" />
-                  <div style={{display:'flex', gap:'0.5rem', marginTop:'0.5rem'}}>
-                    <TransactionReservationSaveBtn type="submit">저장</TransactionReservationSaveBtn>
-                    <TransactionReservationSaveBtn type="button" style={{background:'#ccc', color:'#333'}} onClick={handleEditReservationCancel}>취소</TransactionReservationSaveBtn>
-                  </div>
-                </TransactionReservationForm>
-              ) : (
-                <div style={{margin:'0.7rem 0 1.2rem 0', background:'#f8f9fa', borderRadius:'10px', padding:'14px 16px'}}>
-                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>거래 장소</div>
-                  <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.location?.name || '-'}</div>
-                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 일자</div>
-                  <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.reservationDate || '-'}</div>
-                  <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 시간</div>
-                  <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.reservationTime || '-'}</div>
-                  <TransactionReservationSaveBtn type="button" onClick={() => handleEditReservationClick(selectedTransaction)} style={{marginTop:'0.7rem'}}>예약 정보 수정</TransactionReservationSaveBtn>
+        {/* 구매자 선택 모달 */}
+        {buyerModal.open && (
+            <ModalOverlay>
+              <RatingModalBox>
+                <ModalTitle>구매자 선택</ModalTitle>
+                {buyerLoading ? (
+                    <div style={{margin:'8px 0 16px', color:'#555'}}>후보를 불러오는 중...</div>
+                ) : buyerCandidates.length === 0 ? (
+                    <div style={{margin:'8px 0 16px', color:'#555'}}>
+                      연결된 채팅방에서 구매자 후보를 찾지 못했습니다. 아래에 구매자 ID를 직접 입력해 주세요.
+                    </div>
+                ) : (
+                    <div style={{margin:'8px 0 16px'}}>
+                      아래 후보 중 구매자를 선택해 주세요.
+                    </div>
+                )}
+                {buyerError && (
+                    <div style={{margin:'0 0 12px', color:'#d32f2f'}}>{buyerError}</div>
+                )}
+                {!buyerLoading && buyerCandidates.length > 0 && (
+                    <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:180, overflowY:'auto', marginBottom:12}}>
+                      {buyerCandidates.map(c => (
+                          <label key={c.buyerId} style={{display:'flex', alignItems:'center', gap:8}}>
+                            <input type="radio" name="buyer" value={c.buyerId}
+                                   checked={selectedBuyerId === c.buyerId}
+                                   onChange={() => setSelectedBuyerId(c.buyerId)} />
+                            {c.buyerProfileImageUrl ? (
+                                <img src={c.buyerProfileImageUrl} alt="buyer" style={{width:28,height:28,borderRadius:'50%',objectFit:'cover',border:'1px solid #eee'}} />
+                            ) : (
+                                <span style={{width:28,height:28,borderRadius:'50%',background:'#eee',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#666'}}>👤</span>
+                            )}
+                            <span>구매자 ID: {c.buyerId}{c.buyerNickname ? ` (닉네임: ${c.buyerNickname})` : ''}</span>
+                          </label>
+                      ))}
+                    </div>
+                )}
+                <div style={{marginBottom:12}}>
+                  <input
+                      type="number"
+                      placeholder="직접 입력: 구매자 ID"
+                      value={selectedBuyerId ?? ''}
+                      onChange={e => setSelectedBuyerId(e.target.value ? Number(e.target.value) : null)}
+                      style={{width:'100%', padding:'10px 12px', border:'1px solid #ddd', borderRadius:8}}
+                  />
                 </div>
-              )}
-            </TransactionCard>
-          </DetailModalContent>
-        </DetailModal>
-      )}
-    </>
+                <ModalActions>
+                  <ModalButton className="cancel" onClick={closeBuyerModal} disabled={confirmingBuyer}>취소</ModalButton>
+                  <ModalButton onClick={handleConfirmBuyer} disabled={!selectedBuyerId || confirmingBuyer}>
+                    {confirmingBuyer ? '처리 중...' : '확인'}
+                  </ModalButton>
+                </ModalActions>
+              </RatingModalBox>
+            </ModalOverlay>
+        )}
+
+        {/* 상세 보기 모달 */}
+        {showDetailModal && selectedTransaction && (() => {
+          const uiSelected = selectedTransaction._uiStatus || normalizeStatus(selectedTransaction.status);
+          return (
+              <DetailModal onClick={closeDetailModal}>
+                <DetailModalContent onClick={(e) => e.stopPropagation()}>
+                  <DetailModalHeader>
+                    <DetailModalTitle>거래 상세 정보</DetailModalTitle>
+                    <CloseButton onClick={closeDetailModal}>×</CloseButton>
+                  </DetailModalHeader>
+
+                  <TransactionCard>
+                    <TransactionHeader>
+                      <BookInfo>
+                        <BookTitle>{selectedTransaction.bookTitle}</BookTitle>
+                        <TransactionMeta>
+                          <MetaItem>
+                            <FaUser />
+                            구매자: {selectedTransaction.buyer}
+                          </MetaItem>
+                          <MetaItem>
+                            <FaCalendarAlt />
+                            {uiSelected === 'COMPLETED'
+                                ? (selectedTransaction.completedDate || selectedTransaction.soldAt || '-')
+                                : `예약일: ${selectedTransaction.reservationDate || '-'}`}
+                          </MetaItem>
+                          <MetaItem>
+                            <FaClock />
+                            {uiSelected === 'COMPLETED' ? '완료' : `예약시간: ${selectedTransaction.reservationTime || '-'}`}
+                          </MetaItem>
+                        </TransactionMeta>
+                        <Price>{(selectedTransaction.price ?? 0).toLocaleString()}원</Price>
+                      </BookInfo>
+                    </TransactionHeader>
+
+                    <TransactionContent>
+                      <QRCodeSection style={selectedTransaction.myReview ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
+                        <QRCodeTitle>
+                          <FaQrcode /> 결제 QR 코드
+                        </QRCodeTitle>
+                        <QRCodeContainer>
+                          <QRCode value={selectedTransaction.qrCode} size={120} />
+                        </QRCodeContainer>
+                        <RegenerateButton onClick={() => regenerateQRCode(selectedTransaction.id)} disabled={!!selectedTransaction.myReview}>
+                          <FaSyncAlt /> QR 코드 재생성
+                        </RegenerateButton>
+                        {selectedTransaction.myReview && (
+                            <div style={{color:'#dc3545', marginTop:8, fontWeight:500, fontSize:'0.97rem'}}>
+                              거래가 완료되어 QR코드를 사용할 수 없습니다
+                            </div>
+                        )}
+                      </QRCodeSection>
+
+                      <RouteSection>
+                        <RouteTitle>
+                          <FaRoute /> 약속 장소 경로
+                        </RouteTitle>
+                        <LocationInfo>
+                          <LocationName>{selectedTransaction.location?.name}</LocationName>
+                          <LocationAddress>{selectedTransaction.location?.address}</LocationAddress>
+                        </LocationInfo>
+                        {selectedTransaction.route && (
+                            <RouteInfo>
+                              <RouteIcon>
+                                {selectedTransaction.route.type === '지하철' && <FaRoute />}
+                                {selectedTransaction.route.type === '버스' && <FaRoute />}
+                                {selectedTransaction.route.type === '도보' && <FaLocationArrow />}
+                              </RouteIcon>
+                              <RouteDetails>
+                                <RouteType>{selectedTransaction.route.type}</RouteType>
+                                <RouteDescription>{selectedTransaction.route.description}</RouteDescription>
+                              </RouteDetails>
+                              <RouteTime>{selectedTransaction.route.duration}</RouteTime>
+                            </RouteInfo>
+                        )}
+                      </RouteSection>
+                    </TransactionContent>
+
+                    <ActionButtons>
+                      <ActionButton
+                          className="reserve-cancel"
+                          onClick={() => handleCancelReservation(selectedTransaction.id)}
+                      >
+                        <FaTimes /> 예약 취소
+                      </ActionButton>
+                      <ActionButton
+                          className="complete"
+                          onClick={() => handleCompleteTransaction(selectedTransaction.id)}
+                          disabled={!!selectedTransaction.myReview}
+                      >
+                        <FaCheck /> {selectedTransaction.myReview ? '거래 후기' : '거래 완료'}
+                      </ActionButton>
+                      <ActionButton
+                          className="chat"
+                          onClick={() => navigate(`/chat/${selectedTransaction.buyerId}`)}
+                      >
+                        <FaUser /> 채팅방으로 가기
+                      </ActionButton>
+                    </ActionButtons>
+
+                    {selectedTransaction.reason && (
+                        <div style={{background:'#fff3cd', color:'#856404', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
+                          <b>취소/예약취소 사유:</b> {selectedTransaction.reason}
+                        </div>
+                    )}
+
+                    {selectedTransaction.rating && (
+                        <div style={{background:'#e6f0ff', color:'#007bff', borderRadius:6, padding:'10px 14px', marginBottom:10, fontSize:'0.97rem'}}>
+                          <b>평가:</b> {ratingOptions.find(r => r.value === selectedTransaction.rating)?.label} ({Number(selectedTransaction.ratingScore).toFixed(2)}★)
+                          {selectedTransaction.ratingKeywords && selectedTransaction.ratingKeywords.length > 0 && (
+                              <div style={{marginTop:6, fontSize:'0.96rem'}}>
+                                <b>키워드:</b> {selectedTransaction.ratingKeywords.join(', ')}
+                              </div>
+                          )}
+                        </div>
+                    )}
+
+                    {/* 예약 정보 표시 및 수정 */}
+                    {editReservationId === selectedTransaction.id ? (
+                        <TransactionReservationForm onSubmit={e => handleEditReservationSave(selectedTransaction.id, e)}>
+                          <TransactionReservationLabel>거래 장소</TransactionReservationLabel>
+                          <TransactionReservationInput name="place" value={editReservation.place} onChange={handleEditReservationChange} placeholder="거래 장소를 입력하세요" />
+                          <TransactionReservationLabel>예약 일자</TransactionReservationLabel>
+                          <TransactionReservationInput name="date" value={editReservation.date} onChange={handleEditReservationChange} placeholder="예: 2024-07-01" type="date" />
+                          <TransactionReservationLabel>예약 시간</TransactionReservationLabel>
+                          <TransactionReservationInput name="time" value={editReservation.time} onChange={handleEditReservationChange} placeholder="예: 14:00" type="time" />
+                          <div style={{display:'flex', gap:'0.5rem', marginTop:'0.5rem'}}>
+                            <TransactionReservationSaveBtn type="submit">저장</TransactionReservationSaveBtn>
+                            <TransactionReservationSaveBtn type="button" style={{background:'#ccc', color:'#333'}} onClick={handleEditReservationCancel}>취소</TransactionReservationSaveBtn>
+                          </div>
+                        </TransactionReservationForm>
+                    ) : (
+                        <div style={{margin:'0.7rem 0 1.2rem 0', background:'#f8f9fa', borderRadius:'10px', padding:'14px 16px'}}>
+                          <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>거래 장소</div>
+                          <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.location?.name || '-'}</div>
+                          <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 일자</div>
+                          <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.reservationDate || '-'}</div>
+                          <div style={{fontWeight:600, color:'#2351e9', fontSize:'0.98rem'}}>예약 시간</div>
+                          <div style={{marginBottom:'0.3rem'}}>{selectedTransaction.reservationTime || '-'}</div>
+                          <TransactionReservationSaveBtn type="button" onClick={() => handleEditReservationClick(selectedTransaction)} style={{marginTop:'0.7rem'}}>예약 정보 수정</TransactionReservationSaveBtn>
+                        </div>
+                    )}
+                  </TransactionCard>
+                </DetailModalContent>
+              </DetailModal>
+          );
+        })()}
+      </>
   );
 };
 
-export default MyTransactions; 
+export default MyTransactions;

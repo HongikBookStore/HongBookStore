@@ -1,14 +1,14 @@
-// ChatList.jsx — 판매자/구매자 필터 정상화 + 상태/정렬/스타일 수정 (복붙용)
-
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import styled from 'styled-components';
-import { FaArrowLeft, FaSearch, FaBook, FaExclamationCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaSearch, FaBook, FaExclamationCircle, FaCheckCircle } from 'react-icons/fa';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrCreateChatRoom } from '../../api/chat';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { createPeerReview } from '../../api/peerReviews';
 import axios from 'axios';
+
+/* ---------------------------- styled components ---------------------------- */
 
 const PageWrapper = styled.div`
   display: flex;
@@ -151,6 +151,10 @@ const ChatItem = styled.div`
     background: #fff3cd;
     border-left: 4px solid #ffc107;
   `}
+  ${props => props.$isCompleted && `
+    background: #dcfce7;
+    border-left: 4px solid #22c55e;
+  `}
   ${props => props.$hasUnread && `
     background: #e3f2fd;
   `}
@@ -202,7 +206,11 @@ const TradeStatus = styled.div`
       case 'reserved':
         return 'background: #ffe066; color: #856404;';
       case 'completed':
-        return 'background: #b6fcd5; color: #155724;';
+        return `
+          background: #bbf7d0;
+          color: #166534;
+          border: 1px solid #86efac;
+        `;
       case 'in_progress':
       default:
         return 'background: #cce5ff; color: #004085;';
@@ -228,7 +236,14 @@ const SmallBtn = styled.button`
   &:hover { background: #e9ecef; }
 `;
 
-// 후기 모달 스타일
+/* ✅ 후기 완료 배지 */
+const ReviewDoneBadge = styled.div`
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7;
+`;
+
+// 후기 모달
 const ModalOverlay = styled.div`
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center; z-index: 2000;
@@ -237,12 +252,8 @@ const ModalBox = styled.div`
   background: #fff; border-radius: 12px; width: 420px; max-width: 92vw;
   padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 `;
-const ModalTitle = styled.h3`
-  margin: 0 0 10px; color: #333;
-`;
-const ModalActions = styled.div`
-  display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;
-`;
+const ModalTitle = styled.h3` margin: 0 0 10px; color: #333; `;
+const ModalActions = styled.div` display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; `;
 const ModalButton = styled.button`
   padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;
   background: #007bff; color: #fff;
@@ -265,10 +276,8 @@ function normalizeTradeStatus(status, flags = {}) {
 
 function toTimestamp(anyTime) {
   if (!anyTime) return 0;
-  // ISO or date-like
   const d1 = new Date(anyTime);
   if (!isNaN(d1.getTime())) return d1.getTime();
-  // "HH:mm" 같은 경우
   const hhmm = /^(\d{1,2}):(\d{2})/.exec(String(anyTime));
   if (hhmm) {
     const h = parseInt(hhmm[1], 10), m = parseInt(hhmm[2], 10);
@@ -295,7 +304,6 @@ function readMyId() {
     const u = localStorage.getItem('user');
     if (u) return JSON.parse(u).id;
   } catch {}
-  // 토큰에서 파싱 (옵션)
   try {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
@@ -305,44 +313,34 @@ function readMyId() {
   return null;
 }
 
-/**
- * 서버 응답을 화면용 형태로 정규화
- * 서버 스키마가 달라도 안전하게 동작하게 다중 키를 지원
- */
+/** 서버 응답을 화면용 형태로 정규화 */
 function normalizeRoom(raw, myId) {
   const id = raw.id ?? raw.roomId ?? raw.chatId;
   const buyerId = raw.buyerId ?? raw.buyer?.id;
   const sellerId = raw.sellerId ?? raw.seller?.id;
   const role = myId === sellerId ? 'seller' : (myId === buyerId ? 'buyer' : (raw.type || 'other'));
 
-  // 상대방 이름
   const buyerName = raw.buyerName ?? raw.buyer?.username ?? raw.buyer?.name;
   const sellerName = raw.sellerName ?? raw.seller?.username ?? raw.seller?.name;
   const counterpartyName =
       role === 'seller' ? (buyerName || raw.userName) :
-          role === 'buyer' ? (sellerName || raw.userName) :
+          role === 'buyer'  ? (sellerName || raw.userName) :
               (raw.userName || '상대방');
 
   const userAvatar = (counterpartyName || '?').slice(0, 1).toUpperCase();
-
-  // 책/게시글
   const bookTitle = raw.bookTitle ?? raw.postTitle ?? raw.title ?? '';
 
-  // 마지막 메시지/시간
   const lastMsgObj = raw.lastMessage || {};
   const lastMessage = lastMsgObj.message ?? raw.lastMessage ?? '';
   const lastTimeRaw = raw.lastMessageAt ?? lastMsgObj.sentAt ?? raw.updatedAt ?? raw.lastTime;
   const lastTimeTs = toTimestamp(lastTimeRaw);
   const lastTime = formatDisplayTime(lastTimeTs);
 
-  // 상태/안읽음
   const tradeStatus = normalizeTradeStatus(raw.tradeStatus, {
     isReserved: raw.isReserved,
     isCompleted: raw.isCompleted
   });
-  const unread = Number(
-      raw.unreadCountForMe ?? raw.unreadCount ?? raw.unread ?? 0
-  );
+  const unread = Number(raw.unreadCountForMe ?? raw.unreadCount ?? raw.unread ?? 0);
 
   return {
     id,
@@ -358,7 +356,9 @@ function normalizeRoom(raw, myId) {
     unreadCount: isNaN(unread) ? 0 : unread,
     salePostId: raw.salePostId ?? raw.postId,
     tradeStatus,
-    isReserved: tradeStatus === 'reserved'
+    isReserved: tradeStatus === 'reserved',
+    // ✅ 서버가 이미 알려줄 수도 있는 필드(있으면 활용)
+    hasMyReview: raw.hasMyReview === true || raw.myReviewedAt != null
   };
 }
 
@@ -380,13 +380,29 @@ const ChatListPage = () => {
   const [keywords, setKeywords] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // URL ?bookId=xxxxx 처리: 해당 책 채팅방 생성/열기
+  // 🔹 roomId -> reservation 객체(또는 null) 캐시
+  const [reservationMap, setReservationMap] = useState({});
+
+  // ✅ 내가 이미 작성한 후기 여부(로컬 캐시) — key: `${postId}:${role}`
+  const [reviewDoneMap, setReviewDoneMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('reviewDoneMap') || '{}');
+    } catch { return {}; }
+  });
+  const setReviewDone = (postId, role) => {
+    const key = `${postId}:${role}`;
+    setReviewDoneMap(prev => {
+      const next = { ...prev, [key]: true };
+      localStorage.setItem('reviewDoneMap', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // URL ?bookId=xxxxx 처리
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const bookId = urlParams.get('bookId');
-
     if (!bookId) return;
-
     (async () => {
       try {
         const res = await getOrCreateChatRoom(bookId);
@@ -401,7 +417,7 @@ const ChatListPage = () => {
     })();
   }, [location.search, navigate]);
 
-  // 내 채팅방 목록 불러오기
+  // 내 채팅방 목록
   useEffect(() => {
     const fetchChatRooms = async () => {
       setError(null);
@@ -425,10 +441,76 @@ const ChatListPage = () => {
     fetchChatRooms();
   }, []);
 
-  // 화면용 정규화 목록
-  const rooms = useMemo(() => roomsRaw.map(r => normalizeRoom(r, myId)), [roomsRaw, myId]);
+  // 🔹 목록에 예약필드가 없을 수 있어서, 각 방의 예약상태를 보강
+  useEffect(() => {
+    if (!roomsRaw?.length) return;
 
-  // 필터/검색/정렬
+    const ids = Array.from(
+        new Set(
+            roomsRaw.map(r => r.id ?? r.roomId ?? r.chatId).filter(Boolean)
+        )
+    );
+
+    // 이미 조회한 방은 스킵
+    const need = ids.filter(id => !(id in reservationMap));
+
+    if (!need.length) return;
+
+    const token = localStorage.getItem('accessToken') || '';
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    // 동시성 제한(최대 4개씩)
+    const maxConcurrency = 4;
+    let cursor = 0;
+    const nextBatch = () => need.slice(cursor, cursor + maxConcurrency);
+
+    (async () => {
+      const collected = {};
+      while (cursor < need.length) {
+        const batch = nextBatch();
+        await Promise.all(
+            batch.map(async (roomId) => {
+              try {
+                const res = await fetch(`/api/chat/rooms/${roomId}/reservation`, { headers });
+                if (res.status === 204) {
+                  collected[roomId] = null;
+                  return;
+                }
+                if (!res.ok) {
+                  collected[roomId] = null;
+                  return;
+                }
+                const body = await res.json();
+                collected[roomId] = body || null;
+              } catch {
+                collected[roomId] = null;
+              }
+            })
+        );
+        cursor += maxConcurrency;
+      }
+      if (Object.keys(collected).length) {
+        setReservationMap(prev => ({ ...prev, ...collected }));
+      }
+    })();
+  }, [roomsRaw, reservationMap]);
+
+  // 화면용 정규화 목록 (예약맵 반영)
+  const rooms = useMemo(() => {
+    return roomsRaw.map(r => {
+      const id = r.id ?? r.roomId ?? r.chatId;
+      const rez = reservationMap[id];
+      // 상태 보강
+      const merged = {
+        ...r,
+        isReserved: r.isReserved ?? (rez?.status === 'CONFIRMED'),
+        isCompleted: r.isCompleted ?? (rez?.status === 'COMPLETED')
+      };
+      return normalizeRoom(merged, myId);
+    });
+  }, [roomsRaw, reservationMap, myId]);
+
+  // ✅ 순서 유지: 정렬 제거
   const filteredChatRooms = useMemo(() => {
     const tabFiltered = rooms.filter(chat => {
       if (activeTab === 'seller') return chat.role === 'seller';
@@ -444,12 +526,7 @@ const ChatListPage = () => {
         )
         : tabFiltered;
 
-    // 예약 우선, 그 다음 최근 메시지 시간 내림차순
-    return [...searched].sort((a, b) => {
-      if (a.isReserved && !b.isReserved) return -1;
-      if (!a.isReserved && b.isReserved) return 1;
-      return (b.lastTimeTs || 0) - (a.lastTimeTs || 0);
-    });
+    return searched; // 정렬 없이 그대로 (백엔드 순서 유지)
   }, [rooms, activeTab, searchTerm]);
 
   const handleBack = () => navigate('/marketplace');
@@ -478,11 +555,11 @@ const ChatListPage = () => {
     }
   };
 
+  // (유지) 추후 쓸 수 있는 API 헬퍼
   const getAuthHeader = () => {
     const token = localStorage.getItem('accessToken');
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
-
   const patchPostStatus = async (postId, status, buyerId) => {
     try {
       const payload = buyerId ? { status, buyerId } : { status };
@@ -495,6 +572,7 @@ const ChatListPage = () => {
   };
 
   const openReviewForChat = (chat) => {
+    if (chat.tradeStatus !== 'completed') return; // 버튼이 안 보이지만 방어
     if (!chat?.salePostId) {
       alert('연결된 판매글 정보를 확인할 수 없습니다.');
       return;
@@ -522,6 +600,8 @@ const ChatListPage = () => {
         ratingKeywords: kw,
         role: reviewModal.role
       });
+      // ✅ 로컬/화면 상태에 "후기 완료" 반영
+      setReviewDone(reviewModal.postId, reviewModal.role);
       alert('후기가 저장되었습니다.');
       setReviewModal({ open: false, postId: null, role: null });
     } catch (e) {
@@ -569,54 +649,63 @@ const ChatListPage = () => {
                     <p>잠시 후 다시 시도해 주세요.</p>
                   </EmptyState>
               ) : filteredChatRooms.length > 0 ? (
-                  filteredChatRooms.map((chat) => (
-                      <ChatItem
-                          key={chat.id}
-                          onClick={() => handleChatClick(chat.id)}
-                          $isReserved={chat.isReserved}
-                          $hasUnread={chat.unreadCount > 0}
-                      >
-                        <UserAvatar>{chat.userAvatar}</UserAvatar>
-                        <ChatInfo>
-                          <UserName>{chat.userName}</UserName>
-                          <BookTitle>
-                            <FaBook style={{ color: '#666' }} />
-                            {chat.bookTitle}
-                          </BookTitle>
-                          <TradeStatus $status={chat.tradeStatus}>{getStatusText(chat.tradeStatus)}</TradeStatus>
-                          <LastMessage>{chat.lastMessage}</LastMessage>
-                        </ChatInfo>
-                        <ChatMeta>
-                          <LastTime>{chat.lastTime || ''}</LastTime>
-                          {chat.salePostId && (
-                              <div style={{ fontSize: '0.75rem', color: '#ccc' }}>{chat.salePostId}번포스트</div>
-                          )}
-                          {chat.unreadCount > 0 && (
-                              <UnreadCount>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</UnreadCount>
-                          )}
-                        </ChatMeta>
-                        {chat.role === 'seller' && chat.salePostId && (
+                  filteredChatRooms.map((chat) => {
+                    const isCompleted = chat.tradeStatus === 'completed';
+                    const counterpartyId =
+                        chat.role === 'seller' ? chat.buyerId :
+                            chat.role === 'buyer'  ? chat.sellerId : null;
+
+                    // ✅ 후기 완료 여부 계산 (서버 필드 + 로컬 캐시)
+                    const roleForReview = chat.role === 'seller' ? 'BUYER'
+                        : chat.role === 'buyer'  ? 'SELLER'
+                            : null;
+                    const reviewKey = chat.salePostId && roleForReview ? `${chat.salePostId}:${roleForReview}` : null;
+                    const alreadyReviewed = !!(chat.hasMyReview || (reviewKey && reviewDoneMap[reviewKey] === true));
+
+                    return (
+                        <ChatItem
+                            key={chat.id}
+                            onClick={() => handleChatClick(chat.id)}
+                            $isReserved={chat.isReserved}
+                            $isCompleted={isCompleted}
+                            $hasUnread={chat.unreadCount > 0}
+                        >
+                          <UserAvatar>{chat.userAvatar}</UserAvatar>
+                          <ChatInfo>
+                            <UserName>{chat.userName}</UserName>
+                            <BookTitle>
+                              <FaBook style={{ color: '#666' }} />
+                              {chat.bookTitle}
+                            </BookTitle>
+                            <TradeStatus $status={chat.tradeStatus}>{getStatusText(chat.tradeStatus)}</TradeStatus>
+                            <LastMessage>{chat.lastMessage}</LastMessage>
+                          </ChatInfo>
+
+                          <ChatMeta>
+                            <LastTime>{chat.lastTime || ''}</LastTime>
+                            {chat.unreadCount > 0 && (
+                                <UnreadCount>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</UnreadCount>
+                            )}
+                          </ChatMeta>
+
+                          {/* ✅ 진행중/예약완료: 프로필만
+                        ✅ 거래완료 & 후기 미작성: 후기 버튼
+                        ✅ 거래완료 & 후기 작성: "후기 완료" 배지 */}
                           <RowActions onClick={(e) => e.stopPropagation()}>
-                            {chat.isReserved ? (
-                              <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'FOR_SALE')}>예약 해제</SmallBtn>
+                            {isCompleted && (alreadyReviewed ? (
+                                <ReviewDoneBadge title="후기 작성 완료">
+                                  <FaCheckCircle /> 후기 완료
+                                </ReviewDoneBadge>
                             ) : (
-                              <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'RESERVED')}>예약중</SmallBtn>
+                                <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
+                            ))}
+                            {counterpartyId && (
+                                <SmallBtn onClick={() => navigate(`/users/${counterpartyId}`)}>프로필</SmallBtn>
                             )}
-                            {chat.buyerId && (
-                              <SmallBtn onClick={() => patchPostStatus(chat.salePostId, 'SOLD_OUT', chat.buyerId)}>판매완료</SmallBtn>
-                            )}
-                            <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
-                            {chat.buyerId && <SmallBtn onClick={() => navigate(`/users/${chat.buyerId}`)}>프로필</SmallBtn>}
                           </RowActions>
-                        )}
-                        {chat.role === 'buyer' && (
-                          <RowActions onClick={(e) => e.stopPropagation()}>
-                            <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
-                            {chat.sellerId && <SmallBtn onClick={() => navigate(`/users/${chat.sellerId}`)}>프로필</SmallBtn>}
-                          </RowActions>
-                        )}
-                      </ChatItem>
-                  ))
+                        </ChatItem>
+                    );
+                  })
               ) : (
                   <EmptyState>
                     <EmptyIcon />
@@ -626,29 +715,39 @@ const ChatListPage = () => {
               )}
             </ChatList>
           </ChatListContainer>
+
           {reviewModal.open && (
-            <ModalOverlay>
-              <ModalBox>
-                <ModalTitle>후기 남기기</ModalTitle>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
-                  <input type="number" min="1" max="5" step="0.5" value={star ?? ''}
-                         onChange={e => setStar(e.target.value ? Number(e.target.value) : null)}
-                         style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }} />
-                </div>
-                <div>
-                  <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표 구분, 선택)</div>
-                  <input type="text" value={keywords}
-                         onChange={e => setKeywords(e.target.value)}
-                         placeholder="친절함, 시간엄수"
-                         style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }} />
-                </div>
-                <ModalActions>
-                  <ModalButton className="cancel" onClick={() => setReviewModal({ open: false, postId: null, role: null })} disabled={submitting}>취소</ModalButton>
-                  <ModalButton onClick={submitReview} disabled={!star || submitting}>{submitting ? '저장 중...' : '저장'}</ModalButton>
-                </ModalActions>
-              </ModalBox>
-            </ModalOverlay>
+              <ModalOverlay>
+                <ModalBox>
+                  <ModalTitle>후기 남기기</ModalTitle>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
+                    <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.5"
+                        value={star ?? ''}
+                        onChange={e => setStar(e.target.value ? Number(e.target.value) : null)}
+                        style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표 구분, 선택)</div>
+                    <input
+                        type="text"
+                        value={keywords}
+                        onChange={e => setKeywords(e.target.value)}
+                        placeholder="친절함, 시간엄수"
+                        style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }}
+                    />
+                  </div>
+                  <ModalActions>
+                    <ModalButton className="cancel" onClick={() => setReviewModal({ open: false, postId: null, role: null })} disabled={submitting}>취소</ModalButton>
+                    <ModalButton onClick={submitReview} disabled={!star || submitting}>{submitting ? '저장 중...' : '저장'}</ModalButton>
+                  </ModalActions>
+                </ModalBox>
+              </ModalOverlay>
           )}
         </MainContent>
       </PageWrapper>
