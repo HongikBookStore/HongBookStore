@@ -75,29 +75,6 @@ const AddBookButton = styled.button`
   }
 `;
 
-const MyTransactionsButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: #17a2b8;
-  color: white;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.2);
-
-  &:hover {
-    background: #138496;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
-  }
-`;
-
 const TabSection = styled.div`
   margin-bottom: 30px;
 `;
@@ -743,10 +720,6 @@ const MyBookstore = () => {
     navigate('/book-write');
   };
 
-  const handleMyTransactions = () => {
-    navigate('/my-transactions');
-  };
-
   // 찜 해제 핸들러
   const handleRemoveFromWishlist = async (postId) => {
     if (window.confirm('찜을 해제하시겠습니까?')) {
@@ -871,12 +844,6 @@ const MyBookstore = () => {
           <BookstoreHeader>
             <BookstoreTitle>나의 책방</BookstoreTitle>
             <HeaderButtons>
-              <MyTransactionsButton onClick={handleMyTransactions}>
-                <FaExchangeAlt /> 나의 거래
-              </MyTransactionsButton>
-              <AddBookButton onClick={handleAddBook}>
-                <FaPlus /> 책 등록하기
-              </AddBookButton>
             </HeaderButtons>
           </BookstoreHeader>
 
