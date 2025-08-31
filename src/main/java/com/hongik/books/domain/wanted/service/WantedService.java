@@ -21,6 +21,7 @@ public class WantedService {
     private final WantedRepository wantedRepository;
     private final UserRepository userRepository;
     private final WantedCommentRepository wantedCommentRepository; // ✅ 추가
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
 
     public Page<WantedSummaryResponseDTO> search(
             String category, String department, String keyword,
@@ -53,6 +54,10 @@ public class WantedService {
         User requester = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+        // 유해 표현 검사 (title, content)
+        toxicFilterClient.assertAllowed(dto.getTitle());
+        toxicFilterClient.assertAllowed(dto.getContent());
+
         Wanted wanted = Wanted.builder()
                 .requester(requester)
                 .title(dto.getTitle())
@@ -75,6 +80,10 @@ public class WantedService {
         if (w.getRequester() == null || w.getRequester().getId() == null || !w.getRequester().getId().equals(userId)) {
             throw new SecurityException("권한이 없습니다.");
         }
+
+        // 유해 표현 검사 (title, content)
+        toxicFilterClient.assertAllowed(dto.getTitle());
+        toxicFilterClient.assertAllowed(dto.getContent());
 
         w.update(
                 dto.getTitle(),

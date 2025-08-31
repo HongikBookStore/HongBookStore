@@ -177,3 +177,11 @@ weather:
     path:
       vilage: "/api/typ01/openApi/VilageFcstInfoService_2.0/getVilageFcst"  # 네 계정 대시보드 경로로 교체
       midland-url: "/api/typ01/url/fct_afs_wl.php"                           # 지금 성공한 URL(전문) 엔드포인트
+
+### Toxic Filter ###
+moderation:
+  toxic-filter:
+    enabled: true
+    base-url: https://toxic-filter-534256318130.us-west1.run.app
+    # api-key: ${TOXIC_FILTER_API_KEY:}  # toxic-filter 서버에 API_KEY가 설정된 경우
+    # blockLevel: CERTAIN    # NONE | CERTAIN | AMBIGUOUS
