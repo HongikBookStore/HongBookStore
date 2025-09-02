@@ -1,6 +1,8 @@
 package com.hongik.books.domain.chat.controller;
 
 import com.hongik.books.domain.chat.domain.ChatMessage;
+import com.hongik.books.common.dto.ApiResponse;
+import com.hongik.books.common.dto.ModerationErrorDTO;
 import com.hongik.books.domain.chat.dto.ChatMessageRequest;
 import com.hongik.books.domain.chat.dto.ChatMessageResponse;
 import com.hongik.books.domain.chat.repository.ChatMessageRepository;
@@ -29,6 +31,7 @@ public class ChatMessageController {
     private final SimpMessagingTemplate template;
     private final ChatRoomRepository chatRoomRepository; // ✅ 추가
     private final NotificationService notificationService; // SSE 알림
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
 
 
     // 1. REST: 이전 메시지 조회
@@ -52,7 +55,20 @@ public class ChatMessageController {
 
     // 2. STOMP: 실시간 메시지 저장 및 전송
     @MessageMapping("/chat.sendMessage")
-    public void sendMessage(ChatMessageRequest dto) {
+    public void sendMessage(ChatMessageRequest dto, java.security.Principal principal) {
+        // 유해 표현 검사: 메시지 본문. 차단 시 현재 사용자에게 에러 전달 후 중단
+        try {
+            toxicFilterClient.assertAllowed(dto.getMessage(), "message");
+        } catch (com.hongik.books.common.exception.ModerationException ex) {
+            if (principal != null) {
+                var data = new ModerationErrorDTO(
+                        ex.getField(), ex.getPredictionLevel(), ex.getMalicious(), ex.getClean(), ex.getReason()
+                );
+                var payload = new ApiResponse<>(false, ex.getMessage(), data);
+                template.convertAndSendToUser(principal.getName(), "/queue/chat-errors", payload);
+            }
+            return;
+        }
         var salePost = salePostRepository.findById(dto.getSalePostId()).orElseThrow();
         var sender = userRepository.findById(dto.getSenderId()).orElseThrow();
         var receiver = userRepository.findById(dto.getReceiverId()).orElseThrow();

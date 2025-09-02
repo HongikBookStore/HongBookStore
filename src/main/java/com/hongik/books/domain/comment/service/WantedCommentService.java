@@ -37,6 +37,7 @@ public class WantedCommentService {
     private final WantedCommentRepository commentRepository;
     private final WantedRepository wantedRepository;
     private final NotificationService notificationService;
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -87,6 +88,8 @@ public class WantedCommentService {
        ========================= */
     @Transactional
     public WantedCommentDto addRoot(Long wantedId, CommentCreateRequest req, Long userId, String nickname) {
+        // 유해 표현 검사
+        toxicFilterClient.assertAllowed(req.getContent(), "content");
         String alias = computeAliasForUser(wantedId, userId);
         WantedComment saved = commentRepository.save(
                 WantedComment.builder()
@@ -131,6 +134,8 @@ public class WantedCommentService {
 
     @Transactional
     public WantedCommentDto addReply(Long wantedId, Long parentId, CommentCreateRequest req, Long userId, String nickname) {
+        // 유해 표현 검사
+        toxicFilterClient.assertAllowed(req.getContent(), "content");
         String alias = computeAliasForUser(wantedId, userId);
         WantedComment saved = commentRepository.save(
                 WantedComment.builder()

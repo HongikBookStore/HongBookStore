@@ -22,11 +22,15 @@ public class PlaceReviewService {
     private final PlaceReviewRepository reviewRepo;
     private final ReviewReactionRepository reactionRepo;
     private final UserRepository userRepository;
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
 
     @Transactional
     public Long createReview(Long placeId, Long userId, int rating, String content, List<String> photoUrls) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found"));
+
+        // 유해 표현 검사
+        toxicFilterClient.assertAllowed(content, "content");
 
         PlaceReview review = PlaceReview.builder()
                 .placeId(placeId)

@@ -1023,6 +1023,27 @@ const PostDetail = () => {
                 </ConditionGrid>
               </ConditionSection>
 
+              {/* 상세 설명 */}
+              <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #eee', borderRadius: 8, background: '#fff' }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>상세 설명</div>
+                {post.contentToxic && (
+                  <div style={{
+                    marginBottom: 8,
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    background: '#fff3cd',
+                    color: '#856404',
+                    fontSize: '0.9rem',
+                    border: '1px solid #ffeeba'
+                  }}>
+                    ⚠️ 부적절한 표현이 감지되었습니다{post.contentToxicLevel ? ` (${post.contentToxicLevel}${typeof post.contentToxicMalicious === 'number' ? `, ${Math.round(post.contentToxicMalicious*100)}%` : ''})` : ''}.
+                  </div>
+                )}
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#333' }}>
+                  {post.postContent || '상세 설명이 없습니다.'}
+                </div>
+              </div>
+
               <BookInfoSection>
                 <InfoTitle>책 정보</InfoTitle>
                 <InfoGrid>

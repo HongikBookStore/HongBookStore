@@ -35,6 +35,7 @@ public class SalePostService {
     private final UserRepository userRepository;
     private final GcpStorageUtil gcpStorageUtil;
     private final ChatRoomRepository chatRoomRepository;
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
 
     /**
      * [ISBN 조회된 책]으로 판매 게시글을 생성 (이미지 업로드 포함)
@@ -45,6 +46,10 @@ public class SalePostService {
             Long sellerId) throws IOException {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        // 유해 표현 검사: 제목은 차단, 본문은 경고 플래그만 저장
+        toxicFilterClient.assertAllowed(request.getPostTitle(), "postTitle");
+        var contentModeration = toxicFilterClient.check(request.getPostContent());
 
         // Book 정보는 ISBN을 기반으로 찾되, 없으면 API에서 받은 정보로 새로 생성
         Book book = bookRepository.findByIsbn(request.getIsbn())
@@ -61,6 +66,14 @@ public class SalePostService {
                 });
 
         SalePost newSalePost = createNewSalePost(request, seller, book);
+        // 본문 모더레이션 결과 반영 (차단하지 않고 플래그 저장)
+        newSalePost.applyContentModeration(
+                contentModeration.predictionLevel(),
+                contentModeration.malicious(),
+                contentModeration.clean(),
+                contentModeration.blocked(),
+                contentModeration.reason()
+        );
         salePostRepository.save(newSalePost); // SalePost를 먼저 저장하여 ID를 생성
         uploadAndAttachImages(imageFiles, newSalePost); // 이미지 처리 로직 추가
         return newSalePost.getId();
@@ -80,6 +93,10 @@ public class SalePostService {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
+        // 유해 표현 검사: 제목은 차단, 본문은 경고 플래그만 저장
+        toxicFilterClient.assertAllowed(request.getPostTitle(), "postTitle");
+        var contentModeration = toxicFilterClient.check(request.getPostContent());
+
         // 직접 등록이므로 항상 새로운 Book 엔티티를 생성
         Book newBook = Book.builder()
                 .title(request.getBookTitle())
@@ -91,6 +108,14 @@ public class SalePostService {
         bookRepository.save(newBook);
 
         SalePost newSalePost = createNewSalePost(request, seller, newBook);
+        // 본문 모더레이션 결과 반영 (차단하지 않고 플래그 저장)
+        newSalePost.applyContentModeration(
+                contentModeration.predictionLevel(),
+                contentModeration.malicious(),
+                contentModeration.clean(),
+                contentModeration.blocked(),
+                contentModeration.reason()
+        );
         salePostRepository.save(newSalePost); // SalePost를 먼저 저장하여 ID를 생성
 
         uploadAndAttachImages(imageFiles, newSalePost); // 이미지 처리
@@ -137,7 +162,18 @@ public class SalePostService {
     public void updateSalePost(Long postId, SalePostUpdateRequestDTO request, Long userId) {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
+
+        // 유해 표현 검사: 제목은 차단, 본문은 경고 플래그만 저장
+        toxicFilterClient.assertAllowed(request.getPostTitle(), "postTitle");
+        var contentModeration2 = toxicFilterClient.check(request.getPostContent());
         salePost.update(request);
+        salePost.applyContentModeration(
+                contentModeration2.predictionLevel(),
+                contentModeration2.malicious(),
+                contentModeration2.clean(),
+                contentModeration2.blocked(),
+                contentModeration2.reason()
+        );
     }
 
     /**

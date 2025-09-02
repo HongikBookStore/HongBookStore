@@ -835,6 +835,19 @@ const ChatRoom = () => {
         const newMessage = JSON.parse(message.body);
         setMessages(prev => [...prev, newMessage]);
       });
+      // 유저 전용 에러 큐 구독: 모더레이션/기타 STOMP 에러 알림 처리
+      stomp.subscribe('/user/queue/chat-errors', (frame) => {
+        try {
+          const payload = JSON.parse(frame.body); // ApiResponse<ModerationErrorDTO>
+          const msg = payload?.message || '메시지 전송이 차단되었습니다.';
+          const d = payload?.data;
+          const extra = d?.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? ", " + Math.round(d.malicious*100) + "%" : ''})` : '';
+          setHasProfanity(true);
+          setProfanityWarning(msg + extra);
+          // 일정 시간 후 경고 자동 해제(선택)
+          setTimeout(() => { setHasProfanity(false); setProfanityWarning(''); }, 6000);
+        } catch (e) { /* ignore */ }
+      });
       stompClient.current = stomp;
     });
 
@@ -845,6 +858,11 @@ const ChatRoom = () => {
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
+    // 간단 클라이언트 가드: 부적절 경고 시 전송 차단
+    if (hasProfanity) {
+      alert(profanityWarning || '부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
+      return;
+    }
     if (!roomId) return;
     const client = stompClient.current;
     if (!client || !client.connected) return;

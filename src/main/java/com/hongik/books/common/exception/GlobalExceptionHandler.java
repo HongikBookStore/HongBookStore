@@ -1,6 +1,7 @@
 package com.hongik.books.common.exception;
 
 import com.hongik.books.common.dto.ApiResponse;
+import com.hongik.books.common.dto.ModerationErrorDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -48,6 +49,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(ModerationException.class)
+    public ResponseEntity<ApiResponse<ModerationErrorDTO>> handleModeration(ModerationException ex) {
+        var data = new ModerationErrorDTO(
+                ex.getField(),
+                ex.getPredictionLevel(),
+                ex.getMalicious(),
+                ex.getClean(),
+                ex.getReason()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), data));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})

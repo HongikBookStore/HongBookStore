@@ -55,8 +55,8 @@ public class WantedService {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         // 유해 표현 검사 (title, content)
-        toxicFilterClient.assertAllowed(dto.getTitle());
-        toxicFilterClient.assertAllowed(dto.getContent());
+        toxicFilterClient.assertAllowed(dto.getTitle(), "title");
+        toxicFilterClient.assertAllowed(dto.getContent(), "content");
 
         Wanted wanted = Wanted.builder()
                 .requester(requester)
@@ -82,8 +82,8 @@ public class WantedService {
         }
 
         // 유해 표현 검사 (title, content)
-        toxicFilterClient.assertAllowed(dto.getTitle());
-        toxicFilterClient.assertAllowed(dto.getContent());
+        toxicFilterClient.assertAllowed(dto.getTitle(), "title");
+        toxicFilterClient.assertAllowed(dto.getContent(), "content");
 
         w.update(
                 dto.getTitle(),

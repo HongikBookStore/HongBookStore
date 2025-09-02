@@ -121,8 +121,10 @@ export default function WantedComments({ wantedId }) {
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [text, setText] = useState('');
+    const [textError, setTextError] = useState('');
     const [replyFor, setReplyFor] = useState(null); // commentId
     const [replyText, setReplyText] = useState('');
+    const [replyError, setReplyError] = useState('');
     const myId = (() => {
         const v = localStorage.getItem('userId');
         if (!v) return null;
@@ -152,6 +154,7 @@ export default function WantedComments({ wantedId }) {
         const body = { content: text.trim() };
         if (!body.content) return;
         try {
+            setTextError('');
             const res = await fetch(`/api/wanted/${wantedId}/comments`, {
                 method: 'POST',
                 headers: authHeaders(),
@@ -159,6 +162,12 @@ export default function WantedComments({ wantedId }) {
             });
             const json = await toJsonSafely(res);
             if (!res.ok) {
+                if (res.status === 400 && json?.success === false && json?.data?.field) {
+                    const d = json.data;
+                    const lvl = d.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})` : '';
+                    setTextError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
+                    return;
+                }
                 throw new Error(json?.message || `댓글 등록 실패 (${res.status})`);
             }
             setText('');
@@ -173,6 +182,7 @@ export default function WantedComments({ wantedId }) {
         const body = { content: replyText.trim() };
         if (!body.content) return;
         try {
+            setReplyError('');
             const res = await fetch(`/api/wanted/${wantedId}/comments/${parentId}/replies`, {
                 method: 'POST',
                 headers: authHeaders(),
@@ -180,6 +190,12 @@ export default function WantedComments({ wantedId }) {
             });
             const json = await toJsonSafely(res);
             if (!res.ok) {
+                if (res.status === 400 && json?.success === false && json?.data?.field) {
+                    const d = json.data;
+                    const lvl = d.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})` : '';
+                    setReplyError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
+                    return;
+                }
                 throw new Error(json?.message || `대댓글 등록 실패 (${res.status})`);
             }
             setReplyFor(null);
@@ -244,6 +260,9 @@ export default function WantedComments({ wantedId }) {
                                 onChange={e => setReplyText(e.target.value)}
                                 placeholder="대댓글을 입력하세요"
                             />
+                            {replyError && (
+                                <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{replyError}</div>
+                            )}
                             <div style={{display:'flex',flexDirection:'column',gap:8}}>
                                 <Button $variant="primary" onClick={() => submitReply(c.id)}>등록</Button>
                                 <Button onClick={() => { setReplyFor(null); setReplyText(''); }}>취소</Button>
@@ -273,6 +292,9 @@ export default function WantedComments({ wantedId }) {
                     onChange={e => setText(e.target.value)}
                     placeholder="댓글을 입력하세요"
                 />
+                {textError && (
+                    <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{textError}</div>
+                )}
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
                     <Button $variant="primary" onClick={submitRoot}>등록</Button>
                     <Button onClick={() => setText('')}>취소</Button>

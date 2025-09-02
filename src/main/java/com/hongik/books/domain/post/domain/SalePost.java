@@ -77,6 +77,18 @@ public class SalePost {
     @Column(nullable = false)
     private boolean negotiable;
 
+    // Moderation flags for content
+    @Column(nullable = false)
+    private boolean contentToxic = false;
+
+    private String contentToxicLevel;   // "확실한 비속어", "애매한 비속어", "비속어 아님"
+
+    private Double contentToxicMalicious;
+
+    private Double contentToxicClean;
+
+    private String contentToxicReason;  // disabled | blank | unavailable | error | null
+
     // 조회수
     @Column(nullable = false)
     @ColumnDefault("0") // DB 기본값을 0으로 설정
@@ -151,6 +163,14 @@ public class SalePost {
         this.waterCondition = request.getWaterCondition();
         this.negotiable = request.isNegotiable();
         // 위치 코드는 "작성 시 필수" 요구라 수정 DTO에는 반영 안 함(필요 시 별도 DTO로 추가)
+    }
+
+    public void applyContentModeration(String level, Double malicious, Double clean, boolean toxic, String reason) {
+        this.contentToxic = toxic;
+        this.contentToxicLevel = level;
+        this.contentToxicMalicious = malicious;
+        this.contentToxicClean = clean;
+        this.contentToxicReason = reason;
     }
 
     public void increaseViewCount() {

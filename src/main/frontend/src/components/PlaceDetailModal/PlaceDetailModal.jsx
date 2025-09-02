@@ -49,6 +49,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReview, setExpandedReview] = useState(null);
   const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] }); // photos: 미리보기 URL
+  const [reviewError, setReviewError] = useState('');
 
   // 카테고리
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -191,6 +192,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     if (!newReview.content.trim()) return alert('리뷰 내용을 입력해주세요.');
 
     try {
+      setReviewError('');
       const fileInput = fileInputRef.current;
       const files = fileInput?.files ? Array.from(fileInput.files) : [];
       const photoUrls = await uploadReviewPhotos(files);
@@ -207,14 +209,28 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           photoUrls
         })
       });
-      if (!res.ok) throw new Error('리뷰 등록 실패');
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (res.status === 400 && ct.includes('application/json')) {
+          const json = await res.json().catch(() => null);
+          if (json?.success === false && json?.data?.field) {
+            const d = json.data;
+            const lvl = d.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})` : '';
+            setReviewError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
+            const el = document.querySelector('textarea');
+            if (el && typeof el.focus === 'function') el.focus();
+            return;
+          }
+        }
+        throw new Error('리뷰 등록 실패');
+      }
 
       setNewReview({ rating: 5, content: '', photos: [] });
       if (fileInput) fileInput.value = '';
       await fetchReviews();
     } catch (e) {
       console.error(e);
-      alert('리뷰 등록에 실패했습니다.');
+      if (!reviewError) alert('리뷰 등록에 실패했습니다.');
     }
   };
 
@@ -503,6 +519,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         value={newReview.content}
                         onChange={(e) => setNewReview({ ...newReview, content: e.target.value })}
                     />
+                    {reviewError && (
+                      <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{reviewError}</div>
+                    )}
                     <PhotoUploadSection>
                       <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
                       <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>

@@ -26,6 +26,7 @@ public class PeerReviewService {
     private final PeerReviewRepository peerReviewRepository;
     private final UserRepository userRepository;
     private final SalePostRepository salePostRepository;
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
 
     public void createReview(Long reviewerId, PeerReviewDtos.CreateRequest request, TargetRole role) {
         User reviewer = userRepository.findById(reviewerId)
@@ -56,6 +57,15 @@ public class PeerReviewService {
 
         if (peerReviewRepository.existsByReviewerIdAndSalePostIdAndTargetRole(reviewer.getId(), salePost.getId(), role)) {
             throw new IllegalStateException("이미 해당 거래에 대한 후기를 작성했습니다.");
+        }
+
+        // 유해 표현 검사 (키워드 각각 검사)
+        if (request.ratingKeywords() != null) {
+            for (String kw : request.ratingKeywords()) {
+                if (kw != null && !kw.isBlank()) {
+                    toxicFilterClient.assertAllowed(kw, "ratingKeywords");
+                }
+            }
         }
 
         String keywords = request.ratingKeywords() == null || request.ratingKeywords().isEmpty()
@@ -99,4 +109,3 @@ public class PeerReviewService {
         return new PeerReviewDtos.Summary(avgBd, cnt);
     }
 }
-

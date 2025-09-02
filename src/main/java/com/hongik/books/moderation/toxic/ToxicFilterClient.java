@@ -81,6 +81,20 @@ public class ToxicFilterClient {
         }
     }
 
+    public void assertAllowed(String text, String fieldName) {
+        Result r = check(text);
+        if (r.blocked()) {
+            throw new com.hongik.books.common.exception.ModerationException(
+                    "부적절한 표현이 감지되었습니다.",
+                    fieldName,
+                    r.predictionLevel,
+                    r.malicious,
+                    r.clean,
+                    r.reason
+            );
+        }
+    }
+
     /**
      * @param predictionLevel "확실한 비속어" | "애매한 비속어" | "비속어 아님"
      * @param reason          disabled | blank | unavailable | error | null
@@ -116,4 +130,3 @@ public class ToxicFilterClient {
         }
     }
 }
-

@@ -606,7 +606,12 @@ const ChatListPage = () => {
       setReviewModal({ open: false, postId: null, role: null });
     } catch (e) {
       console.error('후기 저장 실패', e);
-      alert(e.response?.data?.message || '후기 저장 중 오류가 발생했습니다.');
+      if (e.isModeration) {
+        const pct = typeof e.malicious === 'number' ? `, ${Math.round(e.malicious*100)}%` : '';
+        alert((e.message || '부적절한 표현이 감지되었습니다.') + (e.predictionLevel ? ` (${e.predictionLevel}${pct})` : ''));
+      } else {
+        alert(e.response?.data?.message || '후기 저장 중 오류가 발생했습니다.');
+      }
     } finally {
       setSubmitting(false);
     }

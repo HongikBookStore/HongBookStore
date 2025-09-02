@@ -1435,7 +1435,20 @@ const PostWrite = () => {
       }
     } catch (error) {
       console.error("게시글 처리 중 오류 발생:", error);
-      const serverMessage = error.response?.data?.message;
+      const serverData = error.response?.data;
+      const serverMessage = serverData?.message;
+
+      // 모더레이션 차단: 필드 에러로 표시
+      if (error.response?.status === 400 && serverData?.success === false && serverData?.data?.field) {
+        const d = serverData.data; // ModerationErrorDTO
+        const lvl = d.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})` : '';
+        const msg = (serverMessage || '부적절한 표현이 감지되었습니다.') + lvl;
+        setErrors(prev => ({ ...prev, [d.field]: msg }));
+        // 해당 필드 포커스
+        const el = document.querySelector(`[name="${d.field}"]`);
+        if (el && typeof el.focus === 'function') el.focus();
+        return;
+      }
 
       if (error.response?.status === 401) {
         alert(serverMessage || '로그인이 필요해! 다시 로그인해줘 🔐');
