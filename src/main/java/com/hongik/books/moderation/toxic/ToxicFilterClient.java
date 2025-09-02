@@ -41,7 +41,7 @@ public class ToxicFilterClient {
                     .bodyValue(Map.of("text", text))
                     .retrieve()
                     .bodyToMono(ResponseBody.class)
-                    .timeout(Duration.ofSeconds(10))
+                    .timeout(Duration.ofSeconds(70))
                     .onErrorResume(ex -> {
                         log.warn("toxic-filter call failed: {}", ex.toString());
                         return Mono.empty();

@@ -5,6 +5,8 @@ import com.hongik.books.domain.review.place.domain.ReviewPhoto;
 import com.hongik.books.domain.review.place.domain.ReviewReaction;
 import com.hongik.books.domain.review.place.dto.ReviewDtos;
 import com.hongik.books.domain.review.place.repository.PlaceReviewRepository;
+import com.hongik.books.moderation.ModerationPolicyProperties;
+import com.hongik.books.moderation.ModerationService;
 import com.hongik.books.domain.review.place.repository.ReviewReactionRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
@@ -23,14 +25,17 @@ public class PlaceReviewService {
     private final ReviewReactionRepository reactionRepo;
     private final UserRepository userRepository;
     private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
+    private final ModerationService moderationService;
+    private final ModerationPolicyProperties moderationPolicy;
 
     @Transactional
     public Long createReview(Long placeId, Long userId, int rating, String content, List<String> photoUrls) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found"));
 
-        // 유해 표현 검사
-        toxicFilterClient.assertAllowed(content, "content");
+        // 정책 기반 유해 표현 검사 (장소 리뷰 기본 BLOCK)
+        var mode = moderationPolicy.getPlaceReview().getContent();
+        moderationService.checkOrThrow(content, mode, "content");
 
         PlaceReview review = PlaceReview.builder()
                 .placeId(placeId)

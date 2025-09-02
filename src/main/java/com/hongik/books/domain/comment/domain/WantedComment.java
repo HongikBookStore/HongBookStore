@@ -50,6 +50,14 @@ public class WantedComment {
     @Column(nullable = false)
     private boolean deleted;
 
+    // Moderation flags for content (WARN 모드 시 기록)
+    @Column(nullable = false)
+    private boolean contentToxic = false;
+    private String contentToxicLevel;
+    private Double contentToxicMalicious;
+    private Double contentToxicClean;
+    private String contentToxicReason;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -61,5 +69,13 @@ public class WantedComment {
     public void softDelete() {
         this.deleted = true;
         this.content = "(삭제된 댓글입니다)";
+    }
+
+    public void applyContentModeration(String level, Double malicious, Double clean, boolean toxic, String reason) {
+        this.contentToxic = toxic;
+        this.contentToxicLevel = level;
+        this.contentToxicMalicious = malicious;
+        this.contentToxicClean = clean;
+        this.contentToxicReason = reason;
     }
 }

@@ -20,6 +20,7 @@ public class SalePostSummaryResponseDTO {
     private final LocalDateTime createdAt;
     private final String sellerNickname;
     private final long likeCount;
+    private final boolean hasToxicContent;
 
     public static SalePostSummaryResponseDTO fromEntity(SalePost salePost) {
         return new SalePostSummaryResponseDTO(salePost);
@@ -39,5 +40,6 @@ public class SalePostSummaryResponseDTO {
         this.createdAt = salePost.getCreatedAt();
         this.sellerNickname = salePost.getSeller().getUsername();
         this.likeCount = salePost.getLikeCount();
+        this.hasToxicContent = salePost.isContentToxic();
     }
 }

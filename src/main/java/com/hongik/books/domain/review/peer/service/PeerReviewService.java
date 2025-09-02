@@ -9,6 +9,8 @@ import com.hongik.books.domain.review.peer.repository.PeerReviewRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import com.hongik.books.moderation.ModerationPolicyProperties;
+import com.hongik.books.moderation.ModerationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,8 @@ public class PeerReviewService {
     private final UserRepository userRepository;
     private final SalePostRepository salePostRepository;
     private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
+    private final ModerationService moderationService;
+    private final ModerationPolicyProperties moderationPolicy;
 
     public void createReview(Long reviewerId, PeerReviewDtos.CreateRequest request, TargetRole role) {
         User reviewer = userRepository.findById(reviewerId)
@@ -59,11 +63,12 @@ public class PeerReviewService {
             throw new IllegalStateException("이미 해당 거래에 대한 후기를 작성했습니다.");
         }
 
-        // 유해 표현 검사 (키워드 각각 검사)
+        // 유해 표현 검사 (키워드 각각 검사, 정책 기반)
+        var mode = moderationPolicy.getPeerReview().getRatingKeywords();
         if (request.ratingKeywords() != null) {
             for (String kw : request.ratingKeywords()) {
                 if (kw != null && !kw.isBlank()) {
-                    toxicFilterClient.assertAllowed(kw, "ratingKeywords");
+                    moderationService.checkOrThrow(kw, mode, "ratingKeywords");
                 }
             }
         }

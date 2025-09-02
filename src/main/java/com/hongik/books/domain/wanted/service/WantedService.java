@@ -8,6 +8,8 @@ import com.hongik.books.domain.wanted.repository.WantedRepository;
 import com.hongik.books.domain.wanted.repository.WantedSpecifications;
 import com.hongik.books.domain.comment.repository.WantedCommentRepository; // ✅ 추가
 import lombok.RequiredArgsConstructor;
+import com.hongik.books.moderation.ModerationPolicyProperties;
+import com.hongik.books.moderation.ModerationService;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,8 @@ public class WantedService {
     private final UserRepository userRepository;
     private final WantedCommentRepository wantedCommentRepository; // ✅ 추가
     private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
+    private final ModerationService moderationService;
+    private final ModerationPolicyProperties moderationPolicy;
 
     public Page<WantedSummaryResponseDTO> search(
             String category, String department, String keyword,
@@ -54,9 +58,11 @@ public class WantedService {
         User requester = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 유해 표현 검사 (title, content)
-        toxicFilterClient.assertAllowed(dto.getTitle(), "title");
-        toxicFilterClient.assertAllowed(dto.getContent(), "content");
+        // 정책 기반 유해 표현 검사 (title, content)
+        var titleMode = moderationPolicy.getWanted().getTitle();
+        var contentMode = moderationPolicy.getWanted().getContent();
+        moderationService.checkOrThrow(dto.getTitle(), titleMode, "title");
+        var contentModeration = moderationService.checkOrThrow(dto.getContent(), contentMode, "content");
 
         Wanted wanted = Wanted.builder()
                 .requester(requester)
@@ -68,7 +74,15 @@ public class WantedService {
                 .department("전공".equals(dto.getCategory()) ? emptyToNull(dto.getDepartment()) : null)
                 .content(dto.getContent())
                 .build();
-
+        if (contentModeration != null) {
+            wanted.applyContentModeration(
+                    contentModeration.predictionLevel(),
+                    contentModeration.malicious(),
+                    contentModeration.clean(),
+                    contentModeration.blocked(),
+                    contentModeration.reason()
+            );
+        }
         return wantedRepository.save(wanted).getId();
     }
 
@@ -81,9 +95,11 @@ public class WantedService {
             throw new SecurityException("권한이 없습니다.");
         }
 
-        // 유해 표현 검사 (title, content)
-        toxicFilterClient.assertAllowed(dto.getTitle(), "title");
-        toxicFilterClient.assertAllowed(dto.getContent(), "content");
+        // 정책 기반 유해 표현 검사 (title, content)
+        var titleMode = moderationPolicy.getWanted().getTitle();
+        var contentMode = moderationPolicy.getWanted().getContent();
+        moderationService.checkOrThrow(dto.getTitle(), titleMode, "title");
+        var contentModeration = moderationService.checkOrThrow(dto.getContent(), contentMode, "content");
 
         w.update(
                 dto.getTitle(),
@@ -94,6 +110,15 @@ public class WantedService {
                 "전공".equals(dto.getCategory()) ? emptyToNull(dto.getDepartment()) : null,
                 dto.getContent()
         );
+        if (contentModeration != null) {
+            w.applyContentModeration(
+                    contentModeration.predictionLevel(),
+                    contentModeration.malicious(),
+                    contentModeration.clean(),
+                    contentModeration.blocked(),
+                    contentModeration.reason()
+            );
+        }
     }
 
     private String emptyToNull(String s) {

@@ -18,6 +18,12 @@ public class WantedCommentDto {
     private String nickname;        // 화면 표기용
     private String authorNickname;  // NOT NULL 보장
     private boolean deleted;
+    // Moderation (optional in WARN)
+    private boolean contentToxic;
+    private String contentToxicLevel;
+    private Double contentToxicMalicious;
+    private Double contentToxicClean;
+    private String contentToxicReason;
     private LocalDateTime createdAt;
 
     public static WantedCommentDto from(WantedComment c) {
@@ -31,6 +37,11 @@ public class WantedCommentDto {
                 .nickname(c.getNickname())
                 .authorNickname(c.getAuthorNickname())
                 .deleted(c.isDeleted())
+                .contentToxic(c.isContentToxic())
+                .contentToxicLevel(c.getContentToxicLevel())
+                .contentToxicMalicious(c.getContentToxicMalicious())
+                .contentToxicClean(c.getContentToxicClean())
+                .contentToxicReason(c.getContentToxicReason())
                 .createdAt(c.getCreatedAt())
                 .build();
     }

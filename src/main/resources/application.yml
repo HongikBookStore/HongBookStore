@@ -185,3 +185,18 @@ moderation:
     base-url: https://toxic-filter-534256318130.us-west1.run.app
     # api-key: ${TOXIC_FILTER_API_KEY:}  # toxic-filter 서버에 API_KEY가 설정된 경우
     # blockLevel: CERTAIN    # NONE | CERTAIN | AMBIGUOUS
+  policy:
+    salePost:
+      title: BLOCK    # BLOCK | WARN | OFF
+      content: WARN   # 판매글 본문은 기본 허용+경고
+    wanted:
+      title: BLOCK
+      content: WARN   # 구해요 본문: 허용+경고(완만)
+    comment:
+      content: WARN    # 댓글도 허용+경고로 완화
+    placeReview:
+      content: BLOCK
+    peerReview:
+      ratingKeywords: BLOCK
+    chat:
+      message: BLOCK

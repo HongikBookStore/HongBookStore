@@ -240,6 +240,21 @@ export default function WantedComments({ wantedId }) {
                         </span>
                     )}
                 </Meta>
+                {c.contentToxic && (
+                    <div style={{
+                        marginBottom: 6,
+                        display: 'inline-block',
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        background: '#fff3cd',
+                        color: '#856404',
+                        border: '1px solid #ffeeba'
+                    }}>
+                        경고
+                    </div>
+                )}
                 <Content $deleted={c.deleted}>{c.content}</Content>
                 <Actions>
                     <Button onClick={() => { setReplyFor(c.id); setReplyText(''); }}>
