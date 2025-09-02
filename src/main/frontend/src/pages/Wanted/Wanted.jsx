@@ -319,8 +319,23 @@ const Wanted = () => {
                             onClick={() => handlePostClick(post.id)}
                             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePostClick(post.id)}
                         >
-                          <Card>
-                            <CardTitle>{post.title || '-'}</CardTitle>
+                            <Card>
+                            <CardTitle>
+                              {post.title || '-'}
+                              {post.hasToxicContent && (
+                                  <span style={{
+                                    marginLeft: 6,
+                                    display: 'inline-block',
+                                    padding: '2px 6px',
+                                    borderRadius: 6,
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    background: '#fff3cd',
+                                    color: '#856404',
+                                    border: '1px solid #ffeeba'
+                                  }}>주의</span>
+                              )}
+                            </CardTitle>
 
                             <CardMeta>
                               <MetaLabel>저자</MetaLabel>

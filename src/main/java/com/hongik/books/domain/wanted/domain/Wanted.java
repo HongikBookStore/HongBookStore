@@ -47,6 +47,14 @@ public class Wanted {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    // Moderation flags for content
+    @Column(nullable = false)
+    private boolean contentToxic = false;
+    private String contentToxicLevel;
+    private Double contentToxicMalicious;
+    private Double contentToxicClean;
+    private String contentToxicReason;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -62,5 +70,13 @@ public class Wanted {
         this.category = category;
         this.department = department;
         this.content = content;
+    }
+
+    public void applyContentModeration(String level, Double malicious, Double clean, boolean toxic, String reason) {
+        this.contentToxic = toxic;
+        this.contentToxicLevel = level;
+        this.contentToxicMalicious = malicious;
+        this.contentToxicClean = clean;
+        this.contentToxicReason = reason;
     }
 }

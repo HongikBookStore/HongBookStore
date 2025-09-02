@@ -9,7 +9,8 @@ public record WantedSummaryResponseDTO(
         String condition,
         int price,
         String category,
-        String department
+        String department,
+        boolean hasToxicContent
 ) {
     public static WantedSummaryResponseDTO from(Wanted w) {
         return new WantedSummaryResponseDTO(
@@ -19,7 +20,8 @@ public record WantedSummaryResponseDTO(
                 w.getDesiredCondition(),
                 w.getPrice(),
                 w.getCategory(),
-                w.getDepartment()
+                w.getDepartment(),
+                w.isContentToxic()
         );
     }
 }

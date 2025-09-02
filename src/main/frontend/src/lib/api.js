@@ -43,6 +43,23 @@ api.interceptors.response.use(
       return Promise.reject(new Error('Unauthorized'));
     }
 
+    // 400 + 모더레이션 에러 표준 처리
+    try {
+      if (response && response.status === 400 && response.data && response.data.success === false) {
+        const d = response.data.data;
+        if (d && d.field) {
+          // 호출부에서 특정 필드 에러로 쉽게 처리할 수 있도록 힌트 제공
+          error.isModeration = true;
+          error.field = d.field; // 예: 'title' | 'content'
+          error.predictionLevel = d.predictionLevel; // '확실한 비속어' | '애매한 비속어' 등
+          error.malicious = d.malicious;
+          error.clean = d.clean;
+          error.reason = d.reason;
+          error.message = response.data.message || '부적절한 표현이 감지되었습니다.';
+        }
+      }
+    } catch (_) {}
+
     // 그 외 다른 에러들은 그대로 reject하여, 호출한 쪽에서 catch로 처리할 수 있게 합니다.
     return Promise.reject(error);
   }

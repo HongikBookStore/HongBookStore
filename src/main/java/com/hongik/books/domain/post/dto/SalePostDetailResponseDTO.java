@@ -25,6 +25,13 @@ public class SalePostDetailResponseDTO {
     private final boolean negotiable;
     private final int views;
 
+    // Moderation info for content
+    private final boolean contentToxic;
+    private final String contentToxicLevel;
+    private final Double contentToxicMalicious;
+    private final Double contentToxicClean;
+    private final String contentToxicReason;
+
     // ✅ 위치 정보 (교내/교외)
     private final String oncampusPlaceCode;     // 예: "T", "R", "A" ...
     private final String offcampusStationCode;  // 예: "홍대입구"
@@ -61,6 +68,13 @@ public class SalePostDetailResponseDTO {
         this.waterCondition = salePost.getWaterCondition();
         this.negotiable = salePost.isNegotiable();
         this.views = salePost.getViews();
+
+        // Moderation info
+        this.contentToxic = salePost.isContentToxic();
+        this.contentToxicLevel = salePost.getContentToxicLevel();
+        this.contentToxicMalicious = salePost.getContentToxicMalicious();
+        this.contentToxicClean = salePost.getContentToxicClean();
+        this.contentToxicReason = salePost.getContentToxicReason();
 
         // ✅ 위치 정보 매핑 (엔티티의 필드/게터 이름에 맞춰주세요)
         this.oncampusPlaceCode = salePost.getOncampusPlaceCode();      // 예: 컬럼 oncampus_place_code

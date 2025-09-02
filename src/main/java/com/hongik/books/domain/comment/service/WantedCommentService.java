@@ -8,6 +8,8 @@ import com.hongik.books.domain.comment.dto.WantedCommentDto;
 import com.hongik.books.domain.comment.repository.WantedCommentRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import com.hongik.books.moderation.ModerationPolicyProperties;
+import com.hongik.books.moderation.ModerationService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -37,6 +39,9 @@ public class WantedCommentService {
     private final WantedCommentRepository commentRepository;
     private final WantedRepository wantedRepository;
     private final NotificationService notificationService;
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
+    private final ModerationService moderationService;
+    private final ModerationPolicyProperties moderationPolicy;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -75,6 +80,11 @@ public class WantedCommentService {
                             .nickname(null)              // 원래 닉네임/이메일 숨김
                             .authorNickname(alias)       // 익명N
                             .deleted(base.isDeleted())
+                            .contentToxic(base.isContentToxic())
+                            .contentToxicLevel(base.getContentToxicLevel())
+                            .contentToxicMalicious(base.getContentToxicMalicious())
+                            .contentToxicClean(base.getContentToxicClean())
+                            .contentToxicReason(base.getContentToxicReason())
                             .createdAt(base.getCreatedAt())
                             .build()
             );
@@ -87,19 +97,30 @@ public class WantedCommentService {
        ========================= */
     @Transactional
     public WantedCommentDto addRoot(Long wantedId, CommentCreateRequest req, Long userId, String nickname) {
+        // 정책 기반 유해 표현 검사
+        var mode = moderationPolicy.getComment().getContent();
+        var modResult = moderationService.checkOrThrow(req.getContent(), mode, "content");
         String alias = computeAliasForUser(wantedId, userId);
-        WantedComment saved = commentRepository.save(
-                WantedComment.builder()
-                        .wantedId(wantedId)
-                        .parentId(null)
-                        .depth(0)
-                        .deleted(false)
-                        .content(req.getContent())
-                        .userId(userId)
-                        .nickname(nickname)        // DB 저장은 하되 응답에서는 숨김
-                        .authorNickname(alias)     // 저장/응답 모두 익명N
-                        .build()
-        );
+        WantedComment toSave = WantedComment.builder()
+                .wantedId(wantedId)
+                .parentId(null)
+                .depth(0)
+                .deleted(false)
+                .content(req.getContent())
+                .userId(userId)
+                .nickname(nickname)        // DB 저장은 하되 응답에서는 숨김
+                .authorNickname(alias)     // 저장/응답 모두 익명N
+                .build();
+        if (modResult != null) {
+            toSave.applyContentModeration(
+                    modResult.predictionLevel(),
+                    modResult.malicious(),
+                    modResult.clean(),
+                    modResult.blocked(),
+                    modResult.reason()
+            );
+        }
+        WantedComment saved = commentRepository.save(toSave);
 
         // ✅ SSE 알림: 글 작성자에게 새 댓글 알림
         try {
@@ -131,19 +152,29 @@ public class WantedCommentService {
 
     @Transactional
     public WantedCommentDto addReply(Long wantedId, Long parentId, CommentCreateRequest req, Long userId, String nickname) {
+        var mode = moderationPolicy.getComment().getContent();
+        var modResult = moderationService.checkOrThrow(req.getContent(), mode, "content");
         String alias = computeAliasForUser(wantedId, userId);
-        WantedComment saved = commentRepository.save(
-                WantedComment.builder()
-                        .wantedId(wantedId)
-                        .parentId(parentId)
-                        .depth(1)
-                        .deleted(false)
-                        .content(req.getContent())
-                        .userId(userId)
-                        .nickname(nickname)
-                        .authorNickname(alias)
-                        .build()
-        );
+        WantedComment toSave2 = WantedComment.builder()
+                .wantedId(wantedId)
+                .parentId(parentId)
+                .depth(1)
+                .deleted(false)
+                .content(req.getContent())
+                .userId(userId)
+                .nickname(nickname)
+                .authorNickname(alias)
+                .build();
+        if (modResult != null) {
+            toSave2.applyContentModeration(
+                    modResult.predictionLevel(),
+                    modResult.malicious(),
+                    modResult.clean(),
+                    modResult.blocked(),
+                    modResult.reason()
+            );
+        }
+        WantedComment saved = commentRepository.save(toSave2);
 
         // ✅ SSE 알림: 글 작성자에게 새 댓글 알림
         try {
@@ -169,6 +200,11 @@ public class WantedCommentService {
                 .nickname(null)            // 숨김
                 .authorNickname(alias)     // 익명N
                 .deleted(base.isDeleted())
+                .contentToxic(base.isContentToxic())
+                .contentToxicLevel(base.getContentToxicLevel())
+                .contentToxicMalicious(base.getContentToxicMalicious())
+                .contentToxicClean(base.getContentToxicClean())
+                .contentToxicReason(base.getContentToxicReason())
                 .createdAt(base.getCreatedAt())
                 .build();
     }

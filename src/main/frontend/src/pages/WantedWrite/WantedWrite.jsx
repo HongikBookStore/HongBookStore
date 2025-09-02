@@ -397,6 +397,8 @@ export default function WantedWrite() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    // 이전 에러 초기화
+    setErrors({});
 
     const token = localStorage.getItem('accessToken');
     const userId = await ensureUserId(); // ✅ userId 보장
@@ -439,8 +441,28 @@ export default function WantedWrite() {
       });
 
       if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`요청 실패 (${res.status}) ${txt}`);
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const json = await res.json().catch(() => null);
+          const success = json?.success;
+          const message = json?.message || '';
+          const data = json?.data || null; // ModerationErrorDTO 가능
+          if (res.status === 400 && success === false && data && data.field) {
+            const lvl = data.predictionLevel ? ` (${data.predictionLevel}${typeof data.malicious === 'number' ? 
+                `, ${Math.round(data.malicious * 100)}%` : ''})` : '';
+            const fieldMsg = (message || '부적절한 표현이 감지되었습니다.') + lvl;
+            setErrors(prev => ({ ...prev, [data.field]: fieldMsg }));
+            // 해당 필드로 포커스 이동(가능한 경우)
+            const el = document.querySelector(`[name="${data.field}"]`);
+            if (el && typeof el.focus === 'function') el.focus();
+            return; // 모더레이션 에러는 알림창 없이 필드 에러로 처리
+          }
+          // 그 외 JSON 에러 메시지
+          throw new Error(message || `요청 실패 (${res.status})`);
+        } else {
+          const txt = await res.text();
+          throw new Error(`요청 실패 (${res.status}) ${txt}`);
+        }
       }
 
       if (!isEdit) { await res.json().catch(() => ({})); }
@@ -451,7 +473,10 @@ export default function WantedWrite() {
       navigate(isEdit ? '/mybookstore' : '/wanted');
     } catch (err) {
       console.error(err);
-      alert(isEdit ? '수정 중 오류가 발생했습니다.' : '등록 중 오류가 발생했습니다.');
+      // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감
+      if (!Object.values(errors).some(Boolean)) {
+        alert(isEdit ? '수정 중 오류가 발생했습니다.' : '등록 중 오류가 발생했습니다.');
+      }
     } finally {
       setSubmitting(false);
     }

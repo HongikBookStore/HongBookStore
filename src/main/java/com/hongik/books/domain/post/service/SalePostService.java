@@ -12,6 +12,8 @@ import com.hongik.books.domain.post.repository.SalePostRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import com.hongik.books.moderation.ModerationPolicyProperties;
+import com.hongik.books.moderation.ModerationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -35,6 +37,9 @@ public class SalePostService {
     private final UserRepository userRepository;
     private final GcpStorageUtil gcpStorageUtil;
     private final ChatRoomRepository chatRoomRepository;
+    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
+    private final ModerationService moderationService;
+    private final ModerationPolicyProperties moderationPolicy;
 
     /**
      * [ISBN 조회된 책]으로 판매 게시글을 생성 (이미지 업로드 포함)
@@ -45,6 +50,12 @@ public class SalePostService {
             Long sellerId) throws IOException {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        // 정책 기반 유해 표현 검사
+        var titleMode = moderationPolicy.getSalePost().getTitle();
+        var contentMode = moderationPolicy.getSalePost().getContent();
+        moderationService.checkOrThrow(request.getPostTitle(), titleMode, "postTitle");
+        var contentModeration = moderationService.checkOrThrow(request.getPostContent(), contentMode, "postContent");
 
         // Book 정보는 ISBN을 기반으로 찾되, 없으면 API에서 받은 정보로 새로 생성
         Book book = bookRepository.findByIsbn(request.getIsbn())
@@ -61,6 +72,16 @@ public class SalePostService {
                 });
 
         SalePost newSalePost = createNewSalePost(request, seller, book);
+        // 본문 모더레이션 결과 반영 (WARN 또는 BLOCK 허용 시 기록, OFF는 null)
+        if (contentModeration != null) {
+            newSalePost.applyContentModeration(
+                    contentModeration.predictionLevel(),
+                    contentModeration.malicious(),
+                    contentModeration.clean(),
+                    contentModeration.blocked(),
+                    contentModeration.reason()
+            );
+        }
         salePostRepository.save(newSalePost); // SalePost를 먼저 저장하여 ID를 생성
         uploadAndAttachImages(imageFiles, newSalePost); // 이미지 처리 로직 추가
         return newSalePost.getId();
@@ -80,6 +101,12 @@ public class SalePostService {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
+        // 정책 기반 유해 표현 검사
+        var titleMode = moderationPolicy.getSalePost().getTitle();
+        var contentMode = moderationPolicy.getSalePost().getContent();
+        moderationService.checkOrThrow(request.getPostTitle(), titleMode, "postTitle");
+        var contentModeration = moderationService.checkOrThrow(request.getPostContent(), contentMode, "postContent");
+
         // 직접 등록이므로 항상 새로운 Book 엔티티를 생성
         Book newBook = Book.builder()
                 .title(request.getBookTitle())
@@ -91,6 +118,15 @@ public class SalePostService {
         bookRepository.save(newBook);
 
         SalePost newSalePost = createNewSalePost(request, seller, newBook);
+        if (contentModeration != null) {
+            newSalePost.applyContentModeration(
+                    contentModeration.predictionLevel(),
+                    contentModeration.malicious(),
+                    contentModeration.clean(),
+                    contentModeration.blocked(),
+                    contentModeration.reason()
+            );
+        }
         salePostRepository.save(newSalePost); // SalePost를 먼저 저장하여 ID를 생성
 
         uploadAndAttachImages(imageFiles, newSalePost); // 이미지 처리
@@ -137,7 +173,22 @@ public class SalePostService {
     public void updateSalePost(Long postId, SalePostUpdateRequestDTO request, Long userId) {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
+
+        // 정책 기반 유해 표현 검사
+        var titleMode = moderationPolicy.getSalePost().getTitle();
+        var contentMode = moderationPolicy.getSalePost().getContent();
+        moderationService.checkOrThrow(request.getPostTitle(), titleMode, "postTitle");
+        var contentModeration2 = moderationService.checkOrThrow(request.getPostContent(), contentMode, "postContent");
         salePost.update(request);
+        if (contentModeration2 != null) {
+            salePost.applyContentModeration(
+                    contentModeration2.predictionLevel(),
+                    contentModeration2.malicious(),
+                    contentModeration2.clean(),
+                    contentModeration2.blocked(),
+                    contentModeration2.reason()
+            );
+        }
     }
 
     /**

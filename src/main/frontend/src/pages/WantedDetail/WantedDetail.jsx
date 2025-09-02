@@ -219,6 +219,22 @@ export default function WantedDetail() {
                         <div>
                             <Card>
                                 <SectionTitle><FaBook /> 요청 내용</SectionTitle>
+                                {data.contentToxic && (
+                                    <div style={{
+                                        marginBottom: 10,
+                                        padding: '8px 12px',
+                                        borderRadius: 8,
+                                        background: '#fff3cd',
+                                        border: '1px solid #ffeeba',
+                                        color: '#856404',
+                                        fontSize: '0.92rem'
+                                    }}>
+                                        ⚠️ 부적절한 표현이 감지되었습니다
+                                        {data.contentToxicLevel && (
+                                            <> ({data.contentToxicLevel}{typeof data.contentToxicMalicious === 'number' ? `, ${Math.round(data.contentToxicMalicious*100)}%` : ''})</>
+                                        )}
+                                    </div>
+                                )}
                                 {data.content ? (
                                     <BodyText>{data.content}</BodyText>
                                 ) : (

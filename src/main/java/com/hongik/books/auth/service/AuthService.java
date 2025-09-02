@@ -25,6 +25,10 @@ public class AuthService {
 
         // 토큰의 남은 유효 시간을 계산
         long expiration = jwtTokenProvider.getExpiration(accessToken);
+        // 만료된 토큰이면 블랙리스트에 넣을 필요가 없음
+        if (expiration <= 0) {
+            return;
+        }
 
         // Redis에 블랙리스트로 등록 (남은 유효 시간만큼만 저장하여 메모리 관리)
         jwtTokenRedisRepository.set(accessToken, "logout", expiration);
