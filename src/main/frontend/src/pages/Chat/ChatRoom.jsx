@@ -10,7 +10,6 @@ import Stomp from 'stompjs';
 import { AuthCtx } from '../../contexts/AuthContext';
 
 /* ----------------------------- styled components ----------------------------- */
-
 const ChatContainer = styled.div`
   width: 100%;
   max-width: 1600px;
@@ -446,7 +445,7 @@ function dijkstraCampus(start, end) {
   const dist={}, prev={}, all=Object.keys(CAMPUS_GRAPH); all.forEach(n=>dist[n]=Infinity);
   dist[start]=0;
   const todo=new Set(all);
-  const pick=()=>{ let b=null,bd=Infinity; for(const n of todo) if(dist[n]<bd){bd=dist[n]; b=n;} return b; };
+  const pick=()=>{ let best=null,bd=Infinity; for(const n of todo){ if(dist[n]<bd){bd=dist[n]; best=n;} } return best; };
   while(todo.size){
     const u=pick(); if(u==null) break; todo.delete(u); if(u===end) break;
     for(const {to,w} of CAMPUS_GRAPH[u]){
@@ -551,6 +550,18 @@ async function apiUpsertReservation(roomId, payload) {
   if (!res.ok) throw new Error('예약 저장 실패');
   return res.json();
 }
+async function apiAcceptReservation(roomId, reservationId) {
+  const token = localStorage.getItem('accessToken') || '';
+  const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/accept`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(()=> '');
+    throw new Error(t || '예약 수락 실패');
+  }
+  return res.json();
+}
 async function apiCancelReservation(roomId, reservationId, reason) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/cancel`, {
@@ -585,11 +596,17 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// ✅ 서버 ENUM으로 변환(대문자 + 언더스코어)
+const toServerEnum = (s) => String(s || '').toUpperCase().replace(/-/g, '_');
+// ✅ 서버 ENUM → 화면 비교용 소문자
+const toLocalStatus = (s) => String(s || '').toLowerCase();
+
 // sale_post 상태 변경
 async function patchPostStatus(postId, status, buyerId) {
   if (!postId || !status) return;
   const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
-  const body = buyerId ? { status, buyerId } : { status };
+  const statusEnum = toServerEnum(status);
+  const body = buyerId ? { status: statusEnum, buyerId } : { status: statusEnum };
   const res = await fetch(`/api/posts/${postId}/status`, {
     method: 'PATCH',
     headers,
@@ -613,6 +630,7 @@ async function fetchPost(postId) {
 /* ----------------------------- component start ------------------------------ */
 
 const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
+const SSE_ENDPOINT = (token) => `/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
 
 const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
@@ -622,13 +640,14 @@ const ChatRoom = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
 
-  // ✅ chatId → 유효한 숫자 roomId로 변환
+  // chatId → 유효한 숫자 roomId로 변환
   const roomId = useMemo(() => {
     const n = Number(chatId);
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [chatId]);
 
-  const [isReserved, setIsReserved] = useState(false);
+  const [isPending, setIsPending] = useState(false);    // REQUESTED
+  const [isReserved, setIsReserved] = useState(false);  // CONFIRMED
   const [reservationId, setReservationId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -642,7 +661,7 @@ const ChatRoom = () => {
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
 
-  // ✅ 스마트 예약 관련
+  // 스마트 예약 관련
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -654,16 +673,16 @@ const ChatRoom = () => {
   const [senderId, setSenderId] = useState(null);
   const [salePostId, setSalePostId] = useState(null);
 
-  // ✅ 추가: 게시글 상태 및 참여자
+  // 참여자/게시글 상태
   const [postStatus, setPostStatus] = useState(null);
   const [buyerId, setBuyerId] = useState(null);
   const [sellerId, setSellerId] = useState(null);
 
   const stompClient = useRef(null);
+  const sseRef = useRef(null);
   const { user } = useContext(AuthCtx);
   const currentUserId = user?.id;
 
-  // ✅ 역할 계산
   const isBuyer = useMemo(
       () => !!currentUserId && !!buyerId && currentUserId === buyerId,
       [currentUserId, buyerId]
@@ -673,25 +692,24 @@ const ChatRoom = () => {
       [currentUserId, sellerId]
   );
 
-  // ✅ 날씨 상태
+  // 날씨
   const [weeklyWeather, setWeeklyWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
-  // ✅ 판매자가 설정한 기본 위치 (게시글에서 가져옴)
+  // 판매자 기본 위치
   const [sellerDefault, setSellerDefault] = useState({
     oncampusPlaceCode: null,
     offcampusStationCode: null
   });
 
-  // ✅ 교내/교외 입력 + 추천 상태
+  // 교내/교외 추천
   const [meetType, setMeetType] = useState('on'); // 'on' | 'off'
-  const [buyerCampusCode, setBuyerCampusCode] = useState(''); // 교내 선택
+  const [buyerCampusCode, setBuyerCampusCode] = useState('');
   const [campusSuggest, setCampusSuggest] = useState(null);
-  const [buyerLine, setBuyerLine] = useState(''); // 교외 노선
-  const [buyerStation, setBuyerStation] = useState(''); // 교외 역
+  const [buyerLine, setBuyerLine] = useState('');
+  const [buyerStation, setBuyerStation] = useState('');
   const [offSuggest, setOffSuggest] = useState(null);
 
-  // 버튼 텍스트 반응형
   const getLabel = (type) => {
     if (width <= 600) return '';
     if (width <= 900) {
@@ -701,6 +719,8 @@ const ChatRoom = () => {
         case 'reserve-cancel': return '예약 취소';
         case 'complete': return '완료';
         case 'complete-cancel': return '완료 취소';
+        case 'accept': return '수락';
+        case 'decline': return '거절';
         default: return '';
       }
     }
@@ -710,11 +730,12 @@ const ChatRoom = () => {
       case 'reserve-cancel': return '예약 취소하기';
       case 'complete': return '거래 완료';
       case 'complete-cancel': return '거래 완료 취소';
+      case 'accept': return '예약 수락';
+      case 'decline': return '예약 거절';
       default: return '';
     }
   };
 
-  // 아이콘 색상
   const iconColor = (activeColor, isActive, isHover) => {
     if (isActive || isHover) return activeColor;
     return '#bbb';
@@ -722,7 +743,6 @@ const ChatRoom = () => {
 
   /* -------------------------- 채팅방/메시지 로딩 -------------------------- */
   useEffect(() => {
-    // ❗ roomId 없으면 호출 금지
     if (!roomId) return;
 
     async function loadRoomInfo() {
@@ -751,12 +771,12 @@ const ChatRoom = () => {
         setBuyerId(room.buyerId);
         setSellerId(room.sellerId);
 
-        // ✅ 판매자 기본 위치 + 게시글 상태 로드
+        // 판매자 기본 위치 + 게시글 상태
         if (room.salePostId) {
           const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
           if (postRes.ok) {
             const post = await postRes.json();
-            setPostStatus(post.status || null);
+            setPostStatus(toLocalStatus(post.status || null));
             setSellerDefault({
               oncampusPlaceCode: post.oncampusPlaceCode || null,
               offcampusStationCode: post.offcampusStationCode || null
@@ -773,7 +793,7 @@ const ChatRoom = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (!roomId || !token) return; // ❗ 가드 강화
+    if (!roomId || !token) return;
 
     const loadPreviousMessages = async () => {
       try {
@@ -796,13 +816,16 @@ const ChatRoom = () => {
         const r = await apiGetReservation(roomId);
         if (!r) {
           setReservationId(null);
+          setIsPending(false);
           setIsReserved(false);
           setIsCompleted(false);
           return;
         }
         setReservationId(r.id);
-        setIsReserved(r.status === 'CONFIRMED');
-        setIsCompleted(r.status === 'COMPLETED');
+        const st = String(r.status || '').toUpperCase();
+        setIsPending(st === 'REQUESTED');
+        setIsReserved(st === 'CONFIRMED');
+        setIsCompleted(st === 'COMPLETED');
         if (r.placeLabel) setSelectedPlace(r.placeLabel);
         if (r.reservedAt) {
           const parsed = new Date(r.reservedAt.toString().replace(' ', 'T'));
@@ -820,10 +843,7 @@ const ChatRoom = () => {
 
   /* -------------------------------- STOMP -------------------------------- */
   useEffect(() => {
-    // ❗ roomId 없으면 연결 금지
     if (!roomId) return;
-
-    // 중복 연결 방지
     if (stompClient.current?.connected) return;
 
     const ws = new WebSocket(WS_ENDPOINT);
@@ -835,16 +855,14 @@ const ChatRoom = () => {
         const newMessage = JSON.parse(message.body);
         setMessages(prev => [...prev, newMessage]);
       });
-      // 유저 전용 에러 큐 구독: 모더레이션/기타 STOMP 에러 알림 처리
       stomp.subscribe('/user/queue/chat-errors', (frame) => {
         try {
-          const payload = JSON.parse(frame.body); // ApiResponse<ModerationErrorDTO>
+          const payload = JSON.parse(frame.body);
           const msg = payload?.message || '메시지 전송이 차단되었습니다.';
           const d = payload?.data;
           const extra = d?.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? ", " + Math.round(d.malicious*100) + "%" : ''})` : '';
           setHasProfanity(true);
           setProfanityWarning(msg + extra);
-          // 일정 시간 후 경고 자동 해제(선택)
           setTimeout(() => { setHasProfanity(false); setProfanityWarning(''); }, 6000);
         } catch (e) { /* ignore */ }
       });
@@ -856,9 +874,89 @@ const ChatRoom = () => {
     };
   }, [roomId]);
 
+  /* ----------------------------- ✅ SSE 구독 (이벤트 이름 지정) ----------------------------- */
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') || '';
+    if (!token) return;
+
+    const es = new EventSource(SSE_ENDPOINT(token));
+    sseRef.current = es;
+
+    const handleNotify = (evt) => {
+      try {
+        const data = JSON.parse(evt.data);
+        if (!data) return;
+        const sameRoom = roomId && Number(data.roomId) === Number(roomId);
+        if (!sameRoom) return;
+
+        const st = String(data.status || '').toUpperCase();
+
+        if (data.type === 'RESERVATION_REQUESTED' || st === 'REQUESTED') {
+          if (data.reservationId) setReservationId(data.reservationId);
+          setIsPending(true);
+          setIsReserved(false);
+          setIsCompleted(false);
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: '구매자가 예약을 요청했습니다. 수락 여부를 결정해주세요.', sentAt: new Date().toISOString() }
+          ]));
+        }
+
+        if (data.type === 'RESERVATION_CONFIRMED' || st === 'CONFIRMED') {
+          setIsPending(false);
+          setIsReserved(true);
+          setIsCompleted(false);
+          setPostStatus('reserved');
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: '예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+          ]));
+        }
+
+        if (data.type === 'RESERVATION_CANCELED' || st === 'CANCELED') {
+          setIsPending(false);
+          setIsReserved(false);
+          setIsCompleted(false);
+          setPostStatus('for_sale');
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: `예약이 취소되었습니다${data.reason ? ` (사유: ${data.reason})` : ''}.`, cancel: true, sentAt: new Date().toISOString() }
+          ]));
+        }
+
+        if (data.type === 'RESERVATION_COMPLETED' || st === 'COMPLETED') {
+          setIsPending(false);
+          setIsReserved(false);
+          setIsCompleted(true);
+          setPostStatus('sold_out');
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+          ]));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    es.addEventListener('notification', handleNotify); // ✅ 핵심
+    es.onmessage = handleNotify; // 혹시 서버가 event 이름을 안 붙이는 경우 대비
+
+    es.onerror = () => {
+      // 브라우저가 자동 재시도
+    };
+
+    return () => {
+      try {
+        es.removeEventListener('notification', handleNotify);
+        es.close();
+      } catch {}
+      sseRef.current = null;
+    };
+  }, [roomId]);
+
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
-    // 간단 클라이언트 가드: 부적절 경고 시 전송 차단
     if (hasProfanity) {
       alert(profanityWarning || '부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
       return;
@@ -883,7 +981,7 @@ const ChatRoom = () => {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleRetryClick = (messageId) => { setRetryMessageId(messageId); setShowRetryModal(true); };
-  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO: 재전송 */ setRetryMessageId(null);} };
+  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO */ setRetryMessageId(null);} };
   const handleRetryCancel = () => { setShowRetryModal(false); setRetryMessageId(null); };
 
   const handleMessageChange = (e) => {
@@ -917,34 +1015,31 @@ const ChatRoom = () => {
 
   /* -------------------------------- 예약/신고/완료 -------------------------------- */
 
-  // ✅ 예약 버튼 누르기 전에 게시글 상태 가드 (구매자 전용 UI)
   const handleReserve = async () => {
     if (!salePostId) { setShowReserveModal(true); return; }
     try {
       const latest = await fetchPost(salePostId);
-      const st = latest?.status || postStatus;
+      const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
       setPostStatus(st || null);
       if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
       if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
     } catch (e) {
       console.warn('게시글 상태 확인 실패:', e);
-      // 조회 실패 시에도 모달은 열어줌
     }
     setShowReserveModal(true);
   };
 
+  // 예약 요청(구매자)
   const handleReserveConfirm = async () => {
     if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
     try {
-      // 한번 더 최신 상태 확인(경쟁 예약 대비)
       if (salePostId) {
         const latest = await fetchPost(salePostId);
-        const st = latest?.status || postStatus;
+        const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
         if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
         if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
       }
 
-      // meetType에 따라 한쪽만 보냄
       const base = {
         meetType,
         placeLabel: selectedPlace,
@@ -952,33 +1047,18 @@ const ChatRoom = () => {
       };
       const payload =
           meetType === 'on'
-              ? {
-                ...base,
-                oncampusPlaceCode: campusSuggest?.midCode || sellerDefault.oncampusPlaceCode || null,
-                offcampusStationCode: null
-              }
-              : {
-                ...base,
-                oncampusPlaceCode: null,
-                offcampusStationCode: offSuggest?.midStation || sellerDefault.offcampusStationCode || null
-              };
+              ? { ...base, oncampusPlaceCode: campusSuggest?.midCode || sellerDefault.oncampusPlaceCode || null, offcampusStationCode: null }
+              : { ...base, oncampusPlaceCode: null, offcampusStationCode: offSuggest?.midStation || sellerDefault.offcampusStationCode || null };
 
       const res = await apiUpsertReservation(roomId, payload);
+
       setReservationId(res.id);
-      setIsReserved(res.status === 'CONFIRMED');
-      setIsCompleted(res.status === 'COMPLETED');
+      const stNow = String(res.status || '').toUpperCase();
+      setIsPending(stNow === 'REQUESTED');
+      setIsReserved(stNow === 'CONFIRMED');
+      setIsCompleted(stNow === 'COMPLETED');
       setReserveConfirmed(true);
       setShowReserveModal(false);
-
-      // ✅ 게시글 상태를 reserved로 변경 (buyerId 포함)
-      try {
-        const buyerForPatch = buyerId || currentUserId;
-        await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
-        setPostStatus('reserved');
-      } catch (e) {
-        console.error('게시글 상태 reserved 설정 실패:', e);
-        alert('예약은 완료되었지만, 게시글 상태 업데이트에 실패했습니다.');
-      }
 
       const when = res.reservedAt
           ? new Date(res.reservedAt.toString().replace(' ', 'T')).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
@@ -986,16 +1066,62 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        {
-          id: Date.now(),
-          type: 'system',
-          message: `예약이 확정되었습니다!\n장소: ${res.placeLabel || selectedPlace}, 날짜: ${when}`,
-          sentAt: new Date().toISOString()
-        }
+        { id: Date.now(), type: 'system', message: `예약 요청을 보냈습니다. 판매자의 수락을 기다리는 중입니다.\n장소: ${res.placeLabel || selectedPlace}${when ? `, 날짜: ${when}` : ''}`, sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       console.error(e);
       alert('예약 저장에 실패했습니다.');
+    }
+  };
+
+  // 판매자: 예약 수락
+  const handleAcceptReservation = async () => {
+    if (!reservationId) return;
+    try {
+      await apiAcceptReservation(roomId, reservationId);
+
+      setIsPending(false);
+      setIsReserved(true);
+      setIsCompleted(false);
+
+      try {
+        const buyerForPatch = buyerId || currentUserId;
+        if (salePostId) {
+          await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
+          setPostStatus('reserved');
+        }
+      } catch (e) {
+        console.error('게시글 상태 reserved 설정 실패:', e);
+      }
+
+      setMessages(prev => ([
+        ...prev,
+        { id: Date.now(), type: 'system', message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+      ]));
+    } catch (e) {
+      console.error(e);
+      alert('예약 수락에 실패했습니다.');
+    }
+  };
+
+  // 판매자: 예약 거절(=취소)
+  const handleDeclineReservation = async () => {
+    if (!reservationId) return;
+    try {
+      await apiCancelReservation(roomId, reservationId, '판매자에 의해 거절되었습니다.');
+      setIsPending(false);
+      setIsReserved(false);
+      setMessages(prev => ([
+        ...prev,
+        { id: Date.now(), type: 'system', message: '예약 요청이 판매자에 의해 거절되었습니다.', cancel: true, sentAt: new Date().toISOString() }
+      ]));
+      // 게시글 상태 복구
+      try {
+        if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
+      } catch {}
+    } catch (e) {
+      console.error(e);
+      alert('예약 거절에 실패했습니다.');
     }
   };
 
@@ -1005,20 +1131,18 @@ const ChatRoom = () => {
     try {
       if (!reservationId) { setShowCancelModal(false); return; }
       await apiCancelReservation(roomId, reservationId, cancelReason || '');
+      setIsPending(false);
       setIsReserved(false);
       setShowCancelModal(false);
       setMessages(prev => ([
         ...prev,
-        {
-          id: Date.now(),
-          type: 'system',
-          message: `예약이 취소되었습니다.${cancelReason ? ` 사유: ${cancelReason}` : ''}`,
-          cancel: true,
-          sentAt: new Date().toISOString()
-        }
+        { id: Date.now(), type: 'system', message: `예약이 취소되었습니다.${cancelReason ? ` 사유: ${cancelReason}` : ''}`, cancel: true, sentAt: new Date().toISOString() }
       ]));
       setCancelReason('');
-      // (선택) 예약 취소 시 post.status 되돌리려면 여기서 PATCH 처리
+      // 게시글 상태를 되돌림
+      try {
+        if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
+      } catch {}
     } catch (e) {
       console.error(e);
       alert('예약 취소에 실패했습니다.');
@@ -1031,13 +1155,12 @@ const ChatRoom = () => {
     if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
     try {
       await apiCompleteReservation(roomId, reservationId);
+      setIsPending(false);
       setIsReserved(false);
       setIsCompleted(true);
 
-      // ✅ 게시글 상태를 sold_out으로 변경
       try {
-        await patchPostStatus(salePostId, 'sold_out');
-        setPostStatus('sold_out');
+        if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
       } catch (e) {
         console.error('게시글 상태 sold_out 설정 실패:', e);
         alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다.');
@@ -1056,12 +1179,11 @@ const ChatRoom = () => {
   const handleReport = () => { setShowReportModal(true); setReportReason(''); };
   const handleReportSubmit = (e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); };
   const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
-  const handleReportStay = () => { setShowReportExitModal(false); };
 
   const handleBack = () => { navigate('/chat'); };
   const formatTime = (timestamp) => { const date = new Date(timestamp); return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); };
 
-  /* --------------------------- ✅ 스마트 예약 (날씨) -------------------------- */
+  /* --------------------------- 스마트 예약 (날씨) -------------------------- */
 
   async function getCoords() {
     return new Promise((resolve) => {
@@ -1089,7 +1211,7 @@ const ChatRoom = () => {
       try {
         setWeatherLoading(true);
         const { lat, lng } = await getCoords();
-        const sido = '서울'; // TODO: 역지오코딩 자동화
+        const sido = '서울';
         const r = await fetchWeeklyWeather({ lat, lng, sido });
         setWeeklyWeather(r);
       } catch (e) {
@@ -1101,7 +1223,6 @@ const ChatRoom = () => {
     })();
   }, [showReserveModal]);
 
-  // API 데이터를 UI용으로 정제
   const dateOptions = (weeklyWeather?.days || []).map(d => {
     const isoRaw = d.date;
     const iso = normalizeDateTime(isoRaw);
@@ -1158,7 +1279,7 @@ const ChatRoom = () => {
             </HeaderLeft>
 
             <HeaderRight style={{gap: 0}}>
-              {/* 신고 버튼 (모두 노출) */}
+              {/* 신고 버튼 */}
               <ChatMenuButton
                   onClick={() => { setShowReportModal(true); setReportReason(''); }}
                   title="신고하기"
@@ -1169,8 +1290,34 @@ const ChatRoom = () => {
                 {getLabel('report')}
               </ChatMenuButton>
 
-              {/* ✅ 예약/예약취소 버튼: 예약은 구매자 전용, 취소는 구매자+판매자 */}
-              {isReserved ? (
+              {/* 판매자 전용: 예약 수락/거절 */}
+              {isSeller && isPending && (
+                  <>
+                    <ChatMenuButton
+                        onClick={handleAcceptReservation}
+                        title="예약 수락"
+                        onMouseEnter={() => setHovered('accept')}
+                        onMouseLeave={() => setHovered('')}
+                    >
+                      <FaCheckCircle style={{ fontSize: '1.1em', color: iconColor('#1976d2', false, hovered==='accept') }} />
+                      {getLabel('accept')}
+                    </ChatMenuButton>
+
+                    <ChatMenuButton
+                        className="danger"
+                        onClick={handleDeclineReservation}
+                        title="예약 거절"
+                        onMouseEnter={() => setHovered('decline')}
+                        onMouseLeave={() => setHovered('')}
+                    >
+                      <FaExclamationCircle style={{ fontSize: '1.1em', color: iconColor('#ef4444', false, hovered==='decline') }} />
+                      {getLabel('decline')}
+                    </ChatMenuButton>
+                  </>
+              )}
+
+              {/* 예약/예약취소 */}
+              {(isPending || isReserved) ? (
                   (isBuyer || isSeller) && (
                       <ChatMenuButton
                           onClick={handleCancelReserve}
@@ -1198,7 +1345,7 @@ const ChatRoom = () => {
                   )
               )}
 
-              {/* ✅ 거래 완료 버튼: 판매자 전용, 예약 상태에서만 활성화 */}
+              {/* 거래 완료(판매자 전용) */}
               {isSeller && (
                   <ChatMenuButton
                       onClick={handleComplete}
@@ -1271,7 +1418,7 @@ const ChatRoom = () => {
               </ModalOverlay>
           )}
 
-          {/* ✅ 스마트 예약 모달 */}
+          {/* 스마트 예약 모달 */}
           {showReserveModal && (
               <ModalOverlay>
                 <ReserveModalBox>
@@ -1292,7 +1439,7 @@ const ChatRoom = () => {
                     ><FaSubway/> 교외</button>
                   </div>
 
-                  {/* 판매자 설정 위치 노출 */}
+                  {/* 판매자 설정 위치 */}
                   <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
                     <div style={{fontWeight:800, marginBottom:6}}>판매자 설정 위치</div>
                     {meetType==='on' ? (
@@ -1392,7 +1539,7 @@ const ChatRoom = () => {
                       </>
                   )}
 
-                  {/* 선택된 장소 미리보기 */}
+                  {/* 선택된 장소 */}
                   <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
                     <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> 선택된 장소</div>
                     <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || '아직 선택되지 않았습니다.'}</div>
@@ -1430,7 +1577,7 @@ const ChatRoom = () => {
 
                   <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
                     <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
-                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 확정</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 요청 보내기</ModalButton>
                     <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
                   </div>
 
@@ -1444,7 +1591,7 @@ const ChatRoom = () => {
 
                   {reserveConfirmed && (
                       <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
-                        예약이 확정되었습니다!
+                        예약 요청이 전송되었습니다! 판매자의 수락을 기다려주세요.
                       </div>
                   )}
                 </ReserveModalBox>
@@ -1558,12 +1705,10 @@ const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
 
 /* --------------------------------- 비속어 --------------------------------- */
 function detectProfanity(text) {
-  const profanityList = [
-    '씨발','개새끼','병신','미친','바보','멍청이','돌아이','등신',
-    'fuck','shit','bitch','asshole','damn','hell'
-  ];
-  const lowerText = text.toLowerCase();
-  return profanityList.some(word => lowerText.includes(word));
+  if (!text) return false;
+  const bad = ['씨발','개새끼','병신','미친','fuck','shit','bitch','asshole','damn','hell'];
+  const s = String(text).toLowerCase();
+  return bad.some(w => s.includes(w));
 }
 
 export default ChatRoom;
