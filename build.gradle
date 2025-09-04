@@ -37,6 +37,9 @@ dependencies {
     // web-socket
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+    // Mail (Gmail SMTP via JavaMailSender)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
     // Security, OAuth
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'

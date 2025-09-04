@@ -40,15 +40,25 @@ public class UserService {
         }
 
         User user = userOptional.get();
+        // 닉네임 중복 검사 (자기 자신은 허용)
+        String newUsername = userRequestDTO.username();
+        if (newUsername != null && !newUsername.isBlank()) {
+            String trimmed = newUsername.trim();
+            if (!trimmed.equals(user.getUsername()) && userRepository.existsByUsername(trimmed)) {
+                throw new IllegalStateException("이미 사용 중인 닉네임입니다.");
+            }
+        }
+
         // User 엔티티의 update 메서드를 호출
-        user.updateProfile(userRequestDTO.username(), userRequestDTO.profileImagePath());
+        user.updateProfile(newUsername, userRequestDTO.profileImagePath());
 
         UserResponseDTO userResponse = new UserResponseDTO(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.isStudentVerified(),
-                user.getUnivEmail());
+                user.getUnivEmail(),
+                user.getProfileImagePath());
         return new ApiResponse<>(true, "사용자 정보가 성공적으로 수정되었습니다.", userResponse);
     }
 
@@ -62,7 +72,8 @@ public class UserService {
                             user.getUsername(),
                             user.getEmail(),
                             user.isStudentVerified(),
-                            user.getUnivEmail());
+                            user.getUnivEmail(),
+                            user.getProfileImagePath());
                     return new ApiResponse<>(true, "사용자 조회 성공", userResponse);
                 })
                 .orElse(new ApiResponse<>(false, "사용자를 찾을 수 없습니다.", null));
@@ -137,10 +148,9 @@ public class UserService {
     public String updateProfileImage(Long userId, MultipartFile imageFile) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
-
-        // TODO: User Entity에 setProfileImagePath(String url) 메서드 추가 후 주석 해제
-        // user.setProfileImagePath(profileImageUrl);
-
-        return gcpStorageUtil.uploadImage(imageFile, "profile-images");
+        String url = gcpStorageUtil.uploadImage(imageFile, "profile-images");
+        user.setProfileImagePath(url);
+        userRepository.save(user);
+        return url;
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
 import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { useLocation } from '../../contexts/LocationContext'; // TODO: 위치 �
 import axios from 'axios';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
+import { AuthCtx } from '../../contexts/AuthContext';
 
 const MyPageContainer = styled.div`
   padding: 2rem 1rem 4rem;
@@ -887,12 +888,13 @@ const MyPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef();
+  const { updateUser } = useContext(AuthCtx);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [showVerificationForm, setShowVerificationForm] = useState(false);
-  const [schoolEmail, setSchoolEmail] = useState(''); // 사용자가 입력할 학교 이메일
+  const [univEmail, setUnivEmail] = useState(''); // 사용자가 입력할 학교 이메일
   // 인증 요청 후 서버 메시지를 담을 상태
   const [verificationMessage, setVerificationMessage] = useState({ type: '', text: '' }); 
   const [isSubmitting, setIsSubmitting] = useState(false); // API 호출 중복 방지
@@ -909,6 +911,48 @@ const MyPage = () => {
   const photoMenuRef = useRef();
   const [editingName, setEditingName] = useState(false);
   const [profileName, setProfileName] = useState(t('profileName', 'John Doe'));
+  const pendingNameRef = useRef(null);
+
+  // 닉네임 저장 API 호출
+  const saveProfileName = async () => {
+    const current = profile?.username ?? '';
+    const next = (profileName ?? '').trim();
+    if (!next || next.length < 2) {
+      // 최소 길이 검증과 동일하게 처리
+      setProfileName(current);
+      return;
+    }
+    if (next === current) return; // 변경 없음
+
+    // 중복 호출 방지 (blur와 enter 동시 트리거 등을 대비)
+    if (pendingNameRef.current === next) return;
+    pendingNameRef.current = next;
+
+    try {
+      const res = await axios.patch('/api/my/profile', { username: next }, { headers: getAuthHeader() });
+      if (res?.data?.success) {
+        const updated = res.data.data;
+        setProfile(updated);
+        setProfileName(updated.username);
+        // 로컬 사용자 정보도 동기화 (헤더/채팅 등에서 참조)
+        try {
+          const userJson = localStorage.getItem('user');
+          const userObj = userJson ? JSON.parse(userJson) : {};
+          localStorage.setItem('user', JSON.stringify({ ...userObj, username: updated.username }));
+        } catch (_) {}
+        try { updateUser?.({ username: updated.username }); } catch (_) {}
+      } else {
+        alert(res?.data?.message || '닉네임 변경에 실패했습니다.');
+        setProfileName(current);
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.message || '닉네임 변경 중 오류가 발생했습니다.';
+      alert(msg);
+      setProfileName(current);
+    } finally {
+      pendingNameRef.current = null;
+    }
+  };
   const nameInputRef = useRef();
   
   // 평점에 따른 색상 계산 함수
@@ -919,7 +963,6 @@ const MyPage = () => {
     return '#D97706'; // 진주황
   };
   
-  const userScore = 85; // deprecated placeholder
   // 거래 평점 요약 상태
   const [ratingSummary, setRatingSummary] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
@@ -944,8 +987,8 @@ const MyPage = () => {
         const userProfile = response.data.data;
         setProfile(userProfile);
         setProfileName(userProfile.username); // 닉네임 수정용 상태에도 반영
-        if (userProfile.universityEmail) {
-          setSchoolEmail(userProfile.universityEmail);
+        if (userProfile.univEmail) {
+          setUnivEmail(userProfile.univEmail);
         }
       }
     } catch (error) {
@@ -1095,9 +1138,32 @@ const MyPage = () => {
     }
   };
 
-  const handlePhotoChange = (e) => {
-    // 기능 보류
-    alert('프로필 사진 변경 기능은 현재 준비 중입니다.');
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await axios.post('/api/my/profile-image', form, {
+        headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
+      });
+      const newUrl = res.data; // 백엔드가 String URL을 반환
+      setProfile((prev) => ({ ...(prev || {}), profileImageUrl: newUrl }));
+      setProfileImage(newUrl);
+      // 전역 사용자 정보 동기화
+      try { updateUser?.({ profileImageUrl: newUrl, profileImage: newUrl }); } catch (_) {}
+      try {
+        const userJson = localStorage.getItem('user');
+        const userObj = userJson ? JSON.parse(userJson) : {};
+        localStorage.setItem('user', JSON.stringify({ ...userObj, profileImage: newUrl, profileImageUrl: newUrl }));
+      } catch (_) {}
+    } catch (err) {
+      console.error('프로필 이미지 업로드 실패', err);
+      alert(err?.response?.data?.message || '프로필 이미지 업로드 중 오류가 발생했습니다.');
+    } finally {
+      // 같은 파일 재선택 가능하도록 input 리셋
+      e.target.value = '';
+    }
   };
 
   const handleSendVerification = async () => {
@@ -1106,15 +1172,15 @@ const MyPage = () => {
 
     // 이메일 형식 검증 (두 도메인 모두 허용)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@(mail\.hongik\.ac\.kr|g\.hongik\.ac\.kr)$/;
-    if (!emailRegex.test(schoolEmail)) {
+    if (!emailRegex.test(univEmail)) {
       setVerificationMessage({ type: 'error', text: '홍익대학교 메일 형식(@mail.hongik.ac.kr 또는 @g.hongik.ac.kr)이 올바르지 않습니다.' });
       setIsSubmitting(false);
       return;
     }
 
     try {
-      await axios.post('/api/my/verification/request-code', { schoolEmail }, { headers: getAuthHeader() });
-      setVerificationMessage({ type: 'info', text: `${schoolEmail}로 인증 메일을 보냈습니다. 메일함의 링크를 클릭하면 인증이 완료됩니다.` });
+      await axios.post('/api/my/verification/request-code', { univEmail }, { headers: getAuthHeader() });
+      setVerificationMessage({ type: 'info', text: `${univEmail}로 인증 메일을 보냈습니다. 메일함의 링크를 클릭하면 인증이 완료됩니다.` });
       setShowVerificationForm(false); // 성공 시 폼 숨기기
     } catch (error) {
       const message = error.response?.data?.message || "인증 메일 발송 중 오류가 발생했습니다.";
@@ -1223,9 +1289,18 @@ const MyPage = () => {
                     type="text"
                     value={profileName}
                     onChange={e => setProfileName(e.target.value)}
-                    onBlur={() => setEditingName(false)}
+                    onBlur={async () => {
+                      await saveProfileName();
+                      setEditingName(false);
+                    }}
                     onKeyDown={e => {
-                      if (e.key === 'Enter') setEditingName(false);
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        (async () => {
+                          await saveProfileName();
+                          setEditingName(false);
+                        })();
+                      }
                     }}
                     style={{
                       fontSize: '1.15rem',
@@ -1468,8 +1543,8 @@ const MyPage = () => {
               <Input
                 type="email"
                 placeholder="id@g.hongik.ac.kr / id@mail.hongik.ac.kr"
-                value={schoolEmail}
-                onChange={(e) => setSchoolEmail(e.target.value)}
+                value={univEmail}
+                onChange={(e) => setUnivEmail(e.target.value)}
                 disabled={isSubmitting}
               />
               <SmallButton onClick={handleSendVerification} disabled={isSubmitting}>
@@ -1489,7 +1564,7 @@ const MyPage = () => {
           {profile.studentVerified && (
             <VerificationMessage className="success">
               <i className="fas fa-check-circle"></i>
-              {profile.universityEmail} 계정으로 재학생 인증이 완료되었습니다.
+              {profile.univEmail} 계정으로 재학생 인증이 완료되었습니다.
             </VerificationMessage>
           )}
         </SettingsSection>

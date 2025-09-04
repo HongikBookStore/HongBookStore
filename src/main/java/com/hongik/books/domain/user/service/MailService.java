@@ -1,36 +1,28 @@
 package com.hongik.books.domain.user.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.MediaType;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import java.util.Map;
 import java.nio.charset.StandardCharsets;
 import java.time.Year;
 import java.util.Locale;
-
-import static org.springframework.http.HttpHeaders.*;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class MailService {
 
-    private final WebClient.Builder webClientBuilder;
+    private final JavaMailSender mailSender;
 
-    @Value("${resend.api-key}")
-    private String apiKey;
-
-    @Value("${resend.from}")
+    @Value("${email.from:${spring.mail.username:}}")
     private String from;
-
-    @Value("${resend.base-url:https://api.resend.com}")
-    private String baseUrl;
 
     @Value("${email.brand.name:HongBookStore}")
     private String brandName;
@@ -42,50 +34,32 @@ public class MailService {
     private int verificationExpirationHours;
 
     /**
-     * 지정된 이메일 주소로 메일을 발송하는 범용 메서드 (Resend 사용)
+     * 지정된 이메일 주소로 메일을 발송하는 범용 메서드 (JavaMailSender + Gmail SMTP)
      * @param to 받는 사람 이메일 주소
      * @param subject 이메일 제목
      * @param text 이메일 본문(plain text)
      * @param html html 템플릿
      */
     public void sendEmailHtml(String to, String subject, String text, String html) {
-        if (apiKey == null || apiKey.isBlank()) {
-            log.error("RESEND_API_KEY is not configured; skipping email send.");
-            return;
-        }
         if (from == null || from.isBlank()) {
-            log.error("RESEND_FROM_EMAIL is not configured; skipping email send.");
+            log.error("'email.from' 또는 'spring.mail.username'이 설정되지 않았습니다. 메일 전송을 건너뜁니다.");
             return;
         }
-
-        WebClient client = webClientBuilder
-                .baseUrl(baseUrl)
-                .defaultHeader(AUTHORIZATION, "Bearer " + apiKey)
-                .defaultHeader(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build();
-
-        Map<String, Object> body = Map.of(
-                "from", from,
-                "to", new String[]{to},
-                "subject", subject,
-                "text", text,
-                "html", html
-        );
 
         try {
-            client.post()
-                    .uri("/emails")
-                    .bodyValue(body)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .onErrorResume(e -> {
-                        log.error("Failed to send HTML email via Resend: {}", e.getMessage());
-                        return Mono.empty();
-                    })
-                    .block();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            // text는 일반 텍스트 본문, html은 HTML 본문으로 설정
+            helper.setText(text, html);
+            mailSender.send(message);
+            log.info("Verification email sent via Gmail SMTP. to={}", to);
+        } catch (MessagingException e) {
+            log.error("Failed to compose email message: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Resend HTML email send exception: {}", e.getMessage());
-            // 이메일 발송 실패가 전체 트랜잭션을 막지 않도록 예외 전파는 하지 않음
+            log.error("Unexpected error sending email: {}", e.getMessage());
         }
     }
 
@@ -127,17 +101,15 @@ public class MailService {
                 .replace("{{BRAND_COLOR}}", escapeHtml(brandPrimaryColor))
                 .replace("{{EXPIRY_HOURS}}", String.valueOf(verificationExpirationHours));
 
-        // fallback if template missing
-        if (html.isBlank()) {
-            html = "<p>" + text + "</p>";
-        }
+        if (html.isBlank()) html = "<p>" + text + "</p>";
+
         sendEmailHtml(to, subject, text, html);
     }
 
     private String normalizeLang(Locale locale) {
         if (locale == null) return "ko";
         String l = locale.getLanguage();
-        if (l.isBlank()) return "ko";
+        if (l == null || l.isBlank()) return "ko";
         if (l.startsWith("en")) return "en";
         if (l.startsWith("ja")) return "ja";
         if (l.startsWith("zh")) return "zh";
@@ -165,3 +137,4 @@ public class MailService {
                 .replace("'", "&#x27;");
     }
 }
+

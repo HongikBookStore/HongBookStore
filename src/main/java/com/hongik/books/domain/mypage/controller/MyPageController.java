@@ -7,6 +7,7 @@ import com.hongik.books.domain.post.dto.MyPostSummaryResponseDTO;
 import com.hongik.books.domain.post.service.PostLikeService;
 import com.hongik.books.domain.post.service.SalePostService;
 import com.hongik.books.domain.user.dto.StudentVerificationRequestDTO;
+import com.hongik.books.domain.user.dto.UserRequestDTO;
 import com.hongik.books.domain.user.dto.UserResponseDTO;
 import com.hongik.books.domain.user.service.UserService;
 import jakarta.validation.Valid;
@@ -44,6 +45,18 @@ public class MyPageController {
     }
 
     /**
+     * 내 프로필(닉네임/프로필 이미지 URL)을 수정하는 API
+     * - 파일 업로드가 필요한 경우 먼저 /api/my/profile-image로 이미지 업로드 후 반환된 URL을 전달하세요.
+     */
+    @PatchMapping("/profile")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> updateMyProfile(
+            @AuthenticationPrincipal LoginUserDTO loginUser,
+            @Valid @RequestBody UserRequestDTO request) {
+        ApiResponse<UserResponseDTO> response = userService.updateUser(loginUser.id(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 내가 쓴 판매글 목록을 조회하는 API
      */
     @GetMapping("/posts")
@@ -75,7 +88,7 @@ public class MyPageController {
     }
 
     /**
-     * TODO: 내 프로필 이미지를 변경하는 API
+     * 내 프로필 이미지를 변경하는 API (이미지 업로드)
      */
     @PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> updateProfileImage(
