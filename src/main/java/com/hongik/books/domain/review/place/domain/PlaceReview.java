@@ -9,13 +9,17 @@ import java.util.List;
 
 @Entity
 @Table(name = "place_reviews",
-       indexes = {
-           @Index(name = "idx_place_reviews_place_id", columnList = "place_id"),
-           @Index(name = "idx_place_reviews_place_created", columnList = "place_id, created_at")
-       })
+        indexes = {
+                @Index(name = "idx_place_reviews_place_id", columnList = "place_id"),
+                @Index(name = "idx_place_reviews_place_created", columnList = "place_id, created_at")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_place_user", columnNames = {"place_id","user_id"})
+        }
+)
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class PlaceReview {
@@ -31,23 +35,21 @@ public class PlaceReview {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "user_name", nullable = false, length = 100)
+    // ⬇️ DB의 컬럼에 맞춰 언더스코어 없는 `username`으로 매핑
+    @Column(name = "username", nullable = false, length = 100)
     private String userName;
 
     @Column(nullable = false)
-    private int rating; // 1~5
+    private int rating;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Builder.Default
     @Column(name = "likes_count", nullable = false)
-    private int likesCount = 0;
+    private int likesCount;
 
-    @Builder.Default
     @Column(name = "dislikes_count", nullable = false)
-    private int dislikesCount = 0;
+    private int dislikesCount;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -55,15 +57,18 @@ public class PlaceReview {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Builder.Default
-    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC, id ASC")
+    @Builder.Default
     private List<ReviewPhoto> photos = new ArrayList<>();
 
     @PrePersist
     public void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+        if (likesCount < 0) likesCount = 0;
+        if (dislikesCount < 0) dislikesCount = 0;
     }
 
     @PreUpdate
@@ -71,7 +76,7 @@ public class PlaceReview {
         updatedAt = LocalDateTime.now();
     }
 
-    // ✅ 편의 메서드: 양방향 연관관계 세팅 + null 안전
+    // 양방향 연관관계 편의 메서드
     public void addPhoto(ReviewPhoto photo) {
         if (photo == null) return;
         photo.setReview(this);

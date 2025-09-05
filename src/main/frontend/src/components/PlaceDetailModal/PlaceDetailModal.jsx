@@ -1,6 +1,7 @@
 // src/components/PlaceDetailModal/PlaceDetailModal.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import styled from 'styled-components';
+import { AuthCtx } from '../../contexts/AuthContext.jsx';
 import {
   FaStar, FaThumbsUp, FaThumbsDown, FaRoute, FaClock, FaMapMarkerAlt,
   FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle,
@@ -14,8 +15,28 @@ const SEARCH_ENDPOINT = '/api/places/search';
 // ✅ 리뷰 API 엔드포인트
 const REVIEW_LIST   = (id) => `/api/places/${id}/reviews`;
 const REVIEW_REACT  = (reviewId) => `/api/places/reviews/${reviewId}/reactions`;
+const REVIEW_DELETE = (placeId, reviewId) => `/api/places/reviews/${reviewId}`;
 const REVIEW_UPLOAD = '/api/reviews/images'; // 리뷰 전용 업로드 엔드포인트
 
+/* ===================== 공통 토스트 ===================== */
+function showToast(message) {
+  const el = document.createElement('div');
+  el.textContent = message;
+  el.style.cssText = `
+    position:fixed;top:20px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,.85);color:#fff;padding:10px 16px;border-radius:10px;
+    font-size:14px;z-index:5000;opacity:0;transition:opacity .25s ease;
+    box-shadow:0 8px 24px rgba(0,0,0,.25)
+  `;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = 1; });
+  setTimeout(() => {
+    el.style.opacity = 0;
+    setTimeout(() => el.remove(), 250);
+  }, 2400);
+}
+
+/* ===================== 유틸 ===================== */
 // 네이버 로컬검색 item에서 위경도 추출 (mapx/mapy는 1e7 스케일된 WGS84)
 function extractLatLngFromNaverItem(item) {
   const toNum = (v) => (v == null ? NaN : Number(v));
@@ -40,21 +61,25 @@ function extractLatLngFromNaverItem(item) {
 }
 
 const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCategory, userLocation }) => {
+  const { user } = useContext(AuthCtx);
+  const currentUserId =
+      (user && user.id) || (JSON.parse(localStorage.getItem('user') || '{}').id) || null;
+
   const [activeTab, setActiveTab] = useState('info');
 
-  // ✅ 리뷰 관련 상태
-  const [reviews, setReviews] = useState([]);             // 서버에서 받은 리뷰 목록
-  const [avgRating, setAvgRating] = useState(null);       // 서버 평균(없으면 클라 계산)
-  const [reviewCount, setReviewCount] = useState(0);      // 서버 카운트(없으면 reviews.length)
+  // ✅ 리뷰 상태
+  const [reviews, setReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(null);
+  const [reviewCount, setReviewCount] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReview, setExpandedReview] = useState(null);
-  const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] }); // photos: 미리보기 URL
+  const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] });
   const [reviewError, setReviewError] = useState('');
 
   // 카테고리
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // 경로 관련
+  // 경로
   const [routeSummary, setRouteSummary] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -64,16 +89,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const markersRef = useRef([]);
   const polylineRef = useRef(null);
 
-  // 출발지(장소검색으로 선택)
-  const [startPoint, setStartPoint] = useState(null); // {lat,lng}
+  // 출발지 검색
+  const [startPoint, setStartPoint] = useState(null);
   const [startQuery, setStartQuery] = useState('');
   const [startResults, setStartResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [startLabel, setStartLabel] = useState('');
 
-  // ✅ 라이트박스 (리뷰 사진 확대)
+  // ✅ 라이트박스
   const [lbOpen, setLbOpen] = useState(false);
-  const [lbImages, setLbImages] = useState([]);   // string[]
+  const [lbImages, setLbImages] = useState([]);
   const [lbIndex, setLbIndex] = useState(0);
 
   const openLightbox = (images, startIndex = 0) => {
@@ -86,20 +111,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const prevLightbox  = () => setLbIndex(i => (i - 1 + lbImages.length) % lbImages.length);
   const nextLightbox  = () => setLbIndex(i => (i + 1) % lbImages.length);
 
-  useEffect(() => {
-    if (!lbOpen) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowLeft') prevLightbox();
-      if (e.key === 'ArrowRight') nextLightbox();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [lbOpen, lbImages.length]);
-
   if (!isOpen || !place) return null;
 
-  // ✅ 평균 평점 계산 (서버값 우선, 없으면 클라이언트 계산)
+  /* ===================== 평균/카운트 ===================== */
   const clientAvg = reviews.length > 0
       ? Number((reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / reviews.length).toFixed(1))
       : 0;
@@ -107,40 +121,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const averageRating = (typeof avgRating === 'number' ? avgRating : clientAvg);
   const totalReviews  = (typeof reviewCount === 'number' ? reviewCount : reviews.length);
 
-  const HUMAN_WALK_SPEED_KMH = 3;
-  const ADJUSTED_SPEED_KMH = HUMAN_WALK_SPEED_KMH * 0.8;
-
-  const calculateRouteTime = () => {
-    if (!startPoint) return '출발지를 검색해서 선택하세요';
-    if (routeSummary) {
-      const mins = Math.round(routeSummary.duration / 60000);
-      const km = (routeSummary.distance / 1000).toFixed(1);
-      return `예상 ${mins}분 · ${km} km`;
-    }
-
-    if (place && startPoint) {
-      const dx = place.lng - startPoint.lng;
-      const dy = place.lat - startPoint.lat;
-      const avgLat = (place.lat + startPoint.lat) / 2;
-      const meterPerDegLon = 111320 * Math.cos(avgLat * Math.PI / 180);
-      const meterPerDegLat = 110540;
-      const distanceMeters = Math.sqrt((dx * meterPerDegLon) ** 2 + (dy * meterPerDegLat) ** 2);
-      const distanceKm = distanceMeters / 1000;
-      const estMin = Math.round(distanceKm / ADJUSTED_SPEED_KMH * 60);
-      return `예상 약 ${estMin}분 (2.4 km/h 보행 기준)`;
-    }
-    return '경로 계산 중...';
-  };
-
-  // 카테고리 추가
-  const handleAddToCategory = () => {
-    if (selectedCategory) {
-      onAddToCategory(place.id, selectedCategory);
-      setSelectedCategory('');
-    }
-  };
-
-  // ✅ 리뷰 목록 불러오기
+  /* ===================== API ===================== */
+  // 리뷰 목록
   const fetchReviews = async () => {
     if (!place?.id) return;
     try {
@@ -148,12 +130,13 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
       if (!res.ok) throw new Error('리뷰 조회 실패');
-      const data = await res.json(); // { averageRating, reviewCount, reviews: [...] }
+      const data = await res.json();
       setAvgRating(typeof data.averageRating === 'number' ? data.averageRating : null);
       setReviewCount(typeof data.reviewCount === 'number' ? data.reviewCount : 0);
       const mapped = (data.reviews || []).map(r => ({
         id: r.id,
-        userName: r.userName,
+        userId: r.userId ?? r.user_id,
+        userName: r.userName ?? r.username,
         rating: r.rating,
         content: r.content,
         likes: r.likes,
@@ -167,7 +150,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
-  // ✅ 이미지 업로드 (엔드포인트 접근 실패 시 사진 없이 진행)
+  // 사진 업로드(엔드포인트 없으면 무시)
   async function uploadReviewPhotos(files) {
     if (!files || files.length === 0) return [];
     try {
@@ -181,15 +164,15 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       if (!res.ok) throw new Error('upload endpoint not available');
       const data = await res.json(); // { urls: [...] }
       return data.urls || [];
-    } catch (err) {
-      console.warn('사진 업로드 API가 없거나 실패했습니다. 사진 없이 리뷰를 등록합니다.');
+    } catch {
+      console.warn('사진 업로드 실패 또는 엔드포인트 없음 → 사진 없이 진행');
       return [];
     }
   }
 
-  // ✅ 리뷰 등록
+  // ✅ 리뷰 등록 (409 → 토스트)
   const handleSubmitReview = async () => {
-    if (!newReview.content.trim()) return alert('리뷰 내용을 입력해주세요.');
+    if (!newReview.content.trim()) return showToast('리뷰 내용을 입력해주세요.');
 
     try {
       setReviewError('');
@@ -209,7 +192,13 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           photoUrls
         })
       });
+
       if (!res.ok) {
+        if (res.status === 409) {
+          setReviewError('이미 이 장소에 리뷰를 작성하셨습니다. 기존 리뷰를 삭제 후 다시 등록해주세요.');
+          showToast('이미 작성된 리뷰가 있어요. 삭제 후 재등록해주세요.');
+          return;
+        }
         const ct = res.headers.get('content-type') || '';
         if (res.status === 400 && ct.includes('application/json')) {
           const json = await res.json().catch(() => null);
@@ -222,26 +211,60 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
             return;
           }
         }
-        throw new Error('리뷰 등록 실패');
+        showToast('리뷰 등록에 실패했습니다.');
+        return;
       }
 
       setNewReview({ rating: 5, content: '', photos: [] });
       if (fileInput) fileInput.value = '';
       await fetchReviews();
+      showToast('리뷰가 등록되었습니다.');
     } catch (e) {
       console.error(e);
-      if (!reviewError) alert('리뷰 등록에 실패했습니다.');
+      showToast('리뷰 등록에 실패했습니다.');
     }
   };
 
-  // 미리보기용 사진 관리 (프론트 전용)
+  // ✅ 리뷰 삭제 (상태코드별 안내)
+  const handleDeleteReview = async (reviewId) => {
+    if (!currentUserId) return showToast('로그인이 필요합니다.');
+    if (!confirm('이 리뷰를 삭제하시겠습니까?')) return;
+
+    try {
+      const res = await fetch(REVIEW_DELETE(place.id, reviewId), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+      });
+
+      if (res.status === 204) {
+        await fetchReviews();
+        return showToast('리뷰를 삭제했습니다.');
+      }
+
+      // 상태 코드별 메시지
+      if (res.status === 401) return showToast('로그인이 필요합니다.');
+      if (res.status === 403) return showToast('본인 리뷰만 삭제할 수 있어요.');
+      if (res.status === 404) return showToast('리뷰를 찾을 수 없습니다.');
+      if (res.status === 409) return showToast('삭제할 수 없는 상태입니다.');
+      // 프록시 미설정 등으로 404/NoResourceFound가 날아오는 경우도 있으니 안내
+      if (res.status === 500) return showToast('서버 오류로 삭제에 실패했습니다.');
+
+      showToast('리뷰 삭제에 실패했습니다.');
+    } catch (e) {
+      console.error(e);
+      showToast('리뷰 삭제에 실패했습니다.');
+    }
+  };
+
+  /* ===================== 프론트 미리보기용 사진 ===================== */
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files || []);
     setNewReview(p => ({ ...p, photos: [...p.photos, ...files.map(f => URL.createObjectURL(f))] }));
   };
-  const handleRemovePhoto = (idx) => setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
+  const handleRemovePhoto = (idx) =>
+      setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
 
-  // ✅ 좋아요/싫어요
+  /* ===================== 좋아요/싫어요 ===================== */
   const handleLikeReview = async (id) => {
     try {
       await fetch(REVIEW_REACT(id) + '?type=LIKE', {
@@ -261,10 +284,11 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     } catch (e) { console.error(e); }
   };
 
-  const getTypeName = (type) => ({ restaurant: '음식점', cafe: '카페', partner: '제휴업체', convenience: '편의점', other: '기타' }[type] || '기타');
+  const getTypeName = (type) =>
+      ({ restaurant: '음식점', cafe: '카페', partner: '제휴업체', convenience: '편의점', other: '기타' }[type] || '기타');
   const stripTags = (s) => (s || '').replace(/<[^>]+>/g, '');
 
-  // 네이버 스크립트 로더
+  /* ===================== 네이버 지도 로더 ===================== */
   const loadNaverMapScript = () =>
       new Promise((resolve, reject) => {
         if (window.naver?.maps) return resolve();
@@ -283,7 +307,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         document.head.appendChild(s);
       });
 
-  // 지도 초기화 (경로 탭 들어올 때)
+  /* ===================== 지도 초기화/경로 ===================== */
   useEffect(() => {
     const init = async () => {
       try {
@@ -292,25 +316,18 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         const { naver } = window;
 
         const center = new naver.maps.LatLng(Number(place.lat), Number(place.lng));
-
         const needRecreate =
             !mapInstanceRef.current ||
             mapInstanceRef.current.getElement?.() !== mapRef.current;
 
         if (needRecreate) {
           mapInstanceRef.current = new naver.maps.Map(mapRef.current, {
-            center,
-            zoom: 16,
-            minZoom: 6,
-            mapDataControl: false,
-            logoControl: false,
-            scaleControl: true,
+            center, zoom: 16, minZoom: 6, mapDataControl: false, logoControl: false, scaleControl: true,
           });
         } else {
           mapInstanceRef.current.setCenter(center);
         }
 
-        // 기존 오버레이 정리
         markersRef.current.forEach(m => m.setMap?.(null));
         markersRef.current = [];
         if (polylineRef.current) { polylineRef.current.setMap?.(null); polylineRef.current = null; }
@@ -318,7 +335,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         const destMarker = new naver.maps.Marker({ position: center, map: mapInstanceRef.current, title: place.name });
         markersRef.current.push(destMarker);
 
-        // 표시 직후 사이즈/바운즈 보정
         setTimeout(() => {
           const el = mapRef.current;
           if (!el || !mapInstanceRef.current) return;
@@ -337,7 +353,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     if (isOpen && activeTab === 'route') init();
   }, [isOpen, activeTab, place, userLocation]);
 
-  // 출발지 선택되면: 출발/도착 마커 + 경로 표시
   useEffect(() => {
     if (!(isOpen && activeTab === 'route')) return;
     if (!window.naver?.maps || !mapInstanceRef.current) return;
@@ -371,12 +386,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           const pathLatLngs = naverPath.map(([x, y]) => new naver.maps.LatLng(y, x));
 
           polylineRef.current = new naver.maps.Polyline({
-            path: pathLatLngs,
-            map,
-            strokeWeight: 5,
-            strokeOpacity: 0.9,
-            strokeColor: '#1e6fff',
-            strokeStyle: 'solid'
+            path: pathLatLngs, map, strokeWeight: 5, strokeOpacity: 0.9, strokeColor: '#1e6fff', strokeStyle: 'solid'
           });
 
           if (track?.summary) setRouteSummary({ distance: track.summary.distance, duration: track.summary.duration });
@@ -396,7 +406,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     drawRoute();
   }, [startPoint, isOpen, activeTab, place]);
 
-  // 출발지 검색
+  /* ===================== 출발지 검색 ===================== */
   const searchStartPlaces = async () => {
     const q = startQuery.trim();
     if (!q) return;
@@ -411,21 +421,20 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       setStartResults(items);
     } catch (e) {
       console.error('출발지 검색 실패:', e);
-      alert('검색에 실패했습니다.');
+      showToast('검색에 실패했습니다.');
     } finally {
       setSearching(false);
     }
   };
 
-  // 검색 결과에서 출발지 선택
   const pickStartFromResult = (item) => {
     const ll = extractLatLngFromNaverItem(item);
-    if (!ll) return alert('이 결과에서 좌표를 읽을 수 없습니다.');
+    if (!ll) return showToast('이 결과에서 좌표를 읽을 수 없습니다.');
 
     setStartPoint(ll);
 
-    const title = stripTags(item.title || item.name || '');
-    const addr  = stripTags(item.roadAddress || item.address || item.addr || '');
+    const title = (item.title || item.name || '').replace(/<[^>]+>/g, '');
+    const addr  = (item.roadAddress || item.address || item.addr || '').replace(/<[^>]+>/g, '');
     setStartLabel(addr ? `${title} · ${addr}` : title);
   };
 
@@ -443,6 +452,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, place?.id]);
 
+  /* ===================== UI ===================== */
   return (
       <ModalOverlay onClick={onClose}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
@@ -493,7 +503,15 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         <option value="">카테고리 선택</option>
                         {userCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </CategorySelect>
-                      <AddToCategoryButton onClick={handleAddToCategory}><FaPlus /></AddToCategoryButton>
+                      <AddToCategoryButton onClick={() => {
+                        if (selectedCategory) {
+                          onAddToCategory(place.id, selectedCategory);
+                          setSelectedCategory('');
+                          showToast('카테고리에 추가했습니다.');
+                        }
+                      }}>
+                        <FaPlus />
+                      </AddToCategoryButton>
                     </CategorySelectContainer>
                   </InfoSection>
                 </InfoTab>
@@ -520,8 +538,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         onChange={(e) => setNewReview({ ...newReview, content: e.target.value })}
                     />
                     {reviewError && (
-                      <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{reviewError}</div>
+                        <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{reviewError}</div>
                     )}
+
                     <PhotoUploadSection>
                       <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
                       <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>
@@ -546,6 +565,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                           </PhotoPreviewContainer>
                       )}
                     </PhotoUploadSection>
+
                     <ReviewSubmitButton onClick={handleSubmitReview}>리뷰 등록</ReviewSubmitButton>
                   </ReviewForm>
 
@@ -578,6 +598,12 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                               <ActionButton onClick={() => handleDislikeReview(review.id)}>
                                 <FaThumbsDown /> {review.dislikes || 0}
                               </ActionButton>
+
+                              {(currentUserId && review.userId === currentUserId) && (
+                                  <DeleteBtn title="내 리뷰 삭제" onClick={() => handleDeleteReview(review.id)}>
+                                    <FaTrash />
+                                  </DeleteBtn>
+                              )}
                             </ReviewActions>
                           </ReviewHeader>
 
@@ -613,7 +639,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         </ReviewItem>
                     ))}
                   </ReviewsList>
-
                 </ReviewsTab>
             )}
 
@@ -624,10 +649,27 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                     <RouteDetails>
                       <RouteItem><FaMapMarkerAlt /><span>출발지: {startLabel || '미설정 (아래에서 검색)'}</span></RouteItem>
                       <RouteItem><FaMapMarkerAlt /><span>도착지: {place.name}</span></RouteItem>
-                      <RouteItem><FaClock /><span>상태: {calculateRouteTime()}</span></RouteItem>
+                      <RouteItem><FaClock /><span>상태: {(() => {
+                        if (!startPoint) return '출발지를 검색해서 선택하세요';
+                        if (routeSummary) {
+                          const mins = Math.round(routeSummary.duration / 60000);
+                          const km = (routeSummary.distance / 1000).toFixed(1);
+                          return `예상 ${mins}분 · ${km} km`;
+                        }
+                        // 대략치
+                        const dx = place.lng - startPoint.lng;
+                        const dy = place.lat - startPoint.lat;
+                        const avgLat = (place.lat + startPoint.lat) / 2;
+                        const meterPerDegLon = 111320 * Math.cos(avgLat * Math.PI / 180);
+                        const meterPerDegLat = 110540;
+                        const distanceMeters = Math.sqrt((dx * meterPerDegLon) ** 2 + (dy * meterPerDegLat) ** 2);
+                        const distanceKm = distanceMeters / 1000;
+                        const HUMAN_WALK_SPEED_KMH = 3;
+                        const estMin = Math.round(distanceKm / (HUMAN_WALK_SPEED_KMH * 0.8) * 60);
+                        return `예상 약 ${estMin}분 (2.4 km/h 보행 기준)`;
+                      })()}</span></RouteItem>
                     </RouteDetails>
 
-                    {/* 출발지 장소검색 UI */}
                     <SearchRow>
                       <label>출발지 검색</label>
                       <SearchControls>
@@ -650,8 +692,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                                   key={r.id ?? `${r.mapx ?? r.x}-${r.mapy ?? r.y}-${idx}`}
                                   onClick={() => pickStartFromResult(r)}
                               >
-                                <ResultTitle>{stripTags(r.title || r.name)}</ResultTitle>
-                                <ResultAddr>{stripTags(r.roadAddress || r.address || r.addr || '')}</ResultAddr>
+                                <ResultTitle>{(r.title || r.name || '').replace(/<[^>]+>/g, '')}</ResultTitle>
+                                <ResultAddr>{(r.roadAddress || r.address || r.addr || '').replace(/<[^>]+>/g, '')}</ResultAddr>
                               </ResultItem>
                           ))}
                         </ResultsList>
@@ -684,667 +726,221 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
 const ModalOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
 `;
 
 const ModalContent = styled.div`
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 700px;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  background: white; border-radius: 16px;
+  width: 100%; max-width: 700px; max-height: 85vh;
+  overflow: hidden; display: flex; flex-direction: column;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 `;
 
 const ModalHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 24px 0 24px;
-  border-bottom: 1px solid #f0f0f0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 24px 0 24px; border-bottom: 1px solid #f0f0f0;
 `;
 
 const PlaceInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
+  display: flex; align-items: center; gap: 16px; flex: 1;
 `;
 
 const PlaceIcon = styled.span`
-  font-size: 40px;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f8f9fa;
-  border-radius: 12px;
+  font-size: 40px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;
+  background: #f8f9fa; border-radius: 12px;
 `;
 
-const PlaceDetails = styled.div`
-  flex: 1;
-`;
-
+const PlaceDetails = styled.div` flex: 1; `;
 const PlaceName = styled.h2`
-  margin: 0 0 6px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a1a;
-  line-height: 1.2;
+  margin: 0 0 6px 0; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.2;
 `;
-
 const PlaceType = styled.span`
-  color: #666;
-  font-size: 14px;
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
+  color: #666; font-size: 14px; display: block; margin-bottom: 8px; font-weight: 500;
 `;
 
-const PlaceRating = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const Stars = styled.div`
-  display: flex;
-  gap: 2px;
-`;
-
-const Star = styled.span`
-  color: ${props => props.$isFilled ? '#ffc107' : '#e0e0e0'};
-  font-size: 16px;
-`;
-
-const RatingText = styled.span`
-  color: #666;
-  font-size: 13px;
-  font-weight: 500;
-`;
+const PlaceRating = styled.div` display: flex; align-items: center; gap: 10px; `;
+const Stars = styled.div` display: flex; gap: 2px; `;
+const Star = styled.span` color: ${p => p.$isFilled ? '#ffc107' : '#e0e0e0'}; font-size: 16px; `;
+const RatingText = styled.span` color: #666; font-size: 13px; font-weight: 500; `;
 
 const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #333;
-    background: #f8f9fa;
-  }
+  background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 8px; border-radius: 8px;
+  transition: all .2s ease;
+  &:hover { color: #333; background: #f8f9fa; }
 `;
 
 const TabContainer = styled.div`
-  display: flex;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  display: flex; border-bottom: 1px solid #f0f0f0; background: #fafafa;
 `;
-
 const TabButton = styled.button`
-  flex: 1;
-  padding: 16px 20px;
-  background: ${props => props.$isActive ? 'white' : 'transparent'};
-  color: ${props => props.$isActive ? '#007bff' : '#666'};
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  position: relative;
-
-  &:hover {
-    background: ${props => props.$isActive ? 'white' : '#f0f0f0'};
-  }
-
-  ${props => props.$isActive && `
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: #007bff;
-    }
+  flex: 1; padding: 16px 20px; background: ${p => p.$isActive ? 'white' : 'transparent'};
+  color: ${p => p.$isActive ? '#007bff' : '#666'}; border: none; cursor: pointer; font-weight: 600; font-size: 14px;
+  transition: all .2s ease; position: relative;
+  &:hover { background: ${p => p.$isActive ? 'white' : '#f0f0f0'}; }
+  ${p => p.$isActive && `
+    &::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#007bff;}
   `}
 `;
 
-const ModalBody = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-`;
-
+const ModalBody = styled.div` flex: 1; overflow-y: auto; padding: 24px; `;
 const InfoTab = styled.div``;
 
 const InfoSection = styled.div`
-  margin-bottom: 24px;
-  padding: 20px;
-  background: #fafafa;
-  border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  margin-bottom: 24px; padding: 20px; background: #fafafa;
+  border-radius: 12px; border: 1px solid #f0f0f0;
 `;
-
 const InfoTitle = styled.h4`
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #333;
+  display: flex; align-items: center; gap: 8px;
 `;
+const InfoContent = styled.div` color: #555; display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 1.5; `;
 
-const InfoContent = styled.div`
-  color: #555;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 1.5;
-`;
-
-const CategorySelectContainer = styled.div`
-  display: flex;
-  gap: 12px;
-  align-items: center;
-`;
-
+const CategorySelectContainer = styled.div` display: flex; gap: 12px; align-items: center; `;
 const CategorySelect = styled.select`
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  background: white;
-  transition: border-color 0.2s ease;
-
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-  }
+  flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: white;
+  transition: border-color .2s ease;
+  &:focus { outline: none; border-color: #007bff; }
 `;
-
 const AddToCategoryButton = styled.button`
-  padding: 12px 16px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: #0056b3;
-  }
+  padding: 12px 16px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;
+  transition: background .2s ease; &:hover { background: #0056b3; }
 `;
 
 const ReviewsTab = styled.div``;
 
 const ReviewForm = styled.div`
-  margin-bottom: 24px;
-  padding: 24px;
+  margin-bottom: 24px; padding: 24px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 16px;
-  border: 1px solid #e9ecef;
+  border-radius: 16px; border: 1px solid #e9ecef;
 `;
-
-const ReviewFormTitle = styled.h4`
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-`;
-
-const RatingContainer = styled.div`
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-`;
-
+const ReviewFormTitle = styled.h4` margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #333; `;
+const RatingContainer = styled.div` display: flex; gap: 6px; margin-bottom: 16px; `;
 const StarButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: ${props => props.$isSelected ? '#ffc107' : '#ddd'};
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #ffc107;
-    transform: scale(1.1);
-  }
+  background: none; border: none; font-size: 24px; color: ${p => p.$isSelected ? '#ffc107' : '#ddd'};
+  cursor: pointer; transition: all .2s ease; &:hover { color: #ffc107; transform: scale(1.1); }
 `;
 
 const ReviewTextarea = styled.textarea`
-  width: 100%;
-  padding: 16px;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  font-size: 14px;
-  min-height: 100px;
-  resize: vertical;
-  margin-bottom: 16px;
-  font-family: inherit;
-  transition: border-color 0.2s ease;
-
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-  }
+  width: 100%; padding: 16px; border: 1px solid #ddd; border-radius: 12px; font-size: 14px; min-height: 100px; resize: vertical;
+  margin-bottom: 16px; font-family: inherit; transition: border-color .2s ease;
+  &:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1); }
 `;
 
-const PhotoUploadSection = styled.div`
-  margin-bottom: 16px;
-`;
-
-const PhotoUploadTitle = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #333;
-`;
-
+const PhotoUploadSection = styled.div` margin-bottom: 16px; `;
+const PhotoUploadTitle = styled.div` font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #333; `;
 const PhotoUploadArea = styled.div`
-  border: 2px dashed #ddd;
-  border-radius: 12px;
-  padding: 24px;
-  text-align: center;
-  cursor: pointer;
-  color: #666;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #007bff;
-    color: #007bff;
-    background: rgba(0, 123, 255, 0.05);
-  }
+  border: 2px dashed #ddd; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; color: #666;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; transition: all .2s ease;
+  &:hover { border-color: #007bff; color: #007bff; background: rgba(0,123,255,.05); }
 `;
-
-const PhotoPreviewContainer = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 12px;
-  overflow-x: auto;
-  padding: 4px;
-`;
-
-const PhotoPreview = styled.div`
-  position: relative;
-  flex-shrink: 0;
-`;
-
-const PhotoPreviewImage = styled.img`
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid #f0f0f0;
-`;
-
+const PhotoPreviewContainer = styled.div` display: flex; gap: 12px; margin-top: 12px; overflow-x: auto; padding: 4px; `;
+const PhotoPreview = styled.div` position: relative; flex-shrink: 0; `;
+const PhotoPreviewImage = styled.img` width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #f0f0f0; `;
 const RemovePhotoButton = styled.button`
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: #c82333;
-  }
+  position: absolute; top: -6px; right: -6px; background: #dc3545; color: #fff; border: none; border-radius: 50%;
+  width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .2s ease; &:hover { background: #c82333; }
 `;
 
 const ReviewSubmitButton = styled.button`
-  width: 100%;
-  padding: 14px;
+  width: 100%; padding: 14px;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 16px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-  }
+  color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 16px; transition: all .2s ease;
+  &:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3); }
 `;
 
 const ReviewsList = styled.div``;
-
 const ReviewsHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0;
 `;
-
-const ReviewsTitle = styled.h4`
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-`;
-
+const ReviewsTitle = styled.h4` margin: 0; font-size: 18px; font-weight: 600; color: #333; `;
 const ShowMoreButton = styled.button`
-  background: none;
-  border: none;
-  color: #007bff;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(0, 123, 255, 0.1);
-    text-decoration: none;
-  }
+  background: none; border: none; color: #007bff; cursor: pointer; font-size: 14px; font-weight: 500;
+  padding: 8px 16px; border-radius: 8px; transition: all .2s ease;
+  &:hover { background: rgba(0,123,255,.1); text-decoration: none; }
 `;
 
 const ReviewItem = styled.div`
-  padding: 20px;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  margin-bottom: 16px;
-  background: white;
-  transition: all 0.2s ease;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-  }
+  padding: 20px; border: 1px solid #f0f0f0; border-radius: 12px; margin-bottom: 16px; background: #fff; transition: all .2s ease;
+  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: translateY(-1px); }
 `;
-
-const ReviewHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-`;
-
+const ReviewHeader = styled.div` display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; `;
 const ReviewerInfo = styled.div``;
+const ReviewerName = styled.div` font-weight: 600; margin-bottom: 6px; color: #333; font-size: 14px; `;
+const ReviewRating = styled.div` display: flex; gap: 2px; `;
 
-const ReviewerName = styled.div`
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #333;
-  font-size: 14px;
-`;
-
-const ReviewRating = styled.div`
-  display: flex;
-  gap: 2px;
-`;
-
-const ReviewActions = styled.div`
-  display: flex;
-  gap: 12px;
-`;
-
+const ReviewActions = styled.div` display: flex; gap: 12px; `;
 const ActionButton = styled.button`
-  background: none;
-  border: 1px solid #e0e0e0;
-  color: #666;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #333;
-    border-color: #ccc;
-    background: #f8f9fa;
-  }
+  background: none; border: 1px solid #e0e0e0; color: #666; cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; transition: all .2s ease;
+  &:hover { color: #333; border-color: #ccc; background: #f8f9fa; }
+`;
+const DeleteBtn = styled.button`
+  background: none; border: 1px solid #f0f0f0; color: #c0392b; cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 20px; transition: all .2s ease;
+  &:hover { background: #fff5f5; border-color: #e6b0aa; }
 `;
 
-const ReviewContent = styled.div`
-  color: #333;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  font-size: 14px;
-`;
-
+const ReviewContent = styled.div` color: #333; line-height: 1.6; margin-bottom: 12px; font-size: 14px; `;
 const ExpandButton = styled.button`
-  background: none;
-  border: none;
-  color: #007bff;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(0, 123, 255, 0.1);
-    text-decoration: none;
-  }
+  background: none; border: none; color: #007bff; cursor: pointer; font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 4px; transition: all .2s ease;
+  &:hover { background: rgba(0,123,255,.1); text-decoration: none; }
 `;
+const CollapseButton = styled(ExpandButton)` margin-left: 8px; `;
 
-const CollapseButton = styled.button`
-  background: none;
-  border: none;
-  color: #007bff;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  margin-left: 8px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(0, 123, 255, 0.1);
-    text-decoration: none;
-  }
-`;
-
-const ReviewPhotos = styled.div`
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 4px;
-`;
-
+const ReviewPhotos = styled.div` display: flex; gap: 12px; overflow-x: auto; padding: 4px; `;
 const ReviewPhoto = styled.img`
-  width: 90px;
-  height: 90px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid #f0f0f0;
-  transition: transform 0.2s ease;
-  cursor: zoom-in;
-
-  &:hover {
-    transform: scale(1.05);
-  }
+  width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 2px solid #f0f0f0; transition: transform .2s ease; cursor: zoom-in;
+  &:hover { transform: scale(1.05); }
 `;
 
 const RouteTab = styled.div``;
-
 const RouteInfo = styled.div`
-  margin-bottom: 24px;
-  padding: 24px;
+  margin-bottom: 24px; padding: 24px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 16px;
-  border: 1px solid #e9ecef;
+  border-radius: 16px; border: 1px solid #e9ecef;
 `;
+const RouteTitle = styled.h4` margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #333; `;
+const RouteDetails = styled.div` display: flex; flex-direction: column; gap: 12px; `;
+const RouteItem = styled.div` display: flex; align-items: center; gap: 12px; color: #555; font-size: 14px; padding: 8px 0; `;
+const RouteMap = styled.div` height: 300px; border: 1px solid #f0f0f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #fafafa; `;
 
-const RouteTitle = styled.h4`
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-`;
-
-const RouteDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const RouteItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #555;
-  font-size: 14px;
-  padding: 8px 0;
-`;
-
-const RouteMap = styled.div`
-  height: 300px;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fafafa;
-`;
-
-const RouteMapPlaceholder = styled.div`
-  color: #999;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-
-  svg {
-    font-size: 32px;
-    color: #ccc;
-  }
-`;
-
-const SearchRow = styled.div`
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 8px;
-  align-items: center;
-  margin-top: 12px;
-`;
-
-const SearchControls = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
+const SearchRow = styled.div` display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; margin-top: 12px; `;
+const SearchControls = styled.div` display: flex; gap: 8px; `;
 const SearchInput = styled.input`
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
+  flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
   &:focus { outline: none; border-color: #007bff; }
 `;
-
 const SearchBtn = styled.button`
-  padding: 10px 14px;
-  background: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  &:disabled { opacity: .6; cursor: default; }
-  &:hover:not(:disabled) { background: #0056b3; }
+  padding: 10px 14px; background: #007bff; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;
+  &:disabled { opacity: .6; cursor: default; } &:hover:not(:disabled) { background: #0056b3; }
 `;
 
-const ResultsList = styled.div`
-  margin-top: 10px;
-  max-height: 220px;
-  overflow: auto;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  background: #fff;
-`;
-
+const ResultsList = styled.div` margin-top: 10px; max-height: 220px; overflow: auto; border: 1px solid #eee; border-radius: 10px; background: #fff; `;
 const ResultItem = styled.button`
-  width: 100%;
-  text-align: left;
-  background: #fff;
-  border: none;
-  border-bottom: 1px solid #f3f3f3;
-  padding: 10px 12px;
-  cursor: pointer;
-  &:hover { background: #f8faff; }
-  &:last-child { border-bottom: none; }
+  width: 100%; text-align: left; background: #fff; border: none; border-bottom: 1px solid #f3f3f3; padding: 10px 12px; cursor: pointer;
+  &:hover { background: #f8faff; } &:last-child { border-bottom: none; }
 `;
+const ResultTitle = styled.div` font-weight: 600; color: #222; font-size: 14px; `;
+const ResultAddr = styled.div` color: #666; font-size: 12px; margin-top: 2px; `;
 
-const ResultTitle = styled.div`
-  font-weight: 600;
-  color: #222;
-  font-size: 14px;
-`;
-
-const ResultAddr = styled.div`
-  color: #666;
-  font-size: 12px;
-  margin-top: 2px;
-`;
-
-/* ===================== Lightbox (리뷰 이미지 확대) ===================== */
-
+/* ===================== Lightbox ===================== */
 const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
   const [scale, setScale] = useState(1);
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [last, setLast] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    // 이미지 변경 시 상태 초기화
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
-    setDragging(false);
-  }, [index]);
+  useEffect(() => { setScale(1); setOffset({ x: 0, y: 0 }); setDragging(false); }, [index]);
 
   const onWheel = (e) => {
     e.preventDefault();
-    const delta = -Math.sign(e.deltaY) * 0.15; // 위로 스크롤 시 확대
+    const delta = -Math.sign(e.deltaY) * 0.15;
     setScale((s) => {
       const next = Math.min(5, Math.max(1, +(s + delta).toFixed(2)));
       if (next === 1) setOffset({ x: 0, y: 0 });
@@ -1352,15 +948,10 @@ const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
     });
   };
 
-  const onMouseDown = (e) => {
-    if (scale === 1) return; // 1배율에선 드래그 비활성
-    setDragging(true);
-    setLast({ x: e.clientX, y: e.clientY });
-  };
+  const onMouseDown = (e) => { if (scale !== 1) { setDragging(true); setLast({ x: e.clientX, y: e.clientY }); } };
   const onMouseMove = (e) => {
     if (!dragging) return;
-    const dx = e.clientX - last.x;
-    const dy = e.clientY - last.y;
+    const dx = e.clientX - last.x; const dy = e.clientY - last.y;
     setLast({ x: e.clientX, y: e.clientY });
     setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
   };
@@ -1368,17 +959,9 @@ const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
   const onMouseLeave = () => setDragging(false);
 
   const zoomIn  = () => setScale((s) => Math.min(5, +(s + 0.5).toFixed(2)));
-  const zoomOut = () => setScale((s) => {
-    const next = Math.max(1, +(s - 0.5).toFixed(2));
-    if (next === 1) setOffset({ x: 0, y: 0 });
-    return next;
-  });
+  const zoomOut = () => setScale((s) => { const next = Math.max(1, +(s - 0.5).toFixed(2)); if (next === 1) setOffset({ x: 0, y: 0 }); return next; });
   const reset   = () => { setScale(1); setOffset({ x: 0, y: 0 }); };
-
-  const dblClick = () => {
-    if (scale === 1) setScale(2);
-    else reset();
-  };
+  const dblClick = () => { if (scale === 1) setScale(2); else reset(); };
 
   if (!images || images.length === 0) return null;
 
@@ -1416,9 +999,7 @@ const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
           </LBControls>
 
           {images.length > 1 && (
-              <LBPager>
-                {index + 1} / {images.length}
-              </LBPager>
+              <LBPager>{index + 1} / {images.length}</LBPager>
           )}
         </LBStage>
       </LightboxOverlay>
@@ -1426,88 +1007,28 @@ const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
 };
 
 const LightboxOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.8);
-  z-index: 3000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 3000;
+  display: flex; align-items: center; justify-content: center;
 `;
-
 const LBStage = styled.div`
-  position: relative;
-  width: 92vw;
-  height: 86vh;
-  background: #111;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.1);
-  user-select: none;
-  cursor: ${p => p.$dragging ? 'grabbing' : 'default'};
+  position: relative; width: 92vw; height: 86vh; background: #111; border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1); user-select: none; cursor: ${p => p.$dragging ? 'grabbing' : 'default'};
 `;
-
-const LBImageWrapper = styled.div`
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-`;
-
-const LBImage = styled.img`
-  max-width: 90%;
-  max-height: 85%;
-  transform-origin: center center;
-  transition: transform 0.04s linear;
-  will-change: transform;
-`;
-
+const LBImageWrapper = styled.div` position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; `;
+const LBImage = styled.img` max-width: 90%; max-height: 85%; transform-origin: center center; transition: transform .04s linear; will-change: transform; `;
 const LBControls = styled.div`
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 10px;
-  background: rgba(0,0,0,.4);
-  padding: 8px 10px;
-  border-radius: 999px;
-  align-items: center;
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px; background: rgba(0,0,0,.4); padding: 8px 10px; border-radius: 999px; align-items: center;
 `;
-
 const LBButton = styled.button`
-  border: none;
-  background: rgba(255,255,255,.12);
-  color: #fff;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  cursor: pointer;
-  transition: background .15s ease;
+  border: none; background: rgba(255,255,255,.12); color: #fff; width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 18px; cursor: pointer; transition: background .15s ease;
   &:hover { background: rgba(255,255,255,.22); }
 `;
-
-const LBClose = styled(LBButton)`
-  margin-left: 4px;
-  width: 46px;
-  height: 46px;
-  font-size: 20px;
-`;
-
+const LBClose = styled(LBButton)` margin-left: 4px; width: 46px; height: 46px; font-size: 20px; `;
 const LBPager = styled.div`
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #fff;
-  background: rgba(0,0,0,.35);
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 13px;
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  color: #fff; background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; font-size: 13px;
 `;
 
 export default PlaceDetailModal;
