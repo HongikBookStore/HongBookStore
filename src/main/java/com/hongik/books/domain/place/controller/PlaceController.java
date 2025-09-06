@@ -44,5 +44,10 @@ public class PlaceController {
         Map<String, String> addressData = placeService.getAddressFromCoordinates(lat, lng);
         return ResponseEntity.ok(addressData);
     }
-}
 
+    // 🧭 주소 → 좌표 (Forward Geocoding)
+    @GetMapping("/geocode/forward")
+    public ResponseEntity<Map<String, Object>> forwardGeocode(@RequestParam("query") String query) {
+        return ResponseEntity.ok(placeService.forwardGeocode(query));
+    }
+}

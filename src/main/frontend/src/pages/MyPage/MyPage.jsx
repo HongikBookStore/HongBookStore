@@ -7,6 +7,9 @@ import { useLocation } from '../../contexts/LocationContext'; // TODO: 위치 �
 import axios from 'axios';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
+import Modal from '../../components/ui/Modal';
+// 지도 선택 기능 제거로 NaverMap import 불필요
+import { openDaumPostcode } from '../../utils/daumPostcode';
 import { AuthCtx } from '../../contexts/AuthContext';
 
 const MyPageContainer = styled.div`
@@ -899,13 +902,20 @@ const MyPage = () => {
   const [verificationMessage, setVerificationMessage] = useState({ type: '', text: '' }); 
   const [isSubmitting, setIsSubmitting] = useState(false); // API 호출 중복 방지
 
-  const { locations, setDefaultLocation, addLocation, deleteLocation } = useLocation();
+  const { locations, setDefaultLocation, addLocation, deleteLocation, updateLocation } = useLocation();
 
 
   const [profileImage, setProfileImage] = useState(null);
   const [isDefaultImage, setIsDefaultImage] = useState(true);
   const [newLocation, setNewLocation] = useState({ name: '', address: '' });
   const [showAddForm, setShowAddForm] = useState(false);
+  // 우편번호 전용으로 단순화: 주소 검색 관련 상태 제거
+
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState({ name: '', address: '', lat: null, lng: null });
+  const [showEditCancelConfirm, setShowEditCancelConfirm] = useState(false);
+
+  // 지도 선택 제거
 
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const photoMenuRef = useRef();
@@ -1112,16 +1122,111 @@ const MyPage = () => {
     deleteLocation(locationId);
   };
 
-  const handleAddLocation = () => {
-    if (newLocation.name && newLocation.address) {
-      addLocation({
-        name: newLocation.name,
-        address: newLocation.address,
-        lat: 37.5519, // 기본값 (실제로는 지오코딩 API 사용)
-        lng: 126.9259
-      });
-      setNewLocation({ name: '', address: '' });
-      setShowAddForm(false);
+  const handleAddLocation = async () => {
+    const name = (newLocation.name || '').trim();
+    const address = (newLocation.address || '').trim();
+    if (name.length < 2) { alert('위치명은 2자 이상 입력해 주세요.'); return; }
+    if (address.length < 3) { alert('주소는 3자 이상 입력해 주세요.'); return; }
+    if (locations.some(l => String(l.name||'').toLowerCase() === name.toLowerCase())) {
+      alert('이미 같은 이름의 위치가 있습니다.');
+      return;
+    }
+
+    let lat = newLocation.lat ?? null;
+    let lng = newLocation.lng ?? null;
+    if (lat == null || lng == null) {
+      try {
+        // 우편번호/주소 선택으로 채워졌을 수 있는 roadAddress를 우선 지오코딩
+        const geo = await axios.get('/api/places/geocode/forward', { params: { query: newLocation.address } });
+        const g = typeof geo.data === 'string' ? JSON.parse(geo.data) : geo.data;
+        if (g && typeof g.lat === 'number' && typeof g.lng === 'number') {
+          lat = g.lat; lng = g.lng;
+        } else {
+          // 폴백: 기존 로컬 검색 사용
+          const res = await axios.get('/api/places/search', { params: { query: newLocation.address } });
+          const raw = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+          const item = Array.isArray(raw?.items) && raw.items.length > 0 ? raw.items[0] : null;
+          if (item) {
+            lat = Number(item.mapy) * 0.0000001;
+            lng = Number(item.mapx) * 0.0000001;
+          }
+        }
+      } catch (_) {}
+    }
+
+    await addLocation({
+      name: newLocation.name,
+      address: newLocation.address,
+      lat,
+      lng,
+    });
+    setNewLocation({ name: '', address: '' });
+    setShowAddForm(false);
+  };
+
+  // 우편번호(다음) 검색으로 주소 선택 → 좌표 자동 보강
+  const handlePostcodeSelect = async (forEdit = false) => {
+    try {
+      const data = await openDaumPostcode();
+      const road = data.roadAddress || data.address || '';
+      if (!road) return;
+      if (forEdit) {
+        setEditDraft(prev => ({ ...prev, address: road }));
+      } else {
+        setNewLocation(prev => ({ ...prev, address: road }));
+      }
+      try {
+        const geo = await axios.get('/api/places/geocode/forward', { params: { query: road } });
+        const g = typeof geo.data === 'string' ? JSON.parse(geo.data) : geo.data;
+        if (typeof g?.lat === 'number' && typeof g?.lng === 'number') {
+          if (forEdit) {
+            setEditDraft(prev => ({ ...prev, lat: g.lat, lng: g.lng }));
+          } else {
+            setNewLocation(prev => ({ ...prev, lat: g.lat, lng: g.lng }));
+          }
+        }
+      } catch (e) {
+        console.warn('Forward geocoding failed:', e?.response?.data?.message || e.message);
+      }
+    } catch (e) {
+      // 사용자가 창을 닫은 경우 등 무시
+    }
+  };
+
+  // 주소 검색 기능 제거
+
+  const beginEdit = (loc) => {
+    setEditingId(loc.id);
+    setEditDraft({ name: loc.name || '', address: loc.address || '', lat: loc.lat ?? null, lng: loc.lng ?? null });
+  };
+  const hasEditChanged = () => {
+    const original = locations.find(l => l.id === editingId) || {};
+    return (
+      (original.name || '') !== (editDraft.name || '') ||
+      (original.address || '') !== (editDraft.address || '') ||
+      (original.lat ?? null) !== (editDraft.lat ?? null) ||
+      (original.lng ?? null) !== (editDraft.lng ?? null)
+    );
+  };
+  const cancelEditNow = () => { setEditingId(null); setEditDraft({ name: '', address: '', lat: null, lng: null }); setEditResults([]); };
+  const requestCancelEdit = () => {
+    if (!hasEditChanged()) return cancelEditNow();
+    setShowEditCancelConfirm(true);
+  };
+  const saveEdit = async () => {
+    const name = (editDraft.name || '').trim();
+    const address = (editDraft.address || '').trim();
+    if (name.length < 2) { alert('위치명은 2자 이상 입력해 주세요.'); return; }
+    if (address.length < 3) { alert('주소는 3자 이상 입력해 주세요.'); return; }
+    if (locations.some(l => l.id !== editingId && String(l.name||'').toLowerCase() === name.toLowerCase())) {
+      alert('이미 같은 이름의 위치가 있습니다.');
+      return;
+    }
+    try {
+      await updateLocation(editingId, { name, address, lat: editDraft.lat, lng: editDraft.lng });
+      cancelEdit();
+    } catch (e) {
+      alert(e?.response?.data?.message || '위치 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -1574,25 +1679,50 @@ const MyPage = () => {
           <div className="location-list">
             {locations.map(location => (
               <div key={location.id} className="location-item">
-                <div className="location-info">
-                  <span className="location-name">{location.name}</span>
-                  <span className="location-address">{location.address}</span>
-                </div>
-                <div className="location-actions">
-                  <IconButton 
-                    onClick={() => handleSetDefault(location.id)}
-                    title={location.isDefault ? t('defaultLocation') : t('setDefault')}
-                  >
-                    <i className={`fas fa-star`} style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
-                  </IconButton>
-                  <IconButton 
-                    onClick={() => handleDeleteLocation(location.id)}
-                    className="danger"
-                    title={t('deleteLocation')}
-                  >
-                    <i className="fas fa-trash"></i>
-                  </IconButton>
-                </div>
+                {editingId === location.id ? (
+                  <div style={{display:'flex', flexDirection:'column', gap:8, width:'100%'}}>
+                    <div style={{display:'flex', gap:8}}>
+                      <Input
+                        type="text"
+                        placeholder={t('locationName')}
+                        value={editDraft.name}
+                        onChange={(e)=> setEditDraft(d => ({...d, name: e.target.value}))}
+                      />
+                      <Input
+                        type="text"
+                        placeholder={`${t('address')} (우편번호로 찾기를 이용하세요)`}
+                        value={editDraft.address}
+                        readOnly
+                      />
+                      <SmallButton onClick={() => handlePostcodeSelect(true)}>
+                        우편번호로 찾기
+                      </SmallButton>
+                    </div>
+                    {/* 검색/지도 선택 제거: 우편번호 전용 */}
+                    <div style={{display:'flex', gap:8}}>
+                      <SmallButton onClick={saveEdit}>{t('save', '저장')}</SmallButton>
+                      <SmallButton onClick={requestCancelEdit}>{t('cancel')}</SmallButton>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="location-info">
+                      <span className="location-name">{location.name}</span>
+                      <span className="location-address">{location.address}</span>
+                    </div>
+                    <div className="location-actions">
+                      <IconButton onClick={() => handleSetDefault(location.id)} title={location.isDefault ? t('defaultLocation') : t('setDefault')}>
+                        <i className={`fas fa-star`} style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
+                      </IconButton>
+                      <IconButton onClick={() => beginEdit(location)} title={'수정'}>
+                        <i className="fas fa-pen"></i>
+                      </IconButton>
+                      <IconButton onClick={() => handleDeleteLocation(location.id)} className="danger" title={t('deleteLocation')}>
+                        <i className="fas fa-trash"></i>
+                      </IconButton>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -1608,10 +1738,15 @@ const MyPage = () => {
                 />
                 <Input
                   type="text"
-                  placeholder={t('address')}
+                  placeholder={`${t('address')} (우편번호로 찾기를 이용하세요)`}
                   value={newLocation.address}
-                  onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
+                  readOnly
                 />
+                <div style={{display:'flex', gap:8, alignItems:'flex-start'}}>
+                  <SmallButton onClick={() => handlePostcodeSelect(false)}>
+                    우편번호로 찾기
+                  </SmallButton>
+                </div>
                 <div className="button-group">
                   <Button onClick={handleAddLocation}>{t('addNewLocation')}</Button>
                   <Button onClick={() => setShowAddForm(false)}>{t('cancel')}</Button>
@@ -1634,6 +1769,19 @@ const MyPage = () => {
           </SettingsList>
         </SettingsSection>
       </SettingsContainer>
+
+      {/* 편집 취소 확인 모달 */}
+      <Modal isOpen={showEditCancelConfirm} onClose={() => setShowEditCancelConfirm(false)} title={t('confirm', '확인')}>
+        <div style={{display:'flex', flexDirection:'column', gap:12}}>
+          <div>변경 사항이 저장되지 않습니다. 취소하시겠습니까?</div>
+          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+            <button onClick={() => setShowEditCancelConfirm(false)} className="btn-secondary">{t('cancel')}</button>
+            <button onClick={() => { setShowEditCancelConfirm(false); cancelEditNow(); }} className="btn-primary">{t('confirm')}</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 지도 선택 기능 제거됨 */}
     </MyPageContainer>
   );
 };
