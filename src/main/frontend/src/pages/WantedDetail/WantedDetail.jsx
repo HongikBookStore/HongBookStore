@@ -1,3 +1,4 @@
+// src/pages/WantedDetail/WantedDetail.jsx
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaBook, FaTag, FaUser, FaClock, FaEye } from 'react-icons/fa';
@@ -5,18 +6,21 @@ import { useNavigate, useParams } from 'react-router-dom';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import WantedComments from '../../components/Comments/WantedComments';
+import { useWriting } from '../../contexts/WritingContext';
 
 const PageWrapper = styled.div`
     display: flex; flex-direction: row; align-items: flex-start; width: 100%;
 `;
 const Container = styled.div` padding: 28px; box-sizing: border-box; `;
+
 const TopBar = styled.div`
     display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px;
 `;
 const BackButton = styled.button`
-    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; background: #6c757d; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
-    &:hover { background: #5a6268; }
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+    background: #f3f4f6; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
 `;
+
 const Actions = styled.div` display: flex; gap: 8px; `;
 const Button = styled.button`
     padding: 10px 14px; border-radius: 10px; border: 1px solid ${p => (p.$variant === 'danger' ? '#dc3545' : '#e5e7eb')};
@@ -26,9 +30,11 @@ const Button = styled.button`
     &:hover{ transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
     &:disabled{ opacity: .6; cursor: not-allowed; transform:none; box-shadow:none; }
 `;
+
 const HeaderCard = styled.div` background: #fff; border: 1px solid #e9ecef; border-radius: 14px; padding: 22px; margin-bottom: 18px; `;
 const Title = styled.h1` font-size: 1.9rem; margin: 0 0 10px 0; color: #222; `;
 const MetaRow = styled.div` display: flex; flex-wrap: wrap; gap: 8px; `;
+
 const Chip = styled.span`
     display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb; background: #f8fafc; color: #374151; font-weight: 600; font-size: 0.9rem; border-radius: 999px; padding: 6px 12px;
 `;
@@ -39,6 +45,7 @@ const ConditionChip = styled(Chip)`
     color: ${({$lv}) => $lv === '상' ? '#2e7d32' : $lv === '중' ? '#b26a00' : '#c62828'};
 `;
 const SubMeta = styled.div` display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; color: #6b7280; font-size: .92rem; `;
+
 const Layout = styled.div`
     display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-top: 6px;
     @media (max-width: 980px){ grid-template-columns: 1fr; }
@@ -55,14 +62,39 @@ const Small = styled.div` font-size: .86rem; color: #6b7280; `;
 export default function WantedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { setUnsavedChanges, stopWriting } = useWriting();
 
     const [data, setData] = useState(null);
     const [mine, setMine] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+    // ✅ 목록 페이지와 동일한 사이드바 메뉴 핸들러 이식
+    const handleSidebarMenu = (menu) => {
+        switch (menu) {
+            case 'booksale': navigate('/bookstore/add'); break;
+            case 'wanted': navigate('/wanted'); break;
+            case 'mybookstore': navigate('/bookstore'); break;
+            case 'chat': navigate('/chat'); break;
+            // 상세 화면 내 섹션 이동도 지원 (메뉴 아이디가 'comments' 등인 경우)
+            case 'comments': {
+                const el = document.querySelector('[data-section="comments"]');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                break;
+            }
+            case 'detail': {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                break;
+            }
+            default: break;
+        }
+    };
+
+    // 상세 조회 (ApiResponse형/직접객체형 모두 처리)
     useEffect(() => {
+        let alive = true;
         (async () => {
+            setLoading(true);
             try {
                 const res = await fetch(`/api/wanted/${id}`);
                 const ct = res.headers.get('content-type') || '';
@@ -71,22 +103,45 @@ export default function WantedDetail() {
                     throw new Error(msg || `상세 조회 실패 (${res.status})`);
                 }
                 const json = ct.includes('application/json') ? await res.json() : null;
-                const detail = json?.data || json;
-                setData(detail);
 
-                const myId = localStorage.getItem('userId');
-                if (myId && detail?.requesterId && String(detail.requesterId) === String(myId)) {
-                    setMine(true);
+                const detail =
+                    json && typeof json === 'object'
+                        ? (('success' in json && json.success === false) ? null
+                            : (('data' in json) ? json.data : json))
+                        : json;
+
+                if (alive) {
+                    setData(detail || null);
+                    // 내 글 여부 계산
+                    try {
+                        const myId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+                        setMine(myId != null && String(myId) === String(detail?.requesterId));
+                    } catch { /* ignore */ }
                 }
             } catch (e) {
                 console.error(e);
+                if (alive) setData(null);
             } finally {
-                setLoading(false);
+                if (alive) setLoading(false);
             }
         })();
+        return () => { alive = false; };
     }, [id]);
 
+    // 작성자 표기: '저자(author)'는 책 저자라서 절대 사용하지 않음
+    const displayAuthor = data?.requesterNickname || data?.requesterName || '익명 사용자';
+
+    const openDelete = () => {
+        // 중복 모달 방지: 쓰기 가드/이탈 가드 끄고 삭제 모달만 활성화
+        stopWriting();
+        setUnsavedChanges(false);
+        setShowDeleteModal(true);
+    };
+
     const onDelete = async () => {
+        // 이동 직전에도 가드 해제
+        stopWriting();
+        setUnsavedChanges(false);
         try {
             const token = localStorage.getItem('accessToken');
             let userId = localStorage.getItem('userId');
@@ -96,7 +151,6 @@ export default function WantedDetail() {
                     try { userId = JSON.parse(userJson)?.id; } catch {}
                 }
             }
-
             const res = await fetch(`/api/wanted/${id}`, {
                 method: 'DELETE',
                 headers: {
@@ -104,21 +158,19 @@ export default function WantedDetail() {
                     ...(userId ? { 'X-User-Id': String(userId) } : {}),
                 },
             });
-
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
                 return;
             }
-
             let message = `삭제 실패 (${res.status})`;
             const ct = res.headers.get('content-type') || '';
             if (ct.includes('application/json')) {
-                const data = await res.json().catch(() => null);
-                if (data?.message) message = data.message;
+                const d = await res.json().catch(() => null);
+                if (d?.message) message = d.message;
             } else {
-                const text = await res.text().catch(() => '');
-                if (text) message = text;
+                const t = await res.text().catch(() => '');
+                if (t) message = t;
             }
             throw new Error(message);
         } catch (err) {
@@ -135,21 +187,10 @@ export default function WantedDetail() {
         }
     };
 
-    const openDelete = () => {
-        setShowDeleteModal(true);
-        setTimeout(() => {
-            const mounted = document.querySelector('[data-warning-modal-open="true"]');
-            if (!mounted) {
-                if (window.confirm('정말 삭제할까요?\n삭제하면 되돌릴 수 없습니다.')) onDelete();
-                else setShowDeleteModal(false);
-            }
-        }, 0);
-    };
-
     if (loading) {
         return (
             <PageWrapper>
-                <SidebarMenu />
+                <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
                 <MainContent>
                     <Container><Card>불러오는 중…</Card></Container>
                 </MainContent>
@@ -160,7 +201,7 @@ export default function WantedDetail() {
     if (!data) {
         return (
             <PageWrapper>
-                <SidebarMenu />
+                <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
                 <MainContent>
                     <Container>
                         <Card>해당 글을 찾을 수 없습니다.</Card>
@@ -171,10 +212,9 @@ export default function WantedDetail() {
         );
     }
 
-    const condition = (data.condition || '').trim();
-    const displayAuthor = data.requesterNickname || data.requesterName || data.author || '익명 사용자';
+    const condition = (data.condition || '').trim() || '미지정';
     const createdAt = data.createdAt ? new Date(data.createdAt) : null;
-    const views = typeof data.views !== 'undefined' ? Number(data.views) : null;
+    const views = (typeof data.views !== 'undefined' ? Number(data.views) : (typeof data.viewCount !== 'undefined' ? Number(data.viewCount) : null));
 
     const rawCategory = (data.category || '').trim();
     const displayCategory = data.department
@@ -183,7 +223,8 @@ export default function WantedDetail() {
 
     return (
         <PageWrapper>
-            <SidebarMenu active="wanted" />
+            {/* ✅ 목록 페이지와 동일한 onMenuClick을 연결 */}
+            <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
             <MainContent>
                 <Container>
                     <TopBar>
@@ -204,7 +245,7 @@ export default function WantedDetail() {
                         <Title>{data.title}</Title>
                         <MetaRow>
                             <Chip><FaUser /> {displayAuthor}</Chip>
-                            <ConditionChip $lv={condition}><FaTag /> 상태: {condition || '미지정'}</ConditionChip>
+                            <ConditionChip $lv={condition}><FaTag /> 상태: {condition}</ConditionChip>
                             <PriceChip><FaTag /> 희망가: {Number(data.price || 0).toLocaleString()}원</PriceChip>
                         </MetaRow>
                         <SubMeta>
@@ -214,7 +255,7 @@ export default function WantedDetail() {
                         </SubMeta>
                     </HeaderCard>
 
-                    {/* 본문 / 요약 */}
+                    {/* 본문 / 요약 / 댓글 */}
                     <Layout>
                         <div>
                             <Card>
@@ -242,8 +283,10 @@ export default function WantedDetail() {
                                 )}
                             </Card>
 
-                            {/* 댓글 */}
-                            <WantedComments wantedId={id} />
+                            {/* 댓글 섹션 - 사이드바에서 스크롤 이동을 위해 anchor 마커 */}
+                            <div data-section="comments">
+                                <WantedComments wantedId={id} />
+                            </div>
                         </div>
 
                         <Card>
@@ -251,9 +294,9 @@ export default function WantedDetail() {
                             <InfoGrid>
                                 <InfoItem><Label>책 제목</Label><Value>{data.title || '-'}</Value></InfoItem>
                                 <InfoItem><Label>저자</Label><Value>{data.author || '-'}</Value></InfoItem>
-                                <InfoItem><Label>상태</Label><Value>{condition || '-'}</Value></InfoItem>
+                                <InfoItem><Label>상태</Label><Value>{condition}</Value></InfoItem>
                                 <InfoItem><Label>희망 가격</Label><Value>{Number(data.price || 0).toLocaleString()}원</Value></InfoItem>
-                                <InfoItem><Label>카테고리</Label><Value>{displayCategory || '-'}</Value></InfoItem>
+                                <InfoItem><Label>카테고리</Label><Value>{displayCategory}</Value></InfoItem>
                                 <InfoItem><Label>작성자</Label><Value>{displayAuthor}</Value></InfoItem>
                             </InfoGrid>
                         </Card>
