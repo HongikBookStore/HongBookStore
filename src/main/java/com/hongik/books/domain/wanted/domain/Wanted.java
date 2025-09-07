@@ -4,6 +4,7 @@ import com.hongik.books.domain.user.domain.User;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Check;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
+@Check(constraints = "price >= 0 AND price <= 1000000000")
 @Table(name = "wanted")
 public class Wanted {
 
@@ -70,6 +72,7 @@ public class Wanted {
         this.category = category;
         this.department = department;
         this.content = content;
+        validateInvariants();
     }
 
     public void applyContentModeration(String level, Double malicious, Double clean, boolean toxic, String reason) {
@@ -78,5 +81,20 @@ public class Wanted {
         this.contentToxicMalicious = malicious;
         this.contentToxicClean = clean;
         this.contentToxicReason = reason;
+    }
+
+    private static final int PRICE_MIN = 0;
+    private static final int PRICE_MAX = 1_000_000_000;
+
+    @PrePersist
+    @PreUpdate
+    private void onPersistOrUpdate() { validateInvariants(); }
+
+    private void validateInvariants() {
+        if (this.price < PRICE_MIN) throw new IllegalArgumentException("희망 가격은 0원 이상이어야 합니다.");
+        if (this.price > PRICE_MAX) throw new IllegalArgumentException("희망 가격이 너무 큽니다. 최대 1,000,000,000원까지 입력 가능합니다.");
+        if (this.title == null || this.title.isBlank()) throw new IllegalArgumentException("제목은 필수입니다.");
+        if (this.author == null || this.author.isBlank()) throw new IllegalArgumentException("저자는 필수입니다.");
+        if (this.category == null || this.category.isBlank()) throw new IllegalArgumentException("카테고리는 필수입니다.");
     }
 }

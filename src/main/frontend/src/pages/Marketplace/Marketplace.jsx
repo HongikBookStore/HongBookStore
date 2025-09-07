@@ -6,6 +6,19 @@ import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
 import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton } from '../../components/ui';
 import axios from 'axios';
 
+// 가격 한도(백엔드와 동일하게 유지)
+const PRICE_MIN = 0;
+const PRICE_MAX = 1000000000;
+
+const clampPrice = (val) => {
+  if (val === '' || val === null || typeof val === 'undefined') return '';
+  let n = Math.floor(Number(val));
+  if (!Number.isFinite(n)) return '';
+  if (n < PRICE_MIN) n = PRICE_MIN;
+  if (n > PRICE_MAX) n = PRICE_MAX;
+  return String(n);
+};
+
 const shimmer = keyframes`
   0% { background-position: -200px 0; }
   100% { background-position: calc(200px + 100%) 0; }
@@ -925,6 +938,14 @@ const Marketplace = () => {
 
   // 임시 필터
   const [tempFilters, setTempFilters] = useState({ minPrice: '', maxPrice: '' });
+  const invalidRange = (() => {
+    const min = Number(tempFilters.minPrice || '');
+    const max = Number(tempFilters.maxPrice || '');
+    if (Number.isFinite(min) && Number.isFinite(max) && tempFilters.minPrice !== '' && tempFilters.maxPrice !== '') {
+      return min > max;
+    }
+    return false;
+  })();
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef();
   const observerRef = useRef();
@@ -968,10 +989,17 @@ const Marketplace = () => {
         setError('요청 시간이 초과되었어요. 네트워크 상태를 확인해주세요 📡');
       } else if (error.response?.status === 404) {
         setError('해당 페이지를 찾을 수 없어요 🤔');
+        setHasMore(false);
+      } else if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || '요청 파라미터를 확인해주세요.';
+        setError(msg);
+        setHasMore(false); // 무한 로드 방지
       } else if (error.response?.status >= 500) {
         setError('서버에 문제가 발생했어요. 잠시 후 다시 시도해주세요 🛠️');
+        setHasMore(false);
       } else {
         setError('게시글을 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요 😅');
+        setHasMore(false);
       }
     } finally {
       setIsLoading(false);
@@ -993,7 +1021,7 @@ const Marketplace = () => {
     const currentObserverRef = observerRef.current;
     const observer = new IntersectionObserver(
         (entries) => {
-          if (entries[0].isIntersecting && hasMore && !isLoading) {
+          if (entries[0].isIntersecting && hasMore && !isLoading && !error) {
             fetchPosts(searchParams, page);
           }
         },
@@ -1077,7 +1105,10 @@ const Marketplace = () => {
   const handleSortChange = (e) => setSearchParams(prev => ({...prev, sort: e.target.value}));
   const handleCategoryChange = (e) => setSearchParams(prev => ({...prev, category: e.target.value}));
   const handleApplyFilters = () => {
-    setSearchParams(prev => ({ ...prev, minPrice: tempFilters.minPrice, maxPrice: tempFilters.maxPrice }));
+    if (invalidRange) return; // 방어
+    const minC = clampPrice(tempFilters.minPrice);
+    const maxC = clampPrice(tempFilters.maxPrice);
+    setSearchParams(prev => ({ ...prev, minPrice: minC, maxPrice: maxC }));
     setFilterOpen(false);
   };
 
@@ -1221,20 +1252,35 @@ const Marketplace = () => {
                         <PriceInputGroup>
                           <PriceInput
                               type="number"
+                              inputMode="numeric"
                               placeholder="최소 금액"
+                              min={PRICE_MIN}
+                              max={PRICE_MAX}
+                              step={1}
                               value={tempFilters.minPrice}
-                              onChange={e => setTempFilters(p => ({...p, minPrice: e.target.value}))}
+                              onChange={e => setTempFilters(p => ({...p, minPrice: clampPrice(e.target.value)}))}
                           />
                           <span>~</span>
                           <PriceInput
                               type="number"
+                              inputMode="numeric"
                               placeholder="최대 금액"
+                              min={PRICE_MIN}
+                              max={PRICE_MAX}
+                              step={1}
                               value={tempFilters.maxPrice}
-                              onChange={e => setTempFilters(p => ({...p, maxPrice: e.target.value}))}
+                              onChange={e => setTempFilters(p => ({...p, maxPrice: clampPrice(e.target.value)}))}
                           />
                         </PriceInputGroup>
+                        {invalidRange && (
+                          <div style={{ color: '#dc2626', fontSize: '0.85rem' }}>
+                            최소 금액이 최대 금액보다 클 수 없어요.
+                          </div>
+                        )}
                       </FilterSection>
-                      <FilterApplyButton onClick={handleApplyFilters}>적용하기</FilterApplyButton>
+                      <FilterApplyButton onClick={handleApplyFilters} disabled={invalidRange} style={{ opacity: invalidRange ? 0.6 : 1 }}>
+                        적용하기
+                      </FilterApplyButton>
                     </FilterPopover>
                 )}
               </div>

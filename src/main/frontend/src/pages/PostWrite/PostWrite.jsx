@@ -5,6 +5,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
+import api from '../../lib/api';
 
 /* ----------------------- 스타일 ----------------------- */
 
@@ -707,6 +708,23 @@ const InfoModalClose = styled.button`
   }
 `;
 
+// 카테고리 전용 스타일
+const CategoryRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+`;
+
+const CategorySelect = styled.select`
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  min-width: 140px;
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
 const RecommendButton = styled.button`
   margin-left: 0.5rem;
   padding: 0.3rem 0.8rem;
@@ -763,6 +781,20 @@ const MAX_IMAGES = 3;
 const DRAFT_STORAGE_KEY = 'postWriteDraft';
 const DRAFT_EXPIRY_HOURS = 24;
 
+// 가격 한도(백엔드와 통일)
+const PRICE_MIN = 0;
+const PRICE_MAX = 1_000_000_000;        // 판매가 한도
+const ORIGINAL_PRICE_MAX = 2_000_000_000; // 원가 한도
+
+const clampInt = (val, min, max) => {
+  if (val === '' || val === null || typeof val === 'undefined') return '';
+  let n = Math.floor(Number(val));
+  if (!Number.isFinite(n)) return '';
+  if (n < min) n = min;
+  if (n > max) n = max;
+  return String(n);
+};
+
 // 카테고리 데이터 (현재 미사용이나 유지)
 const CATEGORIES = {
   '전공': {
@@ -788,6 +820,12 @@ const CATEGORIES = {
     '교직': ['교직']
   }
 };
+
+const mapServerTree = (nodes) => Array.isArray(nodes) ? nodes.map(n => ({ name: n.name, children: mapServerTree(n.children || []) })) : [];
+const buildTreeFromConst = () => Object.keys(CATEGORIES).map(main => ({
+  name: main,
+  children: Object.keys(CATEGORIES[main] || {}).map(sub => ({ name: sub, children: (CATEGORIES[main][sub] || []).map(d => ({ name: d, children: [] })) }))
+}));
 
 // ✅ 교내 드롭다운: addEdge 데이터에서 중복 제거한 코드 목록
 const ONCAMPUS_CODES = [
@@ -883,6 +921,10 @@ const PostWrite = () => {
     // 거래 기준 위치(판매자)
     oncampusPlaceCode: '',
     offcampusStationCode: '',
+    // 카테고리
+    mainCategory: '',
+    subCategory: '',
+    detailCategory: '',
   });
 
   const [images, setImages] = useState([]); // 다중 이미지 파일 관리
@@ -903,6 +945,20 @@ const PostWrite = () => {
 
   // ✅ 교외 2단 드롭다운 상태
   const [offcampusLine, setOffcampusLine] = useState('');
+  // 카테고리 트리: 서버 우선, 실패 시 상수 폴백
+  const [catTree, setCatTree] = useState([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/categories');
+        const arr = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const tree = mapServerTree(arr);
+        setCatTree(tree && tree.length ? tree : buildTreeFromConst());
+      } catch (_) {
+        setCatTree(buildTreeFromConst());
+      }
+    })();
+  }, []);
 
   const imageInputRef = useRef(null);
 
@@ -1160,8 +1216,16 @@ const PostWrite = () => {
   // 원가 변경 핸들러
   const handleOriginalPriceChange = useCallback((e) => {
     const { value } = e.target;
-    setFormData(prev => ({ ...prev, originalPrice: value }));
+    const clamped = clampInt(value, PRICE_MIN, ORIGINAL_PRICE_MAX);
+    setFormData(prev => ({ ...prev, originalPrice: clamped }));
     clearErrors('originalPrice');
+  }, [clearErrors]);
+
+  const handlePriceChange = useCallback((e) => {
+    const { value } = e.target;
+    const clamped = clampInt(value, PRICE_MIN, PRICE_MAX);
+    setFormData(prev => ({ ...prev, price: clamped }));
+    clearErrors('price');
   }, [clearErrors]);
 
   // 이미지 업로드
@@ -1261,21 +1325,22 @@ const PostWrite = () => {
     const price = parseInt(formData.price, 10);
 
     // 원가 필수 여부: 검색 모드에서는 필수, 직접 입력(custom)에서는 선택
+    // 원가: 0~2,000,000,000 범위로 통일 (입력했을 경우만 체크)
     if (inputType === 'search') {
-      if (!formData.originalPrice || Number.isNaN(originalPrice) || originalPrice <= 0) {
-        newErrors.originalPrice = '원가를 올바르게 입력해줘! 💰';
+      if (formData.originalPrice === '' || Number.isNaN(originalPrice) || originalPrice < PRICE_MIN || originalPrice > ORIGINAL_PRICE_MAX) {
+        newErrors.originalPrice = `원가는 ${PRICE_MIN.toLocaleString()}~${ORIGINAL_PRICE_MAX.toLocaleString()}원 범위로 입력해줘! 💰`;
       }
     } else {
       // custom 모드: 사용자가 원가를 적어준 경우에만 유효성 검사
-      if (!unknownOriginalPrice && formData.originalPrice) {
-        if (Number.isNaN(originalPrice) || originalPrice <= 0) {
-          newErrors.originalPrice = '원가를 올바르게 입력해줘! 💰';
+      if (!unknownOriginalPrice && formData.originalPrice !== '') {
+        if (Number.isNaN(originalPrice) || originalPrice < PRICE_MIN || originalPrice > ORIGINAL_PRICE_MAX) {
+          newErrors.originalPrice = `원가는 ${PRICE_MIN.toLocaleString()}~${ORIGINAL_PRICE_MAX.toLocaleString()}원 범위로 입력해줘! 💰`;
         }
       }
     }
 
-    if (!formData.price || Number.isNaN(price) || price <= 0) {
-      newErrors.price = '판매가를 올바르게 입력해줘! 💵';
+    if (formData.price === '' || Number.isNaN(price) || price < PRICE_MIN || price > PRICE_MAX) {
+      newErrors.price = `판매가는 ${PRICE_MIN.toLocaleString()}~${PRICE_MAX.toLocaleString()}원 범위로 입력해줘! 💵`;
     } else if (formData.originalPrice && !Number.isNaN(originalPrice) && price > originalPrice) { // 원가가 있을 때만 비교
       newErrors.price = '판매가가 원가보다 클 수 없어! 🤔';
     }
@@ -1374,6 +1439,10 @@ const PostWrite = () => {
           // 서버로 전송
           oncampusPlaceCode: formData.oncampusPlaceCode.trim(),
           offcampusStationCode: formData.offcampusStationCode.trim(),
+          // 카테고리 전송
+          mainCategory: formData.mainCategory,
+          subCategory: formData.subCategory,
+          detailCategory: formData.detailCategory,
         };
 
         if (inputType === 'search') {
@@ -1665,6 +1734,61 @@ const PostWrite = () => {
             <FormSection>
               <SectionTitle>📝 판매글 정보</SectionTitle>
               <FormGroup>
+                <Label>카테고리 <Required>*</Required></Label>
+                <CategoryRow>
+                  <CategorySelect
+                    value={formData.mainCategory}
+                    onChange={e => {
+                      const main = e.target.value;
+                      const mainNode = (catTree || []).find(m => m.name === main);
+                      const firstSub = mainNode?.children?.[0]?.name || '';
+                      const firstDetail = firstSub ? (mainNode.children.find(s => s.name === firstSub)?.children?.[0]?.name || '') : '';
+                      setFormData(prev => ({ ...prev, mainCategory: main, subCategory: firstSub, detailCategory: firstDetail }));
+                      clearErrors('category');
+                    }}
+                  >
+                    <option value="">대분류</option>
+                    {(catTree || []).map(node => (
+                      <option key={node.name} value={node.name}>{node.name}</option>
+                    ))}
+                  </CategorySelect>
+                  <CategorySelect
+                    value={formData.subCategory}
+                    onChange={e => {
+                      const sub = e.target.value;
+                      const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
+                      const firstDetail = sub ? (mainNode?.children?.find(s => s.name === sub)?.children?.[0]?.name || '') : '';
+                      setFormData(prev => ({ ...prev, subCategory: sub, detailCategory: firstDetail }));
+                      clearErrors('category');
+                    }}
+                    disabled={!formData.mainCategory}
+                  >
+                    <option value="">중분류</option>
+                    {(() => {
+                      const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
+                      return (mainNode?.children || []).map(s => (
+                        <option key={s.name} value={s.name}>{s.name}</option>
+                      ));
+                    })()}
+                  </CategorySelect>
+                  <CategorySelect
+                    value={formData.detailCategory}
+                    onChange={e => { setFormData(prev => ({ ...prev, detailCategory: e.target.value })); clearErrors('category'); }}
+                    disabled={!formData.subCategory}
+                  >
+                    <option value="">소분류</option>
+                    {(() => {
+                      const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
+                      const subNode = mainNode?.children?.find(s => s.name === formData.subCategory);
+                      return (subNode?.children || []).map(d => (
+                        <option key={d.name} value={d.name}>{d.name}</option>
+                      ));
+                    })()}
+                  </CategorySelect>
+                </CategoryRow>
+                {errors.category && <ErrorMessage>{errors.category}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
                 <Label>글 제목 <Required>*</Required></Label>
                 <Input
                     name="postTitle"
@@ -1781,7 +1905,9 @@ const PostWrite = () => {
                     value={formData.originalPrice}
                     onChange={handleOriginalPriceChange}
                     placeholder="정가를 입력해줘"
-                    min="0"
+                    min={PRICE_MIN}
+                    max={ORIGINAL_PRICE_MAX}
+                    step={1}
                 />
                 {errors.originalPrice && <ErrorMessage>{errors.originalPrice}</ErrorMessage>}
                 <HelpText>책의 정가를 입력해줘 </HelpText>
@@ -1793,9 +1919,11 @@ const PostWrite = () => {
                     type="number"
                     name="price"
                     value={formData.price}
-                    onChange={handleInputChange}
+                    onChange={handlePriceChange}
                     placeholder="판매 희망가를 입력해줘"
-                    min="0"
+                    min={PRICE_MIN}
+                    max={PRICE_MAX}
+                    step={1}
                 />
                 {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
 

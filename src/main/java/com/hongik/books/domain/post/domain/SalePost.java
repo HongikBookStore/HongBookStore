@@ -12,6 +12,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Formula;
+import org.hibernate.annotations.Check;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ import java.util.List;
  * 판매 게시글 정보를 담는 SalePost Entity
  */
 @Getter @Entity
+@Check(constraints = "price >= 0 AND price <= 1000000000")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SalePost {
     @Id
@@ -163,6 +165,7 @@ public class SalePost {
         this.waterCondition = request.getWaterCondition();
         this.negotiable = request.isNegotiable();
         // 위치 코드는 "작성 시 필수" 요구라 수정 DTO에는 반영 안 함(필요 시 별도 DTO로 추가)
+        validateInvariants();
     }
 
     public void applyContentModeration(String level, Double malicious, Double clean, boolean toxic, String reason) {
@@ -193,5 +196,27 @@ public class SalePost {
 
     public void setBuyer(User buyer) {
         this.buyer = buyer;
+    }
+
+    // --- Invariants ---
+    private static final int PRICE_MIN = 0;
+    private static final int PRICE_MAX = 1_000_000_000;
+
+    @PrePersist
+    @PreUpdate
+    private void onPersistOrUpdate() {
+        validateInvariants();
+    }
+
+    private void validateInvariants() {
+        if (this.price == null) {
+            throw new IllegalArgumentException("가격은 필수입니다.");
+        }
+        if (this.price < PRICE_MIN) {
+            throw new IllegalArgumentException("가격은 0원 이상이어야 합니다.");
+        }
+        if (this.price > PRICE_MAX) {
+            throw new IllegalArgumentException("가격이 너무 큽니다. 최대 1,000,000,000원까지 입력 가능합니다.");
+        }
     }
 }

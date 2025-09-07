@@ -71,6 +71,16 @@ export function AuthProvider({ children }) {
     try {
       await apiLogout();
     } finally {
+      try {
+        const uid = (user && user.id) ? String(user.id) : null;
+        if (uid) {
+          localStorage.removeItem(`userLocations:${uid}`);
+          localStorage.removeItem(`userLocation:${uid}`);
+        }
+        // 과거 공용 키가 남아있을 수 있으므로 함께 정리
+        localStorage.removeItem('userLocations');
+        localStorage.removeItem('userLocation');
+      } catch (_) {}
       setToken(null);
       setUser(null);
       localStorage.removeItem('user'); // 추가!

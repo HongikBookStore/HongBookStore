@@ -4,6 +4,7 @@ import com.hongik.books.auth.dto.LoginUserDTO;
 import com.hongik.books.domain.post.dto.*;
 import com.hongik.books.domain.post.service.SalePostService;
 import com.hongik.books.domain.post.service.RecentlyViewedPostService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,7 +36,7 @@ public class SalePostController {
      */
     @GetMapping
     public ResponseEntity<Page<SalePostSummaryResponseDTO>> getSalePosts(
-            @ModelAttribute PostSearchCondition condition, // @ModelAttribute로 검색 조건 DTO를 받음
+            @Validated @ModelAttribute PostSearchCondition condition, // @ModelAttribute로 검색 조건 DTO를 받음
             @PageableDefault(size = 10, sort = "createdAt,desc") Pageable pageable) {
 
         Page<SalePostSummaryResponseDTO> posts = salePostService.getSalePosts(condition, pageable);
@@ -81,7 +83,7 @@ public class SalePostController {
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createSalePostFromSearch(
-            @RequestPart("request") SalePostCreateRequestDTO request,
+            @RequestPart("request") @Valid SalePostCreateRequestDTO request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException{
         // 실제 로그인한 사용자의 ID를 서비스에 전달
@@ -96,7 +98,7 @@ public class SalePostController {
      */
     @PostMapping(value = "/custom", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createSalePostCustom(
-            @RequestPart("request") SalePostCustomCreateRequestDTO request,
+            @RequestPart("request") @Valid SalePostCustomCreateRequestDTO request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal LoginUserDTO loginUser) throws IOException {
         Long postId = salePostService.createSalePostCustom(request, images, loginUser.id());
@@ -120,7 +122,7 @@ public class SalePostController {
     @PatchMapping("/{postId}")
     public ResponseEntity<Void> updateSalePost(
             @PathVariable Long postId,
-            @RequestBody SalePostUpdateRequestDTO request,
+            @RequestBody @Valid SalePostUpdateRequestDTO request,
             @AuthenticationPrincipal LoginUserDTO loginUser) {
         salePostService.updateSalePost(postId, request, loginUser.id());
         return ResponseEntity.ok().build();

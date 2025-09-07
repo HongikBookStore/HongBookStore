@@ -11,6 +11,9 @@ import com.hongik.books.domain.post.repository.PostSpecification;
 import com.hongik.books.domain.post.repository.SalePostRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
+import com.hongik.books.domain.book.domain.Category;
+import com.hongik.books.domain.book.domain.BookCategory;
+import com.hongik.books.domain.book.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import com.hongik.books.moderation.ModerationPolicyProperties;
 import com.hongik.books.moderation.ModerationService;
@@ -40,6 +43,7 @@ public class SalePostService {
     private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
     private final ModerationService moderationService;
     private final ModerationPolicyProperties moderationPolicy;
+    private final CategoryRepository categoryRepository;
 
     /**
      * [ISBN 조회된 책]으로 판매 게시글을 생성 (이미지 업로드 포함)
@@ -70,6 +74,12 @@ public class SalePostService {
                             .build();
                     return bookRepository.save(newBook);
                 });
+
+        // 카테고리 지정(선택): main/sub/detail이 들어오면 Book에 연결
+        attachCategoriesIfPresent(book,
+                (request.getMainCategory()),
+                (request.getSubCategory()),
+                (request.getDetailCategory()));
 
         SalePost newSalePost = createNewSalePost(request, seller, book);
         // 본문 모더레이션 결과 반영 (WARN 또는 BLOCK 허용 시 기록, OFF는 null)
@@ -117,6 +127,12 @@ public class SalePostService {
                 .build();
         bookRepository.save(newBook);
 
+        // 카테고리 지정(선택)
+        attachCategoriesIfPresent(newBook,
+                (request.getMainCategory()),
+                (request.getSubCategory()),
+                (request.getDetailCategory()));
+
         SalePost newSalePost = createNewSalePost(request, seller, newBook);
         if (contentModeration != null) {
             newSalePost.applyContentModeration(
@@ -138,6 +154,7 @@ public class SalePostService {
      * 판매 게시글 목록을 페이지네이션 및 동적 조건으로 조회
      */
     public Page<SalePostSummaryResponseDTO> getSalePosts(PostSearchCondition condition, Pageable pageable) {
+        // 범위 검증은 @Validated + DTO(@AssertTrue)에서 수행
         Specification<SalePost> spec = Specification.allOf(
                 PostSpecification.hasQuery(condition.getQuery()),
                 PostSpecification.inCategory(condition.getCategory()),
@@ -318,5 +335,36 @@ public class SalePostService {
                 salePost.addPostImage(postImage);
             }
         }
+    }
+
+    // 서비스 레이어에서는 가격 보정/검증을 하지 않습니다. (DTO @Valid와 엔티티 불변식으로 보장)
+
+    // --- Category helpers ---
+    private void attachCategoriesIfPresent(com.hongik.books.domain.book.domain.Book book,
+                                           String main, String sub, String detail) {
+        if (detail == null || detail.isBlank()) return; // leaf 없으면 스킵
+        Category leaf = ensureCategoryPath(main, sub, detail);
+        boolean exists = book.getBookCategories().stream()
+                .anyMatch(bc -> bc.getCategory() != null && leaf.getId() != null && leaf.getId().equals(bc.getCategory().getId()));
+        if (!exists) {
+            book.getBookCategories().add(BookCategory.builder().book(book).category(leaf).build());
+            bookRepository.save(book);
+        }
+    }
+
+    private Category ensureCategoryPath(String main, String sub, String detail) {
+        Category root = findOrCreateCategory(normalize(main, "교양"), null);
+        Category mid = (sub != null && !sub.isBlank()) ? findOrCreateCategory(sub.trim(), root) : root;
+        return findOrCreateCategory(detail.trim(), mid);
+    }
+
+    private Category findOrCreateCategory(String name, Category parent) {
+        return parent == null
+                ? categoryRepository.findByNameAndParentIsNull(name).orElseGet(() -> categoryRepository.save(com.hongik.books.domain.book.domain.Category.builder().name(name).parent(null).build()))
+                : categoryRepository.findByNameAndParent(name, parent).orElseGet(() -> categoryRepository.save(com.hongik.books.domain.book.domain.Category.builder().name(name).parent(parent).build()));
+    }
+
+    private String normalize(String v, String def) {
+        return (v == null || v.isBlank()) ? def : v.trim();
     }
 }

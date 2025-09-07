@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
+import { AuthCtx } from './AuthContext';
 
 const LocationContext = createContext();
 
@@ -12,10 +13,15 @@ export const useLocation = () => {
 };
 
 export const LocationProvider = ({ children }) => {
+  const { user, token } = useContext(AuthCtx) || {};
+  const userKey = user?.id ? String(user.id) : 'guest';
+  const LS_LOCATIONS_KEY = `userLocations:${userKey}`;
+  const LS_LOCATION_KEY = `userLocation:${userKey}`;
+
   const [userLocation, setUserLocation] = useState(() => {
     // localStorage에서 저장된 위치 정보 불러오기
     try {
-      const saved = localStorage.getItem('userLocation');
+      const saved = localStorage.getItem(LS_LOCATION_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -25,7 +31,7 @@ export const LocationProvider = ({ children }) => {
   const [locations, setLocations] = useState(() => {
     // localStorage에서 저장된 위치 목록 불러오기
     try {
-      const saved = localStorage.getItem('userLocations');
+      const saved = localStorage.getItem(LS_LOCATIONS_KEY);
       return saved ? JSON.parse(saved) : [
         { 
           id: 1, 
@@ -53,18 +59,18 @@ export const LocationProvider = ({ children }) => {
   // 위치 정보가 변경될 때마다 localStorage에 저장
   useEffect(() => {
     if (userLocation) {
-      localStorage.setItem('userLocation', JSON.stringify(userLocation));
+      localStorage.setItem(LS_LOCATION_KEY, JSON.stringify(userLocation));
     }
-  }, [userLocation]);
+  }, [userLocation, LS_LOCATION_KEY]);
 
   useEffect(() => {
-    localStorage.setItem('userLocations', JSON.stringify(locations));
-  }, [locations]);
+    localStorage.setItem(LS_LOCATIONS_KEY, JSON.stringify(locations));
+  }, [locations, LS_LOCATIONS_KEY]);
 
   // 서버 동기화: 로그인 상태면 서버에서 목록을 불러와 반영
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return; // 비로그인 시 로컬 유지
+    const currentToken = token || localStorage.getItem('accessToken');
+    if (!currentToken || !user?.id) return; // 비로그인 시 로컬 유지
     (async () => {
       try {
         const res = await api.get('/my/locations');
@@ -79,7 +85,17 @@ export const LocationProvider = ({ children }) => {
         console.warn('Failed to load my locations from server:', e?.response?.data?.message || e.message);
       }
     })();
-  }, []);
+  }, [user?.id, token]);
+
+  // 사용자 변경 시, 사용자별 저장소에서 최신 로컬값 로드
+  useEffect(() => {
+    try {
+      const savedLocs = localStorage.getItem(LS_LOCATIONS_KEY);
+      if (savedLocs) setLocations(JSON.parse(savedLocs));
+      const savedLoc = localStorage.getItem(LS_LOCATION_KEY);
+      if (savedLoc) setUserLocation(JSON.parse(savedLoc));
+    } catch (_) {}
+  }, [LS_LOCATIONS_KEY, LS_LOCATION_KEY]);
 
   // 기본 위치 설정
   const setDefaultLocation = async (locationId) => {
