@@ -10,17 +10,27 @@ import java.util.List;
 
 public interface WantedCommentRepository extends JpaRepository<WantedComment, Long> {
 
-    // (기존 조회 메서드 등이 있다면 유지)
+    // ✅ 기존에 쓰던 "삭제 제외" 조회 메서드는 남겨두되,
+    //    트리 보존을 위해 "삭제 포함" 버전을 사용하도록 서비스 쪽을 교체한다.
     List<WantedComment> findByWantedIdAndDeletedFalseOrderByCreatedAtAsc(Long wantedId);
+
+    // ✅ 트리 보존용: 삭제 포함 전체 조회
+    List<WantedComment> findByWantedIdOrderByCreatedAtAsc(Long wantedId);
+
     int countByIdAndUserId(Long id, Long userId);
 
-    // ✅ 먼저 '자식 댓글' 모두 삭제
+    // (구해요 글 삭제 시) 자식 → 부모 순서로 물리 삭제 (self-FK 충돌 예방)
     @Modifying
-    @Query(value = "DELETE FROM wanted_comment WHERE wanted_id = :wantedId AND parent_id IS NOT NULL", nativeQuery = true)
+    @Query(value =
+            "DELETE FROM wanted_comment " +
+                    "WHERE wanted_id = :wantedId AND parent_id IS NOT NULL",
+            nativeQuery = true)
     void deleteChildrenByWantedId(@Param("wantedId") Long wantedId);
 
-    // ✅ 그 다음 '부모 댓글' 삭제
     @Modifying
-    @Query(value = "DELETE FROM wanted_comment WHERE wanted_id = :wantedId AND parent_id IS NULL", nativeQuery = true)
+    @Query(value =
+            "DELETE FROM wanted_comment " +
+                    "WHERE wanted_id = :wantedId AND parent_id IS NULL",
+            nativeQuery = true)
     void deleteParentsByWantedId(@Param("wantedId") Long wantedId);
 }

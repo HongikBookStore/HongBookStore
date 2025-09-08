@@ -14,17 +14,18 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-@Service
 @RequiredArgsConstructor
+@Service
 public class PlaceReviewService {
-
     private final PlaceReviewRepository reviewRepo;
     private final ReviewReactionRepository reactionRepo;
     private final UserRepository userRepository;
-    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
     private final ModerationService moderationService;
     private final ModerationPolicyProperties moderationPolicy;
 
@@ -33,7 +34,12 @@ public class PlaceReviewService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found"));
 
-        // 정책 기반 유해 표현 검사 (장소 리뷰 기본 BLOCK)
+        // 1인 1리뷰 (중복 방지)
+        if (reviewRepo.existsByPlaceIdAndUserId(placeId, userId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 이 장소에 리뷰를 작성하셨습니다.");
+        }
+
+        // 유해표현 검사
         var mode = moderationPolicy.getPlaceReview().getContent();
         moderationService.checkOrThrow(content, mode, "content");
 
@@ -43,71 +49,95 @@ public class PlaceReviewService {
                 .userName(user.getUsername())
                 .rating(Math.max(1, Math.min(5, rating)))
                 .content(content == null ? "" : content.trim())
+                .likesCount(0)
+                .dislikesCount(0)
                 .build();
 
-        // ✅ 사진 URL 추가 (빈/null 필터링 + 편의 메서드 사용)
-        if (photoUrls != null && !photoUrls.isEmpty()) {
-            int i = 0;
-            for (String raw : photoUrls) {
-                if (raw == null) continue;
-                String url = raw.trim();
-                if (url.isEmpty()) continue;
-
+        // 사진 세팅
+        if (photoUrls != null) {
+            int order = 0;
+            for (String url : photoUrls) {
+                if (url == null || url.isBlank()) continue;
                 ReviewPhoto p = ReviewPhoto.builder()
                         .url(url)
-                        .sortOrder(i++)
+                        .sortOrder(order++)
                         .build();
-
-                review.addPhoto(p); // 양방향 세팅 + 리스트 add
+                review.addPhoto(p);
             }
         }
 
-        reviewRepo.save(review); // cascade=ALL 로 사진도 함께 저장
+        reviewRepo.save(review);
         return review.getId();
     }
 
     @Transactional
     public void react(Long reviewId, Long userId, ReviewReaction.ReactionType type) {
-        PlaceReview review = reviewRepo.findById(reviewId)
+        var review = reviewRepo.findById(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("review not found"));
-
-        var existing = reactionRepo.findByReviewIdAndUserId(reviewId, userId);
-        if (existing.isPresent()) {
-            var r = existing.get();
-            if (r.getReaction() == type) {
-                reactionRepo.delete(r);
-            } else {
-                r.setReaction(type);
-            }
-        } else {
-            reactionRepo.save(ReviewReaction.builder()
-                    .review(review)
-                    .userId(userId)
-                    .reaction(type)
-                    .build());
-        }
+        // (리액션 저장 로직 생략되어 있었다면 기존 코드 유지)
+        // 예시) 기존에 저장/취소 후 카운트 재계산
+        reactionRepo.findByReviewIdAndUserId(reviewId, userId).ifPresentOrElse(
+                r -> {
+                    if (r.getReaction() == type) {
+                        reactionRepo.delete(r);
+                    } else {
+                        r.setReaction(type);
+                        reactionRepo.save(r);
+                    }
+                },
+                () -> reactionRepo.save(ReviewReaction.builder()
+                        .review(review)
+                        .userId(userId)
+                        .reaction(type)
+                        .build())
+        );
 
         review.setLikesCount((int) reactionRepo.countByReviewIdAndReaction(reviewId, ReviewReaction.ReactionType.LIKE));
         review.setDislikesCount((int) reactionRepo.countByReviewIdAndReaction(reviewId, ReviewReaction.ReactionType.DISLIKE));
+        reviewRepo.save(review);
     }
 
     @Transactional
-    public ReviewDtos.ListRes listByPlace(Long placeId, int page, int size) {
-        var pageable = PageRequest.of(Math.max(0, page), Math.min(size, 50));
+    public void deleteReview(Long reviewId, Long userId) {
+        var review = reviewRepo.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."));
+        if (!review.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 리뷰만 삭제할 수 있습니다.");
+        }
+        reviewRepo.delete(review);
+    }
+
+    // (선택) placeId까지 확인하는 오버로드
+    @Transactional
+    public void deleteReview(Long placeId, Long reviewId, Long userId) {
+        var review = reviewRepo.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."));
+        if (!review.getPlaceId().equals(placeId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "장소와 리뷰 정보가 일치하지 않습니다.");
+        }
+        if (!review.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 리뷰만 삭제할 수 있습니다.");
+        }
+        reviewRepo.delete(review);
+    }
+
+    @Transactional
+    public ReviewDtos.ListRes listByPlace(Long placeId, Long loginUserId, int page, int size) {
+        var pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
         var slice = reviewRepo.findByPlaceIdOrderByCreatedAtDesc(placeId, pageable);
 
         double avg = reviewRepo.avgByPlace(placeId);
         long cnt = reviewRepo.countByPlaceId(placeId);
-
-        var dtf = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
         var res = new ReviewDtos.ListRes();
-        res.setAverageRating(Math.round(avg * 10.0) / 10.0);
+        res.setAverageRating(avg);
         res.setReviewCount(cnt);
         res.setReviews(slice.getContent().stream().map(r ->
                 ReviewDtos.ReviewRes.builder()
                         .id(r.getId())
                         .userName(r.getUserName())
+                        .userId(r.getUserId())          // ⬅️ 프런트로 userId 전달
                         .rating(r.getRating())
                         .content(r.getContent())
                         .likes(r.getLikesCount())

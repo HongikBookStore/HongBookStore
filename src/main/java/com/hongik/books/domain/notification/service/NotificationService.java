@@ -15,8 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-// ✅ 프로젝트에 맞게 import만 조정하세요.
-// 예: com.hongik.books.domain.user.repository.UserRepository (findByEmail(String) 존재 가정)
 import com.hongik.books.domain.user.repository.UserRepository;
 import com.hongik.books.domain.user.domain.User;
 
@@ -30,7 +28,6 @@ public class NotificationService {
     private final EmitterRepository emitterRepository;
     private final ObjectMapper objectMapper;
 
-    // 리포지토리 선택적 주입(없어도 컴파일되게 Optional 사용)
     private final Optional<UserRepository> userRepository;
 
     @PostConstruct
@@ -58,9 +55,7 @@ public class NotificationService {
         return emitter;
     }
 
-    // ====== 여기부터 알림 발행 ======
-
-    // 채팅 알림 (기존 호출부가 보낸 senderName이 '이메일'이어도 알아서 username으로 변환)
+    // ====== 기존 알림 ======
     public void notifyChatMessage(Long userId, Long roomId, Long salePostId, String senderNameOrEmail, String message) {
         String display = resolveDisplayName(senderNameOrEmail);
         NotificationEvent evt = NotificationEvent.builder()
@@ -70,11 +65,12 @@ public class NotificationService {
                 .message((display != null ? display + ": " : "") + safe(message))
                 .link("/chat/" + roomId + (salePostId != null ? ("?post=" + salePostId) : ""))
                 .createdAt(Instant.now())
+                .roomId(roomId)
+                .salePostId(salePostId)
                 .build();
         sendToUser(userId, evt);
     }
 
-    // 구해요 댓글 알림 (commenterAlias가 이메일이면 username으로 변환)
     public void notifyWantedComment(Long ownerUserId, Long wantedId, String commenterAliasOrEmail, String commentSnippet) {
         String display = resolveDisplayName(commenterAliasOrEmail);
         NotificationEvent evt = NotificationEvent.builder()
@@ -89,6 +85,85 @@ public class NotificationService {
         sendToUser(ownerUserId, evt);
     }
 
+    // ====== 🔔 예약 알림 추가 ======
+
+    public void notifyReservationRequested(
+            Long targetUserId, Long roomId, Long reservationId, Long salePostId,
+            String placeLabel, Instant reservedAt
+    ) {
+        NotificationEvent evt = NotificationEvent.builder()
+                .id(UUID.randomUUID().toString())
+                .type("RESERVATION_REQUESTED")
+                .title("예약 요청")
+                .message("새 예약 요청이 도착했어요.")
+                .link("/chat/" + roomId + (salePostId != null ? ("?post=" + salePostId) : ""))
+                .createdAt(Instant.now())
+                .roomId(roomId)
+                .reservationId(reservationId)
+                .salePostId(salePostId)
+                .status("REQUESTED")
+                .placeLabel(placeLabel)
+                .reservedAt(reservedAt)
+                .build();
+        sendToUser(targetUserId, evt);
+    }
+
+    public void notifyReservationConfirmed(
+            Long targetUserId, Long roomId, Long reservationId, Long salePostId
+    ) {
+        NotificationEvent evt = NotificationEvent.builder()
+                .id(UUID.randomUUID().toString())
+                .type("RESERVATION_CONFIRMED")
+                .title("예약 확정")
+                .message("예약이 수락되어 확정되었습니다.")
+                .link("/chat/" + roomId + (salePostId != null ? ("?post=" + salePostId) : ""))
+                .createdAt(Instant.now())
+                .roomId(roomId)
+                .reservationId(reservationId)
+                .salePostId(salePostId)
+                .status("CONFIRMED")
+                .build();
+        sendToUser(targetUserId, evt);
+    }
+
+    public void notifyReservationCanceled(
+            Long targetUserId, Long roomId, Long reservationId, Long salePostId, String reason
+    ) {
+        NotificationEvent evt = NotificationEvent.builder()
+                .id(UUID.randomUUID().toString())
+                .type("RESERVATION_CANCELED")
+                .title("예약 취소")
+                .message("예약이 취소되었습니다.")
+                .link("/chat/" + roomId + (salePostId != null ? ("?post=" + salePostId) : ""))
+                .createdAt(Instant.now())
+                .roomId(roomId)
+                .reservationId(reservationId)
+                .salePostId(salePostId)
+                .status("CANCELED")
+                .reason(safe(reason))
+                .build();
+        sendToUser(targetUserId, evt);
+    }
+
+    public void notifyReservationCompleted(
+            Long targetUserId, Long roomId, Long reservationId, Long salePostId
+    ) {
+        NotificationEvent evt = NotificationEvent.builder()
+                .id(UUID.randomUUID().toString())
+                .type("RESERVATION_COMPLETED")
+                .title("거래 완료")
+                .message("거래가 완료되었습니다.")
+                .link("/chat/" + roomId + (salePostId != null ? ("?post=" + salePostId) : ""))
+                .createdAt(Instant.now())
+                .roomId(roomId)
+                .reservationId(reservationId)
+                .salePostId(salePostId)
+                .status("COMPLETED")
+                .build();
+        sendToUser(targetUserId, evt);
+    }
+
+    // ====== 공통 전송 ======
     public void sendToUser(Long userId, NotificationEvent event) {
         Map<String, SseEmitter> map = emitterRepository.get(userId);
         if (map.isEmpty()) {
@@ -108,17 +183,14 @@ public class NotificationService {
     private void sendInternal(SseEmitter emitter, NotificationEvent event) throws IOException {
         emitter.send(SseEmitter.event()
                 .id(event.getId())
-                .name("notification")
+                .name("notification") // 🔔 이름있는 이벤트로 보냄
                 .data(objectMapper.writeValueAsString(event)));
     }
 
-    // ====== 표시명 변환 유틸 ======
-
+    // ====== 표시명 유틸 ======
     private String resolveDisplayName(String raw) {
         if (raw == null || raw.isBlank()) return "사용자";
         String s = raw.trim();
-
-        // 이메일 형태면 -> 리포지토리로 username 조회, 실패하면 로컬파트로 대체
         if (looksLikeEmail(s)) {
             String localPart = s.substring(0, s.indexOf('@'));
             try {
@@ -130,32 +202,25 @@ public class NotificationService {
             } catch (Exception ignore) {}
             return localPart;
         }
-        // 이미 username/닉네임이면 그대로
         return s;
     }
-
     private boolean looksLikeEmail(String s) {
         return s.contains("@") && !s.startsWith("@") && s.indexOf('@') < s.length() - 1;
     }
-
     private String userDisplayName(User u) {
         String name = firstNonBlank(u.getUsername(), tryNickname(u));
         return name != null ? name : "사용자";
     }
-
     private String tryNickname(User u) {
         try { return (String) User.class.getMethod("getNickname").invoke(u); }
         catch (Exception e) { return null; }
     }
-
     private String firstNonBlank(String... arr) {
         if (arr == null) return null;
         for (String s : arr) if (s != null && !s.isBlank()) return s.trim();
         return null;
     }
-
     private String safe(String s) { return s == null ? "" : s; }
-
     private String truncate(String s, int max) {
         if (s == null) return "";
         return s.length() <= max ? s : s.substring(0, max) + "...";

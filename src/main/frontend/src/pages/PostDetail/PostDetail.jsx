@@ -1,6 +1,7 @@
+// src/pages/PostDetail/PostDetail.jsx
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
-import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes } from 'react-icons/fa';
+import { FaHeart, FaShare, FaMapMarkerAlt, FaUser, FaCalendar, FaEye, FaArrowLeft, FaPhone, FaComment, FaStar, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { createPeerReview } from '../../api/peerReviews';
@@ -115,6 +116,18 @@ const BookTitle = styled.h1`
   display: flex;
   align-items: center;
   gap: 1rem;
+`;
+
+/* 👉 제목 우측 액션 컨테이너 */
+const TitleActions = styled.div`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  @media (max-width: 480px) {
+    gap: 0.4rem;
+  }
 `;
 
 const BookAuthor = styled.p`
@@ -383,6 +396,22 @@ const ViewOtherBooksButton = styled.button`
   }
 `;
 
+const ReportButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #fff5f5;
+  color: #dc2626;
+  border: 2px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: all 0.2s;
+  &:hover{ background:#dc2626; color:#fff; border-color:#dc2626; transform: translateY(-1px); }
+`;
+
 const OtherBooksSection = styled.div`
   margin-top: 2rem;
   border: 1px solid var(--border);
@@ -634,7 +663,7 @@ const statusMap = {
 // ✅ 지하철 호선 → 역 리스트
 const SUBWAY_MAP = {
   '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
-  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
+  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
   '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
   '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
   '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
@@ -695,7 +724,6 @@ const getBookCondition = (discountRate) => {
 
 // ✅ 응답 어디에 있어도 안전하게 추출하는 유틸 (교내/교외 기준 위치)
 const deriveTradeLocations = (p = {}) => {
-  // 여러 가능성 커버 (필드명/중첩)
   const onRaw =
       p.oncampusPlaceCode ??
       p.oncampusPlace ??
@@ -714,7 +742,6 @@ const deriveTradeLocations = (p = {}) => {
 
   const onLabel = onRaw ? (ONCAMPUS_PLACE_LABELS[onRaw] || onRaw) : null;
 
-  // 역 이름이 '홍대입구' 처럼 한글이면 바로 사용, 라인 자동 탐색
   const offStation = offRaw || null;
   const offLine = offStation ? getLineByStation(offStation) : null;
 
@@ -742,17 +769,19 @@ const PostDetail = () => {
   const [sellerOtherBooks, setSellerOtherBooks] = useState([]);
   const [loadingOtherBooks, setLoadingOtherBooks] = useState(false);
 
+  // ✅ 신고 모달 상태
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState(''); // '욕설/비방' | '사기/허위매물' | '스팸/광고' | '기타'
+  const [reportEtcText, setReportEtcText] = useState('');
+  const [showReportDoneModal, setShowReportDoneModal] = useState(false);
+
   const fetchPost = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // 로그인 사용자의 최근 본 게시글 기록을 위해 토큰이 있으면 인증 헤더를 포함해 호출
       const response = await axios.get(`/api/posts/${id}`, { headers: getAuthHeader() });
       setPost(response.data);
       setSelectedImageIndex(0);
-
-      // 디버깅 도움(필요 없으면 주석 처리 가능)
-      // console.log('PostDetail Response:', response.data);
     } catch (err) {
       setError(err);
       console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
@@ -765,7 +794,8 @@ const PostDetail = () => {
     if (!localStorage.getItem('accessToken')) return;
     try {
       const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
-      const likedIds = new Set(response.data.map(p => p.postId));
+      // ✅ postId 또는 id 모두 대응
+      const likedIds = new Set(response.data.map(p => p.postId ?? p.id));
       setLiked(likedIds.has(parseInt(id)));
     } catch (error) {
       console.error("찜 목록을 불러오는 데 실패했습니다.", error);
@@ -846,7 +876,10 @@ const PostDetail = () => {
 
   const handleViewOtherBooks = useCallback(() => {
     setShowOtherBooks(!showOtherBooks);
-  }, [showOtherBooks]);
+    if (!showOtherBooks && post?.sellerId) {
+      fetchSellerOtherBooks(post.sellerId);
+    }
+  }, [showOtherBooks, post?.sellerId, fetchSellerOtherBooks]);
 
   const handleOtherBookClick = useCallback((bookId) => {
     if (bookId !== parseInt(id)) {
@@ -877,7 +910,8 @@ const PostDetail = () => {
     try {
       setReviewSubmitting(true);
       await createPeerReview({
-        postId: post.postId,
+        // ✅ 다양한 응답형 대응 (post.id || post.postId || URL 파라미터)
+        postId: post.id ?? post.postId ?? Number(id),
         ratingLabel,
         ratingScore,
         ratingKeywords: kw,
@@ -907,11 +941,51 @@ const PostDetail = () => {
     return getBookCondition(post.discountRate || discountRate);
   }, [post, discountRate]);
 
-  // ✅ 교내/교외 기준 위치 안전 추출 (필드명/중첩 변화에 내성)
+  // ✅ 교내/교외 기준 위치 안전 추출
   const { onLabel: oncampusLabel, offStation: offcampusStation, offLine: offcampusLine } = useMemo(
       () => deriveTradeLocations(post || {}),
       [post]
   );
+
+  // ✅ 신고 모달 열기
+  const openReport = () => {
+    setReportReason('');
+    setReportEtcText('');
+    setShowReportModal(true);
+  };
+
+  // ✅ 신고 제출
+  const submitReport = async () => {
+    try {
+      const reasonText = reportReason === '기타'
+          ? (reportEtcText || '기타')
+          : reportReason;
+
+      const payload = {
+        type: 'SALE_POST',
+        targetId: String(id),
+        reason: (reportReason === '기타' ? 'OTHER' : reasonText),
+        ...(reportReason === '기타' ? { detail: reportEtcText.trim() } : {})
+      };
+
+      await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+    } catch {
+      // 실패해도 UX는 계속
+    }
+  };
+
+  const onReportSubmit = async (e) => {
+    e.preventDefault();
+    if (!reportReason) return;
+    if (reportReason === '기타' && !reportEtcText.trim()) return;
+    setShowReportModal(false);
+    await submitReport();
+    setShowReportDoneModal(true);
+  };
 
   // 로딩 상태
   if (loading) {
@@ -936,6 +1010,9 @@ const PostDetail = () => {
         </DetailContainer>
     );
   }
+
+  // ✅ 전체 상태/설명에서 사용할 안전한 할인율
+  const safeDiscountRate = post.discountRate ?? discountRate;
 
   return (
       <>
@@ -973,7 +1050,14 @@ const PostDetail = () => {
               <div>
                 <BookTitle>
                   {post.bookTitle}
-                  <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
+                  {/* 👉 제목 오른쪽에 신고 + 좋아요 */}
+                  <TitleActions>
+                    <ReportButton onClick={openReport} title="신고하기">
+                      <FaExclamationTriangle />
+                      신고
+                    </ReportButton>
+                    <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
+                  </TitleActions>
                 </BookTitle>
                 <BookAuthor>{post.author}</BookAuthor>
               </div>
@@ -992,16 +1076,16 @@ const PostDetail = () => {
               <OverallConditionSection>
                 <OverallConditionTitle>📊 전체 책 상태</OverallConditionTitle>
                 <OverallConditionBadge
-                    $bgColor={getBookCondition(post.discountRate).bgColor}
-                    $color={getBookCondition(post.discountRate).color}
+                    $bgColor={getBookCondition(safeDiscountRate).bgColor}
+                    $color={getBookCondition(safeDiscountRate).color}
                 >
-                  {getBookCondition(post.discountRate).text}
+                  {getBookCondition(safeDiscountRate).text}
                 </OverallConditionBadge>
                 <OverallConditionDescription>
-                  할인율 {post.discountRate}%에 따른 전체 상태 평가입니다.
-                  {post.discountRate <= 20 && ' 책이 양호한 상태입니다.'}
-                  {post.discountRate > 20 && post.discountRate <= 40 && ' 책이 보통 상태입니다.'}
-                  {post.discountRate > 40 && ' 책에 일부 손상이 있습니다.'}
+                  할인율 {safeDiscountRate}%에 따른 전체 상태 평가입니다.
+                  {safeDiscountRate <= 20 && ' 책이 양호한 상태입니다.'}
+                  {safeDiscountRate > 20 && safeDiscountRate <= 40 && ' 책이 보통 상태입니다.'}
+                  {safeDiscountRate > 40 && ' 책에 일부 손상이 있습니다.'}
                 </OverallConditionDescription>
               </OverallConditionSection>
 
@@ -1027,17 +1111,17 @@ const PostDetail = () => {
               <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #eee', borderRadius: 8, background: '#fff' }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>상세 설명</div>
                 {post.contentToxic && (
-                  <div style={{
-                    marginBottom: 8,
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    background: '#fff3cd',
-                    color: '#856404',
-                    fontSize: '0.9rem',
-                    border: '1px solid #ffeeba'
-                  }}>
-                    ⚠️ 부적절한 표현이 감지되었습니다{post.contentToxicLevel ? ` (${post.contentToxicLevel}${typeof post.contentToxicMalicious === 'number' ? `, ${Math.round(post.contentToxicMalicious*100)}%` : ''})` : ''}.
-                  </div>
+                    <div style={{
+                      marginBottom: 8,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      background: '#fff3cd',
+                      color: '#856404',
+                      fontSize: '0.9rem',
+                      border: '1px solid #ffeeba'
+                    }}>
+                      ⚠️ 부적절한 표현이 감지되었습니다{post.contentToxicLevel ? ` (${post.contentToxicLevel}${typeof post.contentToxicMalicious === 'number' ? `, ${Math.round(post.contentToxicMalicious*100)}%` : ''})` : ''}.
+                    </div>
                 )}
                 <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#333' }}>
                   {post.postContent || '상세 설명이 없습니다.'}
@@ -1083,12 +1167,12 @@ const PostDetail = () => {
                     <InfoValue>{statusMap[post.status] || '판매중'}</InfoValue>
                   </InfoItem>
                   {canLeaveReview && (
-                    <InfoItem>
-                      <InfoLabel>거래 후기</InfoLabel>
-                      <div>
-                        <button onClick={openReview} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', background: '#007bff', color: '#fff', cursor: 'pointer' }}>후기 남기기</button>
-                      </div>
-                    </InfoItem>
+                      <InfoItem>
+                        <InfoLabel>거래 후기</InfoLabel>
+                        <div>
+                          <button onClick={openReview} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', background: '#007bff', color: '#fff', cursor: 'pointer' }}>후기 남기기</button>
+                        </div>
+                      </InfoItem>
                   )}
 
                   <InfoItem>
@@ -1119,7 +1203,7 @@ const PostDetail = () => {
                       <FaMapMarkerAlt />
                       {post.sellerLocation || '위치 정보 없음'}
                     </SellerLocation>
-                    {post.sellerRating && (
+                    {typeof post.sellerRating === 'number' && (
                         <SellerRating>
                           <Stars>
                             {[...Array(5)].map((_, i) => (
@@ -1146,6 +1230,7 @@ const PostDetail = () => {
                     <FaUser />
                     다른 책 보기 {sellerOtherBooks.length > 0 && `(${sellerOtherBooks.length})`}
                   </ViewOtherBooksButton>
+                  {/* (제거됨) 신고 버튼은 제목 옆으로 이동 */}
                 </ActionButtons>
               </SellerSection>
             </InfoSection>
@@ -1232,32 +1317,116 @@ const PostDetail = () => {
             </ModalOverlay>
         )}
 
+        {/* ✅ 후기 모달 */}
         {reviewOpen && (
-          <ModalOverlay onClick={() => setReviewOpen(false)}>
-            <ModalContent onClick={(e) => e.stopPropagation()}>
-              <ModalHeader>
-                <ModalTitle>후기 남기기</ModalTitle>
-                <CloseButton onClick={() => setReviewOpen(false)}><FaTimes /></CloseButton>
-              </ModalHeader>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
-                <input type="number" min="1" max="5" step="0.5" value={reviewStar ?? ''}
-                       onChange={e => setReviewStar(e.target.value ? Number(e.target.value) : null)}
-                       style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: 8 }} />
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표로 구분, 선택)</div>
-                <input type="text" value={reviewKeywords}
-                       onChange={e => setReviewKeywords(e.target.value)}
-                       placeholder="친절함, 시간엄수"
-                       style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: 8 }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button onClick={() => setReviewOpen(false)} disabled={reviewSubmitting} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#6c757d', color: '#fff' }}>취소</button>
-                <button onClick={submitReview} disabled={!reviewStar || reviewSubmitting} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#007bff', color: '#fff' }}>{reviewSubmitting ? '저장 중...' : '저장'}</button>
-              </div>
-            </ModalContent>
-          </ModalOverlay>
+            <ModalOverlay onClick={() => setReviewOpen(false)}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>후기 남기기</ModalTitle>
+                  <CloseButton onClick={() => setReviewOpen(false)}><FaTimes /></CloseButton>
+                </ModalHeader>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
+                  <input type="number" min="1" max="5" step="0.5" value={reviewStar ?? ''}
+                         onChange={e => setReviewStar(e.target.value ? Number(e.target.value) : null)}
+                         style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: 8 }} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표로 구분, 선택)</div>
+                  <input type="text" value={reviewKeywords}
+                         onChange={e => setReviewKeywords(e.target.value)}
+                         placeholder="친절함, 시간엄수"
+                         style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: 8 }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button onClick={() => setReviewOpen(false)} disabled={reviewSubmitting} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#6c757d', color: '#fff' }}>취소</button>
+                  <button onClick={submitReview} disabled={!reviewStar || reviewSubmitting} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#007bff', color: '#fff' }}>{reviewSubmitting ? '저장 중...' : '저장'}</button>
+                </div>
+              </ModalContent>
+            </ModalOverlay>
+        )}
+
+        {/* ✅ 신고 모달 */}
+        {showReportModal && (
+            <ModalOverlay onClick={() => setShowReportModal(false)}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>신고 사유를 선택하세요</ModalTitle>
+                  <CloseButton onClick={() => setShowReportModal(false)}><FaTimes /></CloseButton>
+                </ModalHeader>
+
+                <form onSubmit={onReportSubmit}>
+                  <div style={{ display:'grid', gap:10, marginBottom: 12 }}>
+                    {['욕설/비방','사기/허위매물','스팸/광고','기타'].map(opt => (
+                        <label key={opt} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
+                          <input
+                              type="radio"
+                              name="report"
+                              value={opt}
+                              checked={reportReason === opt}
+                              onChange={(e) => setReportReason(e.target.value)}
+                          />
+                          {opt}
+                        </label>
+                    ))}
+                  </div>
+
+                  {/* ✅ '기타' 선택 시 세부 사항 입력창 표시 */}
+                  {reportReason === '기타' && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ marginBottom: 6, fontSize: '.92rem', color: '#555' }}>세부 사유</div>
+                        <textarea
+                            value={reportEtcText}
+                            onChange={e => setReportEtcText(e.target.value)}
+                            placeholder="자세한 신고 사유를 입력해주세요."
+                            rows={4}
+                            style={{ width:'100%', border:'1px solid #e5e7eb', borderRadius: 8, padding: 10, resize: 'vertical' }}
+                        />
+                      </div>
+                  )}
+
+                  <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
+                    <button
+                        type="button"
+                        onClick={() => setShowReportModal(false)}
+                        style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #ddd', background:'#f1f3f5', cursor:'pointer' }}
+                    >
+                      취소
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}
+                        style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #0d6efd', background:'#0d6efd', color:'#fff', cursor:'pointer' }}
+                    >
+                      제출
+                    </button>
+                  </div>
+                </form>
+              </ModalContent>
+            </ModalOverlay>
+        )}
+
+        {/* ✅ 신고 완료 안내 모달 */}
+        {showReportDoneModal && (
+            <ModalOverlay onClick={() => setShowReportDoneModal(false)}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>신고가 접수되었습니다.</ModalTitle>
+                  <CloseButton onClick={() => setShowReportDoneModal(false)}><FaTimes /></CloseButton>
+                </ModalHeader>
+                <div style={{ color:'#333', lineHeight:1.6 }}>
+                  빠르게 검토하겠습니다. 제보해주셔서 감사합니다.
+                </div>
+                <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
+                  <button
+                      onClick={() => setShowReportDoneModal(false)}
+                      style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #ddd', background:'#0d6efd', color:'#fff', cursor:'pointer' }}
+                  >
+                    닫기
+                  </button>
+                </div>
+              </ModalContent>
+            </ModalOverlay>
         )}
       </>
   );
