@@ -422,7 +422,7 @@ function useWindowWidth() {
 
 const ONCAMPUS_LABELS = {
   A:'A동', B:'B동', C:'C동', D:'D동', E:'E동', F:'F동', G:'G동', H:'H동',
-  I:'I동', J:'J동', K:'K동', L:'L동', M:'M동', MH:'MH', P:'P동', Q:'Q동', R:'R동',
+  I:'I동', J:'J동', K:'K동', L:'L동', M:'M', MH:'MH', P:'P동', Q:'Q동', R:'R동',
   S:'S동', T:'제2공학관(T동)', U:'U동', X:'운동장(X)', Z1:'정문(Z1)', Z2:'후문(Z2)', Z3:'측문(Z3)', Z4:'측문(Z4)', '신기숙사':'신기숙사'
 };
 const CAMPUS_OPTIONS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','MH','P','Q','R','S','T','U','X','Z1','Z2','Z3','Z4','신기숙사'];
@@ -476,7 +476,7 @@ const SUBWAY_MAP = {
   '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
   '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
   '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
-  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
 };
 const getLineByStation = (station) => {
   if (!station) return null;
@@ -652,9 +652,12 @@ const ChatRoom = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [reportEtcText, setReportEtcText] = useState(''); // ✅ 기타 상세 입력
   const [showReportExitModal, setShowReportExitModal] = useState(false);
+
   const [hovered, setHovered] = useState('');
   const [hasProfanity, setHasProfanity] = useState(false);
   const [profanityWarning, setProfanityWarning] = useState('');
@@ -691,6 +694,13 @@ const ChatRoom = () => {
       () => !!currentUserId && !!sellerId && currentUserId === sellerId,
       [currentUserId, sellerId]
   );
+
+  // ✅ 상대 사용자 ID(신고 대상)
+  const otherUserId = useMemo(() => {
+    if (receiverId) return receiverId;
+    if (!buyerId || !sellerId || !currentUserId) return null;
+    return currentUserId === sellerId ? buyerId : sellerId;
+  }, [receiverId, buyerId, sellerId, currentUserId]);
 
   // 날씨
   const [weeklyWeather, setWeeklyWeather] = useState(null);
@@ -874,7 +884,7 @@ const ChatRoom = () => {
     };
   }, [roomId]);
 
-  /* ----------------------------- ✅ SSE 구독 (이벤트 이름 지정) ----------------------------- */
+  /* ----------------------------- ✅ SSE 구독 ----------------------------- */
   useEffect(() => {
     const token = localStorage.getItem('accessToken') || '';
     if (!token) return;
@@ -939,11 +949,11 @@ const ChatRoom = () => {
       }
     };
 
-    es.addEventListener('notification', handleNotify); // ✅ 핵심
-    es.onmessage = handleNotify; // 혹시 서버가 event 이름을 안 붙이는 경우 대비
+    es.addEventListener('notification', handleNotify);
+    es.onmessage = handleNotify;
 
     es.onerror = () => {
-      // 브라우저가 자동 재시도
+      // auto-retry by browser
     };
 
     return () => {
@@ -981,7 +991,7 @@ const ChatRoom = () => {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleRetryClick = (messageId) => { setRetryMessageId(messageId); setShowRetryModal(true); };
-  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO */ setRetryMessageId(null);} };
+  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO 재전송 구현 */ setRetryMessageId(null);} };
   const handleRetryCancel = () => { setShowRetryModal(false); setRetryMessageId(null); };
 
   const handleMessageChange = (e) => {
@@ -1152,7 +1162,7 @@ const ChatRoom = () => {
   const handleComplete = async () => {
     if (!reservationId) return;
     if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
-    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
+    if (isCompleted) { alert('이미 거래 완료 처리되었습니다.'); return; }
     try {
       await apiCompleteReservation(roomId, reservationId);
       setIsPending(false);
@@ -1176,8 +1186,63 @@ const ChatRoom = () => {
     }
   };
 
-  const handleReport = () => { setShowReportModal(true); setReportReason(''); };
-  const handleReportSubmit = (e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); };
+  // ✅ 신고 모달 열기/제출 + 백엔드 전송
+  const handleReport = () => {
+    setShowReportModal(true);
+    setReportReason('');
+    setReportEtcText('');
+  };
+
+  const handleReportSubmit = async (e) => {
+    e.preventDefault();
+    if (!reportReason) return;
+    if (reportReason === '기타' && !reportEtcText.trim()) return;
+    if (!otherUserId) { alert('상대 사용자를 식별할 수 없어 신고를 보낼 수 없습니다.'); return; }
+
+    const reasonText = reportReason === '기타' ? reportEtcText.trim() : reportReason;
+
+    try {
+      const payload = {
+        type: 'CHAT_ROOM',                // 서버에서 채팅 신고로 구분
+        targetId: Number(otherUserId),
+        chatRoomId: Number(roomId),        // ✅ 현재 채팅방 ID
+        reason: (reportReason === '기타' ? 'OTHER' : reasonText),
+        ...(reportReason === '기타' ? { detail: reportEtcText.trim() } : {})
+      };
+
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(()=> '');
+        if (res.status === 409) {
+          alert('이미 해당 상대를 신고했습니다.');
+        } else if (res.status === 400) {
+          alert(t || '잘못된 신고 요청입니다.');
+        } else if (res.status === 401) {
+          alert('로그인이 필요합니다.');
+        } else if (res.status === 404) {
+          alert('대상을 찾을 수 없습니다.');
+        } else {
+          alert('신고 처리 중 오류가 발생했습니다.');
+        }
+        setShowReportModal(false);
+        return;
+      }
+
+      // 성공
+      setShowReportModal(false);
+      setShowReportExitModal(true);
+    } catch (err) {
+      console.warn('report failed:', err);
+      alert('신고 요청을 보내는 중 오류가 발생했습니다.');
+      setShowReportModal(false);
+    }
+  };
+
   const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
 
   const handleBack = () => { navigate('/chat'); };
@@ -1236,18 +1301,36 @@ const ChatRoom = () => {
     };
   });
 
-  const bestDate = dateOptions.find(x => x.best) || [...dateOptions].sort((a,b)=>a.pop-b.pop)[0];
-
   /* ---------------------------------- UI 가드 ---------------------------------- */
-
   if (chatId !== undefined && !roomId) {
     return (
-        <div style={{maxWidth: 720, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 12, background: '#fff'}}>
-          <div style={{fontSize: 18, fontWeight: 700, marginBottom: 8}}>잘못된 채팅방 주소</div>
-          <div style={{color: '#666', marginBottom: 16}}>유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.</div>
+        <div
+            style={{
+              maxWidth: 720,
+              margin: '40px auto',
+              padding: 24,
+              border: '1px solid #eee',
+              borderRadius: 12,
+              background: '#fff',
+            }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            잘못된 채팅방 주소
+          </div>
+          <div style={{ color: '#666', marginBottom: 16 }}>
+            유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.
+          </div>
           <button
               onClick={() => navigate('/chat')}
-              style={{padding: '10px 14px', borderRadius: 8, border: 'none', background: '#111827', color: '#fff', fontWeight: 700, cursor: 'pointer'}}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#111827',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
           >
             채팅 목록으로 이동
           </button>
@@ -1281,7 +1364,7 @@ const ChatRoom = () => {
             <HeaderRight style={{gap: 0}}>
               {/* 신고 버튼 */}
               <ChatMenuButton
-                  onClick={() => { setShowReportModal(true); setReportReason(''); }}
+                  onClick={() => { setShowReportModal(true); setReportReason(''); setReportEtcText(''); }}
                   title="신고하기"
                   onMouseEnter={() => setHovered('report')}
                   onMouseLeave={() => setHovered('')}
@@ -1391,15 +1474,54 @@ const ChatRoom = () => {
           {/* 신고 모달 */}
           {showReportModal && (
               <ModalOverlay>
-                <ModalBox as="form" onSubmit={(e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); }}>
+                <ModalBox as="form" onSubmit={handleReportSubmit}>
                   <ModalTitle>신고 사유를 선택하세요</ModalTitle>
-                  <ReportRadio><RadioInput type="radio" name="report" value="욕설/비방" checked={reportReason === '욕설/비방'} onChange={e => setReportReason(e.target.value)} />욕설/비방</ReportRadio>
-                  <ReportRadio><RadioInput type="radio" name="report" value="사기/허위매물" checked={reportReason === '사기/허위매물'} onChange={e => setReportReason(e.target.value)} />사기/허위매물</ReportRadio>
-                  <ReportRadio><RadioInput type="radio" name="report" value="스팸/광고" checked={reportReason === '스팸/광고'} onChange={e => setReportReason(e.target.value)} />스팸/광고</ReportRadio>
-                  <ReportRadio><RadioInput type="radio" name="report" value="기타" checked={reportReason === '기타'} onChange={e => setReportReason(e.target.value)} />기타</ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="욕설/비방"
+                                checked={reportReason === '욕설/비방'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    욕설/비방
+                  </ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="사기/허위매물"
+                                checked={reportReason === '사기/허위매물'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    사기/허위매물
+                  </ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="스팸/광고"
+                                checked={reportReason === '스팸/광고'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    스팸/광고
+                  </ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="기타"
+                                checked={reportReason === '기타'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    기타
+                  </ReportRadio>
+
+                  {/* ✅ '기타' 선택 시 상세 사유 입력 */}
+                  {reportReason === '기타' && (
+                      <ModalTextarea
+                          value={reportEtcText}
+                          onChange={e => setReportEtcText(e.target.value)}
+                          placeholder="자세한 신고 사유를 입력해주세요."
+                      />
+                  )}
+
                   <ModalActions>
                     <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
-                    <ModalButton type="submit" disabled={!reportReason}>제출</ModalButton>
+                    <ModalButton
+                        type="submit"
+                        disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}
+                    >
+                      제출
+                    </ModalButton>
                   </ModalActions>
                 </ModalBox>
               </ModalOverlay>
@@ -1458,7 +1580,7 @@ const ChatRoom = () => {
                   </div>
 
                   {/* 교내 / 교외 입력 + 중간지점 추천 */}
-                  {meetType==='on' ? (
+                  {meetType === 'on' ? (
                       <>
                         <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
                         <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
@@ -1473,16 +1595,21 @@ const ChatRoom = () => {
                             ))}
                           </select>
 
-                          <button type="button" onClick={()=>{
-                            if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
-                            if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
-                            const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
-                            if(!r) return alert('경로를 찾을 수 없습니다.');
-                            setCampusSuggest(r);
-                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
+                                if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
+                                const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
+                                if(!r) return alert('경로를 찾을 수 없습니다.');
+                                setCampusSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
                             <FaTrophy/> 중간지점 추천
                           </button>
                         </div>
+
                         {campusSuggest && (
                             <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
                               <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
@@ -1512,16 +1639,21 @@ const ChatRoom = () => {
                             <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
                             {(buyerLine ? getUniqueStations(buyerLine) : []).map(st => <option key={st} value={st}>{st}</option>)}
                           </select>
-                          <button type="button" onClick={()=>{
-                            if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
-                            if(!buyerStation) return alert('구매자 역을 선택하세요');
-                            const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
-                            if(!r) return alert('경로를 찾을 수 없습니다.');
-                            setOffSuggest(r);
-                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
+                                if(!buyerStation) return alert('구매자 역을 선택하세요');
+                                const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
+                                if(!r) return alert('경로를 찾을 수 없습니다.');
+                                setOffSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
                             <FaTrophy/> 중간역 추천
                           </button>
                         </div>
+
                         {offSuggest && (
                             <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
                               <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
