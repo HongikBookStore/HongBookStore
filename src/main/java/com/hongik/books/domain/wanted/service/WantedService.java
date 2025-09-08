@@ -39,10 +39,11 @@ public class WantedService {
         };
         Pageable pageable = PageRequest.of(page, size, s);
 
-        Specification<Wanted> spec = Specification
-                .where(WantedSpecifications.categoryEquals(category))
-                .and(WantedSpecifications.departmentEquals(department))
-                .and(WantedSpecifications.keywordContains(keyword));
+        Specification<Wanted> spec = Specification.allOf(
+                WantedSpecifications.categoryEquals(category),
+                WantedSpecifications.departmentEquals(department),
+                WantedSpecifications.keywordContains(keyword)
+        );
 
         return wantedRepository.findAll(spec, pageable).map(WantedSummaryResponseDTO::from);
     }
