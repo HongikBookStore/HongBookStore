@@ -15,12 +15,13 @@ public class ReviewDtos {
     public static class ReviewPhotoDto {
         private Long id;
         private String url;
-        private int sortOrder;
+        private Integer sortOrder;
     }
 
     @Getter @Setter @AllArgsConstructor @NoArgsConstructor @Builder
     public static class ReviewRes {
         private Long id;
+        private Long userId;      // ⬅️ 프론트에서 내 리뷰 식별용으로 추가
         private String userName;
         private int rating;
         private String content;

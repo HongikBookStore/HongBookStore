@@ -146,18 +146,29 @@ const ChatItem = styled.div`
   cursor: pointer;
   transition: background 0.3s;
   position: relative;
+
+  /* 상태별 시각 강조 — 우선순위: 완료 > 확정 > 대기 > 안읽음 */
+  ${({ $isCompleted, $isReserved, $isPending, $hasUnread }) => {
+    if ($isCompleted) return `
+      background: #dcfce7;
+      border-left: 4px solid #22c55e;
+    `;
+    if ($isReserved) return `
+      background: #fff7d1;
+      border-left: 4px solid #f59e0b;
+    `;
+    if ($isPending) return `
+      background: #e6f0ff;
+      border-left: 4px solid #3b82f6;
+    `;
+    if ($hasUnread) return `
+      background: #eef6ff;
+    `;
+    return '';
+  }}
+
   &:hover { background: #f8f9fa; }
-  ${props => props.$isReserved && `
-    background: #fff3cd;
-    border-left: 4px solid #ffc107;
-  `}
-  ${props => props.$isCompleted && `
-    background: #dcfce7;
-    border-left: 4px solid #22c55e;
-  `}
-  ${props => props.$hasUnread && `
-    background: #e3f2fd;
-  `}
+
   @media (max-width: 600px) { padding: 15px; }
 `;
 
@@ -198,13 +209,24 @@ const UnreadCount = styled.div`
   display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600;
 `;
 
+/* 상태 칩 */
 const TradeStatus = styled.div`
   display: inline-block; margin-top: 4px; padding: 2px 12px; border-radius: 12px;
   font-size: 0.85rem; font-weight: 600; margin-left: 0; margin-bottom: 2px; vertical-align: middle;
   ${({ $status }) => {
     switch ($status) {
-      case 'reserved':
-        return 'background: #ffe066; color: #856404;';
+      case 'requested': /* 수락 대기 */
+        return `
+          background: #dbeafe;
+          color: #1e3a8a;
+          border: 1px solid #bfdbfe;
+        `;
+      case 'reserved': /* 예약 확정 */
+        return `
+          background: #fff1b8;
+          color: #7c5e00;
+          border: 1px solid #ffe08a;
+        `;
       case 'completed':
         return `
           background: #bbf7d0;
@@ -213,7 +235,11 @@ const TradeStatus = styled.div`
         `;
       case 'in_progress':
       default:
-        return 'background: #cce5ff; color: #004085;';
+        return `
+          background: #cce5ff;
+          color: #004085;
+          border: 1px solid #b8daff;
+        `;
     }
   }}
 `;
@@ -243,7 +269,7 @@ const ReviewDoneBadge = styled.div`
   background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7;
 `;
 
-// 후기 모달
+/* 후기 모달 */
 const ModalOverlay = styled.div`
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center; z-index: 2000;
@@ -267,8 +293,10 @@ function safeLower(v) {
   return (v ?? '').toString().toLowerCase();
 }
 
+/* 상태 문자열 정규화: requested | reserved | completed | in_progress */
 function normalizeTradeStatus(status, flags = {}) {
   const s = safeLower(status);
+  if (s === 'requested' || flags.isPending) return 'requested';
   if (s === 'reserved' || flags.isReserved) return 'reserved';
   if (s === 'completed' || flags.isCompleted) return 'completed';
   return 'in_progress';
@@ -337,6 +365,7 @@ function normalizeRoom(raw, myId) {
   const lastTime = formatDisplayTime(lastTimeTs);
 
   const tradeStatus = normalizeTradeStatus(raw.tradeStatus, {
+    isPending: raw.isPending,
     isReserved: raw.isReserved,
     isCompleted: raw.isCompleted
   });
@@ -356,8 +385,10 @@ function normalizeRoom(raw, myId) {
     unreadCount: isNaN(unread) ? 0 : unread,
     salePostId: raw.salePostId ?? raw.postId,
     tradeStatus,
+    isPending: tradeStatus === 'requested',
     isReserved: tradeStatus === 'reserved',
-    // ✅ 서버가 이미 알려줄 수도 있는 필드(있으면 활용)
+    isCompleted: tradeStatus === 'completed',
+    // 서버가 이미 알려줄 수도 있는 필드(있으면 활용)
     hasMyReview: raw.hasMyReview === true || raw.myReviewedAt != null
   };
 }
@@ -380,10 +411,10 @@ const ChatListPage = () => {
   const [keywords, setKeywords] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // 🔹 roomId -> reservation 객체(또는 null) 캐시
+  // roomId -> reservation 객체(또는 null) 캐시
   const [reservationMap, setReservationMap] = useState({});
 
-  // ✅ 내가 이미 작성한 후기 여부(로컬 캐시) — key: `${postId}:${role}`
+  // ✅ 내가 이미 작성한 후기 여부(로컬 캐시)
   const [reviewDoneMap, setReviewDoneMap] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('reviewDoneMap') || '{}');
@@ -398,7 +429,7 @@ const ChatListPage = () => {
     });
   };
 
-  // URL ?bookId=xxxxx 처리
+  // URL ?bookId=xxxxx 처리 -> 해당 책의 채팅방으로 진입
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const bookId = urlParams.get('bookId');
@@ -441,7 +472,7 @@ const ChatListPage = () => {
     fetchChatRooms();
   }, []);
 
-  // 🔹 목록에 예약필드가 없을 수 있어서, 각 방의 예약상태를 보강
+  // 각 방의 예약상태를 보강(REQUESTED/CONFIRMED/COMPLETED/CANCELLED)
   useEffect(() => {
     if (!roomsRaw?.length) return;
 
@@ -451,9 +482,7 @@ const ChatListPage = () => {
         )
     );
 
-    // 이미 조회한 방은 스킵
     const need = ids.filter(id => !(id in reservationMap));
-
     if (!need.length) return;
 
     const token = localStorage.getItem('accessToken') || '';
@@ -495,22 +524,27 @@ const ChatListPage = () => {
     })();
   }, [roomsRaw, reservationMap]);
 
-  // 화면용 정규화 목록 (예약맵 반영)
+  // 화면용 정규화 목록 (예약맵 반영 + 상태 깔끔 정리)
   const rooms = useMemo(() => {
     return roomsRaw.map(r => {
       const id = r.id ?? r.roomId ?? r.chatId;
       const rez = reservationMap[id];
-      // 상태 보강
+
+      // 서버 예약 상태 → 화면 상태 플래그
+      const rezStatus = rez?.status || null;
       const merged = {
         ...r,
-        isReserved: r.isReserved ?? (rez?.status === 'CONFIRMED'),
-        isCompleted: r.isCompleted ?? (rez?.status === 'COMPLETED')
+        // 요청/확정/완료만 강조, 취소/없음은 기본으로
+        isPending: rezStatus === 'REQUESTED',
+        isReserved: rezStatus === 'CONFIRMED',
+        isCompleted: rezStatus === 'COMPLETED'
       };
+
       return normalizeRoom(merged, myId);
     });
   }, [roomsRaw, reservationMap, myId]);
 
-  // ✅ 순서 유지: 정렬 제거
+  // 순서 유지: 정렬 제거
   const filteredChatRooms = useMemo(() => {
     const tabFiltered = rooms.filter(chat => {
       if (activeTab === 'seller') return chat.role === 'seller';
@@ -526,7 +560,7 @@ const ChatListPage = () => {
         )
         : tabFiltered;
 
-    return searched; // 정렬 없이 그대로 (백엔드 순서 유지)
+    return searched;
   }, [rooms, activeTab, searchTerm]);
 
   const handleBack = () => navigate('/marketplace');
@@ -548,6 +582,7 @@ const ChatListPage = () => {
 
   const getStatusText = (status) => {
     switch (status) {
+      case 'requested': return '수락대기';
       case 'reserved': return '예약완료';
       case 'completed': return '거래완료';
       case 'in_progress':
@@ -600,7 +635,6 @@ const ChatListPage = () => {
         ratingKeywords: kw,
         role: reviewModal.role
       });
-      // ✅ 로컬/화면 상태에 "후기 완료" 반영
       setReviewDone(reviewModal.postId, reviewModal.role);
       alert('후기가 저장되었습니다.');
       setReviewModal({ open: false, postId: null, role: null });
@@ -671,6 +705,7 @@ const ChatListPage = () => {
                         <ChatItem
                             key={chat.id}
                             onClick={() => handleChatClick(chat.id)}
+                            $isPending={chat.isPending}
                             $isReserved={chat.isReserved}
                             $isCompleted={isCompleted}
                             $hasUnread={chat.unreadCount > 0}
@@ -693,9 +728,9 @@ const ChatListPage = () => {
                             )}
                           </ChatMeta>
 
-                          {/* ✅ 진행중/예약완료: 프로필만
-                        ✅ 거래완료 & 후기 미작성: 후기 버튼
-                        ✅ 거래완료 & 후기 작성: "후기 완료" 배지 */}
+                          {/* 진행중/예약완료: 프로필만
+                        거래완료 & 후기 미작성: 후기 버튼
+                        거래완료 & 후기 작성: "후기 완료" 배지 */}
                           <RowActions onClick={(e) => e.stopPropagation()}>
                             {isCompleted && (alreadyReviewed ? (
                                 <ReviewDoneBadge title="후기 작성 완료">

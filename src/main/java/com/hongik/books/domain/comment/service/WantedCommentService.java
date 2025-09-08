@@ -48,15 +48,16 @@ public class WantedCommentService {
     /* =========================
        조회
        ========================= */
+    @Transactional(readOnly = true)
     public List<WantedCommentDto> getList(Long wantedId) {
-        var comments = commentRepository.findByWantedIdAndDeletedFalseOrderByCreatedAtAsc(wantedId);
+        var comments = commentRepository.findByWantedIdOrderByCreatedAtAsc(wantedId); // ✅ 삭제 포함
 
         // userId 등장 순서 기반 매핑: userId -> 번호(1부터)
         Map<Long, Integer> orderMap = new LinkedHashMap<>();
         int next = 1;
         for (var c : comments) {
             Long uid = c.getUserId();
-            if (uid == null) continue; // 비회원 방어
+            if (uid == null) continue;
             if (!orderMap.containsKey(uid)) {
                 orderMap.put(uid, next++);
             }
@@ -77,8 +78,8 @@ public class WantedCommentService {
                             .depth(base.getDepth())
                             .content(base.getContent())
                             .userId(base.getUserId())
-                            .nickname(null)              // 원래 닉네임/이메일 숨김
-                            .authorNickname(alias)       // 익명N
+                            .nickname(null)                // 실닉 숨김
+                            .authorNickname(alias)         // 익명N 노출
                             .deleted(base.isDeleted())
                             .contentToxic(base.isContentToxic())
                             .contentToxicLevel(base.getContentToxicLevel())
@@ -97,10 +98,11 @@ public class WantedCommentService {
        ========================= */
     @Transactional
     public WantedCommentDto addRoot(Long wantedId, CommentCreateRequest req, Long userId, String nickname) {
-        // 정책 기반 유해 표현 검사
         var mode = moderationPolicy.getComment().getContent();
         var modResult = moderationService.checkOrThrow(req.getContent(), mode, "content");
+
         String alias = computeAliasForUser(wantedId, userId);
+
         WantedComment toSave = WantedComment.builder()
                 .wantedId(wantedId)
                 .parentId(null)
@@ -108,9 +110,10 @@ public class WantedCommentService {
                 .deleted(false)
                 .content(req.getContent())
                 .userId(userId)
-                .nickname(nickname)        // DB 저장은 하되 응답에서는 숨김
-                .authorNickname(alias)     // 저장/응답 모두 익명N
+                .nickname(nickname)
+                .authorNickname(alias)
                 .build();
+
         if (modResult != null) {
             toSave.applyContentModeration(
                     modResult.predictionLevel(),
@@ -120,33 +123,28 @@ public class WantedCommentService {
                     modResult.reason()
             );
         }
+
         WantedComment saved = commentRepository.save(toSave);
 
-        // ✅ SSE 알림: 글 작성자에게 새 댓글 알림
+        // ✅ 자기 자신에게는 알림을 보내지 않도록 체크
         try {
             var wanted = wantedRepository.findById(wantedId).orElse(null);
             if (wanted != null && wanted.getRequester() != null) {
-                notificationService.notifyWantedComment(
-                        wanted.getRequester().getId(),
-                        wantedId,
-                        alias,                   // 익명N
-                        req.getContent()
-                );
+                Long ownerId = wanted.getRequester().getId();
+                if (!Objects.equals(ownerId, userId)) { // 🔑 작성자와 댓글 작성자가 다를 때만 알림 발송
+                    notificationService.notifyWantedComment(
+                            ownerId,
+                            wantedId,
+                            alias,
+                            req.getContent()
+                    );
+                }
             }
         } catch (Exception ignore) {}
 
-        var base = WantedCommentDto.from(saved);
-        return WantedCommentDto.builder()
-                .id(base.getId())
-                .wantedId(base.getWantedId())
-                .parentId(base.getParentId())
-                .depth(base.getDepth())
-                .content(base.getContent())
-                .userId(base.getUserId())
-                .nickname(null)            // 숨김
-                .authorNickname(alias)     // 익명N
-                .deleted(base.isDeleted())
-                .createdAt(base.getCreatedAt())
+        return WantedCommentDto.from(saved).toBuilder()
+                .nickname(null)
+                .authorNickname(alias)
                 .build();
     }
 
@@ -154,7 +152,9 @@ public class WantedCommentService {
     public WantedCommentDto addReply(Long wantedId, Long parentId, CommentCreateRequest req, Long userId, String nickname) {
         var mode = moderationPolicy.getComment().getContent();
         var modResult = moderationService.checkOrThrow(req.getContent(), mode, "content");
+
         String alias = computeAliasForUser(wantedId, userId);
+
         WantedComment toSave2 = WantedComment.builder()
                 .wantedId(wantedId)
                 .parentId(parentId)
@@ -165,6 +165,7 @@ public class WantedCommentService {
                 .nickname(nickname)
                 .authorNickname(alias)
                 .build();
+
         if (modResult != null) {
             toSave2.applyContentModeration(
                     modResult.predictionLevel(),
@@ -174,38 +175,28 @@ public class WantedCommentService {
                     modResult.reason()
             );
         }
+
         WantedComment saved = commentRepository.save(toSave2);
 
-        // ✅ SSE 알림: 글 작성자에게 새 댓글 알림
+        // ✅ 자기 자신 제외 로직 추가
         try {
             var wanted = wantedRepository.findById(wantedId).orElse(null);
             if (wanted != null && wanted.getRequester() != null) {
-                notificationService.notifyWantedComment(
-                        wanted.getRequester().getId(),
-                        wantedId,
-                        alias,                   // 익명N
-                        req.getContent()
-                );
+                Long ownerId = wanted.getRequester().getId();
+                if (!Objects.equals(ownerId, userId)) {
+                    notificationService.notifyWantedComment(
+                            ownerId,
+                            wantedId,
+                            alias,
+                            req.getContent()
+                    );
+                }
             }
         } catch (Exception ignore) {}
 
-        var base = WantedCommentDto.from(saved);
-        return WantedCommentDto.builder()
-                .id(base.getId())
-                .wantedId(base.getWantedId())
-                .parentId(base.getParentId())
-                .depth(base.getDepth())
-                .content(base.getContent())
-                .userId(base.getUserId())
-                .nickname(null)            // 숨김
-                .authorNickname(alias)     // 익명N
-                .deleted(base.isDeleted())
-                .contentToxic(base.isContentToxic())
-                .contentToxicLevel(base.getContentToxicLevel())
-                .contentToxicMalicious(base.getContentToxicMalicious())
-                .contentToxicClean(base.getContentToxicClean())
-                .contentToxicReason(base.getContentToxicReason())
-                .createdAt(base.getCreatedAt())
+        return WantedCommentDto.from(saved).toBuilder()
+                .nickname(null)
+                .authorNickname(alias)
                 .build();
     }
 
@@ -292,7 +283,7 @@ public class WantedCommentService {
 
     /** 같은 글에서 해당 userId에게 부여될 익명 별칭(익명N) 계산 — 등장 순서 기준 */
     private String computeAliasForUser(Long wantedId, Long userId) {
-        var comments = commentRepository.findByWantedIdAndDeletedFalseOrderByCreatedAtAsc(wantedId);
+        var comments = commentRepository.findByWantedIdOrderByCreatedAtAsc(wantedId); // ✅ 삭제 포함
         Map<Long, Integer> orderMap = new LinkedHashMap<>();
         int num = 1;
         for (var c : comments) {
@@ -302,12 +293,8 @@ public class WantedCommentService {
                 orderMap.put(uid, num++);
             }
         }
-        Integer mine = (userId == null) ? null : orderMap.get(userId);
-        if (mine == null) {
-            // 아직 한 번도 안 쓴 유저면 다음 번호
-            mine = num;
-        }
-        return "익명" + mine;
+        Integer order = orderMap.get(userId);
+        return (order == null) ? "익명" : ("익명" + order);
     }
 
     private HttpServletRequest currentRequest() {

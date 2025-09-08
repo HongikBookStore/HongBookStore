@@ -10,7 +10,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> {
 
-    // ✅ 리뷰 목록을 불러올 때 사진 컬렉션을 함께 로딩(N+1 방지)
+    boolean existsByPlaceIdAndUserId(Long placeId, Long userId);
+    java.util.Optional<PlaceReview> findByPlaceIdAndUserId(Long placeId, Long userId);
+    java.util.Optional<PlaceReview> findByIdAndUserId(Long id, Long userId);
+
+    // 리뷰 목록 N+1 방지
     @EntityGraph(attributePaths = "photos")
     Page<PlaceReview> findByPlaceIdOrderByCreatedAtDesc(Long placeId, Pageable pageable);
 

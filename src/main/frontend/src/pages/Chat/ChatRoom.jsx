@@ -10,7 +10,6 @@ import Stomp from 'stompjs';
 import { AuthCtx } from '../../contexts/AuthContext';
 
 /* ----------------------------- styled components ----------------------------- */
-
 const ChatContainer = styled.div`
   width: 100%;
   max-width: 1600px;
@@ -423,7 +422,7 @@ function useWindowWidth() {
 
 const ONCAMPUS_LABELS = {
   A:'A동', B:'B동', C:'C동', D:'D동', E:'E동', F:'F동', G:'G동', H:'H동',
-  I:'I동', J:'J동', K:'K동', L:'L동', M:'M동', MH:'MH', P:'P동', Q:'Q동', R:'R동',
+  I:'I동', J:'J동', K:'K동', L:'L동', M:'M', MH:'MH', P:'P동', Q:'Q동', R:'R동',
   S:'S동', T:'제2공학관(T동)', U:'U동', X:'운동장(X)', Z1:'정문(Z1)', Z2:'후문(Z2)', Z3:'측문(Z3)', Z4:'측문(Z4)', '신기숙사':'신기숙사'
 };
 const CAMPUS_OPTIONS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','MH','P','Q','R','S','T','U','X','Z1','Z2','Z3','Z4','신기숙사'];
@@ -446,7 +445,7 @@ function dijkstraCampus(start, end) {
   const dist={}, prev={}, all=Object.keys(CAMPUS_GRAPH); all.forEach(n=>dist[n]=Infinity);
   dist[start]=0;
   const todo=new Set(all);
-  const pick=()=>{ let b=null,bd=Infinity; for(const n of todo) if(dist[n]<bd){bd=dist[n]; b=n;} return b; };
+  const pick=()=>{ let best=null,bd=Infinity; for(const n of todo){ if(dist[n]<bd){bd=dist[n]; best=n;} } return best; };
   while(todo.size){
     const u=pick(); if(u==null) break; todo.delete(u); if(u===end) break;
     for(const {to,w} of CAMPUS_GRAPH[u]){
@@ -477,7 +476,7 @@ const SUBWAY_MAP = {
   '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
   '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
   '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
-  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
 };
 const getLineByStation = (station) => {
   if (!station) return null;
@@ -551,6 +550,18 @@ async function apiUpsertReservation(roomId, payload) {
   if (!res.ok) throw new Error('예약 저장 실패');
   return res.json();
 }
+async function apiAcceptReservation(roomId, reservationId) {
+  const token = localStorage.getItem('accessToken') || '';
+  const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/accept`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(()=> '');
+    throw new Error(t || '예약 수락 실패');
+  }
+  return res.json();
+}
 async function apiCancelReservation(roomId, reservationId, reason) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/cancel`, {
@@ -585,11 +596,17 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// ✅ 서버 ENUM으로 변환(대문자 + 언더스코어)
+const toServerEnum = (s) => String(s || '').toUpperCase().replace(/-/g, '_');
+// ✅ 서버 ENUM → 화면 비교용 소문자
+const toLocalStatus = (s) => String(s || '').toLowerCase();
+
 // sale_post 상태 변경
 async function patchPostStatus(postId, status, buyerId) {
   if (!postId || !status) return;
   const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
-  const body = buyerId ? { status, buyerId } : { status };
+  const statusEnum = toServerEnum(status);
+  const body = buyerId ? { status: statusEnum, buyerId } : { status: statusEnum };
   const res = await fetch(`/api/posts/${postId}/status`, {
     method: 'PATCH',
     headers,
@@ -613,6 +630,7 @@ async function fetchPost(postId) {
 /* ----------------------------- component start ------------------------------ */
 
 const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
+const SSE_ENDPOINT = (token) => `/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
 
 const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
@@ -622,27 +640,31 @@ const ChatRoom = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
 
-  // ✅ chatId → 유효한 숫자 roomId로 변환
+  // chatId → 유효한 숫자 roomId로 변환
   const roomId = useMemo(() => {
     const n = Number(chatId);
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [chatId]);
 
-  const [isReserved, setIsReserved] = useState(false);
+  const [isPending, setIsPending] = useState(false);    // REQUESTED
+  const [isReserved, setIsReserved] = useState(false);  // CONFIRMED
   const [reservationId, setReservationId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [reportEtcText, setReportEtcText] = useState(''); // ✅ 기타 상세 입력
   const [showReportExitModal, setShowReportExitModal] = useState(false);
+
   const [hovered, setHovered] = useState('');
   const [hasProfanity, setHasProfanity] = useState(false);
   const [profanityWarning, setProfanityWarning] = useState('');
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
 
-  // ✅ 스마트 예약 관련
+  // 스마트 예약 관련
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -654,16 +676,16 @@ const ChatRoom = () => {
   const [senderId, setSenderId] = useState(null);
   const [salePostId, setSalePostId] = useState(null);
 
-  // ✅ 추가: 게시글 상태 및 참여자
+  // 참여자/게시글 상태
   const [postStatus, setPostStatus] = useState(null);
   const [buyerId, setBuyerId] = useState(null);
   const [sellerId, setSellerId] = useState(null);
 
   const stompClient = useRef(null);
+  const sseRef = useRef(null);
   const { user } = useContext(AuthCtx);
   const currentUserId = user?.id;
 
-  // ✅ 역할 계산
   const isBuyer = useMemo(
       () => !!currentUserId && !!buyerId && currentUserId === buyerId,
       [currentUserId, buyerId]
@@ -673,25 +695,31 @@ const ChatRoom = () => {
       [currentUserId, sellerId]
   );
 
-  // ✅ 날씨 상태
+  // ✅ 상대 사용자 ID(신고 대상)
+  const otherUserId = useMemo(() => {
+    if (receiverId) return receiverId;
+    if (!buyerId || !sellerId || !currentUserId) return null;
+    return currentUserId === sellerId ? buyerId : sellerId;
+  }, [receiverId, buyerId, sellerId, currentUserId]);
+
+  // 날씨
   const [weeklyWeather, setWeeklyWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
-  // ✅ 판매자가 설정한 기본 위치 (게시글에서 가져옴)
+  // 판매자 기본 위치
   const [sellerDefault, setSellerDefault] = useState({
     oncampusPlaceCode: null,
     offcampusStationCode: null
   });
 
-  // ✅ 교내/교외 입력 + 추천 상태
+  // 교내/교외 추천
   const [meetType, setMeetType] = useState('on'); // 'on' | 'off'
-  const [buyerCampusCode, setBuyerCampusCode] = useState(''); // 교내 선택
+  const [buyerCampusCode, setBuyerCampusCode] = useState('');
   const [campusSuggest, setCampusSuggest] = useState(null);
-  const [buyerLine, setBuyerLine] = useState(''); // 교외 노선
-  const [buyerStation, setBuyerStation] = useState(''); // 교외 역
+  const [buyerLine, setBuyerLine] = useState('');
+  const [buyerStation, setBuyerStation] = useState('');
   const [offSuggest, setOffSuggest] = useState(null);
 
-  // 버튼 텍스트 반응형
   const getLabel = (type) => {
     if (width <= 600) return '';
     if (width <= 900) {
@@ -701,6 +729,8 @@ const ChatRoom = () => {
         case 'reserve-cancel': return '예약 취소';
         case 'complete': return '완료';
         case 'complete-cancel': return '완료 취소';
+        case 'accept': return '수락';
+        case 'decline': return '거절';
         default: return '';
       }
     }
@@ -710,11 +740,12 @@ const ChatRoom = () => {
       case 'reserve-cancel': return '예약 취소하기';
       case 'complete': return '거래 완료';
       case 'complete-cancel': return '거래 완료 취소';
+      case 'accept': return '예약 수락';
+      case 'decline': return '예약 거절';
       default: return '';
     }
   };
 
-  // 아이콘 색상
   const iconColor = (activeColor, isActive, isHover) => {
     if (isActive || isHover) return activeColor;
     return '#bbb';
@@ -722,7 +753,6 @@ const ChatRoom = () => {
 
   /* -------------------------- 채팅방/메시지 로딩 -------------------------- */
   useEffect(() => {
-    // ❗ roomId 없으면 호출 금지
     if (!roomId) return;
 
     async function loadRoomInfo() {
@@ -751,12 +781,12 @@ const ChatRoom = () => {
         setBuyerId(room.buyerId);
         setSellerId(room.sellerId);
 
-        // ✅ 판매자 기본 위치 + 게시글 상태 로드
+        // 판매자 기본 위치 + 게시글 상태
         if (room.salePostId) {
           const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
           if (postRes.ok) {
             const post = await postRes.json();
-            setPostStatus(post.status || null);
+            setPostStatus(toLocalStatus(post.status || null));
             setSellerDefault({
               oncampusPlaceCode: post.oncampusPlaceCode || null,
               offcampusStationCode: post.offcampusStationCode || null
@@ -773,7 +803,7 @@ const ChatRoom = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (!roomId || !token) return; // ❗ 가드 강화
+    if (!roomId || !token) return;
 
     const loadPreviousMessages = async () => {
       try {
@@ -796,13 +826,16 @@ const ChatRoom = () => {
         const r = await apiGetReservation(roomId);
         if (!r) {
           setReservationId(null);
+          setIsPending(false);
           setIsReserved(false);
           setIsCompleted(false);
           return;
         }
         setReservationId(r.id);
-        setIsReserved(r.status === 'CONFIRMED');
-        setIsCompleted(r.status === 'COMPLETED');
+        const st = String(r.status || '').toUpperCase();
+        setIsPending(st === 'REQUESTED');
+        setIsReserved(st === 'CONFIRMED');
+        setIsCompleted(st === 'COMPLETED');
         if (r.placeLabel) setSelectedPlace(r.placeLabel);
         if (r.reservedAt) {
           const parsed = new Date(r.reservedAt.toString().replace(' ', 'T'));
@@ -820,10 +853,7 @@ const ChatRoom = () => {
 
   /* -------------------------------- STOMP -------------------------------- */
   useEffect(() => {
-    // ❗ roomId 없으면 연결 금지
     if (!roomId) return;
-
-    // 중복 연결 방지
     if (stompClient.current?.connected) return;
 
     const ws = new WebSocket(WS_ENDPOINT);
@@ -835,16 +865,14 @@ const ChatRoom = () => {
         const newMessage = JSON.parse(message.body);
         setMessages(prev => [...prev, newMessage]);
       });
-      // 유저 전용 에러 큐 구독: 모더레이션/기타 STOMP 에러 알림 처리
       stomp.subscribe('/user/queue/chat-errors', (frame) => {
         try {
-          const payload = JSON.parse(frame.body); // ApiResponse<ModerationErrorDTO>
+          const payload = JSON.parse(frame.body);
           const msg = payload?.message || '메시지 전송이 차단되었습니다.';
           const d = payload?.data;
           const extra = d?.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? ", " + Math.round(d.malicious*100) + "%" : ''})` : '';
           setHasProfanity(true);
           setProfanityWarning(msg + extra);
-          // 일정 시간 후 경고 자동 해제(선택)
           setTimeout(() => { setHasProfanity(false); setProfanityWarning(''); }, 6000);
         } catch (e) { /* ignore */ }
       });
@@ -856,9 +884,89 @@ const ChatRoom = () => {
     };
   }, [roomId]);
 
+  /* ----------------------------- ✅ SSE 구독 ----------------------------- */
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') || '';
+    if (!token) return;
+
+    const es = new EventSource(SSE_ENDPOINT(token));
+    sseRef.current = es;
+
+    const handleNotify = (evt) => {
+      try {
+        const data = JSON.parse(evt.data);
+        if (!data) return;
+        const sameRoom = roomId && Number(data.roomId) === Number(roomId);
+        if (!sameRoom) return;
+
+        const st = String(data.status || '').toUpperCase();
+
+        if (data.type === 'RESERVATION_REQUESTED' || st === 'REQUESTED') {
+          if (data.reservationId) setReservationId(data.reservationId);
+          setIsPending(true);
+          setIsReserved(false);
+          setIsCompleted(false);
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: '구매자가 예약을 요청했습니다. 수락 여부를 결정해주세요.', sentAt: new Date().toISOString() }
+          ]));
+        }
+
+        if (data.type === 'RESERVATION_CONFIRMED' || st === 'CONFIRMED') {
+          setIsPending(false);
+          setIsReserved(true);
+          setIsCompleted(false);
+          setPostStatus('reserved');
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: '예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+          ]));
+        }
+
+        if (data.type === 'RESERVATION_CANCELED' || st === 'CANCELED') {
+          setIsPending(false);
+          setIsReserved(false);
+          setIsCompleted(false);
+          setPostStatus('for_sale');
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: `예약이 취소되었습니다${data.reason ? ` (사유: ${data.reason})` : ''}.`, cancel: true, sentAt: new Date().toISOString() }
+          ]));
+        }
+
+        if (data.type === 'RESERVATION_COMPLETED' || st === 'COMPLETED') {
+          setIsPending(false);
+          setIsReserved(false);
+          setIsCompleted(true);
+          setPostStatus('sold_out');
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+          ]));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    es.addEventListener('notification', handleNotify);
+    es.onmessage = handleNotify;
+
+    es.onerror = () => {
+      // auto-retry by browser
+    };
+
+    return () => {
+      try {
+        es.removeEventListener('notification', handleNotify);
+        es.close();
+      } catch {}
+      sseRef.current = null;
+    };
+  }, [roomId]);
+
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
-    // 간단 클라이언트 가드: 부적절 경고 시 전송 차단
     if (hasProfanity) {
       alert(profanityWarning || '부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
       return;
@@ -883,7 +991,7 @@ const ChatRoom = () => {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleRetryClick = (messageId) => { setRetryMessageId(messageId); setShowRetryModal(true); };
-  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO: 재전송 */ setRetryMessageId(null);} };
+  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false);  setRetryMessageId(null);} };
   const handleRetryCancel = () => { setShowRetryModal(false); setRetryMessageId(null); };
 
   const handleMessageChange = (e) => {
@@ -917,34 +1025,31 @@ const ChatRoom = () => {
 
   /* -------------------------------- 예약/신고/완료 -------------------------------- */
 
-  // ✅ 예약 버튼 누르기 전에 게시글 상태 가드 (구매자 전용 UI)
   const handleReserve = async () => {
     if (!salePostId) { setShowReserveModal(true); return; }
     try {
       const latest = await fetchPost(salePostId);
-      const st = latest?.status || postStatus;
+      const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
       setPostStatus(st || null);
       if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
       if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
     } catch (e) {
       console.warn('게시글 상태 확인 실패:', e);
-      // 조회 실패 시에도 모달은 열어줌
     }
     setShowReserveModal(true);
   };
 
+  // 예약 요청(구매자)
   const handleReserveConfirm = async () => {
     if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
     try {
-      // 한번 더 최신 상태 확인(경쟁 예약 대비)
       if (salePostId) {
         const latest = await fetchPost(salePostId);
-        const st = latest?.status || postStatus;
+        const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
         if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
         if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
       }
 
-      // meetType에 따라 한쪽만 보냄
       const base = {
         meetType,
         placeLabel: selectedPlace,
@@ -952,33 +1057,18 @@ const ChatRoom = () => {
       };
       const payload =
           meetType === 'on'
-              ? {
-                ...base,
-                oncampusPlaceCode: campusSuggest?.midCode || sellerDefault.oncampusPlaceCode || null,
-                offcampusStationCode: null
-              }
-              : {
-                ...base,
-                oncampusPlaceCode: null,
-                offcampusStationCode: offSuggest?.midStation || sellerDefault.offcampusStationCode || null
-              };
+              ? { ...base, oncampusPlaceCode: campusSuggest?.midCode || sellerDefault.oncampusPlaceCode || null, offcampusStationCode: null }
+              : { ...base, oncampusPlaceCode: null, offcampusStationCode: offSuggest?.midStation || sellerDefault.offcampusStationCode || null };
 
       const res = await apiUpsertReservation(roomId, payload);
+
       setReservationId(res.id);
-      setIsReserved(res.status === 'CONFIRMED');
-      setIsCompleted(res.status === 'COMPLETED');
+      const stNow = String(res.status || '').toUpperCase();
+      setIsPending(stNow === 'REQUESTED');
+      setIsReserved(stNow === 'CONFIRMED');
+      setIsCompleted(stNow === 'COMPLETED');
       setReserveConfirmed(true);
       setShowReserveModal(false);
-
-      // ✅ 게시글 상태를 reserved로 변경 (buyerId 포함)
-      try {
-        const buyerForPatch = buyerId || currentUserId;
-        await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
-        setPostStatus('reserved');
-      } catch (e) {
-        console.error('게시글 상태 reserved 설정 실패:', e);
-        alert('예약은 완료되었지만, 게시글 상태 업데이트에 실패했습니다.');
-      }
 
       const when = res.reservedAt
           ? new Date(res.reservedAt.toString().replace(' ', 'T')).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
@@ -986,16 +1076,62 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        {
-          id: Date.now(),
-          type: 'system',
-          message: `예약이 확정되었습니다!\n장소: ${res.placeLabel || selectedPlace}, 날짜: ${when}`,
-          sentAt: new Date().toISOString()
-        }
+        { id: Date.now(), type: 'system', message: `예약 요청을 보냈습니다. 판매자의 수락을 기다리는 중입니다.\n장소: ${res.placeLabel || selectedPlace}${when ? `, 날짜: ${when}` : ''}`, sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       console.error(e);
       alert('예약 저장에 실패했습니다.');
+    }
+  };
+
+  // 판매자: 예약 수락
+  const handleAcceptReservation = async () => {
+    if (!reservationId) return;
+    try {
+      await apiAcceptReservation(roomId, reservationId);
+
+      setIsPending(false);
+      setIsReserved(true);
+      setIsCompleted(false);
+
+      try {
+        const buyerForPatch = buyerId || currentUserId;
+        if (salePostId) {
+          await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
+          setPostStatus('reserved');
+        }
+      } catch (e) {
+        console.error('게시글 상태 reserved 설정 실패:', e);
+      }
+
+      setMessages(prev => ([
+        ...prev,
+        { id: Date.now(), type: 'system', message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+      ]));
+    } catch (e) {
+      console.error(e);
+      alert('예약 수락에 실패했습니다.');
+    }
+  };
+
+  // 판매자: 예약 거절(=취소)
+  const handleDeclineReservation = async () => {
+    if (!reservationId) return;
+    try {
+      await apiCancelReservation(roomId, reservationId, '판매자에 의해 거절되었습니다.');
+      setIsPending(false);
+      setIsReserved(false);
+      setMessages(prev => ([
+        ...prev,
+        { id: Date.now(), type: 'system', message: '예약 요청이 판매자에 의해 거절되었습니다.', cancel: true, sentAt: new Date().toISOString() }
+      ]));
+      // 게시글 상태 복구
+      try {
+        if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
+      } catch {}
+    } catch (e) {
+      console.error(e);
+      alert('예약 거절에 실패했습니다.');
     }
   };
 
@@ -1005,20 +1141,18 @@ const ChatRoom = () => {
     try {
       if (!reservationId) { setShowCancelModal(false); return; }
       await apiCancelReservation(roomId, reservationId, cancelReason || '');
+      setIsPending(false);
       setIsReserved(false);
       setShowCancelModal(false);
       setMessages(prev => ([
         ...prev,
-        {
-          id: Date.now(),
-          type: 'system',
-          message: `예약이 취소되었습니다.${cancelReason ? ` 사유: ${cancelReason}` : ''}`,
-          cancel: true,
-          sentAt: new Date().toISOString()
-        }
+        { id: Date.now(), type: 'system', message: `예약이 취소되었습니다.${cancelReason ? ` 사유: ${cancelReason}` : ''}`, cancel: true, sentAt: new Date().toISOString() }
       ]));
       setCancelReason('');
-      // (선택) 예약 취소 시 post.status 되돌리려면 여기서 PATCH 처리
+      // 게시글 상태를 되돌림
+      try {
+        if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
+      } catch {}
     } catch (e) {
       console.error(e);
       alert('예약 취소에 실패했습니다.');
@@ -1028,16 +1162,15 @@ const ChatRoom = () => {
   const handleComplete = async () => {
     if (!reservationId) return;
     if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
-    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
+    if (isCompleted) { alert('이미 거래 완료 처리되었습니다.'); return; }
     try {
       await apiCompleteReservation(roomId, reservationId);
+      setIsPending(false);
       setIsReserved(false);
       setIsCompleted(true);
 
-      // ✅ 게시글 상태를 sold_out으로 변경
       try {
-        await patchPostStatus(salePostId, 'sold_out');
-        setPostStatus('sold_out');
+        if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
       } catch (e) {
         console.error('게시글 상태 sold_out 설정 실패:', e);
         alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다.');
@@ -1053,15 +1186,69 @@ const ChatRoom = () => {
     }
   };
 
-  const handleReport = () => { setShowReportModal(true); setReportReason(''); };
-  const handleReportSubmit = (e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); };
+  // ✅ 신고 모달 열기/제출 + 백엔드 전송
+  const handleReport = () => {
+    setShowReportModal(true);
+    setReportReason('');
+    setReportEtcText('');
+  };
+
+  const handleReportSubmit = async (e) => {
+    e.preventDefault();
+    if (!reportReason) return;
+    if (reportReason === '기타' && !reportEtcText.trim()) return;
+    if (!otherUserId) { alert('상대 사용자를 식별할 수 없어 신고를 보낼 수 없습니다.'); return; }
+
+    const reasonText = reportReason === '기타' ? reportEtcText.trim() : reportReason;
+
+    try {
+      const payload = {
+        type: 'CHAT_ROOM',                // 서버에서 채팅 신고로 구분
+        targetId: Number(otherUserId),
+        chatRoomId: Number(roomId),        // ✅ 현재 채팅방 ID
+        reason: (reportReason === '기타' ? 'OTHER' : reasonText),
+        ...(reportReason === '기타' ? { detail: reportEtcText.trim() } : {})
+      };
+
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(()=> '');
+        if (res.status === 409) {
+          alert('이미 해당 상대를 신고했습니다.');
+        } else if (res.status === 400) {
+          alert(t || '잘못된 신고 요청입니다.');
+        } else if (res.status === 401) {
+          alert('로그인이 필요합니다.');
+        } else if (res.status === 404) {
+          alert('대상을 찾을 수 없습니다.');
+        } else {
+          alert('신고 처리 중 오류가 발생했습니다.');
+        }
+        setShowReportModal(false);
+        return;
+      }
+
+      // 성공
+      setShowReportModal(false);
+      setShowReportExitModal(true);
+    } catch (err) {
+      console.warn('report failed:', err);
+      alert('신고 요청을 보내는 중 오류가 발생했습니다.');
+      setShowReportModal(false);
+    }
+  };
+
   const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
-  const handleReportStay = () => { setShowReportExitModal(false); };
 
   const handleBack = () => { navigate('/chat'); };
   const formatTime = (timestamp) => { const date = new Date(timestamp); return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); };
 
-  /* --------------------------- ✅ 스마트 예약 (날씨) -------------------------- */
+  /* --------------------------- 스마트 예약 (날씨) -------------------------- */
 
   async function getCoords() {
     return new Promise((resolve) => {
@@ -1089,7 +1276,7 @@ const ChatRoom = () => {
       try {
         setWeatherLoading(true);
         const { lat, lng } = await getCoords();
-        const sido = '서울'; // TODO: 역지오코딩 자동화
+        const sido = '서울';
         const r = await fetchWeeklyWeather({ lat, lng, sido });
         setWeeklyWeather(r);
       } catch (e) {
@@ -1101,7 +1288,6 @@ const ChatRoom = () => {
     })();
   }, [showReserveModal]);
 
-  // API 데이터를 UI용으로 정제
   const dateOptions = (weeklyWeather?.days || []).map(d => {
     const isoRaw = d.date;
     const iso = normalizeDateTime(isoRaw);
@@ -1115,18 +1301,36 @@ const ChatRoom = () => {
     };
   });
 
-  const bestDate = dateOptions.find(x => x.best) || [...dateOptions].sort((a,b)=>a.pop-b.pop)[0];
-
   /* ---------------------------------- UI 가드 ---------------------------------- */
-
   if (chatId !== undefined && !roomId) {
     return (
-        <div style={{maxWidth: 720, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 12, background: '#fff'}}>
-          <div style={{fontSize: 18, fontWeight: 700, marginBottom: 8}}>잘못된 채팅방 주소</div>
-          <div style={{color: '#666', marginBottom: 16}}>유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.</div>
+        <div
+            style={{
+              maxWidth: 720,
+              margin: '40px auto',
+              padding: 24,
+              border: '1px solid #eee',
+              borderRadius: 12,
+              background: '#fff',
+            }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            잘못된 채팅방 주소
+          </div>
+          <div style={{ color: '#666', marginBottom: 16 }}>
+            유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.
+          </div>
           <button
               onClick={() => navigate('/chat')}
-              style={{padding: '10px 14px', borderRadius: 8, border: 'none', background: '#111827', color: '#fff', fontWeight: 700, cursor: 'pointer'}}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#111827',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
           >
             채팅 목록으로 이동
           </button>
@@ -1158,9 +1362,9 @@ const ChatRoom = () => {
             </HeaderLeft>
 
             <HeaderRight style={{gap: 0}}>
-              {/* 신고 버튼 (모두 노출) */}
+              {/* 신고 버튼 */}
               <ChatMenuButton
-                  onClick={() => { setShowReportModal(true); setReportReason(''); }}
+                  onClick={() => { setShowReportModal(true); setReportReason(''); setReportEtcText(''); }}
                   title="신고하기"
                   onMouseEnter={() => setHovered('report')}
                   onMouseLeave={() => setHovered('')}
@@ -1169,8 +1373,34 @@ const ChatRoom = () => {
                 {getLabel('report')}
               </ChatMenuButton>
 
-              {/* ✅ 예약/예약취소 버튼: 예약은 구매자 전용, 취소는 구매자+판매자 */}
-              {isReserved ? (
+              {/* 판매자 전용: 예약 수락/거절 */}
+              {isSeller && isPending && (
+                  <>
+                    <ChatMenuButton
+                        onClick={handleAcceptReservation}
+                        title="예약 수락"
+                        onMouseEnter={() => setHovered('accept')}
+                        onMouseLeave={() => setHovered('')}
+                    >
+                      <FaCheckCircle style={{ fontSize: '1.1em', color: iconColor('#1976d2', false, hovered==='accept') }} />
+                      {getLabel('accept')}
+                    </ChatMenuButton>
+
+                    <ChatMenuButton
+                        className="danger"
+                        onClick={handleDeclineReservation}
+                        title="예약 거절"
+                        onMouseEnter={() => setHovered('decline')}
+                        onMouseLeave={() => setHovered('')}
+                    >
+                      <FaExclamationCircle style={{ fontSize: '1.1em', color: iconColor('#ef4444', false, hovered==='decline') }} />
+                      {getLabel('decline')}
+                    </ChatMenuButton>
+                  </>
+              )}
+
+              {/* 예약/예약취소 */}
+              {(isPending || isReserved) ? (
                   (isBuyer || isSeller) && (
                       <ChatMenuButton
                           onClick={handleCancelReserve}
@@ -1198,7 +1428,7 @@ const ChatRoom = () => {
                   )
               )}
 
-              {/* ✅ 거래 완료 버튼: 판매자 전용, 예약 상태에서만 활성화 */}
+              {/* 거래 완료(판매자 전용) */}
               {isSeller && (
                   <ChatMenuButton
                       onClick={handleComplete}
@@ -1244,15 +1474,54 @@ const ChatRoom = () => {
           {/* 신고 모달 */}
           {showReportModal && (
               <ModalOverlay>
-                <ModalBox as="form" onSubmit={(e) => { e.preventDefault(); if (!reportReason) return; setShowReportModal(false); setShowReportExitModal(true); }}>
+                <ModalBox as="form" onSubmit={handleReportSubmit}>
                   <ModalTitle>신고 사유를 선택하세요</ModalTitle>
-                  <ReportRadio><RadioInput type="radio" name="report" value="욕설/비방" checked={reportReason === '욕설/비방'} onChange={e => setReportReason(e.target.value)} />욕설/비방</ReportRadio>
-                  <ReportRadio><RadioInput type="radio" name="report" value="사기/허위매물" checked={reportReason === '사기/허위매물'} onChange={e => setReportReason(e.target.value)} />사기/허위매물</ReportRadio>
-                  <ReportRadio><RadioInput type="radio" name="report" value="스팸/광고" checked={reportReason === '스팸/광고'} onChange={e => setReportReason(e.target.value)} />스팸/광고</ReportRadio>
-                  <ReportRadio><RadioInput type="radio" name="report" value="기타" checked={reportReason === '기타'} onChange={e => setReportReason(e.target.value)} />기타</ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="욕설/비방"
+                                checked={reportReason === '욕설/비방'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    욕설/비방
+                  </ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="사기/허위매물"
+                                checked={reportReason === '사기/허위매물'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    사기/허위매물
+                  </ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="스팸/광고"
+                                checked={reportReason === '스팸/광고'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    스팸/광고
+                  </ReportRadio>
+
+                  <ReportRadio>
+                    <RadioInput type="radio" name="report" value="기타"
+                                checked={reportReason === '기타'}
+                                onChange={e => setReportReason(e.target.value)} />
+                    기타
+                  </ReportRadio>
+
+                  {/* ✅ '기타' 선택 시 상세 사유 입력 */}
+                  {reportReason === '기타' && (
+                      <ModalTextarea
+                          value={reportEtcText}
+                          onChange={e => setReportEtcText(e.target.value)}
+                          placeholder="자세한 신고 사유를 입력해주세요."
+                      />
+                  )}
+
                   <ModalActions>
                     <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
-                    <ModalButton type="submit" disabled={!reportReason}>제출</ModalButton>
+                    <ModalButton
+                        type="submit"
+                        disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}
+                    >
+                      제출
+                    </ModalButton>
                   </ModalActions>
                 </ModalBox>
               </ModalOverlay>
@@ -1271,7 +1540,7 @@ const ChatRoom = () => {
               </ModalOverlay>
           )}
 
-          {/* ✅ 스마트 예약 모달 */}
+          {/* 스마트 예약 모달 */}
           {showReserveModal && (
               <ModalOverlay>
                 <ReserveModalBox>
@@ -1292,7 +1561,7 @@ const ChatRoom = () => {
                     ><FaSubway/> 교외</button>
                   </div>
 
-                  {/* 판매자 설정 위치 노출 */}
+                  {/* 판매자 설정 위치 */}
                   <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
                     <div style={{fontWeight:800, marginBottom:6}}>판매자 설정 위치</div>
                     {meetType==='on' ? (
@@ -1311,7 +1580,7 @@ const ChatRoom = () => {
                   </div>
 
                   {/* 교내 / 교외 입력 + 중간지점 추천 */}
-                  {meetType==='on' ? (
+                  {meetType === 'on' ? (
                       <>
                         <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
                         <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
@@ -1326,16 +1595,21 @@ const ChatRoom = () => {
                             ))}
                           </select>
 
-                          <button type="button" onClick={()=>{
-                            if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
-                            if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
-                            const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
-                            if(!r) return alert('경로를 찾을 수 없습니다.');
-                            setCampusSuggest(r);
-                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
+                                if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
+                                const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
+                                if(!r) return alert('경로를 찾을 수 없습니다.');
+                                setCampusSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
                             <FaTrophy/> 중간지점 추천
                           </button>
                         </div>
+
                         {campusSuggest && (
                             <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
                               <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
@@ -1365,16 +1639,21 @@ const ChatRoom = () => {
                             <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
                             {(buyerLine ? getUniqueStations(buyerLine) : []).map(st => <option key={st} value={st}>{st}</option>)}
                           </select>
-                          <button type="button" onClick={()=>{
-                            if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
-                            if(!buyerStation) return alert('구매자 역을 선택하세요');
-                            const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
-                            if(!r) return alert('경로를 찾을 수 없습니다.');
-                            setOffSuggest(r);
-                          }} style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}>
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
+                                if(!buyerStation) return alert('구매자 역을 선택하세요');
+                                const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
+                                if(!r) return alert('경로를 찾을 수 없습니다.');
+                                setOffSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
                             <FaTrophy/> 중간역 추천
                           </button>
                         </div>
+
                         {offSuggest && (
                             <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
                               <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
@@ -1392,7 +1671,7 @@ const ChatRoom = () => {
                       </>
                   )}
 
-                  {/* 선택된 장소 미리보기 */}
+                  {/* 선택된 장소 */}
                   <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
                     <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> 선택된 장소</div>
                     <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || '아직 선택되지 않았습니다.'}</div>
@@ -1430,7 +1709,7 @@ const ChatRoom = () => {
 
                   <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
                     <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
-                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 확정</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 요청 보내기</ModalButton>
                     <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
                   </div>
 
@@ -1444,7 +1723,7 @@ const ChatRoom = () => {
 
                   {reserveConfirmed && (
                       <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
-                        예약이 확정되었습니다!
+                        예약 요청이 전송되었습니다! 판매자의 수락을 기다려주세요.
                       </div>
                   )}
                 </ReserveModalBox>
@@ -1558,12 +1837,10 @@ const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
 
 /* --------------------------------- 비속어 --------------------------------- */
 function detectProfanity(text) {
-  const profanityList = [
-    '씨발','개새끼','병신','미친','바보','멍청이','돌아이','등신',
-    'fuck','shit','bitch','asshole','damn','hell'
-  ];
-  const lowerText = text.toLowerCase();
-  return profanityList.some(word => lowerText.includes(word));
+  if (!text) return false;
+  const bad = ['씨발','개새끼','병신','미친','fuck','shit','bitch','asshole','damn','hell'];
+  const s = String(text).toLowerCase();
+  return bad.some(w => s.includes(w));
 }
 
 export default ChatRoom;
