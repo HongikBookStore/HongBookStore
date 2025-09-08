@@ -4,6 +4,7 @@ import com.hongik.books.domain.wanted.dto.*;
 import com.hongik.books.domain.wanted.service.WantedService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import jakarta.validation.Valid;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,7 +38,7 @@ public class WantedController {
     @PostMapping
     public ResponseEntity<Long> create(
             @RequestHeader("X-User-Id") Long userId,  // 프로젝트 인증 방식에 맞게 교체 가능
-            @RequestBody WantedCreateRequestDTO dto
+            @RequestBody @Valid WantedCreateRequestDTO dto
     ) {
         Long id = wantedService.create(userId, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(id);
@@ -47,7 +48,7 @@ public class WantedController {
     public ResponseEntity<Void> update(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long id,
-            @RequestBody WantedUpdateRequestDTO dto
+            @RequestBody @Valid WantedUpdateRequestDTO dto
     ) {
         wantedService.update(userId, id, dto);
         return ResponseEntity.noContent().build();

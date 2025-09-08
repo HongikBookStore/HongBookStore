@@ -9,6 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.cloud.storage.Storage;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.UUID;
 
 /**
@@ -64,5 +67,60 @@ public class GcpStorageUtil {
 
         // BlobId를 사용하여 GCP에서 해당 객체를 삭제
         storage.delete(BlobId.of(bucketName, objectName));
+    }
+
+    /**
+     * 외부 URL에서 이미지를 다운로드해 GCP Cloud Storage에 업로드하고 공개 URL을 반환
+     * @param imageUrl 외부 이미지 URL (ex. OAuth provider photo URL)
+     * @param directory 업로드 디렉터리 (ex. "profile-images")
+     * @return 업로드된 GCS 공개 URL
+     */
+    public String uploadImageFromUrl(String imageUrl, String directory) throws IOException {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            throw new IOException("Empty image URL");
+        }
+
+        URL url = new URL(imageUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(10000);
+        conn.setInstanceFollowRedirects(true);
+        conn.setRequestProperty("User-Agent", "HongBookStore/1.0");
+        int code = conn.getResponseCode();
+        if (code >= 300) {
+            throw new IOException("Failed to fetch image: HTTP " + code);
+        }
+
+        String contentType = conn.getContentType();
+        String ext = guessExtension(imageUrl, contentType);
+        String uniqueFileName = UUID.randomUUID() + ext;
+        String objectName = directory + "/" + uniqueFileName;
+
+        try (InputStream in = conn.getInputStream()) {
+            BlobInfo blobInfo = BlobInfo.newBuilder(bucketName, objectName)
+                    .setContentType(contentType != null ? contentType : "application/octet-stream")
+                    .build();
+            storage.createFrom(blobInfo, in);
+        }
+
+        return "https://storage.googleapis.com/" + bucketName + "/" + objectName;
+    }
+
+    private String guessExtension(String url, String contentType) {
+        if (contentType != null) {
+            // 간단 매핑
+            if (contentType.contains("png")) return ".png";
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) return ".jpg";
+            if (contentType.contains("gif")) return ".gif";
+            if (contentType.contains("webp")) return ".webp";
+        }
+        int q = url.indexOf('?');
+        String path = q > 0 ? url.substring(0, q) : url;
+        int dot = path.lastIndexOf('.');
+        if (dot > 0 && dot < path.length() - 1) {
+            String ext = path.substring(dot).toLowerCase();
+            if (ext.length() <= 5) return ext; // .png/.jpg 등
+        }
+        return "";
     }
 }

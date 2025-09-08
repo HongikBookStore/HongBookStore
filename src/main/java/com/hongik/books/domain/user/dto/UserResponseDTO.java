@@ -5,5 +5,7 @@ public record UserResponseDTO(
         String username,
         String email,
         boolean studentVerified,
-        String univEmail) {
+        String univEmail,
+        String profileImageUrl
+) {
 }

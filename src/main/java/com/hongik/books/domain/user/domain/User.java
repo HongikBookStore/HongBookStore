@@ -17,7 +17,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email; // 소셜 로그인 제공자로부터 받은 이메일, 주요 식별자 역할
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 25, unique = true)
     private String username; // '로그인 아이디'가 아닌 '닉네임'으로 사용
 
     private String profileImagePath; // 프로필 이미지 경로
@@ -55,11 +55,16 @@ public class User {
         }
     }
 
-    // 소셜 로그인 시마다 최신 프로필 정보(이름, 프로필 사진)를 반영하기 위해 사용.
+    // 소셜 로그인 시 닉네임은 변경하지 않고, 프로필 이미지는 이미 설정되어 있지 않은 경우에만 반영
     public User updateOAuthInfo(String name, String picture) {
-        this.username = name;
-        this.profileImagePath = picture;
+        if ((this.profileImagePath == null || this.profileImagePath.isBlank()) && picture != null && !picture.isBlank()) {
+            this.profileImagePath = picture;
+        }
         return this;
+    }
+
+    public void setProfileImagePath(String url) {
+        this.profileImagePath = url;
     }
 
     /**

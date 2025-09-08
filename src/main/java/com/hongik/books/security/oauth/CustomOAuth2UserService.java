@@ -5,6 +5,7 @@ import com.hongik.books.security.oauth.info.OAuth2UserInfoFactory;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.domain.UserRole;
 import com.hongik.books.domain.user.repository.UserRepository;
+import com.hongik.books.common.util.GcpStorageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,6 +26,7 @@ import java.util.Collections;
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final UserRepository userRepository;
+    private final GcpStorageUtil gcpStorageUtil;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -62,9 +64,16 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private User saveOrUpdateUser(OAuth2UserInfo userInfo) {
         // 이메일로 사용자를 찾기
         User user = userRepository.findByEmail(userInfo.getEmail())
-                // 이미 가입된 회원이면, 이름이나 프로필 사진 등이 변경되었을 수 있으므로 업데이트합니다.
-                .map(entity -> entity.updateOAuthInfo(userInfo.getName(), userInfo.getPicture()))
-                // 가입되지 않은 회원이면, 새로 User 엔티티를 생성합니다.
+                .map(entity -> {
+                    // 기존 유저: 닉네임은 유지, 프로필 이미지가 비어있다면 provider 이미지를 GCS로 업로드 후 세팅
+                    if ((entity.getProfileImagePath() == null || entity.getProfileImagePath().isBlank())
+                            && userInfo.getPicture() != null && !userInfo.getPicture().isBlank()) {
+                        String gcs = tryUploadProviderImage(userInfo.getPicture());
+                        if (gcs != null) entity.setProfileImagePath(gcs);
+                    }
+                    // 이름/실명으로 닉네임을 덮어쓰지 않음
+                    return entity;
+                })
                 .orElseGet(() -> createNewUser(userInfo));
 
         return userRepository.save(user); // 저장 후 User 엔티티를 반환
@@ -77,13 +86,59 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
      */
     private User createNewUser(OAuth2UserInfo userInfo) {
         log.info("신규 회원가입을 시작합니다: {}", userInfo.getEmail());
+        String email = userInfo.getEmail();
+        String baseName = deriveNicknameFromEmail(email);
+        String uniqueName = ensureUniqueUsername(baseName);
+        String gcsImage = tryUploadProviderImage(userInfo.getPicture());
         return User.builder()
-                .username(userInfo.getName())
+                .username(uniqueName)
                 .email(userInfo.getEmail())
-                .profileImagePath(userInfo.getPicture())
+                .profileImagePath(gcsImage)
                 .role(UserRole.USER) // 기본 역할
                 .studentVerified(false) // 재학생 인증은 아직 안 된 상태
                 .build();
     }
-}
 
+    // 사용자명이 중복일 경우 -1, -2 ... 식으로 접미사를 붙여 고유화
+    private String ensureUniqueUsername(String base) {
+        String candidate = (base == null || base.isBlank()) ? "user" : base.trim();
+        int i = 0;
+        while (userRepository.existsByUsername(candidate)) {
+            i++;
+            String suffix = "-" + i;
+            int maxLen = 50; // User.username 컬럼 길이
+            int allowed = Math.max(1, maxLen - suffix.length());
+            String head = candidate.length() > allowed ? candidate.substring(0, allowed) : candidate;
+            candidate = head + suffix;
+            if (i > 9999) break; // 비정상 루프 보호
+        }
+        return candidate;
+    }
+
+    private String safeTrim(String s, int maxLen) {
+        if (s == null) return "";
+        String t = s.trim();
+        return t.length() > maxLen ? t.substring(0, maxLen) : t;
+    }
+
+    private String deriveNicknameFromEmail(String email) {
+        String fallback = "user";
+        if (email == null || email.isBlank() || !email.contains("@")) return fallback;
+        String local = email.substring(0, email.indexOf('@'));
+        // 허용 문자만 남기고, 빈 값이면 fallback
+        String sanitized = local.replaceAll("[^a-zA-Z0-9._-]", "");
+        if (sanitized.isBlank()) sanitized = fallback;
+        // 길이 제한 고려해 트림
+        return safeTrim(sanitized, 40);
+    }
+
+    private String tryUploadProviderImage(String providerUrl) {
+        if (providerUrl == null || providerUrl.isBlank()) return null;
+        try {
+            return gcpStorageUtil.uploadImageFromUrl(providerUrl, "profile-images");
+        } catch (Exception e) {
+            log.warn("Failed to upload provider image to GCS: {}", e.getMessage());
+            return null;
+        }
+    }
+}

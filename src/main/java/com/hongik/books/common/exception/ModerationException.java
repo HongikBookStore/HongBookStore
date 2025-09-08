@@ -1,5 +1,8 @@
 package com.hongik.books.common.exception;
 
+import lombok.Getter;
+
+@Getter
 public class ModerationException extends RuntimeException {
     private final String field;
     private final String predictionLevel;
@@ -16,10 +19,5 @@ public class ModerationException extends RuntimeException {
         this.reason = reason;
     }
 
-    public String getField() { return field; }
-    public String getPredictionLevel() { return predictionLevel; }
-    public Double getMalicious() { return malicious; }
-    public Double getClean() { return clean; }
-    public String getReason() { return reason; }
 }
 

@@ -10,6 +10,8 @@ export const AuthCtx = createContext({
   isLoading: true, // 사용자 정보를 불러오는 중인지 확인하는 상태
   login: (token) => {},
   logout: async () => {},
+  refreshUser: async () => {},
+  updateUser: (partial) => {},
 });
 
 export function AuthProvider({ children }) {
@@ -32,9 +34,14 @@ export function AuthProvider({ children }) {
       if (token) {
         setAuthHeader(token); // 헤더 설정
         try {
-          const userData = await getMyInfo();
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData)); // 추가!
+          const raw = await getMyInfo();
+          const normalized = {
+            ...raw,
+            // 호환성: 헤더 등에서 `profileImage`를 참조하므로 alias 제공
+            profileImage: raw?.profileImage ?? raw?.profileImageUrl ?? raw?.profileImagePath ?? null,
+          };
+          setUser(normalized);
+          localStorage.setItem('user', JSON.stringify(normalized));
         }  catch (error) {
           // 토큰이 유효하지 않은 경우 등...
           console.error("자동 로그인 실패. 토큰을 삭제합니다.", error);
@@ -64,10 +71,52 @@ export function AuthProvider({ children }) {
     try {
       await apiLogout();
     } finally {
+      try {
+        const uid = (user && user.id) ? String(user.id) : null;
+        if (uid) {
+          localStorage.removeItem(`userLocations:${uid}`);
+          localStorage.removeItem(`userLocation:${uid}`);
+        }
+        // 과거 공용 키가 남아있을 수 있으므로 함께 정리
+        localStorage.removeItem('userLocations');
+        localStorage.removeItem('userLocation');
+      } catch (_) {}
       setToken(null);
       setUser(null);
       localStorage.removeItem('user'); // 추가!
     }
+  };
+
+  // 수동 새로고침
+  const refreshUser = async () => {
+    if (!token) return;
+    try {
+      const raw = await getMyInfo();
+      const normalized = {
+        ...raw,
+        profileImage: raw?.profileImage ?? raw?.profileImageUrl ?? raw?.profileImagePath ?? null,
+      };
+      setUser(normalized);
+      localStorage.setItem('user', JSON.stringify(normalized));
+    } catch (e) {
+      console.error('사용자 정보 새로고침 실패', e);
+    }
+  };
+
+  // 부분 업데이트(닉네임/이미지 등 클라이언트 선반영)
+  const updateUser = (partial) => {
+    setUser((prev) => {
+      const next = { ...(prev || {}), ...(partial || {}) };
+      // alias 동기화
+      if (partial?.profileImageUrl && !partial?.profileImage) {
+        next.profileImage = partial.profileImageUrl;
+      }
+      if (partial?.profileImage && !partial?.profileImageUrl) {
+        next.profileImageUrl = partial.profileImage;
+      }
+      try { localStorage.setItem('user', JSON.stringify(next)); } catch (_) {}
+      return next;
+    });
   };
 
   const contextValue = {
@@ -77,6 +126,8 @@ export function AuthProvider({ children }) {
     isLoading,
     login,
     logout,
+    refreshUser,
+    updateUser,
   };
 
   return (

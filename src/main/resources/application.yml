@@ -8,6 +8,20 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+  ### JavaMailSender ###
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true # SMTP 서버에 로그인할 때 인증을 사용할지를 결정
+          starttls:
+            enable: true # TLS를 사용할지를 결정
+      debug: true # 디버그 모드 활성화 (선택 사항)
+
   ### OAuth ###
   security:
     oauth2:
@@ -97,13 +111,7 @@ spring:
       # 여러 장 업로드 시 총합이 10MB를 넘어서 실패하는 이슈 대응
       max-request-size: 30MB
 
-### Resend ###
-resend:
-  api-key: ${RESEND_API_KEY}
-  from: ${RESEND_FROM_EMAIL}
-  base-url: https://api.resend.com
-
-### Email Brand/Verification ###
+### Email From ###
 email:
   brand:
     name: HongBookStore
@@ -137,10 +145,6 @@ logging:
     type:
         descriptor:
         sql: trace
-
-### 프론트엔드 설정 ###
-frontend:
-  base-url: http://localhost:5173 # 로컬 개발 환경용 프론트엔드 주소
 
 ### Swagger ###
 springdoc:

@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+    boolean existsByUsername(String username);
 
     /**
      * 이메일 인증 토큰으로 사용자를 찾기

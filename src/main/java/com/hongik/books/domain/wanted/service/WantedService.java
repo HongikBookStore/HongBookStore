@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import com.hongik.books.moderation.ModerationPolicyProperties;
 import com.hongik.books.moderation.ModerationService;
 import org.springframework.data.domain.*;
+import org.springframework.util.StringUtils;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,6 @@ public class WantedService {
     private final WantedRepository wantedRepository;
     private final UserRepository userRepository;
     private final WantedCommentRepository wantedCommentRepository; // ✅ 추가
-    private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
     private final ModerationService moderationService;
     private final ModerationPolicyProperties moderationPolicy;
 
@@ -61,13 +61,18 @@ public class WantedService {
         // 정책 기반 유해 표현 검사 (title, content)
         var titleMode = moderationPolicy.getWanted().getTitle();
         var contentMode = moderationPolicy.getWanted().getContent();
-        moderationService.checkOrThrow(dto.getTitle(), titleMode, "title");
+        if (StringUtils.hasText(dto.getTitle())) {
+            moderationService.checkOrThrow(dto.getTitle(), titleMode, "title");
+        }
         var contentModeration = moderationService.checkOrThrow(dto.getContent(), contentMode, "content");
+
+        String safeTitle = deriveTitle(dto.getTitle(), dto.getContent());
+        String safeAuthor = deriveAuthor(dto.getAuthor());
 
         Wanted wanted = Wanted.builder()
                 .requester(requester)
-                .title(dto.getTitle())
-                .author(dto.getAuthor())
+                .title(safeTitle)
+                .author(safeAuthor)
                 .desiredCondition(dto.getCondition())
                 .price(dto.getPrice())
                 .category(dto.getCategory())
@@ -98,12 +103,16 @@ public class WantedService {
         // 정책 기반 유해 표현 검사 (title, content)
         var titleMode = moderationPolicy.getWanted().getTitle();
         var contentMode = moderationPolicy.getWanted().getContent();
-        moderationService.checkOrThrow(dto.getTitle(), titleMode, "title");
+        if (StringUtils.hasText(dto.getTitle())) {
+            moderationService.checkOrThrow(dto.getTitle(), titleMode, "title");
+        }
         var contentModeration = moderationService.checkOrThrow(dto.getContent(), contentMode, "content");
 
+        String safeTitle = deriveTitle(dto.getTitle(), dto.getContent());
+        String safeAuthor = deriveAuthor(dto.getAuthor());
         w.update(
-                dto.getTitle(),
-                dto.getAuthor(),
+                safeTitle,
+                safeAuthor,
                 dto.getCondition(),
                 dto.getPrice(),
                 dto.getCategory(),
@@ -123,6 +132,20 @@ public class WantedService {
 
     private String emptyToNull(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    private String deriveTitle(String title, String content) {
+        if (StringUtils.hasText(title)) return title.trim();
+        if (StringUtils.hasText(content)) {
+            String t = content.strip();
+            t = t.replaceAll("\n+", " ");
+            return t.length() > 30 ? t.substring(0, 30) + "…" : t;
+        }
+        return "구해요 요청"; // 최종 폴백
+    }
+
+    private String deriveAuthor(String author) {
+        return StringUtils.hasText(author) ? author.trim() : "미상";
     }
 
     @Transactional

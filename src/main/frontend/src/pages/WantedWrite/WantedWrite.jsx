@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { FaBook, FaArrowLeft, FaSearch } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import api from '../../lib/api';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
 
@@ -90,6 +91,21 @@ const normalizeBook = (doc) => ({
   isbn: pickIsbn(doc?.isbn),
   thumbnail: doc?.thumbnail ?? '',
 });
+
+// 가격 한도(백엔드와 통일)
+const PRICE_MIN = 0;
+const PRICE_MAX = 1_000_000_000;
+const clampInt = (val, min, max) => {
+  if (val === '' || val === null || typeof val === 'undefined') return '';
+  let n = Math.floor(Number(val));
+  if (!Number.isFinite(n)) return '';
+  if (n < min) n = min;
+  if (n > max) n = max;
+  return String(n);
+};
+
+// 카테고리 트리: 서버에서 동적으로 로드 (폴백은 기존 상수)
+const mapServerTree = (nodes) => Array.isArray(nodes) ? nodes.map(n => ({ name: n.name, children: mapServerTree(n.children || []) })) : [];
 
 /* -------------------- styled -------------------- */
 const WriteContainer = styled.div`
@@ -321,19 +337,25 @@ export default function WantedWrite() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let next = value;
+    if (name === 'price') {
+      next = clampInt(value, PRICE_MIN, PRICE_MAX);
+    }
+    setFormData(prev => ({ ...prev, [name]: next }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleMajorChange = (e) => {
     const mainCategory = e.target.value;
-    const firstSub = mainCategory ? Object.keys(CATEGORIES[mainCategory])[0] : '';
-    const firstDetail = mainCategory && firstSub ? CATEGORIES[mainCategory][firstSub][0] : '';
+    const mainNode = (catTree || []).find(m => m.name === mainCategory);
+    const firstSub = mainNode?.children?.[0]?.name || '';
+    const firstDetail = firstSub ? (mainNode.children.find(s => s.name === firstSub)?.children?.[0]?.name || '') : '';
     setFormData(prev => ({ ...prev, mainCategory, subCategory: firstSub || '', detailCategory: firstDetail || '' }));
   };
   const handleSubChange = (e) => {
     const subCategory = e.target.value;
-    const firstDetail = formData.mainCategory && subCategory ? CATEGORIES[formData.mainCategory][subCategory][0] : '';
+    const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
+    const firstDetail = subCategory ? (mainNode?.children?.find(s => s.name === subCategory)?.children?.[0]?.name || '') : '';
     setFormData(prev => ({ ...prev, subCategory, detailCategory: firstDetail || '' }));
   };
   const handleDetailChange = (e) => { setFormData(prev => ({ ...prev, detailCategory: e.target.value })); };
@@ -375,18 +397,16 @@ export default function WantedWrite() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (inputType === 'search') {
-      if (!formData.title.trim()) newErrors.title = '책을 검색해서 선택해줘! 📚';
-      if (!formData.author.trim()) newErrors.author = '저자 정보가 필요해! 📘';
-      // isbn은 현재 서버 전송은 안 하지만, 있으면 좋음
-    } else {
-      if (!formData.title.trim()) newErrors.title = '제목을 입력해주세요';
-      if (!formData.author.trim()) newErrors.author = '저자를 입력해주세요';
+    // 제목/본문 최소 입력 보장: 두 항목 모두 비어있으면 에러
+    if (!formData.title.trim() && !formData.content.trim()) {
+      newErrors.title = '제목 또는 요청 내용을 입력해주세요';
     }
 
     if (!formData.condition) newErrors.condition = '상태를 선택해주세요';
     const priceNum = Number(formData.price);
-    if (!priceNum || priceNum <= 0) newErrors.price = '희망 가격을 입력해주세요';
+    if (formData.price === '' || Number.isNaN(priceNum) || priceNum < PRICE_MIN || priceNum > PRICE_MAX) {
+      newErrors.price = `희망 가격은 ${PRICE_MIN.toLocaleString()}~${PRICE_MAX.toLocaleString()}원 범위로 입력해주세요`;
+    }
     if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = '카테고리를 선택해주세요';
 
     setErrors(newErrors);
@@ -413,7 +433,7 @@ export default function WantedWrite() {
 
     const basePayload = {
       title: formData.title.trim(),
-      author: formData.author.trim(),
+      author: (formData.author || '').trim(),
       condition: formData.condition,
       price: Number(formData.price),
       category: topCategory,
@@ -634,7 +654,9 @@ export default function WantedWrite() {
                     value={formData.price}
                     onChange={handleInputChange}
                     placeholder="희망 가격을 입력해주세요"
-                    min="0"
+                    min={PRICE_MIN}
+                    max={PRICE_MAX}
+                    step={1}
                 />
                 {errors.price && <ErrorMessage>{errors.price}</ErrorMessage>}
               </FormGroup>
@@ -644,24 +666,38 @@ export default function WantedWrite() {
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <Select value={formData.mainCategory} onChange={handleMajorChange}>
                     <option value="">대분류</option>
-                    {Object.keys(CATEGORIES).map(main => (
+                    {(catTree && catTree.length
+                        ? catTree.map(n => n.name)
+                        : Object.keys(CATEGORIES)
+                    ).map(main => (
                         <option key={main} value={main}>{main}</option>
                     ))}
                   </Select>
                   {formData.mainCategory && (
                       <Select value={formData.subCategory} onChange={handleSubChange}>
                         <option value="">중분류</option>
-                        {Object.keys(CATEGORIES[formData.mainCategory]).map(sub => (
-                            <option key={sub} value={sub}>{sub}</option>
-                        ))}
+                        {(() => {
+                          const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
+                          const subs = (mainNode?.children || []).map(s => s.name);
+                          const fallback = Object.keys(CATEGORIES[formData.mainCategory] || {});
+                          return (subs.length ? subs : fallback).map(sub => (
+                              <option key={sub} value={sub}>{sub}</option>
+                          ));
+                        })()}
                       </Select>
                   )}
-                  {formData.subCategory && CATEGORIES[formData.mainCategory]?.[formData.subCategory]?.length > 0 && (
+                  {formData.subCategory && (
                       <Select value={formData.detailCategory} onChange={handleDetailChange}>
                         <option value="">소분류</option>
-                        {CATEGORIES[formData.mainCategory][formData.subCategory].map(detail => (
-                            <option key={detail} value={detail}>{detail}</option>
-                        ))}
+                        {(() => {
+                          const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
+                          const subNode = mainNode?.children?.find(s => s.name === formData.subCategory);
+                          const details = (subNode?.children || []).map(d => d.name);
+                          const fallback = (CATEGORIES[formData.mainCategory]?.[formData.subCategory] || []);
+                          return (details.length ? details : fallback).map(detail => (
+                              <option key={detail} value={detail}>{detail}</option>
+                          ));
+                        })()}
                       </Select>
                   )}
                 </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef, memo, useState } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, memo } from 'react';
 import styled from 'styled-components';
 
 // 스크립트가 중복 로드되는 것을 방지하기 위한 전역 플래그
@@ -20,6 +20,14 @@ const NaverMapComponent = forwardRef(({
     const userMarkerRef = useRef(null);
     const routeLineRef = useRef(null);
     const routeMarkersRef = useRef([]);
+    const selectionMarkerRef = useRef(null);
+    const clickListenerRef = useRef(null);
+    const onMapClickRef = useRef(onMapClick);
+
+    // 최신 onMapClick 콜백을 보관해 비동기 로딩 후에도 참조되도록 함
+    useEffect(() => {
+        onMapClickRef.current = onMapClick;
+    }, [onMapClick]);
 
 
     const getCategoryIcon = (categoryId) => {
@@ -60,61 +68,90 @@ const NaverMapComponent = forwardRef(({
 
     // 지도 초기화 로직 (최초 1회만 실행)
     useEffect(() => {
-        if (isNaverMapScriptLoaded || !mapElementRef.current) {
-            return;
-        }
+        if (!mapElementRef.current) return;
 
-        const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
-        console.log('Naver Maps Client ID:', clientId); // 디버깅용
-        if (!clientId) {
-            console.error("Naver Maps Client ID가 .env 파일에 설정되지 않았습니다.");
-            return;
-        }
+        const initMap = () => {
+            if (mapInstanceRef.current || !window.naver || !window.naver.maps) return;
+            const mapOptions = {
+                center: new window.naver.maps.LatLng(37.5665, 126.978),
+                zoom: 15,
+            };
+            const map = new window.naver.maps.Map(mapElementRef.current, mapOptions);
+            mapInstanceRef.current = map;
 
-        isNaverMapScriptLoaded = true;
-
-        const script = document.createElement('script');
-        // 서브모듈 추가 및 타임아웃 설정
-        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
-        script.async = true;
-        
-        script.onerror = (error) => {
-            console.error('네이버 지도 스크립트 로드에 실패했습니다:', error);
-            console.error('Client ID:', clientId);
-            console.error('현재 도메인:', window.location.hostname);
-            isNaverMapScriptLoaded = false;
+            // 지도가 준비되면 클릭 리스너 바로 연결 (스크립트 지연 로딩 대비)
+            try {
+                if (clickListenerRef.current) {
+                    window.naver.maps.Event.removeListener(clickListenerRef.current);
+                    clickListenerRef.current = null;
+                }
+                clickListenerRef.current = window.naver.maps.Event.addListener(map, 'click', (e) => {
+                    const lat = e.coord.lat();
+                    const lng = e.coord.lng();
+                    if (!selectionMarkerRef.current) {
+                        selectionMarkerRef.current = new window.naver.maps.Marker({
+                            position: new window.naver.maps.LatLng(lat, lng),
+                            map,
+                            icon: { content: '<div style="transform:translate(-50%,-100%);">📍</div>' }
+                        });
+                    } else {
+                        selectionMarkerRef.current.setPosition(new window.naver.maps.LatLng(lat, lng));
+                        selectionMarkerRef.current.setMap(map);
+                    }
+                    if (onMapClickRef.current) onMapClickRef.current(lat, lng);
+                });
+            } catch (_) {}
         };
-        script.onload = () => {
-            if (window.naver && window.naver.maps) {
-                const mapOptions = {
-                    center: new window.naver.maps.LatLng(37.5665, 126.978),
-                    zoom: 15,
-                };
-                const map = new window.naver.maps.Map(mapElementRef.current, mapOptions);
-                mapInstanceRef.current = map;
-            } else {
-                console.error('window.naver.maps를 사용할 수 없습니다.');
-                isNaverMapScriptLoaded = false;
+
+        if (window.naver && window.naver.maps) {
+            initMap();
+        } else {
+            const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+            if (!clientId) {
+                console.error('Naver Maps Client ID가 .env 파일에 설정되지 않았습니다.');
+                return;
             }
+            if (!isNaverMapScriptLoaded) {
+                isNaverMapScriptLoaded = true;
+                const script = document.createElement('script');
+                script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
+                script.async = true;
+                script.onerror = (error) => {
+                    console.error('네이버 지도 스크립트 로드에 실패했습니다:', error);
+                    isNaverMapScriptLoaded = false;
+                };
+                script.onload = () => initMap();
+                document.head.appendChild(script);
+            } else {
+                // 스크립트 로딩 중이거나 이미 로드됨: 준비될 때까지 대기
+                const timer = setInterval(() => {
+                    if (window.naver && window.naver.maps) {
+                        clearInterval(timer);
+                        initMap();
+                    }
+                }, 50);
+                return () => clearInterval(timer);
+            }
+        }
+        return () => {
+            // 언마운트 시 리스너 정리
+            try {
+                if (clickListenerRef.current) {
+                    window.naver.maps.Event.removeListener(clickListenerRef.current);
+                    clickListenerRef.current = null;
+                }
+            } catch (_) {}
         };
-
-        document.head.appendChild(script);
-
     }, []);
 
-    // 지도 클릭 이벤트 리스너 설정
+    // 기존 의존성 문제로 클릭 리스너가 누락되는 것을 방지하기 위해
+    // 초기화 이펙트에서 리스너를 연결하도록 변경(위 로직).
+
+    // 외부에서 전달한 선택 좌표(pin) 반영 (선택사항)
     useEffect(() => {
-        if (!mapInstanceRef.current || !onMapClick) return;
-
-        const listener = window.naver.maps.Event.addListener(mapInstanceRef.current, 'click', (e) => {
-            // 지도 클릭 시 항상 좌표 정보를 전달
-            onMapClick(e.coord.lat(), e.coord.lng());
-        });
-
-        return () => {
-            window.naver.maps.Event.removeListener(listener);
-        };
-    }, [onMapClick]);
+        if (!mapInstanceRef.current || !window.naver || !window.naver.maps) return;
+        // prop으로 제어하려면 향후 pinLatLng 지원 추가 가능
+    }, []);
 
     // 장소 마커 업데이트 로직
     useEffect(() => {
