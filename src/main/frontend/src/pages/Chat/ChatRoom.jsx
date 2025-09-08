@@ -991,7 +991,7 @@ const ChatRoom = () => {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleRetryClick = (messageId) => { setRetryMessageId(messageId); setShowRetryModal(true); };
-  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false); /* TODO 재전송 구현 */ setRetryMessageId(null);} };
+  const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false);  setRetryMessageId(null);} };
   const handleRetryCancel = () => { setShowRetryModal(false); setRetryMessageId(null); };
 
   const handleMessageChange = (e) => {
