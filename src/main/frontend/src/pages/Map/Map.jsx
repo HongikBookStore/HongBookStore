@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaSearch, FaMapMarkerAlt, FaChevronDown, FaSyncAlt } from 'react-icons/fa';
-import { IoMdClose } from 'react-icons/io';
+import { FaPlus, FaSearch, FaMapMarkerAlt, FaChevronDown, FaSyncAlt, FaTrash, FaTimes, FaMinus, FaTrashAlt } from 'react-icons/fa';
 import axios from 'axios';
 
 import NaverMap from '../../components/NaverMap/Navermap';
@@ -551,7 +550,8 @@ const MapPage = () => {
                                 </div>
                               </PlaceMain>
                               <RemoveBtn title="카테고리에서 제거" onClick={() => handleRemovePlaceFromSelectedCategory(p.id)}>
-                                <IoMdClose />
+                                <FaTrashAlt />
+                                삭제
                               </RemoveBtn>
                             </PlaceItem>
                         );
@@ -603,7 +603,7 @@ const MapPage = () => {
               <SearchResultsTitle>
                 {isSearching ? '검색 중...' : `검색 결과 (${searchResults.length})`}
               </SearchResultsTitle>
-              <CloseSearchButton onClick={() => setShowSearchResults(false)}><IoMdClose /></CloseSearchButton>
+              <CloseSearchButton onClick={() => setShowSearchResults(false)}><FaTimes /></CloseSearchButton>
             </SearchResultsHeader>
             <SearchResultsList>
               {isSearching ? (
@@ -644,7 +644,7 @@ const MapPage = () => {
               <ModalContent>
                 <ModalHeader>
                   <h3>새 장소 추가</h3>
-                  <CloseButton onClick={() => setShowAddPlace(false)}><IoMdClose /></CloseButton>
+                  <CloseButton onClick={() => setShowAddPlace(false)}><FaTimes /></CloseButton>
                 </ModalHeader>
                 <ModalBody>
                   <Input
@@ -860,11 +860,36 @@ const PlaceMain = styled.div`
 `;
 
 const RemoveBtn = styled.button`
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 1px solid #e0e0e0; background: #fff; color: #666;
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #dc3545; 
+  background: #dc3545; 
+  color: #fff;
   cursor: pointer;
-  &:hover { background: #ffecec; color: #d00; border-color: #f5c2c7; }
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  &:hover { 
+    background: #c82333; 
+    border-color: #c82333;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
 `;
 
 const MapSearchInput = styled.input`
