@@ -257,6 +257,7 @@ export default function WantedWrite() {
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [catTree, setCatTree] = useState(null);
 
   const navigate = useNavigate();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();

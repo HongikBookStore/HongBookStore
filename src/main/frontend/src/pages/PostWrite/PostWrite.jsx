@@ -991,20 +991,16 @@ const PostWrite = () => {
       const expiryTime = DRAFT_EXPIRY_HOURS * 60 * 60 * 1000;
 
       if (draftAge < expiryTime) {
-        const shouldLoad = window.confirm('임시저장된 내용이 있어! 불러올까? 💾');
-        if (shouldLoad) {
-          const { timestamp, ...dataWithoutTimestamp } = draftData;
-          setFormData(prev => ({
-            ...prev,
-            ...dataWithoutTimestamp,
-          }));
-          if (draftData.images) {
-            setImages(draftData.images);
-          }
-          console.log('임시저장된 데이터 불러옴');
-        } else {
-          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        // 임시저장된 데이터가 있으면 자동으로 불러오기 (팝업 없이)
+        const { timestamp, ...dataWithoutTimestamp } = draftData;
+        setFormData(prev => ({
+          ...prev,
+          ...dataWithoutTimestamp,
+        }));
+        if (draftData.images) {
+          setImages(draftData.images);
         }
+        console.log('임시저장된 데이터 자동 불러옴');
       } else {
         localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
@@ -2032,7 +2028,7 @@ const PostWrite = () => {
                 </CancelButton>
 
                 {!isEdit && (
-                    <SaveDraftButton type="button" onClick={handleSaveDraft}>
+                    <SaveDraftButton type="button" onClick={handleSaveDraftAndExit}>
                       <FaSave /> 임시저장
                     </SaveDraftButton>
                 )}
