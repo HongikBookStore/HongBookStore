@@ -1564,59 +1564,6 @@ const MyPage = () => {
           </ModalOverlay>
         )}
         <SettingsSection>
-          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> 최근 본 게시글</h3>
-          {recentLoading ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>불러오는 중…</div>
-          ) : recentPosts.length === 0 ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>최근 본 게시글이 없습니다.</div>
-          ) : (
-            <RecentGrid>
-              {recentPosts.map(p => (
-                <RecentCard key={p.postId} onClick={() => openConfirm(p)}>
-                  <RecentThumb>
-                    {p.thumbnailUrl ? (
-                      <img src={p.thumbnailUrl} alt={p.postTitle} />
-                    ) : (
-                      <span>{p.postTitle}</span>
-                    )}
-                  </RecentThumb>
-                  <RecentTitle>{p.postTitle}</RecentTitle>
-                  <RecentMeta>
-                    <span>{(p.price ?? 0).toLocaleString()}원</span>
-                    <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
-                  </RecentMeta>
-                </RecentCard>
-              ))}
-            </RecentGrid>
-          )}
-        </SettingsSection>
-
-        {confirmPost && (
-          <ModalOverlay onClick={closeConfirm}>
-            <ModalBox onClick={(e) => e.stopPropagation()}>
-              <ModalHeader>게시글로 이동할까요?</ModalHeader>
-              <ModalBody>
-                <ModalThumb>
-                  {confirmPost.thumbnailUrl ? (
-                    <img src={confirmPost.thumbnailUrl} alt={confirmPost.postTitle} />
-                  ) : (
-                    <span>{confirmPost.postTitle}</span>
-                  )}
-                </ModalThumb>
-                <ModalInfo>
-                  <div className="title">{confirmPost.postTitle}</div>
-                  <div className="meta">{confirmPost.author}</div>
-                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}원</div>
-                </ModalInfo>
-              </ModalBody>
-              <ModalActions>
-                <ModalButton onClick={closeConfirm}>취소</ModalButton>
-                <ModalButton className="primary" onClick={goToPost}>이동</ModalButton>
-              </ModalActions>
-            </ModalBox>
-          </ModalOverlay>
-        )}
-        <SettingsSection>
           <h3>계정 정보</h3>
           <SettingsList>
             <SettingsItem>
