@@ -480,9 +480,6 @@ const MapPage = () => {
               <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
                 <FaSyncAlt /> {loadingDB ? '불러오는 중...' : '새로고침'}
               </AddButton>
-              <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
-                <FaSyncAlt /> {loadingDB ? '불러오는 중...' : '새로고침'}
-              </AddButton>
             </HeaderButtons>
 
             {!loadingCats && userCategories.length === 0 && (
