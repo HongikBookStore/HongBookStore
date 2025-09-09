@@ -144,31 +144,6 @@ const FooterSection = styled.div`
   }
 `;
 
-const FooterLink = styled(Link)`
-  color: var(--gray-600);
-  text-decoration: none;
-  transition: var(--transition-normal);
-  position: relative;
-  
-  &:hover {
-    color: var(--primary);
-  }
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background: var(--primary);
-    transition: var(--transition-normal);
-  }
-  
-  &:hover::after {
-    width: 100%;
-  }
-`;
 
 const SocialLinks = styled.div`
   display: flex;
