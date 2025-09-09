@@ -559,7 +559,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                             {newReview.photos.map((photo, index) => (
                                 <PhotoPreview key={index}>
                                   <PhotoPreviewImage src={photo} alt="업로드된 사진" />
-                                  <RemovePhotoButton onClick={() => handleRemovePhoto(index)}><FaTrash /></RemovePhotoButton>
+                                  <RemovePhotoButton onClick={() => handleRemovePhoto(index)}>×</RemovePhotoButton>
                                 </PhotoPreview>
                             ))}
                           </PhotoPreviewContainer>
@@ -840,9 +840,33 @@ const PhotoPreviewContainer = styled.div` display: flex; gap: 12px; margin-top: 
 const PhotoPreview = styled.div` position: relative; flex-shrink: 0; `;
 const PhotoPreviewImage = styled.img` width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #f0f0f0; `;
 const RemovePhotoButton = styled.button`
-  position: absolute; top: -6px; right: -6px; background: #dc3545; color: #fff; border: none; border-radius: 50%;
-  width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: background .2s ease; &:hover { background: #c82333; }
+  position: absolute; 
+  top: 2px; 
+  right: 2px; 
+  background: rgba(0, 0, 0, 0.7); 
+  color: #fff; 
+  border: none; 
+  border-radius: 50%;
+  width: 24px; 
+  height: 24px; 
+  font-size: 16px; 
+  font-weight: bold;
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  transition: all 0.2s ease; 
+  z-index: 10;
+  line-height: 1;
+  
+  &:hover { 
+    background: rgba(220, 53, 69, 0.9); 
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.9);
+  }
 `;
 
 const ReviewSubmitButton = styled.button`
