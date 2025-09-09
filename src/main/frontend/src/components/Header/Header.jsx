@@ -668,7 +668,7 @@ const Header = () => {
                         className={location.pathname === '/bookstore' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}
                     >
-                      나의 거래
+                      나의 책방
                     </NavLinkItem>
                     <NavLinkItem
                         to="/hongikmap"
@@ -754,7 +754,7 @@ const Header = () => {
                           {t('mypage')}
                         </DropdownItem>
                         <DropdownItem to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
-                          {t('나의 거래')}
+                          {t('나의 책방')}
                         </DropdownItem>
                         <LogoutButton onClick={handleLogout}>
                           {t('logout')}

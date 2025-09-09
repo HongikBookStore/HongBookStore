@@ -166,7 +166,7 @@ const Hero = () => {
       path: '/marketplace'
     },
     {
-      title: '나의 거래',
+      title: '나의 책방',
       description: '내가 등록한 책과 거래 내역을 관리하세요',
       path: '/bookstore'
     },
