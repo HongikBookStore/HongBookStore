@@ -731,11 +731,32 @@ export default function WantedWrite() {
             <BookSearchModal>
               <BookSearchContent>
                 <h3>📚 책 검색</h3>
+                
+                {/* ISBN 입력 가이드 */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+                  border: '1px solid #bbdefb',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  marginBottom: '16px',
+                  fontSize: '13px',
+                  color: '#1976d2'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px' }}>💡</span>
+                    <span>ISBN은 <strong>하이픈(-) 없이</strong> 숫자만 입력하세요</span>
+                  </div>
+                </div>
+                
                 <SearchInput
                     type="text"
                     placeholder="ISBN 또는 책 제목으로 검색하세요"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      // ISBN 입력 시 자동으로 하이픈 제거
+                      const value = e.target.value.replace(/-/g, '');
+                      setSearchQuery(value);
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
                 />
                 <button
