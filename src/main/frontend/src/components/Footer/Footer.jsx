@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { FaGithub, FaTwitter, FaInstagram, FaLinkedin, FaHeart } from 'react-icons/fa';
@@ -235,25 +234,6 @@ const Copyright = styled.p`
   text-align: center;
 `;
 
-const FooterNav = styled.nav`
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.1rem;
-`;
-
-const FooterNavLink = styled(Link)`
-  color: var(--gray-500);
-  text-decoration: none;
-  font-size: 0.85rem;
-  padding: 0.1rem 0.3rem;
-  border-radius: var(--radius-lg);
-  transition: background 0.2s, color 0.2s;
-  &:hover {
-    color: var(--primary);
-    background: var(--primary-50);
-  }
-`;
 
 const NewsletterSection = styled.div`
   background: rgba(255, 255, 255, 0.05);
@@ -330,12 +310,6 @@ const Footer = () => {
 
   return (
     <FooterContainer>
-      <FooterNav>
-        <FooterNavLink to="/terms">{t('termsOfService')}</FooterNavLink>
-        <FooterNavLink to="/privacy">{t('privacyPolicy')}</FooterNavLink>
-        <FooterNavLink to="/cookies">{t('cookiePolicy')}</FooterNavLink>
-        <FooterNavLink to="/accessibility">{t('accessibility')}</FooterNavLink>
-      </FooterNav>
       <Copyright>© {t('title')}. {t('allRightsReserved')}</Copyright>
     </FooterContainer>
   );
