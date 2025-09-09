@@ -824,7 +824,7 @@ const MyBookstore = () => {
 
   const handleSidebarMenu = (menu) => {
     switch(menu) {
-      case 'booksale':
+      case 'bookstore/add':
         navigate('/bookstore/add'); break;
       case 'wanted':
         navigate('/wanted'); break;

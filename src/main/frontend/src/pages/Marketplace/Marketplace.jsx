@@ -916,6 +916,26 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  // 사이드바 메뉴 핸들러
+  const handleSidebarMenu = (menu) => {
+    switch (menu) {
+      case 'bookstore/add':
+        navigate('/bookstore/add');
+        break;
+      case 'wanted':
+        navigate('/wanted');
+        break;
+      case 'mybookstore':
+        navigate('/bookstore');
+        break;
+      case 'chat':
+        navigate('/chat');
+        break;
+      default:
+        break;
+    }
+  };
+
   // API 데이터 상태
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(0);
@@ -1216,7 +1236,7 @@ const Marketplace = () => {
           <Description>선배들의 지식을 저렴하게 얻어보세요! 📚</Description>
         </Header>
         <PageWrapper>
-          <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
+          <SidebarMenu active={'bookstore/add'} onMenuClick={handleSidebarMenu} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <Controls>
               <SearchBar as="form" onSubmit={handleSearch}>

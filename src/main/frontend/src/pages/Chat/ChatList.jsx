@@ -572,7 +572,7 @@ const ChatListPage = () => {
 
   const handleSidebarMenu = (menu) => {
     switch (menu) {
-      case 'booksale': navigate('/bookstore/add'); break;
+      case 'bookstore/add': navigate('/bookstore/add'); break;
       case 'wanted': navigate('/wanted'); break;
       case 'mybookstore': navigate('/bookstore'); break;
       case 'chat': navigate('/chat'); break;
