@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
+import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton } from '../../components/ui';
 import axios from 'axios';
 
@@ -35,19 +35,18 @@ const pulse = keyframes`
 `;
 
 const MarketplaceContainer = styled.div`
-  padding: 8rem 2rem 4rem;
-  max-width: 1440px;
-  margin: 0 auto;
   width: 100%;
+  margin: 0 auto;
+  padding: 32px;
   box-sizing: border-box;
-  padding-top: 96px;
+  padding-top: 0;
   @media (max-width: 900px) {
-    padding-top: 72px;
+    padding: 16px 8px;
+    padding-top: 0;
   }
   @media (max-width: 600px) {
-    padding-top: 56px;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding: 8px 2px;
+    padding-top: 0;
   }
 `;
 
@@ -1230,14 +1229,14 @@ const Marketplace = () => {
   };
 
   return (
-      <MarketplaceContainer>
-        <Header>
-          <Title>책거래게시판</Title>
-          <Description>선배들의 지식을 저렴하게 얻어보세요! 📚</Description>
-        </Header>
-        <PageWrapper>
-          <SidebarMenu active={'bookstore/add'} onMenuClick={handleSidebarMenu} />
-          <div style={{ flex: 1, minWidth: 0 }}>
+    <PageWrapper>
+      <SidebarMenu active={'bookstore/add'} onMenuClick={handleSidebarMenu} />
+      <MainContent>
+        <MarketplaceContainer>
+          <Header>
+            <Title>책거래게시판</Title>
+            <Description>선배들의 지식을 저렴하게 얻어보세요! 📚</Description>
+          </Header>
             <Controls>
               <SearchBar as="form" onSubmit={handleSearch}>
                 <SearchIcon />
@@ -1383,9 +1382,9 @@ const Marketplace = () => {
                   🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
                 </div>
             )}
-          </div>
-        </PageWrapper>
-      </MarketplaceContainer>
+        </MarketplaceContainer>
+      </MainContent>
+    </PageWrapper>
   );
 };
 

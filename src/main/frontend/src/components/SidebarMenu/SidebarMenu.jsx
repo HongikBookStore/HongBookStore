@@ -11,7 +11,7 @@ const Sidebar = styled.div`
   max-width: 220px;
   margin-right: 2rem;
   position: sticky;
-  top: 100px;
+  top: 120px;
   height: fit-content;
   z-index: 2;
 `;
