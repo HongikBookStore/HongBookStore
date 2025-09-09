@@ -166,14 +166,14 @@ const Hero = () => {
       path: '/marketplace'
     },
     {
-      title: '홍익지도',
-      description: '홍익대학교 주변의 여러 장소들을 공유해요',
-      path: '/hongikmap'
-    },
-    {
       title: '나의 거래',
       description: '내가 등록한 책과 거래 내역을 관리하세요',
       path: '/bookstore'
+    },
+    {
+      title: '홍익지도',
+      description: '홍익대학교 주변의 여러 장소들을 공유해요',
+      path: '/hongikmap'
     }
   ];
 
