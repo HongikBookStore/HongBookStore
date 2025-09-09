@@ -16,12 +16,19 @@ public class PlaceController {
 
     private final PlaceService placeService;
 
-    // 🔍 네이버 장소 검색
-    @GetMapping("/search")
+    // 🔍 네이버 장소 검색 (홍대 거리순 재정렬된 JSON 반환)
+    @GetMapping(value = "/search", produces = "application/json")
     public ResponseEntity<String> searchPlaces(@RequestParam String query) {
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.badRequest().body("{\"items\":[]}");
+        }
         String resultJson = placeService.searchPlaces(query);
-        return ResponseEntity.ok(resultJson); // 반드시 JSON 형식 문자열이어야 함
+        return ResponseEntity
+                .ok()
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .body(resultJson);
     }
+
 
     // 📦 DB에서 저장된 장소 전부 조회
     @GetMapping

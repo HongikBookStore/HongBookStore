@@ -46,6 +46,8 @@ api.interceptors.response.use(
 
 /* ==================== 백엔드 API ==================== */
 
+const HONGIK_CENTER = { lat: 37.5513, lng: 126.9246 };
+
 // 장소 검색
 const searchPlacesFromBackend = async (query) => {
   if (!query.trim()) return [];
@@ -262,18 +264,23 @@ const MapPage = () => {
     }
   };
 
-  // 검색 디바운스
+  // 검색 디바운스 (검색 시작 시 지도 중심을 홍대로 이동)
   useEffect(() => {
     const debounce = setTimeout(async () => {
       if (searchQuery.trim()) {
-        setIsSearching(true);
         try {
+          // 지도 컴포넌트 ref가 있다면, 홍익대 중심으로 이동(줌은 프로젝트 컨벤션에 맞게)
+          if (mapRef?.current?.moveToLocation) {
+            mapRef.current.moveToLocation(HONGIK_CENTER.lat, HONGIK_CENTER.lng, 15);
+          }
+          setIsSearching(true);
           const results = await searchPlacesFromBackend(searchQuery);
-          setSearchResults(results);
+          setSearchResults(results);     // 백엔드가 이미 홍대 근접 순으로 5개 정렬
           setShowSearchResults(true);
         } catch (e) {
           console.error('Search error:', e);
           setSearchResults([]);
+          setShowSearchResults(false);
         } finally {
           setIsSearching(false);
         }
@@ -285,6 +292,7 @@ const MapPage = () => {
     }, 300);
     return () => clearTimeout(debounce);
   }, [searchQuery]);
+
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {
@@ -477,9 +485,6 @@ const MapPage = () => {
           <SidebarHeader>
             <h2>홍익지도</h2>
             <HeaderButtons>
-              <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
-                <FaSyncAlt /> {loadingDB ? '불러오는 중...' : '새로고침'}
-              </AddButton>
               <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
                 <FaSyncAlt /> {loadingDB ? '불러오는 중...' : '새로고침'}
               </AddButton>
