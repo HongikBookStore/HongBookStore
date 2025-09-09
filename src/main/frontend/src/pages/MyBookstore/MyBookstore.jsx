@@ -125,9 +125,10 @@ const BookCard = styled.div`
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
-  padding: 20px;
+  padding: 16px;
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden; /* 버튼이 카드 밖으로 나가지 않도록 */
 
   &:hover {
     transform: translateY(-2px);
@@ -201,22 +202,27 @@ const BookStatus = styled.span`
 
 const BookActions = styled.div`
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 15px;
+  justify-content: flex-start;
 `;
 
 const ActionButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 6px 10px;
   border: 1px solid #ddd;
   background: white;
   color: #666;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   transition: all 0.3s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  
   &:hover {
     background: #f8f9fa;
     border-color: #007bff;
@@ -225,6 +231,12 @@ const ActionButton = styled.button`
   &.delete:hover {
     border-color: #dc3545;
     color: #dc3545;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 3px;
   }
 `;
 
@@ -338,6 +350,7 @@ const CompactBookCard = styled.div`
   gap: 15px;
   transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
+  overflow: hidden; /* 버튼이 카드 밖으로 나가지 않도록 */
 
   &:hover {
     transform: translateY(-1px);
@@ -413,7 +426,9 @@ const CompactBookStatus = styled.span`
 
 const CompactBookActions = styled.div`
   display: flex;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-start;
 `;
 
 const EmptyState = styled.div`
@@ -915,30 +930,30 @@ const MyBookstore = () => {
                       </BookStatus>
                       
                       <BookActions>
-                        <ActionButton onClick={() => handleViewBook(post.postId)}>
+                        <ActionButton onClick={() => handleViewBook(post.postId)} title="상세보기">
                           <FaSearch /> 보기
                         </ActionButton>
                         {post.status === 'FOR_SALE' && (
-                          <ActionButton onClick={() => handleEditBook(post.postId)}>
+                          <ActionButton onClick={() => handleEditBook(post.postId)} title="수정하기">
                             <FaEdit /> 수정
                           </ActionButton>
                         )}
-                        {post.status === 'FOR_SALE' && (
-                          <ActionButton onClick={() => handleStatusChange(post.postId, 'RESERVED')}>
-                            예약중
-                          </ActionButton>
-                        )}
                         {post.status === 'RESERVED' && (
-                          <ActionButton onClick={() => handleStatusChange(post.postId, 'FOR_SALE')}>
-                            예약 해제
+                          <ActionButton onClick={() => handleStatusChange(post.postId, 'FOR_SALE')} title="예약 해제">
+                            해제
                           </ActionButton>
                         )}
                         {(post.status === 'FOR_SALE' || post.status === 'RESERVED') && (
-                          <ActionButton onClick={() => handleStatusChange(post.postId, 'SOLD_OUT')}>
+                          <ActionButton onClick={() => handleStatusChange(post.postId, 'SOLD_OUT')} title="판매완료로 변경">
                             판매완료
                           </ActionButton>
                         )}
-                        <ActionButton className="delete" onClick={() => handleDeleteBook(post.postId)}>
+                        {post.status === 'FOR_SALE' && (
+                          <ActionButton onClick={() => handleStatusChange(post.postId, 'RESERVED')} title="예약중으로 변경">
+                            예약중
+                          </ActionButton>
+                        )}
+                        <ActionButton className="delete" onClick={() => handleDeleteBook(post.postId)} title="삭제하기">
                           <FaTrash /> 삭제
                         </ActionButton>
                       </BookActions>
@@ -1053,8 +1068,8 @@ const MyBookstore = () => {
                       <CompactBookPrice>{item.price.toLocaleString()}원</CompactBookPrice>
                     </CompactBookInfo>
                     <BookActions>
-                      <ActionButton onClick={() => handleViewBook(item.postId)}><FaEye /> 보기</ActionButton>
-                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)}><FaHeart /> 찜 해제</ActionButton>
+                      <ActionButton onClick={() => handleViewBook(item.postId)} title="상세보기"><FaEye /> 보기</ActionButton>
+                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)} title="찜 해제"><FaHeart /> 해제</ActionButton>
                     </BookActions>
                   </CompactBookCard>
                 ))}
