@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { FaExclamationTriangle } from 'react-icons/fa';
 
 const ModalOverlay = styled.div`
-  display: ${props => props.$isOpen ? 'flex' : 'none'};
+  display: ${props => props.isOpen ? 'flex' : 'none'};
   position: fixed;
   top: 0;
   left: 0;
@@ -108,6 +108,7 @@ const WarningModal = ({
   message = '',
   showSaveDraft = false 
 }) => {
+  console.log('WarningModal render:', { isOpen, type, showSaveDraft });
   if (!isOpen) return null;
 
   const getDefaultContent = () => {
@@ -130,7 +131,7 @@ const WarningModal = ({
   };
 
   return (
-    <ModalOverlay $isOpen={isOpen} onClick={onClose}>
+    <ModalOverlay isOpen={isOpen} onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <WarningIcon>
           <FaExclamationTriangle />

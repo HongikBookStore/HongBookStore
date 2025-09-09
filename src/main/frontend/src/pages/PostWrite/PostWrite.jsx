@@ -894,11 +894,7 @@ const PostWrite = () => {
   const isEdit = Boolean(id);
 
   // WritingContext 사용
-  const { startWriting, stopWriting, setUnsavedChanges } = useWriting() || {
-    startWriting: () => {},
-    stopWriting: () => {},
-    setUnsavedChanges: () => {},
-  };
+  const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
 
   // 모든 필드 명시적으로 정의
   const [formData, setFormData] = useState({
@@ -1013,7 +1009,9 @@ const PostWrite = () => {
   // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
     console.log('PostWrite 컴포넌트 마운트됨');
+    console.log('startWriting 호출 전');
     startWriting('sale');
+    console.log('startWriting 호출 후');
     loadDraftData();
 
     return () => {

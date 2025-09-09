@@ -457,6 +457,16 @@ const Header = () => {
   const { isWriting, writingType } = useWriting();
   const userMenuRef = useRef(null);
   const isHome = location.pathname === '/';
+  
+  // WritingContext 상태 디버깅
+  useEffect(() => {
+    console.log('Header: isWriting state changed to:', isWriting, 'writingType:', writingType);
+  }, [isWriting, writingType]);
+  
+  // WarningModal 상태 디버깅
+  useEffect(() => {
+    console.log('Header: showWarningModal state changed to:', showWarningModal);
+  }, [showWarningModal]);
 
   // 외부 클릭 시 유저 드롭다운 닫기
   useEffect(() => {
@@ -490,10 +500,13 @@ const Header = () => {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   const safeNavigate = (path) => {
+    console.log('safeNavigate called with path:', path, 'isWriting:', isWriting);
     if (isWriting) {
+      console.log('Writing in progress, showing warning modal');
       setPendingNavigation(path);
       setShowWarningModal(true);
     } else {
+      console.log('No writing in progress, navigating directly');
       navigate(path);
     }
     setIsMobileMenuOpen(false);
@@ -828,7 +841,7 @@ const Header = () => {
         </MobileMenu>
 
         <WarningModal
-            $isOpen={showWarningModal}
+            isOpen={showWarningModal}
             onClose={handleCancelExit}
             onConfirm={handleConfirmExit}
             onCancel={handleCancelExit}

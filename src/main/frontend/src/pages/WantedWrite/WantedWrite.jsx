@@ -265,8 +265,14 @@ export default function WantedWrite() {
   const isEdit = Boolean(id);
 
   useEffect(() => {
+    console.log('WantedWrite 컴포넌트 마운트됨');
+    console.log('startWriting 호출 전');
     startWriting('wanted');
-    return () => { stopWriting(); };
+    console.log('startWriting 호출 후');
+    return () => { 
+      console.log('WantedWrite 컴포넌트 언마운트됨');
+      stopWriting(); 
+    };
   }, [startWriting, stopWriting]);
 
   useEffect(() => {
