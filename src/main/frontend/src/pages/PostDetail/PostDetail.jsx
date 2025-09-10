@@ -947,6 +947,14 @@ const PostDetail = () => {
       [post]
   );
 
+  // 내가 쓴 글인지 여부
+  const isOwner = useMemo(() => {
+    const me = user?.id;
+    const seller = post?.sellerId ?? post?.userId; // 백엔드 응답 케이스 모두 대비
+    return !!me && !!seller && me === seller;
+  }, [user?.id, post?.sellerId, post?.userId]);
+
+
   // ✅ 신고 모달 열기
   const openReport = () => {
     setReportReason('');
@@ -1052,12 +1060,15 @@ const PostDetail = () => {
                   {post.bookTitle}
                   {/* 👉 제목 오른쪽에 신고 + 좋아요 */}
                   <TitleActions>
-                    <ReportButton onClick={openReport} title="신고하기">
-                      <FaExclamationTriangle />
-                      신고
-                    </ReportButton>
+                    {!isOwner && (
+                        <ReportButton onClick={openReport} title="신고하기">
+                          <FaExclamationTriangle />
+                          신고
+                        </ReportButton>
+                    )}
                     <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
                   </TitleActions>
+
                 </BookTitle>
                 <BookAuthor>{post.author}</BookAuthor>
               </div>
