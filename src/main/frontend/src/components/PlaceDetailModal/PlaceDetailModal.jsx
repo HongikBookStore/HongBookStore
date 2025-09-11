@@ -76,6 +76,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] });
   const [reviewError, setReviewError] = useState('');
 
+  // ✅ 업로드할 실제 파일 상태(누적 관리, 최대 3개)
+  const [newReviewFiles, setNewReviewFiles] = useState([]);
+
   // 카테고리
   const [selectedCategory, setSelectedCategory] = useState('');
 
@@ -122,15 +125,20 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const totalReviews  = (typeof reviewCount === 'number' ? reviewCount : reviews.length);
 
   /* ===================== API ===================== */
-  // 리뷰 목록
+  // 공통: 리뷰 목록 가져오기(중복 판별에도 사용)
+  const fetchReviewsRaw = async () => {
+    const res = await fetch(REVIEW_LIST(place.id), {
+      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+    });
+    if (!res.ok) throw new Error('리뷰 조회 실패');
+    return res.json();
+  };
+
+  // 목록 → 화면 반영
   const fetchReviews = async () => {
     if (!place?.id) return;
     try {
-      const res = await fetch(REVIEW_LIST(place.id), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
-      });
-      if (!res.ok) throw new Error('리뷰 조회 실패');
-      const data = await res.json();
+      const data = await fetchReviewsRaw();
       setAvgRating(typeof data.averageRating === 'number' ? data.averageRating : null);
       setReviewCount(typeof data.reviewCount === 'number' ? data.reviewCount : 0);
       const mapped = (data.reviews || []).map(r => ({
@@ -150,6 +158,33 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
+  // ❗️중요: 상태코드가 500이어도 "이미 작성" 문구/상태를 판별하는 보조 함수
+  const detectDuplicateOnError = async (res) => {
+    try {
+      // 1) 응답 본문에서 직접 탐지
+      const clone = res.clone();
+      const ct = clone.headers.get('content-type') || '';
+      let bodyText = '';
+      if (ct.includes('application/json')) {
+        const j = await clone.json().catch(() => null);
+        bodyText = (j?.message || j?.error || j?.detail || JSON.stringify(j || '')) + '';
+      } else {
+        bodyText = await clone.text().catch(() => '');
+      }
+      if (/이미\s*이\s*장소.*리뷰.*작성/i.test(bodyText)) return true;
+
+      // 2) 목록 재조회로 판별 (내 userId가 이미 존재하면 중복)
+      if (!currentUserId) return false;
+      const data = await fetchReviewsRaw().catch(() => null);
+      if (!data) return false;
+      const list = Array.isArray(data.reviews) ? data.reviews : [];
+      const found = list.some(r => String(r.userId ?? r.user_id) === String(currentUserId));
+      return found;
+    } catch {
+      return false;
+    }
+  };
+
   // 사진 업로드(엔드포인트 없으면 무시)
   async function uploadReviewPhotos(files) {
     if (!files || files.length === 0) return [];
@@ -161,7 +196,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` },
         body: form
       });
-      if (!res.ok) throw new Error('upload endpoint not available');
+
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        const msg = ct.includes('application/json')
+            ? (await res.json().catch(() => ({})))?.error || ''
+            : (await res.text().catch(() => ''));
+        if (/최대\s*3개/i.test(msg)) showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+        throw new Error('upload failed');
+      }
+
       const data = await res.json(); // { urls: [...] }
       return data.urls || [];
     } catch {
@@ -170,15 +214,20 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   }
 
-  // ✅ 리뷰 등록 (409 → 토스트)
+  // ✅ 리뷰 등록 (상태코드 의존 X : 본문/목록 기반으로 "이미 작성" 판별)
   const handleSubmitReview = async () => {
     if (!newReview.content.trim()) return showToast('리뷰 내용을 입력해주세요.');
 
     try {
       setReviewError('');
-      const fileInput = fileInputRef.current;
-      const files = fileInput?.files ? Array.from(fileInput.files) : [];
-      const photoUrls = await uploadReviewPhotos(files);
+
+      // 최종 방어: 파일 개수 3개 초과 시 중단
+      if (newReviewFiles.length > 3) {
+        showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+        return;
+      }
+
+      const photoUrls = await uploadReviewPhotos(newReviewFiles);
 
       const res = await fetch(REVIEW_LIST(place.id), {
         method: 'POST',
@@ -194,29 +243,54 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       });
 
       if (!res.ok) {
-        if (res.status === 409) {
+        // ✅ 상태코드가 500이어도, 본문/목록으로 "이미 작성"인지 판별
+        const isDup = await detectDuplicateOnError(res);
+        if (isDup) {
           setReviewError('이미 이 장소에 리뷰를 작성하셨습니다. 기존 리뷰를 삭제 후 다시 등록해주세요.');
           showToast('이미 작성된 리뷰가 있어요. 삭제 후 재등록해주세요.');
           return;
         }
-        const ct = res.headers.get('content-type') || '';
-        if (res.status === 400 && ct.includes('application/json')) {
-          const json = await res.json().catch(() => null);
-          if (json?.success === false && json?.data?.field) {
-            const d = json.data;
-            const lvl = d.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})` : '';
-            setReviewError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
-            const el = document.querySelector('textarea');
-            if (el && typeof el.focus === 'function') el.focus();
-            return;
+
+        // 모더레이션/필드 에러(가능한 경우)
+        try {
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const json = await res.clone().json().catch(() => null);
+            if (json?.success === false && json?.data?.field) {
+              const d = json.data;
+              const lvl = d.predictionLevel
+                  ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})`
+                  : '';
+              setReviewError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
+              const el = document.querySelector('textarea');
+              if (el && typeof el.focus === 'function') el.focus();
+              return;
+            }
+            // 사진 제한 메시지
+            const msg = (json?.message || json?.error || json?.detail || '') + '';
+            if (/최대\s*3개/i.test(msg)) {
+              showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+              return;
+            }
+          } else {
+            const text = await res.clone().text().catch(() => '');
+            if (/최대\s*3개/i.test(text)) {
+              showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+              return;
+            }
           }
+        } catch {
+          // no-op
         }
+
         showToast('리뷰 등록에 실패했습니다.');
         return;
       }
 
+      // 성공 후 초기화
       setNewReview({ rating: 5, content: '', photos: [] });
-      if (fileInput) fileInput.value = '';
+      setNewReviewFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       await fetchReviews();
       showToast('리뷰가 등록되었습니다.');
     } catch (e) {
@@ -241,12 +315,10 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         return showToast('리뷰를 삭제했습니다.');
       }
 
-      // 상태 코드별 메시지
       if (res.status === 401) return showToast('로그인이 필요합니다.');
       if (res.status === 403) return showToast('본인 리뷰만 삭제할 수 있어요.');
       if (res.status === 404) return showToast('리뷰를 찾을 수 없습니다.');
       if (res.status === 409) return showToast('삭제할 수 없는 상태입니다.');
-      // 프록시 미설정 등으로 404/NoResourceFound가 날아오는 경우도 있으니 안내
       if (res.status === 500) return showToast('서버 오류로 삭제에 실패했습니다.');
 
       showToast('리뷰 삭제에 실패했습니다.');
@@ -256,13 +328,37 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
-  /* ===================== 프론트 미리보기용 사진 ===================== */
+  /* ===================== 프론트 미리보기 + 파일 선택 제한(최대 3개) ===================== */
   const handlePhotoUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    setNewReview(p => ({ ...p, photos: [...p.photos, ...files.map(f => URL.createObjectURL(f))] }));
+    const picked = Array.from(e.target.files || []);
+    if (picked.length === 0) return;
+
+    const existing = newReviewFiles.length;
+    const remain = Math.max(0, 3 - existing);
+
+    if (remain <= 0) {
+      showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+      e.target.value = '';
+      return;
+    }
+
+    const filesToAdd = picked.slice(0, remain); // ✅ 초과 컷오프
+    const newPreviews = filesToAdd.map(f => URL.createObjectURL(f));
+
+    setNewReviewFiles(prev => [...prev, ...filesToAdd]);
+    setNewReview(p => ({ ...p, photos: [...p.photos, ...newPreviews] }));
+
+    e.target.value = '';
+
+    if (picked.length > remain) {
+      showToast('최대 3개까지만 추가됩니다. 초과분은 제외했어요.');
+    }
   };
-  const handleRemovePhoto = (idx) =>
-      setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
+
+  const handleRemovePhoto = (idx) => {
+    setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
+    setNewReviewFiles(prev => prev.filter((_, i) => i !== idx));
+  };
 
   /* ===================== 좋아요/싫어요 ===================== */
   const handleLikeReview = async (id) => {

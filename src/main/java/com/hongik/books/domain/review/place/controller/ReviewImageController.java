@@ -26,6 +26,12 @@ public class ReviewImageController {
             return ResponseEntity.badRequest().body(Map.of("error", "파일이 없습니다."));
         }
 
+        // ✅ 업로드 1회당 최대 3개 제한 (프론트 우회/직접 호출 방지)
+        if (files.size() > 3) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "사진/GIF는 한 번에 최대 3개까지만 업로드할 수 있습니다."));
+        }
+
         try {
             List<String> urls = new ArrayList<>();
             for (MultipartFile f : files) {
