@@ -108,6 +108,247 @@
   "ok": "OK",
   "myTransactions": "My Transactions",
   "aiChat": "Chatbot",
+  "marketplace": {
+    "title": "Book Trading Board",
+    "description": "Get knowledge from seniors at affordable prices! 📚",
+    "searchPlaceholder": "Search by book title, author, or post title",
+    "searchButton": "Search",
+    "allCategories": "All Categories",
+    "bookCondition": {
+      "excellent": "Excellent",
+      "good": "Good", 
+      "fair": "Fair"
+    },
+    "status": {
+      "available": "Available",
+      "reserved": "Reserved",
+      "soldOut": "Sold Out"
+    },
+    "noImage": "No Image",
+    "retryButton": "Try Again",
+    "loadingMessage": "📖 Looking for books...",
+    "noResults": {
+      "title": "No search results",
+      "description": "Try searching with different keywords or change the filters."
+    },
+    "currency": "KRW",
+    "filterAndSort": "Filter & Sort",
+    "sortBy": "Sort by",
+    "sortOptions": {
+      "newest": "Newest",
+      "priceLow": "Price: Low to High",
+      "priceHigh": "Price: High to Low",
+      "views": "Most Viewed",
+      "likes": "Most Liked"
+    },
+    "priceRange": "Price Range",
+    "minPrice": "Min Price",
+    "maxPrice": "Max Price",
+    "apply": "Apply"
+  },
+  "navigation": {
+    "bookTradingBoard": "Book Trading Board",
+    "map": "Map"
+  },
+  "sidebar": {
+    "sellBook": "Sell Books",
+    "wanted": "Wanted Board",
+    "myBookstore": "My Bookstore",
+    "chat": "Trading Chat"
+  },
+  "categories": {
+    "major": "Major",
+    "liberal": "Liberal Arts",
+    "colleges": {
+      "business": "Business School",
+      "engineering": "Engineering School",
+      "law": "Law School",
+      "art": "Art School",
+      "design": "Design & Art Management",
+      "performing": "Performing Arts",
+      "economics": "Economics",
+      "education": "Education",
+      "liberalArts": "Liberal Arts",
+      "architecture": "Architecture & Urban Planning"
+    },
+    "departments": {
+      "business": "Business",
+      "electronics": "Electronics & Electrical Engineering",
+      "materials": "Materials Science",
+      "chemical": "Chemical Engineering",
+      "computer": "Computer Science",
+      "industrial": "Industrial Data Engineering",
+      "mechanical": "Mechanical System Design",
+      "civil": "Civil & Environmental Engineering",
+      "law": "Law",
+      "eastern": "Eastern Studies",
+      "painting": "Painting",
+      "printmaking": "Printmaking",
+      "sculpture": "Sculpture",
+      "visualDesign": "Visual Design",
+      "industrialDesign": "Industrial Design",
+      "metalwork": "Metalwork",
+      "ceramics": "Ceramics & Glass",
+      "woodwork": "Woodwork & Furniture",
+      "textile": "Textile Art & Fashion Design",
+      "artHistory": "Art History",
+      "designManagement": "Design Management",
+      "artManagement": "Art Management",
+      "musical": "Musical",
+      "practicalMusic": "Practical Music",
+      "economics": "Economics",
+      "mathEducation": "Mathematics Education",
+      "koreanEducation": "Korean Education",
+      "englishEducation": "English Education",
+      "historyEducation": "History Education",
+      "education": "Education",
+      "englishLiterature": "English Literature",
+      "germanLiterature": "German Literature",
+      "frenchLiterature": "French Literature",
+      "koreanLiterature": "Korean Literature",
+      "architecture": "Architecture",
+      "interiorArchitecture": "Interior Architecture",
+      "urbanPlanning": "Urban Planning"
+    },
+    "liberalArts": {
+      "abeek": "ABEEK Liberal Arts",
+      "humanities": "Humanities",
+      "english": "English",
+      "social": "Social Sciences",
+      "secondLanguage": "Second Foreign Language",
+      "natural": "Natural Sciences",
+      "physical": "Physical Education & Arts",
+      "teaching": "Teaching"
+    }
+  },
+  "postDetail": {
+    "loading": "📚 Loading post...",
+    "error": {
+      "title": "😅 Unable to load post",
+      "message": "Please check your network connection and try again.",
+      "retry": "Try Again"
+    },
+    "back": "Back",
+    "bookInfo": "Book Information",
+    "category": "Category",
+    "tradeLocation": "Trade Location",
+    "onCampusLocation": "On-Campus Location",
+    "offCampusLocation": "Off-Campus Location",
+    "noInfo": "No Information",
+    "description": "Description",
+    "noDescription": "No description available.",
+    "inappropriateContent": "Inappropriate content detected",
+    "viewOtherBooks": "View Seller's Other Books",
+    "report": "Report",
+    "like": "Like",
+    "unlike": "Unlike",
+    "contact": "Contact",
+    "loginRequired": "Login required for this feature.",
+    "reportReasons": {
+      "abuse": "Abuse/Harassment",
+      "fraud": "Fraud/Fake Item",
+      "spam": "Spam/Advertisement",
+      "other": "Other"
+    },
+    "reportModal": {
+      "title": "Report",
+      "selectReason": "Please select a reason for reporting",
+      "otherReason": "Please enter other reason",
+      "submit": "Submit Report",
+      "cancel": "Cancel",
+      "success": "Report submitted",
+      "successMessage": "Thank you for your report. We will review and take action."
+    },
+    "condition": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair"
+    },
+    "status": {
+      "available": "Available",
+      "reserved": "Reserved",
+      "soldOut": "Sold Out"
+    },
+    "price": {
+      "sellingPrice": "Selling Price",
+      "originalPrice": "Original Price",
+      "negotiable": "Price Negotiable",
+      "notNegotiable": "Not Available"
+    },
+    "bookCondition": {
+      "title": "Book Condition",
+      "overallCondition": "📊 Overall Book Condition",
+      "noteCondition": "Note Condition",
+      "tearCondition": "Tear Condition",
+      "waterCondition": "Water Damage",
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "description": {
+        "excellent": "Overall condition assessment based on {{rate}}% discount. The book is in good condition.",
+        "good": "Overall condition assessment based on {{rate}}% discount. The book is in fair condition.",
+        "fair": "Overall condition assessment based on {{rate}}% discount. The book has some damage."
+      }
+    },
+    "seller": {
+      "title": "Seller Information",
+      "name": "Seller",
+      "otherBooks": "'s other books for sale",
+      "loadingOtherBooks": "📚 Loading other books...",
+      "noOtherBooks": "No other books available.",
+      "profile": "Seller Profile",
+      "salesCount": "{{count}} sales"
+    },
+    "statusLabels": {
+      "forSale": "For Sale",
+      "reserved": "Reserved",
+      "soldOut": "Sold Out"
+    },
+    "phone": {
+      "notAvailable": "Phone call feature is under development."
+    },
+    "review": {
+      "title": "Transaction Review",
+      "writeReview": "Write Review",
+      "saveError": "An error occurred while saving the review.",
+      "saving": "Saving...",
+      "save": "Save"
+    },
+    "reportModal": {
+      "selectReason": "Please select a reason for reporting",
+      "detailedReason": "Detailed Reason",
+      "detailedReasonPlaceholder": "Please enter detailed reason for reporting.",
+      "submitted": "Report has been submitted.",
+      "thankYou": "We will review it quickly. Thank you for your report.",
+      "options": {
+        "abuse": "Abuse/Slander",
+        "fraud": "Fraud/Fake Listing",
+        "spam": "Spam/Advertisement",
+        "other": "Other"
+      },
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "close": "Close"
+    },
+    "registrationDate": "Registration Date",
+    "viewCount": "Views"
+  },
+  "userProfile": {
+    "title": "User Profile #{{userId}}",
+    "back": "Back",
+    "sellerAverage": "Seller Average {{score}}★ · {{count}} sales",
+    "buyerAverage": "Buyer Average {{score}}★ · {{count}} purchases",
+    "sellerReviews": "Seller Reviews",
+    "buyerReviews": "Buyer Reviews",
+    "loading": "Loading...",
+    "noReviews": "No reviews registered.",
+    "defaultUser": "User",
+    "previous": "Previous",
+    "next": "Next",
+    "error": {
+      "loadReviews": "Failed to load review list."
+    }
+  },
   "notifications": "Notifications",
   "test": "Test",
   "clearAll": "Clear All",
@@ -117,6 +358,23 @@
   "menu": "Menu",
   "getStarted": "Get Started",
   "heroDescription": "Second-hand book trading platform for Hongik University students",
+  "slides": {
+    "welcome": {
+      "title": "HongBookStore",
+      "description": "A used book trading platform for Hongik University students.",
+      "buttonText": "Sign Up"
+    },
+    "marketplace": {
+      "title": "Book Market",
+      "description": "Trade textbooks and general books safely and easily",
+      "buttonText": "Start Trading"
+    },
+    "map": {
+      "title": "Hongik Map",
+      "description": "Share various places around Hongik University",
+      "buttonText": "View Map"
+    }
+  },
   "wanted": "Wanted",
   "cookiePolicy": "Cookie Policy",
   "accessibility": "Accessibility",

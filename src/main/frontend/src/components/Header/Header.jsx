@@ -648,21 +648,21 @@ const Header = () => {
                         className={location.pathname === '/marketplace' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}
                     >
-                      책 거래 게시판
+                      {t('navigation.bookTradingBoard')}
                     </NavLinkItem>
                     <NavLinkItem
                         to="/bookstore"
                         className={location.pathname === '/bookstore' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}
                     >
-                      나의 거래
+                      {t('myTransactions')}
                     </NavLinkItem>
                     <NavLinkItem
                         to="/hongikmap"
                         className={location.pathname === '/hongikmap' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}
                     >
-                      지도
+                      {t('navigation.map')}
                     </NavLinkItem>
                   </NavLinks>
               )}
@@ -741,7 +741,7 @@ const Header = () => {
                           {t('mypage')}
                         </DropdownItem>
                         <DropdownItem to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
-                          {t('나의 거래')}
+                          {t('myTransactions')}
                         </DropdownItem>
                         <LogoutButton onClick={handleLogout}>
                           {t('logout')}
@@ -807,7 +807,7 @@ const Header = () => {
                       {t('mypage')}
                     </MobileNavLink>
                     <MobileNavLink to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
-                      {t('bookstore')}
+                      {t('myTransactions')}
                     </MobileNavLink>
                     <MobileNavLink as="button" onClick={handleLogout}>
                       {t('logout')}

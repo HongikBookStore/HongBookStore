@@ -108,6 +108,247 @@
   "ok": "確認",
   "myTransactions": "我的交易",
   "aiChat": "聊天机器人",
+  "marketplace": {
+    "title": "書籍交易板",
+    "description": "以實惠的價格獲得學長姐的知識！📚",
+    "searchPlaceholder": "按書籍標題、作者或文章標題搜索",
+    "searchButton": "搜索",
+    "allCategories": "所有分類",
+    "bookCondition": {
+      "excellent": "上",
+      "good": "中", 
+      "fair": "下"
+    },
+    "status": {
+      "available": "可交易",
+      "reserved": "已預約",
+      "soldOut": "已售出"
+    },
+    "noImage": "無圖片",
+    "retryButton": "重試",
+    "loadingMessage": "📖 正在尋找書籍...",
+    "noResults": {
+      "title": "沒有搜索結果",
+      "description": "嘗試使用不同的關鍵詞搜索或更改篩選條件。"
+    },
+    "currency": "韓元",
+    "filterAndSort": "篩選與排序",
+    "sortBy": "排序基準",
+    "sortOptions": {
+      "newest": "最新",
+      "priceLow": "價格：低到高",
+      "priceHigh": "價格：高到低",
+      "views": "最多瀏覽",
+      "likes": "最多收藏"
+    },
+    "priceRange": "價格範圍",
+    "minPrice": "最低價格",
+    "maxPrice": "最高價格",
+    "apply": "套用"
+  },
+  "navigation": {
+    "bookTradingBoard": "書籍交易板",
+    "map": "地圖"
+  },
+  "sidebar": {
+    "sellBook": "書籍販售發文",
+    "wanted": "求購板",
+    "myBookstore": "我的書店",
+    "chat": "交易聊天"
+  },
+  "categories": {
+    "major": "專業",
+    "liberal": "通識",
+    "colleges": {
+      "business": "經營大學",
+      "engineering": "工科大學",
+      "law": "法科大學",
+      "art": "美術大學",
+      "design": "設計藝術經營學部",
+      "performing": "表演藝術學部",
+      "economics": "經濟學部",
+      "education": "師範大學",
+      "liberalArts": "文科大學",
+      "architecture": "建築都市大學"
+    },
+    "departments": {
+      "business": "經營學部",
+      "electronics": "電子電機工學部",
+      "materials": "新素材工學專攻",
+      "chemical": "化學工學專攻",
+      "computer": "電腦工學科",
+      "industrial": "產業數據工學科",
+      "mechanical": "機械系統設計工學科",
+      "civil": "建設環境工學科",
+      "law": "法學部",
+      "eastern": "東洋學科",
+      "painting": "繪畫科",
+      "printmaking": "版畫科",
+      "sculpture": "雕塑科",
+      "visualDesign": "視覺設計專攻",
+      "industrialDesign": "產業設計專攻",
+      "metalwork": "金屬造形設計科",
+      "ceramics": "陶藝玻璃科",
+      "woodwork": "木造形家具學科",
+      "textile": "纖維美術時尚設計科",
+      "artHistory": "藝術學科",
+      "designManagement": "設計經營專攻",
+      "artManagement": "藝術經營專攻",
+      "musical": "音樂劇專攻",
+      "practicalMusic": "實用音樂專攻",
+      "economics": "經濟學專攻",
+      "mathEducation": "數學教育科",
+      "koreanEducation": "國語教育科",
+      "englishEducation": "英語教育科",
+      "historyEducation": "歷史教育科",
+      "education": "教育學科",
+      "englishLiterature": "英語英文學科",
+      "germanLiterature": "德語德文學科",
+      "frenchLiterature": "法語法文學科",
+      "koreanLiterature": "國語國文學科",
+      "architecture": "建築學專攻",
+      "interiorArchitecture": "室內建築學專攻",
+      "urbanPlanning": "都市工學科"
+    },
+    "liberalArts": {
+      "abeek": "ABEEK通識",
+      "humanities": "人文系列",
+      "english": "英語系列",
+      "social": "社會系列",
+      "secondLanguage": "第二外語系列",
+      "natural": "自然系列",
+      "physical": "藝體系列",
+      "teaching": "教職"
+    }
+  },
+  "postDetail": {
+    "loading": "📚 正在載入文章...",
+    "error": {
+      "title": "😅 無法載入文章",
+      "message": "請檢查網路連線後重試。",
+      "retry": "重試"
+    },
+    "back": "返回",
+    "bookInfo": "書籍資訊",
+    "category": "分類",
+    "tradeLocation": "交易地點",
+    "onCampusLocation": "校內基準位置",
+    "offCampusLocation": "校外基準位置",
+    "noInfo": "無資訊",
+    "description": "詳細說明",
+    "noDescription": "無詳細說明。",
+    "inappropriateContent": "偵測到不當內容",
+    "viewOtherBooks": "查看賣家其他書籍",
+    "report": "檢舉",
+    "like": "收藏",
+    "unlike": "取消收藏",
+    "contact": "聯絡",
+    "loginRequired": "此功能需要登入。",
+    "reportReasons": {
+      "abuse": "辱罵/騷擾",
+      "fraud": "詐欺/假商品",
+      "spam": "垃圾/廣告",
+      "other": "其他"
+    },
+    "reportModal": {
+      "title": "檢舉",
+      "selectReason": "請選擇檢舉原因",
+      "otherReason": "請輸入其他原因",
+      "submit": "提交檢舉",
+      "cancel": "取消",
+      "success": "檢舉已提交",
+      "successMessage": "感謝您的檢舉，我們會審查並處理。"
+    },
+    "condition": {
+      "excellent": "上",
+      "good": "中",
+      "fair": "下"
+    },
+    "status": {
+      "available": "可交易",
+      "reserved": "已預約",
+      "soldOut": "已售出"
+    },
+    "price": {
+      "sellingPrice": "售價",
+      "originalPrice": "定價",
+      "negotiable": "價格可議",
+      "notNegotiable": "不可議"
+    },
+    "bookCondition": {
+      "title": "書籍狀態",
+      "overallCondition": "📊 整體書籍狀態",
+      "noteCondition": "筆記狀態",
+      "tearCondition": "破損程度",
+      "waterCondition": "水漬程度",
+      "excellent": "上",
+      "good": "中",
+      "fair": "下",
+      "description": {
+        "excellent": "基於{{rate}}%折扣的整體狀態評估。書籍狀況良好。",
+        "good": "基於{{rate}}%折扣的整體狀態評估。書籍狀況一般。",
+        "fair": "基於{{rate}}%折扣的整體狀態評估。書籍有部分損傷。"
+      }
+    },
+    "seller": {
+      "title": "賣家資訊",
+      "name": "賣家",
+      "otherBooks": "正在販售的其他書籍",
+      "loadingOtherBooks": "📚 正在載入其他書籍...",
+      "noOtherBooks": "沒有其他書籍。",
+      "profile": "賣家檔案",
+      "salesCount": "{{count}}次銷售"
+    },
+    "statusLabels": {
+      "forSale": "販售中",
+      "reserved": "預約中",
+      "soldOut": "已售出"
+    },
+    "phone": {
+      "notAvailable": "電話功能正在開發中。"
+    },
+    "review": {
+      "title": "交易評論",
+      "writeReview": "寫評論",
+      "saveError": "儲存評論時發生錯誤。",
+      "saving": "儲存中...",
+      "save": "儲存"
+    },
+    "reportModal": {
+      "selectReason": "請選擇檢舉原因",
+      "detailedReason": "詳細原因",
+      "detailedReasonPlaceholder": "請輸入詳細的檢舉原因。",
+      "submitted": "檢舉已受理。",
+      "thankYou": "我們會快速審查。感謝您的檢舉。",
+      "options": {
+        "abuse": "辱罵/誹謗",
+        "fraud": "詐欺/假貨",
+        "spam": "垃圾/廣告",
+        "other": "其他"
+      },
+      "cancel": "取消",
+      "submit": "提交",
+      "close": "關閉"
+    },
+    "registrationDate": "註冊日期",
+    "viewCount": "瀏覽次數"
+  },
+  "userProfile": {
+    "title": "用戶檔案 #{{userId}}",
+    "back": "返回",
+    "sellerAverage": "賣家平均 {{score}}★ · {{count}}次銷售",
+    "buyerAverage": "買家平均 {{score}}★ · {{count}}次購買",
+    "sellerReviews": "賣家評論",
+    "buyerReviews": "買家評論",
+    "loading": "載入中...",
+    "noReviews": "沒有註冊的評論。",
+    "defaultUser": "用戶",
+    "previous": "上一頁",
+    "next": "下一頁",
+    "error": {
+      "loadReviews": "載入評論列表失敗。"
+    }
+  },
   "notifications": "通知",
   "test": "測試",
   "clearAll": "全部清除",
@@ -117,6 +358,23 @@
   "menu": "選單",
   "getStarted": "立即開始",
   "heroDescription": "弘益大學學生的二手書交易平台",
+  "slides": {
+    "welcome": {
+      "title": "弘書店",
+      "description": "弘益大學學生的二手書交易平台。",
+      "buttonText": "註冊"
+    },
+    "marketplace": {
+      "title": "書市",
+      "description": "安全便捷地交易專業書籍和通識書籍",
+      "buttonText": "開始交易"
+    },
+    "map": {
+      "title": "弘益地圖",
+      "description": "分享弘益大學周邊的各種場所",
+      "buttonText": "查看地圖"
+    }
+  },
   "wanted": "求購",
   "cookiePolicy": "Cookie政策",
   "accessibility": "無障礙",

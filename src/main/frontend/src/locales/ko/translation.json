@@ -116,7 +116,249 @@
   "passwordResetSuccess": "비밀번호가 성공적으로 변경되었습니다. 잠시 후 로그인 페이지로 이동합니다.",
   "invalidToken": "유효하지 않은 접근입니다.",
   "ok": "확인",
+  "myTransactions": "나의 거래",
   "aiChat": "챗봇",
+  "marketplace": {
+    "title": "책거래게시판",
+    "description": "선배들의 지식을 저렴하게 얻어보세요! 📚",
+    "searchPlaceholder": "책 제목, 저자, 글 제목으로 검색",
+    "searchButton": "검색",
+    "allCategories": "전체 카테고리",
+    "bookCondition": {
+      "excellent": "상",
+      "good": "중", 
+      "fair": "하"
+    },
+    "status": {
+      "available": "거래 가능",
+      "reserved": "예약됨",
+      "soldOut": "판매완료"
+    },
+    "noImage": "이미지 없음",
+    "retryButton": "다시 시도하기",
+    "loadingMessage": "📖 책들을 찾고 있어요...",
+    "noResults": {
+      "title": "검색 결과가 없어요",
+      "description": "다른 키워드로 검색하거나 필터를 변경해보세요."
+    },
+    "currency": "원",
+    "filterAndSort": "필터 및 정렬",
+    "sortBy": "정렬 기준",
+    "sortOptions": {
+      "newest": "최신순",
+      "priceLow": "낮은 가격순",
+      "priceHigh": "높은 가격순",
+      "views": "조회순",
+      "likes": "찜한 순"
+    },
+    "priceRange": "가격 범위",
+    "minPrice": "최소 가격",
+    "maxPrice": "최대 가격",
+    "apply": "적용하기"
+  },
+  "navigation": {
+    "bookTradingBoard": "책 거래 게시판",
+    "map": "지도"
+  },
+  "sidebar": {
+    "sellBook": "책 판매 글쓰기",
+    "wanted": "구하기 게시판",
+    "myBookstore": "나의 책방",
+    "chat": "거래 채팅"
+  },
+  "categories": {
+    "major": "전공",
+    "liberal": "교양",
+    "colleges": {
+      "business": "경영대학",
+      "engineering": "공과대학",
+      "law": "법과대학",
+      "art": "미술대학",
+      "design": "디자인,예술경영학부",
+      "performing": "공연예술학부",
+      "economics": "경제학부",
+      "education": "사범대학",
+      "liberalArts": "문과대학",
+      "architecture": "건축도시대학"
+    },
+    "departments": {
+      "business": "경영학부",
+      "electronics": "전자전기공학부",
+      "materials": "신소재공학전공",
+      "chemical": "화학공학전공",
+      "computer": "컴퓨터공학과",
+      "industrial": "산업데이터공학과",
+      "mechanical": "기계시스템디자인공학과",
+      "civil": "건설환경공학과",
+      "law": "법학부",
+      "eastern": "동양학과",
+      "painting": "회화과",
+      "printmaking": "판화과",
+      "sculpture": "조소과",
+      "visualDesign": "시각디자인전공",
+      "industrialDesign": "산업디자인전공",
+      "metalwork": "금속조형디자인과",
+      "ceramics": "도예유리과",
+      "woodwork": "목조형가구학과",
+      "textile": "섬유미술패션디자인과",
+      "artHistory": "예술학과",
+      "designManagement": "디자인경영전공",
+      "artManagement": "예술경영전공",
+      "musical": "뮤지컬전공",
+      "practicalMusic": "실용음악전공",
+      "economics": "경제학전공",
+      "mathEducation": "수학교육과",
+      "koreanEducation": "국어교육과",
+      "englishEducation": "영어교육과",
+      "historyEducation": "역사교육과",
+      "education": "교육학과",
+      "englishLiterature": "영어영문학과",
+      "germanLiterature": "독어독문학과",
+      "frenchLiterature": "불어불문학과",
+      "koreanLiterature": "국어국문학과",
+      "architecture": "건축학전공",
+      "interiorArchitecture": "실내건축학전공",
+      "urbanPlanning": "도시공학과"
+    },
+    "liberalArts": {
+      "abeek": "ABEEK 교양",
+      "humanities": "인문계열",
+      "english": "영어계열",
+      "social": "사회계열",
+      "secondLanguage": "제2외국어계열",
+      "natural": "자연계열",
+      "physical": "예체능계열",
+      "teaching": "교직"
+    }
+  },
+  "postDetail": {
+    "loading": "📚 게시글을 불러오는 중...",
+    "error": {
+      "title": "😅 게시글을 불러올 수 없어요",
+      "message": "네트워크 연결을 확인하고 다시 시도해주세요.",
+      "retry": "다시 시도"
+    },
+    "back": "뒤로가기",
+    "bookInfo": "책 정보",
+    "category": "카테고리",
+    "tradeLocation": "거래 지역",
+    "onCampusLocation": "교내 기준 위치",
+    "offCampusLocation": "교외 기준 위치",
+    "noInfo": "정보 없음",
+    "description": "상세 설명",
+    "noDescription": "상세 설명이 없습니다.",
+    "inappropriateContent": "부적절한 표현이 감지되었습니다",
+    "viewOtherBooks": "판매자의 다른 책 보기",
+    "report": "신고하기",
+    "like": "찜하기",
+    "unlike": "찜 취소",
+    "contact": "연락하기",
+    "loginRequired": "로그인이 필요한 기능입니다.",
+    "reportReasons": {
+      "abuse": "욕설/비방",
+      "fraud": "사기/허위매물",
+      "spam": "스팸/광고",
+      "other": "기타"
+    },
+    "reportModal": {
+      "title": "신고하기",
+      "selectReason": "신고 사유를 선택해주세요",
+      "otherReason": "기타 사유를 입력해주세요",
+      "submit": "신고하기",
+      "cancel": "취소",
+      "success": "신고가 접수되었습니다",
+      "successMessage": "신고해주셔서 감사합니다. 검토 후 조치하겠습니다."
+    },
+    "condition": {
+      "excellent": "상",
+      "good": "중",
+      "fair": "하"
+    },
+    "status": {
+      "available": "거래 가능",
+      "reserved": "예약됨",
+      "soldOut": "판매완료"
+    },
+    "price": {
+      "sellingPrice": "판매 가격",
+      "originalPrice": "정가",
+      "negotiable": "가격 협의",
+      "notNegotiable": "불가능"
+    },
+    "bookCondition": {
+      "title": "책 상태",
+      "overallCondition": "📊 전체 책 상태",
+      "noteCondition": "필기 상태",
+      "tearCondition": "찢어짐 정도",
+      "waterCondition": "물흘림 정도",
+      "excellent": "상",
+      "good": "중",
+      "fair": "하",
+      "description": {
+        "excellent": "할인율 {{rate}}%에 따른 전체 상태 평가입니다. 책이 양호한 상태입니다.",
+        "good": "할인율 {{rate}}%에 따른 전체 상태 평가입니다. 책이 보통 상태입니다.",
+        "fair": "할인율 {{rate}}%에 따른 전체 상태 평가입니다. 책에 일부 손상이 있습니다."
+      }
+    },
+    "seller": {
+      "title": "판매자 정보",
+      "name": "판매자",
+      "otherBooks": "님이 판매하는 다른 책들",
+      "loadingOtherBooks": "📚 다른 책들을 불러오는 중...",
+      "noOtherBooks": "다른 책이 없습니다.",
+      "profile": "판매자 프로필",
+      "salesCount": "판매 {{count}}회"
+    },
+    "statusLabels": {
+      "forSale": "판매중",
+      "reserved": "예약중", 
+      "soldOut": "판매완료"
+    },
+    "phone": {
+      "notAvailable": "전화 연결 기능은 준비 중입니다."
+    },
+    "review": {
+      "title": "거래 후기",
+      "writeReview": "후기 남기기",
+      "saveError": "후기 저장 중 오류가 발생했습니다.",
+      "saving": "저장 중...",
+      "save": "저장"
+    },
+    "reportModal": {
+      "selectReason": "신고 사유를 선택하세요",
+      "detailedReason": "세부 사유",
+      "detailedReasonPlaceholder": "자세한 신고 사유를 입력해주세요.",
+      "submitted": "신고가 접수되었습니다.",
+      "thankYou": "빠르게 검토하겠습니다. 제보해주셔서 감사합니다.",
+      "options": {
+        "abuse": "욕설/비방",
+        "fraud": "사기/허위매물",
+        "spam": "스팸/광고",
+        "other": "기타"
+      },
+      "cancel": "취소",
+      "submit": "제출",
+      "close": "닫기"
+    },
+    "registrationDate": "등록일",
+    "viewCount": "조회수"
+  },
+  "userProfile": {
+    "title": "사용자 프로필 #{{userId}}",
+    "back": "뒤로",
+    "sellerAverage": "판매자 평균 {{score}}★ · {{count}}건",
+    "buyerAverage": "구매자 평균 {{score}}★ · {{count}}건",
+    "sellerReviews": "판매자 후기",
+    "buyerReviews": "구매자 후기",
+    "loading": "불러오는 중...",
+    "noReviews": "등록된 후기가 없습니다.",
+    "defaultUser": "사용자",
+    "previous": "이전",
+    "next": "다음",
+    "error": {
+      "loadReviews": "후기 목록을 불러오지 못했습니다."
+    }
+  },
   "notifications": "알림",
   "test": "테스트",
   "clearAll": "모두 삭제",
@@ -126,6 +368,23 @@
   "menu": "메뉴",
   "getStarted": "지금 시작하기",
   "heroDescription": "홍익대학교 학생들을 위한 중고책 거래 플랫폼",
+  "slides": {
+    "welcome": {
+      "title": "홍책방",
+      "description": "홍익대 학생들을 위한 중고책 거래 플랫폼입니다.",
+      "buttonText": "회원가입"
+    },
+    "marketplace": {
+      "title": "북마켓",
+      "description": "전공서적, 교양서적을 안전하고 간편하게 이용하세요",
+      "buttonText": "책거래 시작하기"
+    },
+    "map": {
+      "title": "홍익지도",
+      "description": "홍익대학교 주변의 여러 장소들을 공유해요",
+      "buttonText": "지도 보기"
+    }
+  },
   "wanted": "구해요",
   "cookiePolicy": "쿠키 정책",
   "accessibility": "접근성",
