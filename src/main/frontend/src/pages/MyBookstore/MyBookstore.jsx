@@ -790,11 +790,11 @@ const MyBookstore = () => {
 
     try {
       await axios.patch(`/api/posts/${postId}/status`, { status }, { headers: getAuthHeader() });
-      alert('상태가 변경되었습니다.');
+      alert(t('myBookstore.statusChangeSuccess'));
       fetchMyPosts();
     } catch (e) {
       console.error('상태 변경 실패', e);
-      alert(e.response?.data?.message || '상태 변경 중 오류가 발생했습니다.');
+      alert(e.response?.data?.message || t('myBookstore.statusChangeError'));
     }
   };
 
@@ -807,7 +807,7 @@ const MyBookstore = () => {
 
   const handleConfirmBuyer = async () => {
     if (!selectedBuyerId) {
-      alert('구매자를 선택하거나 직접 입력해 주세요.');
+      alert(t('myBookstore.buyerSelectError'));
       return;
     }
     try {
@@ -818,7 +818,7 @@ const MyBookstore = () => {
       fetchMyPosts();
     } catch (e) {
       console.error('구매자 지정 실패', e);
-      alert(e.response?.data?.message || '구매자 지정 중 오류가 발생했습니다.');
+      alert(e.response?.data?.message || t('myBookstore.buyerConfirmError'));
     } finally {
       setConfirmingBuyer(false);
     }
