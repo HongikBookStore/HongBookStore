@@ -724,14 +724,14 @@ const MyBookstore = () => {
 
   // 찜 해제 핸들러
   const handleRemoveFromWishlist = async (postId) => {
-    if (window.confirm(t('myBookstore.confirmRemoveWishlist'))) {
+    if (window.confirm('찜을 해제하시겠습니까?')) {
       try {
         await axios.delete(`/api/posts/${postId}/like`, { headers: getAuthHeader() });
-        alert(t('myBookstore.wishlistRemoved'));
+        alert("찜이 해제되었습니다.");
         fetchWishlist(); // 찜 목록 새로고침
       } catch (error) {
         console.error("찜 해제에 실패했습니다.", error);
-        alert(t('myBookstore.wishlistRemoveError'));
+        alert("찜 해제 중 오류가 발생했습니다.");
       }
     }
   };
@@ -862,16 +862,16 @@ const MyBookstore = () => {
             <TabSection>
               <TabList>
                 <Tab $active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
-                  {t('myBookstore.all')} ({myPosts.length})
+                  전체 ({myPosts.length})
                 </Tab>
                 <Tab $active={activeTab === 'selling'} onClick={() => setActiveTab('selling')}>
-                  {t('myBookstore.forSale')} ({myPosts.filter(p => p.status === 'FOR_SALE').length})
+                  판매중 ({myPosts.filter(p => p.status === 'FOR_SALE').length})
                 </Tab>
                 <Tab $active={activeTab === 'reserved'} onClick={() => setActiveTab('reserved')}>
-                  {t('myBookstore.reserved')} ({myPosts.filter(p => p.status === 'RESERVED').length})
+                  예약중 ({myPosts.filter(p => p.status === 'RESERVED').length})
                 </Tab>
                 <Tab $active={activeTab === 'sold'} onClick={() => setActiveTab('sold')}>
-                  {t('myBookstore.soldOut')} ({myPosts.filter(p => p.status === 'SOLD_OUT').length})
+                  판매완료 ({myPosts.filter(p => p.status === 'SOLD_OUT').length})
                 </Tab>
               </TabList>
 
@@ -879,14 +879,14 @@ const MyBookstore = () => {
               {loading.myPosts ? (
                 <LoadingSpinner>
                   <FaBook style={{ marginRight: '8px' }} />
-                  {t('myBookstore.loadingPosts')}
+                  목록을 불러오는 중...
                 </LoadingSpinner>
               ) : error.myPosts ? (
                 <EmptyState>
                   <EmptyIcon><FaBook /></EmptyIcon>
                   <h3>{error.myPosts}</h3>
                   <button onClick={fetchMyPosts} style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    {t('common.retry')}
+                    다시 시도
                   </button>
                 </EmptyState>
               ) : filteredBooks.length > 0 ? (
@@ -918,30 +918,30 @@ const MyBookstore = () => {
                       
                       <BookActions>
                         <ActionButton onClick={() => handleViewBook(post.postId)}>
-                          <FaSearch /> {t('myBookstore.view')}
+                          <FaSearch /> 보기
                         </ActionButton>
                         {post.status === 'FOR_SALE' && (
                           <ActionButton onClick={() => handleEditBook(post.postId)}>
-                            <FaEdit /> {t('myBookstore.edit')}
+                            <FaEdit /> 수정
                           </ActionButton>
                         )}
                         {post.status === 'FOR_SALE' && (
                           <ActionButton onClick={() => handleStatusChange(post.postId, 'RESERVED')}>
-                            {t('myBookstore.reserved')}
+                            예약중
                           </ActionButton>
                         )}
                         {post.status === 'RESERVED' && (
                           <ActionButton onClick={() => handleStatusChange(post.postId, 'FOR_SALE')}>
-                            {t('myBookstore.unreserve')}
+                            예약 해제
                           </ActionButton>
                         )}
                         {(post.status === 'FOR_SALE' || post.status === 'RESERVED') && (
                           <ActionButton onClick={() => handleStatusChange(post.postId, 'SOLD_OUT')}>
-                            {t('myBookstore.soldOut')}
+                            판매완료
                           </ActionButton>
                         )}
                         <ActionButton className="delete" onClick={() => handleDeleteBook(post.postId)}>
-                          <FaTrash /> {t('myBookstore.delete')}
+                          <FaTrash /> 삭제
                         </ActionButton>
                       </BookActions>
                     </BookCard>
@@ -1022,13 +1022,13 @@ const MyBookstore = () => {
           {/* 2. 찜한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle><FaHeart /> {t('myBookstore.wishlist')} ({Array.isArray(wishlist) ? wishlist.length : 0})</SectionTitle> {/* 배열 체크 추가 */}
+              <SectionTitle><FaHeart /> 찜한 책 ({Array.isArray(wishlist) ? wishlist.length : 0})</SectionTitle> {/* 배열 체크 추가 */}
             </SectionHeader>
             {/* 수정: 로딩과 에러 상태를 더 명확하게 처리 */}
             {loading.wishlist ? (
               <LoadingSpinner>
                 <FaHeart style={{ marginRight: '8px' }} />
-                {t('myBookstore.loadingWishlist')}
+                찜 목록을 불러오는 중...
               </LoadingSpinner>
             ) : error.wishlist ? (
               <EmptyState>
@@ -1055,8 +1055,8 @@ const MyBookstore = () => {
                       <CompactBookPrice>{item.price.toLocaleString()}원</CompactBookPrice>
                     </CompactBookInfo>
                     <BookActions>
-                      <ActionButton onClick={() => handleViewBook(item.postId)}><FaEye /> {t('myBookstore.view')}</ActionButton>
-                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)}><FaHeart /> {t('myBookstore.removeFromWishlist')}</ActionButton>
+                      <ActionButton onClick={() => handleViewBook(item.postId)}><FaEye /> 보기</ActionButton>
+                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)}><FaHeart /> 찜 해제</ActionButton>
                     </BookActions>
                   </CompactBookCard>
                 ))}
@@ -1064,7 +1064,7 @@ const MyBookstore = () => {
             ) : (
               <EmptyState>
                 <EmptyIcon><FaHeart /></EmptyIcon>
-                <h3>{t('myBookstore.noWishlist')}</h3>
+                <h3>찜한 책이 없습니다</h3>
               </EmptyState>
             )}
           </SectionContainer>

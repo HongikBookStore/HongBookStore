@@ -538,7 +538,7 @@ async function apiGetReservation(roomId) {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (res.status === 204) return null;
-  if (!res.ok) throw new Error(t('chat.reservationFetchFailed'));
+  if (!res.ok) throw new Error('예약 조회 실패');
   return res.json();
 }
 async function apiUpsertReservation(roomId, payload) {
@@ -548,7 +548,7 @@ async function apiUpsertReservation(roomId, payload) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error(t('chat.reservationSaveFailed'));
+  if (!res.ok) throw new Error('예약 저장 실패');
   return res.json();
 }
 async function apiAcceptReservation(roomId, reservationId) {
@@ -634,7 +634,6 @@ const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
 const SSE_ENDPOINT = (token) => `/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
 
 const ChatRoom = () => {
-  const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1354,7 +1353,7 @@ const ChatRoom = () => {
               <ChatInfo>
                 <UserAvatar><FaUser /></UserAvatar>
                 <UserInfo>
-                  <UserName>{messages.length > 0 && messages[0].sender === 'other' ? t('chat.otherUser') : t('chat.student')}</UserName>
+                  <UserName>{messages.length > 0 && messages[0].sender === 'other' ? '김학생' : '학생'}</UserName>
                   <BookTitle>
                     <FaBook size={12} />
                     {messages.length > 0 && messages[0].message ? messages[0].message.split(' - ')[0] : ''}
