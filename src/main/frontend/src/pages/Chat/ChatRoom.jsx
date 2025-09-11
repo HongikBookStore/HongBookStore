@@ -1501,14 +1501,14 @@ const ChatRoom = () => {
                   </ReportRadio>
 
                   <ReportRadio>
-                    <RadioInput type="radio" name="report" value="기타"
-                                checked={reportReason === '기타'}
+                    <RadioInput type="radio" name="report" value="other"
+                                checked={reportReason === 'other'}
                                 onChange={e => setReportReason(e.target.value)} />
                     {t('chat.reportReasons.other')}
                   </ReportRadio>
 
                   {/* ✅ '기타' 선택 시 상세 사유 입력 */}
-                  {reportReason === '기타' && (
+                  {reportReason === 'other' && (
                       <ModalTextarea
                           value={reportEtcText}
                           onChange={e => setReportEtcText(e.target.value)}

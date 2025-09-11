@@ -1722,7 +1722,7 @@ const PostWrite = () => {
                   <ImagePreview>
                     {images.map(image => (
                         <ImagePreviewItem key={image.id}>
-                          <ImagePreviewImg src={image.preview} alt="미리보기" />
+                          <ImagePreviewImg src={image.preview} alt={t('common.preview')} />
                           <RemoveImageButton onClick={() => handleRemoveImage(image.id)}>
                             <FaTimes />
                           </RemoveImageButton>

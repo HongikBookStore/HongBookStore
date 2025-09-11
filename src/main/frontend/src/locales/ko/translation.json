@@ -28,7 +28,8 @@
     "yes": "예",
     "no": "아니오",
     "won": "원",
-    "view": "보기"
+    "view": "보기",
+    "preview": "미리보기"
   },
   "postWrite": {
     "title": "판매글 등록",
