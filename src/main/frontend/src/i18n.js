@@ -41,4 +41,9 @@ const initI18n = () => {
 // 즉시 초기화 실행
 initI18n();
 
+// 개발 환경에서 전역으로 노출 (디버깅용)
+if (process.env.NODE_ENV === 'development') {
+  window.i18n = i18n;
+}
+
 export default i18n; 

@@ -7,6 +7,7 @@ import { getOrCreateChatRoom } from '../../api/chat';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { createPeerReview } from '../../api/peerReviews';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 /* ---------------------------- styled components ---------------------------- */
 
@@ -342,7 +343,7 @@ function readMyId() {
 }
 
 /** 서버 응답을 화면용 형태로 정규화 */
-function normalizeRoom(raw, myId) {
+function normalizeRoom(raw, myId, t) {
   const id = raw.id ?? raw.roomId ?? raw.chatId;
   const buyerId = raw.buyerId ?? raw.buyer?.id;
   const sellerId = raw.sellerId ?? raw.seller?.id;
@@ -353,7 +354,7 @@ function normalizeRoom(raw, myId) {
   const counterpartyName =
       role === 'seller' ? (buyerName || raw.userName) :
           role === 'buyer'  ? (sellerName || raw.userName) :
-              (raw.userName || '상대방');
+              (raw.userName || t('chat.counterparty'));
 
   const userAvatar = (counterpartyName || '?').slice(0, 1).toUpperCase();
   const bookTitle = raw.bookTitle ?? raw.postTitle ?? raw.title ?? '';
@@ -396,10 +397,14 @@ function normalizeRoom(raw, myId) {
 /* --------------------------------- 컴포넌트 -------------------------------- */
 
 const ChatListPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useContext(AuthCtx);
   const myId = user?.id ?? readMyId();
+
+  // 디버깅용 로그
+  console.log('ChatListPage 렌더링됨', { t, user, myId });
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // all | seller | buyer
@@ -439,10 +444,10 @@ const ChatListPage = () => {
         const res = await getOrCreateChatRoom(bookId);
         const room = await res.json();
         const rid = room?.id ?? room?.roomId;
-        if (!rid) throw new Error('채팅방 ID 없음');
+        if (!rid) throw new Error(t('chat.noChatRoomId'));
         navigate(`/chat/${rid}`, { replace: true });
       } catch (e) {
-        console.error('채팅방 생성/조회 실패:', e);
+        console.error(t('chat.chatRoomError'), e);
         navigate('/chat', { replace: true });
       }
     })();
@@ -458,11 +463,11 @@ const ChatListPage = () => {
         const res = await fetch('/api/chat/rooms/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error('채팅방 조회 실패');
+        if (!res.ok) throw new Error(t('chat.chatRoomFetchFailed'));
         const data = await res.json();
         setRoomsRaw(Array.isArray(data) ? data : (data?.rooms || []));
       } catch (err) {
-        console.error('❌ 채팅방 불러오기 실패:', err);
+        console.error(t('chat.chatListError'), err);
         setError(err);
         setRoomsRaw([]);
       } finally {
@@ -540,9 +545,9 @@ const ChatListPage = () => {
         isCompleted: rezStatus === 'COMPLETED'
       };
 
-      return normalizeRoom(merged, myId);
+       return normalizeRoom(merged, myId, t);
     });
-  }, [roomsRaw, reservationMap, myId]);
+  }, [roomsRaw, reservationMap, myId, t]);
 
   // 순서 유지: 정렬 제거
   const filteredChatRooms = useMemo(() => {
@@ -582,11 +587,11 @@ const ChatListPage = () => {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'requested': return '수락대기';
-      case 'reserved': return '예약완료';
-      case 'completed': return '거래완료';
+      case 'requested': return t('chat.statusRequested');
+      case 'reserved': return t('chat.statusReserved');
+      case 'completed': return t('chat.statusCompleted');
       case 'in_progress':
-      default: return '진행 중';
+      default: return t('chat.statusInProgress');
     }
   };
 
@@ -599,22 +604,22 @@ const ChatListPage = () => {
     try {
       const payload = buyerId ? { status, buyerId } : { status };
       await axios.patch(`/api/posts/${postId}/status`, payload, { headers: getAuthHeader() });
-      alert('상태가 변경되었습니다.');
+      alert(t('chat.statusChangeSuccess'));
     } catch (e) {
-      console.error('상태 변경 실패', e);
-      alert(e.response?.data?.message || '상태 변경 중 오류가 발생했습니다.');
+      console.error(t('chat.statusChangeFailed'), e);
+      alert(e.response?.data?.message || t('chat.statusChangeError'));
     }
   };
 
   const openReviewForChat = (chat) => {
     if (chat.tradeStatus !== 'completed') return; // 버튼이 안 보이지만 방어
     if (!chat?.salePostId) {
-      alert('연결된 판매글 정보를 확인할 수 없습니다.');
+      alert(t('chat.noPostInfo'));
       return;
     }
     const role = chat.role === 'seller' ? 'BUYER' : (chat.role === 'buyer' ? 'SELLER' : null);
     if (!role) {
-      alert('후기 대상을 결정할 수 없습니다.');
+      alert(t('chat.cannotDetermineReviewTarget'));
       return;
     }
     setReviewModal({ open: true, postId: chat.salePostId, role });
@@ -636,15 +641,15 @@ const ChatListPage = () => {
         role: reviewModal.role
       });
       setReviewDone(reviewModal.postId, reviewModal.role);
-      alert('후기가 저장되었습니다.');
+      alert(t('chat.reviewSaved'));
       setReviewModal({ open: false, postId: null, role: null });
     } catch (e) {
-      console.error('후기 저장 실패', e);
+      console.error(t('chat.reviewSaveFailed'), e);
       if (e.isModeration) {
         const pct = typeof e.malicious === 'number' ? `, ${Math.round(e.malicious*100)}%` : '';
-        alert((e.message || '부적절한 표현이 감지되었습니다.') + (e.predictionLevel ? ` (${e.predictionLevel}${pct})` : ''));
+        alert((e.message || t('chat.inappropriateContentDetected')) + (e.predictionLevel ? ` (${e.predictionLevel}${pct})` : ''));
       } else {
-        alert(e.response?.data?.message || '후기 저장 중 오류가 발생했습니다.');
+        alert(e.response?.data?.message || t('chat.reviewSaveError'));
       }
     } finally {
       setSubmitting(false);
@@ -658,13 +663,13 @@ const ChatListPage = () => {
           <ChatListContainer>
             <Header>
               <HeaderLeft>
-                <BackButton onClick={handleBack}><FaArrowLeft />뒤로</BackButton>
-                <Title>거래 채팅</Title>
+                <BackButton onClick={handleBack}><FaArrowLeft />{t('chat.back')}</BackButton>
+                <Title>{t('chat.title')}</Title>
               </HeaderLeft>
               <SearchContainer>
                 <SearchInput
                     type="text"
-                    placeholder="사용자명 또는 책 제목으로 검색"
+                    placeholder={t('chat.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -673,19 +678,19 @@ const ChatListPage = () => {
             </Header>
 
             <TabButtonGroup>
-              <TabButton $active={activeTab === 'all'} onClick={() => setActiveTab('all')}>전체</TabButton>
-              <TabButton $active={activeTab === 'seller'} onClick={() => setActiveTab('seller')}>판매자</TabButton>
-              <TabButton $active={activeTab === 'buyer'} onClick={() => setActiveTab('buyer')}>구매자</TabButton>
+              <TabButton $active={activeTab === 'all'} onClick={() => setActiveTab('all')}>{t('common.all')}</TabButton>
+              <TabButton $active={activeTab === 'seller'} onClick={() => setActiveTab('seller')}>{t('common.seller')}</TabButton>
+              <TabButton $active={activeTab === 'buyer'} onClick={() => setActiveTab('buyer')}>{t('common.buyer')}</TabButton>
             </TabButtonGroup>
 
             <ChatList>
               {loading ? (
-                  <div style={{ padding: 24, color: '#888' }}>불러오는 중...</div>
+                   <div style={{ padding: 24, color: '#888' }}>{t('common.loading')}</div>
               ) : error ? (
                   <EmptyState>
                     <FaExclamationCircle style={{ color: '#f66', fontSize: '2rem', marginBottom: 12 }} />
-                    <h3>채팅방을 불러오지 못했습니다</h3>
-                    <p>잠시 후 다시 시도해 주세요.</p>
+                    <h3>{t('chat.loadFailed')}</h3>
+                    <p>{t('chat.retryLater')}</p>
                   </EmptyState>
               ) : filteredChatRooms.length > 0 ? (
                   filteredChatRooms.map((chat) => {
@@ -733,14 +738,14 @@ const ChatListPage = () => {
                         거래완료 & 후기 작성: "후기 완료" 배지 */}
                           <RowActions onClick={(e) => e.stopPropagation()}>
                             {isCompleted && (alreadyReviewed ? (
-                                <ReviewDoneBadge title="후기 작성 완료">
-                                  <FaCheckCircle /> 후기 완료
+                                <ReviewDoneBadge title={t('chat.reviewCompleted')}>
+                                  <FaCheckCircle /> {t('chat.reviewCompleted')}
                                 </ReviewDoneBadge>
                             ) : (
-                                <SmallBtn onClick={() => openReviewForChat(chat)}>후기</SmallBtn>
+                                <SmallBtn onClick={() => openReviewForChat(chat)}>{t('chat.review')}</SmallBtn>
                             ))}
                             {counterpartyId && (
-                                <SmallBtn onClick={() => navigate(`/users/${counterpartyId}`)}>프로필</SmallBtn>
+                                <SmallBtn onClick={() => navigate(`/users/${counterpartyId}`)}>{t('chat.profile')}</SmallBtn>
                             )}
                           </RowActions>
                         </ChatItem>
@@ -749,8 +754,8 @@ const ChatListPage = () => {
               ) : (
                   <EmptyState>
                     <EmptyIcon />
-                    <h3>채팅방이 없습니다</h3>
-                    <p>책 거래를 시작하면 채팅방이 생성됩니다.</p>
+                     <h3>{t('chat.noChatRooms')}</h3>
+                     <p>{t('chat.noChatRoomsDesc')}</p>
                   </EmptyState>
               )}
             </ChatList>
@@ -759,9 +764,9 @@ const ChatListPage = () => {
           {reviewModal.open && (
               <ModalOverlay>
                 <ModalBox>
-                  <ModalTitle>후기 남기기</ModalTitle>
+                   <ModalTitle>{t('chat.writeReview')}</ModalTitle>
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ marginBottom: 6, color: '#555' }}>별점(1~5)</div>
+                    <div style={{ marginBottom: 6, color: '#555' }}>{t('chat.ratingLabel')}</div>
                     <input
                         type="number"
                         min="1"
@@ -773,18 +778,18 @@ const ChatListPage = () => {
                     />
                   </div>
                   <div>
-                    <div style={{ marginBottom: 6, color: '#555' }}>키워드(쉼표 구분, 선택)</div>
+                    <div style={{ marginBottom: 6, color: '#555' }}>{t('chat.keywordsLabel')}</div>
                     <input
                         type="text"
                         value={keywords}
                         onChange={e => setKeywords(e.target.value)}
-                        placeholder="친절함, 시간엄수"
+                        placeholder={t('chat.reviewKeywordsPlaceholder')}
                         style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8 }}
                     />
                   </div>
                   <ModalActions>
-                    <ModalButton className="cancel" onClick={() => setReviewModal({ open: false, postId: null, role: null })} disabled={submitting}>취소</ModalButton>
-                    <ModalButton onClick={submitReview} disabled={!star || submitting}>{submitting ? '저장 중...' : '저장'}</ModalButton>
+                    <ModalButton className="cancel" onClick={() => setReviewModal({ open: false, postId: null, role: null })} disabled={submitting}>{t('common.cancel')}</ModalButton>
+                     <ModalButton onClick={submitReview} disabled={!star || submitting}>{submitting ? t('common.saving') : t('common.save')}</ModalButton>
                   </ModalActions>
                 </ModalBox>
               </ModalOverlay>

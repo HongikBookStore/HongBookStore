@@ -86,7 +86,7 @@ const SidebarMenu = ({ active, onMenuClick }) => {
   
   const menus = [
     { key: 'bookstore/add', label: t('sidebar.sellBook') },
-    { key: 'wanted', label: t('sidebar.wanted') },
+    { key: 'wanted', label: t('sidebar.wantedBoard') },
     { key: 'mybookstore', label: t('sidebar.myBookstore') },
     { key: 'chat', label: t('sidebar.chat') },
   ];

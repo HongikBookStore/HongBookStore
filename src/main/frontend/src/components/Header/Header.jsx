@@ -738,7 +738,7 @@ const Header = () => {
                       </UserAvatar>
                       <UserDropdown $isOpen={isDropdownOpen}>
                         <DropdownItem to="/mypage" onClick={(e) => { e.preventDefault(); safeNavigate('/mypage'); }}>
-                          {t('mypage')}
+                          {t('mypageTitle')}
                         </DropdownItem>
                         <DropdownItem to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
                           {t('myTransactions')}
@@ -804,7 +804,7 @@ const Header = () => {
               {isLoggedIn ? (
                   <>
                     <MobileNavLink to="/mypage" onClick={(e) => { e.preventDefault(); safeNavigate('/mypage'); }}>
-                      {t('mypage')}
+                      {t('mypageTitle')}
                     </MobileNavLink>
                     <MobileNavLink to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
                       {t('myTransactions')}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaSearch } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
 import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton } from '../../components/ui';
@@ -142,6 +143,7 @@ const DEPARTMENTS = [
 ];
 
 const Wanted = () => {
+  const { t } = useTranslation();
   const [wantedPosts, setWantedPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -177,7 +179,7 @@ const Wanted = () => {
 
       if (!res.ok) {
         const errTxt = isJson ? JSON.stringify(await res.json()).slice(0, 500) : (await res.text()).slice(0, 500);
-        throw new Error(`구해요 목록 요청 실패(${res.status}) ${errTxt}`);
+        throw new Error(`${t('wanted.error.fetchFailed')} (${res.status}) ${errTxt}`);
       }
 
       const payload = isJson ? await res.json() : null;
@@ -189,7 +191,7 @@ const Wanted = () => {
 
       setWantedPosts(Array.isArray(list) ? list : []);
     } catch (e) {
-      console.error('구해요 목록 불러오기 실패', e);
+      console.error(t('wanted.error.loadFailed'), e);
       setWantedPosts([]);
     } finally {
       setLoading(false);
@@ -233,9 +235,9 @@ const Wanted = () => {
         <MainContent>
           <WantedContainer>
             <WantedHeader>
-              <WantedTitle>구해요 게시판</WantedTitle>
+              <WantedTitle>{t('wanted.title')}</WantedTitle>
               <WriteButton onClick={handleWriteClick}>
-                <FaPlus /> 글쓰기
+                <FaPlus /> {t('wanted.write')}
               </WriteButton>
             </WantedHeader>
 
@@ -244,7 +246,7 @@ const Wanted = () => {
               <SearchForm onSubmit={handleSearch}>
                 <SearchInput
                     type="text"
-                    placeholder="책의 제목이나 저자명을 검색해보세요."
+                    placeholder={t('wanted.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -263,9 +265,9 @@ const Wanted = () => {
                       if (v !== '전공') setDepartment('');
                     }}
                 >
-                  <option value="">분류(전체)</option>
-                  <option value="전공">전공</option>
-                  <option value="교양">교양</option>
+                  <option value="">{t('wanted.category.all')}</option>
+                  <option value="전공">{t('wanted.category.major')}</option>
+                  <option value="교양">{t('wanted.category.general')}</option>
                 </FilterSelect>
 
                 {category === '전공' ? (
@@ -273,7 +275,7 @@ const Wanted = () => {
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
                     >
-                      <option value="">학과(전체)</option>
+                      <option value="">{t('wanted.department.all')}</option>
                       {DEPARTMENTS.map((d) => (
                           <option key={d} value={d}>{d}</option>
                       ))}
@@ -283,33 +285,41 @@ const Wanted = () => {
                 )}
 
                 <FilterSelect value={sort} onChange={(e)=>setSort(e.target.value)}>
-                  <option value="latest">최신순</option>
-                  <option value="oldest">오래된순</option>
-                  <option value="priceDesc">가격높은순</option>
-                  <option value="priceAsc">가격낮은순</option>
+                  <option value="latest">{t('wanted.sort.latest')}</option>
+                  <option value="oldest">{t('wanted.sort.oldest')}</option>
+                  <option value="priceDesc">{t('wanted.sort.priceHigh')}</option>
+                  <option value="priceAsc">{t('wanted.sort.priceLow')}</option>
                 </FilterSelect>
 
                 <SearchButton type="button" onClick={()=>fetchWanted({})}>
-                  적용
+                  {t('wanted.apply')}
                 </SearchButton>
               </FiltersRow>
             </SearchSection>
 
             {/* 기존 태그 필터 섹션은 그대로 두고 keyword로만 매핑 */}
             {loading ? (
-                <NoWanted>검색 중...</NoWanted>
+                <NoWanted>{t('wanted.searching')}</NoWanted>
             ) : wantedPosts.length > 0 ? (
                 <Grid>
                   {wantedPosts.map((post) => {
                     const priceNum = Number(post?.price ?? 0);
-                    const priceText = Number.isFinite(priceNum) ? `${priceNum.toLocaleString()}원` : '-';
+                    const priceText = Number.isFinite(priceNum) ? `${priceNum.toLocaleString()}${t('wanted.currency')}` : '-';
 
                     // 표시용: category + department 조합
                     const cat = (post?.category || '').trim();             // "전공" | "교양" | (과거 데이터 문자열)
                     const catSimple = cat.split('>')[0]?.trim() || cat;    // 과거 데이터 대응
-                    const displayCat = post?.department
-                        ? `${catSimple} / ${post.department}`
-                        : (cat.split('>').pop()?.trim() || catSimple || '-');
+                    
+                    // 카테고리 번역
+                    const translatedCat = catSimple === '전공' ? t('wanted.category.major') : 
+                                         catSimple === '교양' ? t('wanted.category.general') : catSimple;
+                    
+                    // 학과명 번역
+                    const translatedDept = post?.department ? t(`departments.${post.department}`) || post.department : null;
+                    
+                    const displayCat = translatedDept
+                        ? `${translatedCat} / ${translatedDept}`
+                        : (cat.split('>').pop()?.trim() || translatedCat || '-');
 
                     return (
                         <ClickableCard
@@ -333,27 +343,41 @@ const Wanted = () => {
                                     background: '#fff3cd',
                                     color: '#856404',
                                     border: '1px solid #ffeeba'
-                                  }}>주의</span>
+                                  }}>{t('wanted.warning')}</span>
                               )}
                             </CardTitle>
 
                             <CardMeta>
-                              <MetaLabel>저자</MetaLabel>
+                              <MetaLabel>{t('wanted.author')}</MetaLabel>
                               <MetaValue>{post.author || '-'}</MetaValue>
                             </CardMeta>
 
                             <CardMeta>
-                              <MetaLabel>상태</MetaLabel>
-                              <MetaValue>{post.condition || '-'}</MetaValue>
+                              <MetaLabel>{t('wanted.condition')}</MetaLabel>
+                              <MetaValue>
+                                {(() => {
+                                  // 영어 값들
+                                  if (post.condition === 'HIGH') return t('wantedWrite.condition.high');
+                                  if (post.condition === 'MEDIUM') return t('wantedWrite.condition.medium');
+                                  if (post.condition === 'LOW') return t('wantedWrite.condition.low');
+                                  
+                                  // 한국어 값들
+                                  if (post.condition === '상') return t('wantedWrite.condition.high');
+                                  if (post.condition === '중') return t('wantedWrite.condition.medium');
+                                  if (post.condition === '하') return t('wantedWrite.condition.low');
+                                  
+                                  return post.condition || '-';
+                                })()}
+                              </MetaValue>
                             </CardMeta>
 
                             <CardMeta>
-                              <MetaLabel>희망 가격</MetaLabel>
+                              <MetaLabel>{t('wanted.desiredPrice')}</MetaLabel>
                               <MetaValue>{priceText}</MetaValue>
                             </CardMeta>
 
                             <CardMeta>
-                              <MetaLabel>카테고리</MetaLabel>
+                              <MetaLabel>{t('wanted.categoryLabel')}</MetaLabel>
                               <MetaValue>{displayCat}</MetaValue>
                             </CardMeta>
                           </Card>
@@ -362,7 +386,7 @@ const Wanted = () => {
                   })}
                 </Grid>
             ) : (
-                <NoWanted>등록된 글이 없습니다.</NoWanted>
+                <NoWanted>{t('wanted.noPosts')}</NoWanted>
             )}
           </WantedContainer>
         </MainContent>

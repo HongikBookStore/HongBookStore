@@ -952,11 +952,11 @@ const MyPage = () => {
         } catch (_) {}
         try { updateUser?.({ username: updated.username }); } catch (_) {}
       } else {
-        alert(res?.data?.message || '닉네임 변경에 실패했습니다.');
+        alert(res?.data?.message || t('mypage.nicknameChangeFailed'));
         setProfileName(current);
       }
     } catch (e) {
-      const msg = e?.response?.data?.message || '닉네임 변경 중 오류가 발생했습니다.';
+      const msg = e?.response?.data?.message || t('mypage.nicknameChangeError');
       alert(msg);
       setProfileName(current);
     } finally {
@@ -1002,7 +1002,7 @@ const MyPage = () => {
         }
       }
     } catch (error) {
-      console.error("프로필 정보를 불러오는 데 실패했습니다.", error);
+      console.error(t('mypage.profileLoadFailed'), error);
       // 토큰 만료 등의 이유로 실패 시 로그인 페이지로 이동
       navigate('/login');
     } finally {
@@ -1055,8 +1055,8 @@ const MyPage = () => {
         const res = await axios.get(`/api/reviews/summary/users/${uid}`, { headers: getAuthHeader() });
         setRatingSummary(res.data);
       } catch (e) {
-        console.error('거래 평점 요약 조회 실패', e);
-        setRatingError(e.response?.data?.message || '거래 평점을 불러오지 못했습니다.');
+        console.error(t('mypage.ratingSummaryFailed'), e);
+        setRatingError(e.response?.data?.message || t('mypage.ratingLoadFailed'));
       } finally {
         setRatingLoading(false);
       }
@@ -1084,8 +1084,8 @@ const MyPage = () => {
       setRoleTotal(typeof data.totalElements === 'number' ? data.totalElements : (Array.isArray(data.content) ? data.content.length : 0));
       setRoleLast(Boolean(data.last));
     } catch (e) {
-      console.error('역할별 후기 조회 실패', e);
-      setRoleError(e.response?.data?.message || '후기 목록을 불러오지 못했습니다.');
+      console.error(t('mypage.reviewLoadFailed'), e);
+      setRoleError(e.response?.data?.message || t('mypage.reviewListLoadFailed'));
       setRoleReviews([]);
     } finally {
       setRoleLoading(false);
@@ -1125,10 +1125,10 @@ const MyPage = () => {
   const handleAddLocation = async () => {
     const name = (newLocation.name || '').trim();
     const address = (newLocation.address || '').trim();
-    if (name.length < 2) { alert('위치명은 2자 이상 입력해 주세요.'); return; }
-    if (address.length < 3) { alert('주소는 3자 이상 입력해 주세요.'); return; }
+    if (name.length < 2) { alert(t('mypage.locationNameMinLength')); return; }
+    if (address.length < 3) { alert(t('mypage.addressMinLength')); return; }
     if (locations.some(l => String(l.name||'').toLowerCase() === name.toLowerCase())) {
-      alert('이미 같은 이름의 위치가 있습니다.');
+      alert(t('mypage.locationNameExists'));
       return;
     }
 
@@ -1216,17 +1216,17 @@ const MyPage = () => {
   const saveEdit = async () => {
     const name = (editDraft.name || '').trim();
     const address = (editDraft.address || '').trim();
-    if (name.length < 2) { alert('위치명은 2자 이상 입력해 주세요.'); return; }
-    if (address.length < 3) { alert('주소는 3자 이상 입력해 주세요.'); return; }
+    if (name.length < 2) { alert(t('mypage.locationNameMinLength')); return; }
+    if (address.length < 3) { alert(t('mypage.addressMinLength')); return; }
     if (locations.some(l => l.id !== editingId && String(l.name||'').toLowerCase() === name.toLowerCase())) {
-      alert('이미 같은 이름의 위치가 있습니다.');
+      alert(t('mypage.locationNameExists'));
       return;
     }
     try {
       await updateLocation(editingId, { name, address, lat: editDraft.lat, lng: editDraft.lng });
       cancelEdit();
     } catch (e) {
-      alert(e?.response?.data?.message || '위치 수정 중 오류가 발생했습니다.');
+      alert(e?.response?.data?.message || t('mypage.locationUpdateError'));
     }
   };
 
@@ -1263,8 +1263,8 @@ const MyPage = () => {
         localStorage.setItem('user', JSON.stringify({ ...userObj, profileImage: newUrl, profileImageUrl: newUrl }));
       } catch (_) {}
     } catch (err) {
-      console.error('프로필 이미지 업로드 실패', err);
-      alert(err?.response?.data?.message || '프로필 이미지 업로드 중 오류가 발생했습니다.');
+      console.error(t('mypage.profileImageUploadFailed'), err);
+      alert(err?.response?.data?.message || t('mypage.profileImageUploadError'));
     } finally {
       // 같은 파일 재선택 가능하도록 input 리셋
       e.target.value = '';
@@ -1278,17 +1278,17 @@ const MyPage = () => {
     // 이메일 형식 검증 (두 도메인 모두 허용)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@(mail\.hongik\.ac\.kr|g\.hongik\.ac\.kr)$/;
     if (!emailRegex.test(univEmail)) {
-      setVerificationMessage({ type: 'error', text: '홍익대학교 메일 형식(@mail.hongik.ac.kr 또는 @g.hongik.ac.kr)이 올바르지 않습니다.' });
+      setVerificationMessage({ type: 'error', text: t('mypage.invalidEmailFormat') });
       setIsSubmitting(false);
       return;
     }
 
     try {
       await axios.post('/api/my/verification/request-code', { univEmail }, { headers: getAuthHeader() });
-      setVerificationMessage({ type: 'info', text: `${univEmail}로 인증 메일을 보냈습니다. 메일함의 링크를 클릭하면 인증이 완료됩니다.` });
+      setVerificationMessage({ type: 'info', text: t('mypage.verificationEmailSent', { email: univEmail }) });
       setShowVerificationForm(false); // 성공 시 폼 숨기기
     } catch (error) {
-      const message = error.response?.data?.message || "인증 메일 발송 중 오류가 발생했습니다.";
+      const message = error.response?.data?.message || t('mypage.verificationEmailError');
       setVerificationMessage({ type: 'error', text: message });
     } finally {
       setIsSubmitting(false);
@@ -1296,7 +1296,7 @@ const MyPage = () => {
   };
 
   if (loading || !profile) {
-    return <MyPageContainer><h2>로딩 중...</h2></MyPageContainer>;
+    return <MyPageContainer><h2>{t('common.loading')}</h2></MyPageContainer>;
   }
 
   // 프로필 링(원형) 표시를 위한 퍼센트(0~100) 계산: 0~5 ★ → ×20
@@ -1435,19 +1435,19 @@ const MyPage = () => {
           {/* 거래 평점 표시 */}
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6, width:'100%', marginTop:8}}>
             {ratingLoading ? (
-              <div style={{color:'#666'}}>거래 평점을 불러오는 중...</div>
+              <div style={{color:'#666'}}>{t('mypage.loadingRating')}</div>
             ) : ratingError ? (
               <div style={{color:'#d32f2f'}}>{ratingError}</div>
             ) : (
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
                 <div style={{fontWeight:700,color:'#333'}}>
-                  거래 평점: {overall.toFixed(2)}★
-                  <span style={{color:'#777',fontWeight:500}}> / 5.00 (총 {ratingSummary?.totalCount ?? 0}건)</span>
+                  {t('mypage.transactionRating')}: {overall.toFixed(2)}★
+                  <span style={{color:'#777',fontWeight:500}}> / 5.00 ({t('mypage.total')} {ratingSummary?.totalCount ?? 0}{t('mypage.cases')})</span>
                 </div>
                 <div style={{fontSize:'0.92rem',color:'#555'}}>
-                  판매자: {Number(ratingSummary?.sellerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.sellerCount ?? 0}건
+                  {t('mypage.seller')}: {Number(ratingSummary?.sellerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.sellerCount ?? 0}{t('mypage.cases')}
                   {"  |  "}
-                  구매자: {Number(ratingSummary?.buyerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.buyerCount ?? 0}건
+                  {t('mypage.buyer')}: {Number(ratingSummary?.buyerAverage ?? 0).toFixed(2)}★ · {ratingSummary?.buyerCount ?? 0}{t('mypage.cases')}
                 </div>
               </div>
             )}
@@ -1459,29 +1459,29 @@ const MyPage = () => {
       <SettingsContainer>
         {/* 거래 후기 섹션 (판매자/구매자 탭) */}
         <SettingsSection>
-          <h3><i className="fas fa-star" style={{color: 'var(--primary)'}}></i> 거래 후기</h3>
+          <h3><i className="fas fa-star" style={{color: 'var(--primary)'}}></i> {t('mypage.transactionReview')}</h3>
           <TabContainer>
             <TabList>
-              <TabButton active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>판매자 후기</TabButton>
-              <TabButton active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>구매자 후기</TabButton>
+              <TabButton active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>{t('mypage.sellerReview')}</TabButton>
+              <TabButton active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>{t('mypage.buyerReview')}</TabButton>
             </TabList>
           </TabContainer>
           {/* 요약 배지 */}
           <div style={{ display:'flex', gap: 12, marginBottom: 12 }}>
             {reviewTab === 'SELLER' && (
               <div style={{padding:'6px 10px', border:'1px solid var(--border)', borderRadius:8, background:'var(--background)'}}>
-                평균 {Number(roleSummary.SELLER?.averageScore ?? 0).toFixed(2)}★ · {roleSummary.SELLER?.reviewCount ?? 0}건
+                {t('mypage.average')} {Number(roleSummary.SELLER?.averageScore ?? 0).toFixed(2)}★ · {roleSummary.SELLER?.reviewCount ?? 0}{t('mypage.cases')}
               </div>
             )}
             {reviewTab === 'BUYER' && (
               <div style={{padding:'6px 10px', border:'1px solid var(--border)', borderRadius:8, background:'var(--background)'}}>
-                평균 {Number(roleSummary.BUYER?.averageScore ?? 0).toFixed(2)}★ · {roleSummary.BUYER?.reviewCount ?? 0}건
+                {t('mypage.average')} {Number(roleSummary.BUYER?.averageScore ?? 0).toFixed(2)}★ · {roleSummary.BUYER?.reviewCount ?? 0}{t('mypage.cases')}
               </div>
             )}
           </div>
           {/* 목록 */}
           {roleLoading ? (
-            <div style={{color:'#666'}}>후기를 불러오는 중...</div>
+            <div style={{color:'#666'}}>{t('mypage.loadingReviews')}</div>
           ) : roleError ? (
             <div style={{color:'#d32f2f'}}>{roleError}</div>
           ) : roleReviews.length === 0 ? (
@@ -1506,16 +1506,16 @@ const MyPage = () => {
           )}
           {/* 페이지 네비게이션 */}
           <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:12 }}>
-            <SmallButton onClick={() => fetchRoleData(profile.id, reviewTab, Math.max(0, rolePage - 1), roleSize)} disabled={rolePage <= 0}>이전</SmallButton>
-            <SmallButton onClick={() => !roleLast && fetchRoleData(profile.id, reviewTab, rolePage + 1, roleSize)} disabled={roleLast}>다음</SmallButton>
+            <SmallButton onClick={() => fetchRoleData(profile.id, reviewTab, Math.max(0, rolePage - 1), roleSize)} disabled={rolePage <= 0}>{t('common.previous')}</SmallButton>
+            <SmallButton onClick={() => !roleLast && fetchRoleData(profile.id, reviewTab, rolePage + 1, roleSize)} disabled={roleLast}>{t('common.next')}</SmallButton>
           </div>
         </SettingsSection>
         <SettingsSection>
-          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> 최근 본 게시글</h3>
+          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> {t('mypage.recentlyViewedPosts')}</h3>
           {recentLoading ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>불러오는 중…</div>
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.loading')}</div>
           ) : recentPosts.length === 0 ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>최근 본 게시글이 없습니다.</div>
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.noRecentlyViewedPosts')}</div>
           ) : (
             <RecentGrid>
               {recentPosts.map(p => (
@@ -1529,7 +1529,7 @@ const MyPage = () => {
                   </RecentThumb>
                   <RecentTitle>{p.postTitle}</RecentTitle>
                   <RecentMeta>
-                    <span>{(p.price ?? 0).toLocaleString()}원</span>
+                    <span>{(p.price ?? 0).toLocaleString()}{t('common.won')}</span>
                     <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
                   </RecentMeta>
                 </RecentCard>
@@ -1553,22 +1553,22 @@ const MyPage = () => {
                 <ModalInfo>
                   <div className="title">{confirmPost.postTitle}</div>
                   <div className="meta">{confirmPost.author}</div>
-                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}원</div>
+                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}{t('common.won')}</div>
                 </ModalInfo>
               </ModalBody>
               <ModalActions>
-                <ModalButton onClick={closeConfirm}>취소</ModalButton>
-                <ModalButton className="primary" onClick={goToPost}>이동</ModalButton>
+                <ModalButton onClick={closeConfirm}>{t('common.cancel')}</ModalButton>
+                <ModalButton className="primary" onClick={goToPost}>{t('common.move')}</ModalButton>
               </ModalActions>
             </ModalBox>
           </ModalOverlay>
         )}
         <SettingsSection>
-          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> 최근 본 게시글</h3>
+          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> {t('mypage.recentlyViewedPosts')}</h3>
           {recentLoading ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>불러오는 중…</div>
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.loading')}</div>
           ) : recentPosts.length === 0 ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>최근 본 게시글이 없습니다.</div>
+            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.noRecentlyViewedPosts')}</div>
           ) : (
             <RecentGrid>
               {recentPosts.map(p => (
@@ -1582,7 +1582,7 @@ const MyPage = () => {
                   </RecentThumb>
                   <RecentTitle>{p.postTitle}</RecentTitle>
                   <RecentMeta>
-                    <span>{(p.price ?? 0).toLocaleString()}원</span>
+                    <span>{(p.price ?? 0).toLocaleString()}{t('common.won')}</span>
                     <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
                   </RecentMeta>
                 </RecentCard>
@@ -1606,18 +1606,18 @@ const MyPage = () => {
                 <ModalInfo>
                   <div className="title">{confirmPost.postTitle}</div>
                   <div className="meta">{confirmPost.author}</div>
-                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}원</div>
+                  <div className="meta">{(confirmPost.price ?? 0).toLocaleString()}{t('common.won')}</div>
                 </ModalInfo>
               </ModalBody>
               <ModalActions>
-                <ModalButton onClick={closeConfirm}>취소</ModalButton>
-                <ModalButton className="primary" onClick={goToPost}>이동</ModalButton>
+                <ModalButton onClick={closeConfirm}>{t('common.cancel')}</ModalButton>
+                <ModalButton className="primary" onClick={goToPost}>{t('common.move')}</ModalButton>
               </ModalActions>
             </ModalBox>
           </ModalOverlay>
         )}
         <SettingsSection>
-          <h3>계정 정보</h3>
+          <h3>{t('mypage.accountInfo')}</h3>
           <SettingsList>
             <SettingsItem>
               <span><i className="fas fa-envelope" style={{marginRight:8, color: '#6B7280'}}></i>{profile.email}</span>
@@ -1626,16 +1626,16 @@ const MyPage = () => {
         </SettingsSection>
 
         <SettingsSection>
-          <h3>학생 인증</h3>
+          <h3>{t('mypage.studentVerification')}</h3>
           <SettingsList>
             <SettingsItem>
-              <span><i className="fas fa-university" style={{marginRight:8, color: '#6B7280'}}></i>재학생 인증</span>
+              <span><i className="fas fa-university" style={{marginRight:8, color: '#6B7280'}}></i>{t('mypage.currentStudentVerification')}</span>
               <span className={`verification-status ${profile.studentVerified ? 'verified' : 'not-verified'}`}>
                 <i className={`fas fa-${profile.studentVerified ? 'check-circle' : 'exclamation-circle'}`}></i>
-                {profile.studentVerified ? '인증 완료' : '미인증'}
+                {profile.studentVerified ? t('mypage.verificationComplete') : t('mypage.notVerified')}
               </span>
               {!profile.studentVerified && !showVerificationForm && (
-                <SmallButton onClick={() => setShowVerificationForm(true)}>인증하기</SmallButton>
+                <SmallButton onClick={() => setShowVerificationForm(true)}>{t('mypage.verify')}</SmallButton>
               )}
             </SettingsItem>
           </SettingsList>
@@ -1647,7 +1647,7 @@ const MyPage = () => {
               </p>
               <Input
                 type="email"
-                placeholder="id@g.hongik.ac.kr / id@mail.hongik.ac.kr"
+                placeholder={t('mypage.emailPlaceholder')}
                 value={univEmail}
                 onChange={(e) => setUnivEmail(e.target.value)}
                 disabled={isSubmitting}
@@ -1669,7 +1669,7 @@ const MyPage = () => {
           {profile.studentVerified && (
             <VerificationMessage className="success">
               <i className="fas fa-check-circle"></i>
-              {profile.univEmail} 계정으로 재학생 인증이 완료되었습니다.
+              {t('mypage.verificationCompleteMessage', {email: profile.univEmail})}
             </VerificationMessage>
           )}
         </SettingsSection>
@@ -1690,7 +1690,7 @@ const MyPage = () => {
                       />
                       <Input
                         type="text"
-                        placeholder={`${t('address')} (우편번호로 찾기를 이용하세요)`}
+                        placeholder={`${t('address')} (${t('mypage.useZipcodeSearch')})`}
                         value={editDraft.address}
                         readOnly
                       />
@@ -1714,7 +1714,7 @@ const MyPage = () => {
                       <IconButton onClick={() => handleSetDefault(location.id)} title={location.isDefault ? t('defaultLocation') : t('setDefault')}>
                         <i className={`fas fa-star`} style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
                       </IconButton>
-                      <IconButton onClick={() => beginEdit(location)} title={'수정'}>
+                      <IconButton onClick={() => beginEdit(location)} title={t('mypage.edit')}>
                         <i className="fas fa-pen"></i>
                       </IconButton>
                       <IconButton onClick={() => handleDeleteLocation(location.id)} className="danger" title={t('deleteLocation')}>
@@ -1738,7 +1738,7 @@ const MyPage = () => {
                 />
                 <Input
                   type="text"
-                  placeholder={`${t('address')} (우편번호로 찾기를 이용하세요)`}
+                  placeholder={`${t('address')} (${t('mypage.useZipcodeSearch')})`}
                   value={newLocation.address}
                   readOnly
                 />
@@ -1771,7 +1771,7 @@ const MyPage = () => {
       </SettingsContainer>
 
       {/* 편집 취소 확인 모달 */}
-      <Modal isOpen={showEditCancelConfirm} onClose={() => setShowEditCancelConfirm(false)} title={t('confirm', '확인')}>
+      <Modal isOpen={showEditCancelConfirm} onClose={() => setShowEditCancelConfirm(false)} title={t('confirm')}>
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
           <div>변경 사항이 저장되지 않습니다. 취소하시겠습니까?</div>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>

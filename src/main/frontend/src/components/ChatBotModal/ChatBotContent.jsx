@@ -422,7 +422,7 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
           <MessageContainer key={idx} sender={msg.sender}>
             <Message sender={msg.sender} isAsianLanguage={isAsianLanguage}>
               <MessageSender sender={msg.sender}>
-                {msg.sender === "bot" ? t("chatbot.title") : "나"}
+                {msg.sender === "bot" ? t("chatbot.title") : t("common.me")}
               </MessageSender>
               <MessageBubble sender={msg.sender} isAsianLanguage={isAsianLanguage}>
                 {msg.text.split('\n').map((line, index) => (
