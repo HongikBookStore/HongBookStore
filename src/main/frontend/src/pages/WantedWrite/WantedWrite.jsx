@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaBook, FaArrowLeft, FaSearch } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import api from '../../lib/api';
@@ -235,6 +236,7 @@ const CATEGORIES = {
 };
 
 export default function WantedWrite() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
     isbn: '',            // 검색으로 채움(현재 API 전송 X)
@@ -262,6 +264,15 @@ export default function WantedWrite() {
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
   const { id } = useParams();
   const isEdit = Boolean(id);
+
+  // CATEGORIES를 트리 형태로 변환
+  const catTree = Object.entries(CATEGORIES).map(([mainName, subCategories]) => ({
+    name: mainName,
+    children: Object.entries(subCategories).map(([subName, details]) => ({
+      name: subName,
+      children: details.map(detailName => ({ name: detailName }))
+    }))
+  }));
 
   useEffect(() => {
     startWriting('wanted');
@@ -298,7 +309,7 @@ export default function WantedWrite() {
     (async () => {
       try {
         const res = await fetch(`/api/wanted/${id}`);
-        if (!res.ok) throw new Error('상세 불러오기 실패');
+        if (!res.ok) throw new Error(t('wantedWrite.error.loadDetail'));
         const ct = res.headers.get('content-type') || '';
         const json = ct.includes('application/json') ? await res.json() : null;
         const detail = json?.data || json || {};
@@ -330,7 +341,8 @@ export default function WantedWrite() {
         // 수정 진입 시 입력 방식은 수동으로(선택 사항)
         setInputType('title');
       } catch (e) {
-        console.error(e);
+        console.error('기존 글 불러오기 실패:', e);
+        alert(t('wantedWrite.error.loadDetail'));
       }
     })();
   }, [isEdit, id]);
@@ -365,7 +377,7 @@ export default function WantedWrite() {
   const closeSearch = () => { setShowBookSearch(false); setSearchQuery(''); setSearchResults([]); setSearchLoading(false); };
 
   const handleBookSearch = async () => {
-    if (!searchQuery.trim()) { alert('검색어를 입력해줘! 🔍'); return; }
+    if (!searchQuery.trim()) { alert(t('wantedWrite.search.enterQuery')); return; }
     setSearchLoading(true);
     try {
       const res = await axios.get('/api/search/books', {
@@ -374,10 +386,10 @@ export default function WantedWrite() {
       });
       const results = toBookArray(res?.data).map(normalizeBook);
       setSearchResults(results);
-      if (results.length === 0) alert('검색 결과가 없어! 다른 키워드로 시도해봐 📚');
+      if (results.length === 0) alert(t('wantedWrite.search.noResults'));
     } catch (err) {
       console.error('책 검색 실패:', err);
-      alert('책 검색 중 오류가 발생했어! 다시 시도해줘 😅');
+      alert(t('wantedWrite.search.error'));
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -399,15 +411,15 @@ export default function WantedWrite() {
 
     // 제목/본문 최소 입력 보장: 두 항목 모두 비어있으면 에러
     if (!formData.title.trim() && !formData.content.trim()) {
-      newErrors.title = '제목 또는 요청 내용을 입력해주세요';
+      newErrors.title = t('wantedWrite.validation.titleOrContent');
     }
 
-    if (!formData.condition) newErrors.condition = '상태를 선택해주세요';
+    if (!formData.condition) newErrors.condition = t('wantedWrite.validation.selectCondition');
     const priceNum = Number(formData.price);
     if (formData.price === '' || Number.isNaN(priceNum) || priceNum < PRICE_MIN || priceNum > PRICE_MAX) {
-      newErrors.price = `희망 가격은 ${PRICE_MIN.toLocaleString()}~${PRICE_MAX.toLocaleString()}원 범위로 입력해주세요`;
+      newErrors.price = t('wantedWrite.validation.priceRange', { min: PRICE_MIN.toLocaleString(), max: PRICE_MAX.toLocaleString() });
     }
-    if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = '카테고리를 선택해주세요';
+    if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = t('wantedWrite.validation.selectCategory');
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -422,7 +434,7 @@ export default function WantedWrite() {
 
     const token = localStorage.getItem('accessToken');
     const userId = await ensureUserId(); // ✅ userId 보장
-    if (!userId) { alert('로그인이 필요합니다. (userId가 없습니다)'); return; }
+    if (!userId) { alert(t('wantedWrite.error.loginRequired')); return; }
 
     // ✅ 백엔드 규격에 맞게 전송
     const topCategory = formData.mainCategory || '교양';
@@ -495,7 +507,7 @@ export default function WantedWrite() {
       console.error(err);
       // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감
       if (!Object.values(errors).some(Boolean)) {
-        alert(isEdit ? '수정 중 오류가 발생했습니다.' : '등록 중 오류가 발생했습니다.');
+        alert(isEdit ? t('wantedWrite.error.updateFailed') : t('wantedWrite.error.createFailed'));
       }
     } finally {
       setSubmitting(false);
@@ -528,30 +540,30 @@ export default function WantedWrite() {
         <div className="header-spacer" />
         <WriteContainer>
           <WriteHeader>
-            <BackButton onClick={handleCancel}><FaArrowLeft /> 뒤로가기</BackButton>
-            <WriteTitle>구해요 글 작성</WriteTitle>
+            <BackButton onClick={handleCancel}><FaArrowLeft /> {t('wantedWrite.back')}</BackButton>
+            <WriteTitle>{t('wantedWrite.title')}</WriteTitle>
           </WriteHeader>
 
           <WriteForm onSubmit={handleSubmit}>
             <FormSection>
-              <SectionTitle><FaBook /> 기본 정보</SectionTitle>
+              <SectionTitle><FaBook /> {t('wantedWrite.basicInfo')}</SectionTitle>
 
               <InputTypeSelector>
-                <Label>입력 방식 선택 <Required>*</Required></Label>
+                <Label>{t('wantedWrite.inputMethod')} <Required>*</Required></Label>
                 <InputTypeButtons>
                   <InputTypeButton
                       type="button"
                       $active={inputType === 'title'}
                       onClick={() => setInputType('title')}
                   >
-                    직접 입력(제목/저자)
+                    {t('wantedWrite.inputType.manual')}
                   </InputTypeButton>
                   <InputTypeButton
                       type="button"
                       $active={inputType === 'search'}
                       onClick={() => setInputType('search')}
                   >
-                    ISBN/제목으로 검색
+                    {t('wantedWrite.inputType.search')}
                   </InputTypeButton>
                 </InputTypeButtons>
               </InputTypeSelector>
@@ -559,25 +571,25 @@ export default function WantedWrite() {
               {inputType === 'title' ? (
                   <>
                     <FormGroup>
-                      <Label>제목 <Required>*</Required></Label>
+                      <Label>{t('wantedWrite.titleLabel')} <Required>*</Required></Label>
                       <Input
                           type="text"
                           name="title"
                           value={formData.title}
                           onChange={handleInputChange}
-                          placeholder="원하는 책의 제목을 입력해주세요"
+                          placeholder={t('wantedWrite.titlePlaceholder')}
                       />
                       {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
                     </FormGroup>
 
                     <FormGroup>
-                      <Label>저자 <Required>*</Required></Label>
+                      <Label>{t('wantedWrite.authorLabel')} <Required>*</Required></Label>
                       <Input
                           type="text"
                           name="author"
                           value={formData.author}
                           onChange={handleInputChange}
-                          placeholder="저자를 입력해주세요"
+                          placeholder={t('wantedWrite.authorPlaceholder')}
                       />
                       {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
                     </FormGroup>
