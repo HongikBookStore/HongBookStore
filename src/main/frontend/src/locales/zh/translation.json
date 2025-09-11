@@ -107,7 +107,7 @@
   "invalidToken": "無效的存取。",
   "ok": "確認",
   "myTransactions": "我的交易",
-  "aiChat": "AI聊天",
+  "aiChat": "聊天机器人",
   "notifications": "通知",
   "test": "測試",
   "clearAll": "全部清除",
@@ -177,8 +177,8 @@
   "incorrectPasswordForWithdraw": "密碼不正確。",
   "withdrawFailed": "註銷失敗。",
   "chatbot": {
-    "title": "AI聊天機器人",
-    "welcome": "您好！我是弘書店AI聊天機器人。有什麼可以幫助您的嗎？",
+    "title": "聊天機器人",
+    "welcome": "您好！我是弘書店聊天機器人。有什麼可以幫助您的嗎？",
     "reset": "重置對話",
     "back": "返回",
     "questions": {
@@ -209,14 +209,12 @@
     },
     "subQuestions": {
       "withdraw": "帳戶註銷",
-      "findId": "查找ID",
-      "findPassword": "查找密碼",
+      "signupLogin": "註冊與登入",
       "studentVerification": "學生驗證"
     },
     "subAnswers": {
       "withdraw": "如何註銷您的帳戶：\n\n1. 在我的頁面中點擊「帳戶註銷」\n2. 輸入您的密碼進行驗證\n3. 檢查並同意註銷條款\n\n註銷時，所有數據將被永久刪除。",
-      "findId": "如何查找您的ID：\n\n1. 在登入頁面點擊「查找ID」\n2. 輸入您註冊時使用的電子郵件\n3. 我們會將您的ID發送到您的電子郵件",
-      "findPassword": "如何查找您的密碼：\n\n1. 在登入頁面點擊「查找密碼」\n2. 輸入您的ID和電子郵件\n3. 我們會將臨時密碼發送到您的電子郵件",
+      "signupLogin": "如何註冊和登入：\n\n1. 點擊右上角的「登入」按鈕\n2. 選擇Naver、Kakao或Google帳戶之一\n3. 使用您的SNS帳戶登入，系統會自動為您註冊\n\n您可以隨時使用現有的SNS帳戶登入。",
       "studentVerification": "如何驗證學生身份：\n\n1. 在我的頁面中點擊「學校郵箱驗證」\n2. 輸入您的g.hongik.ac.kr電子郵件\n3. 檢查您的電子郵件並輸入驗證碼\n\n驗證完成後，您可以無限制地使用所有服務，包括二手交易。"
     }
   }

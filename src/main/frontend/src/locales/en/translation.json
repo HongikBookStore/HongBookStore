@@ -107,7 +107,7 @@
   "invalidToken": "Invalid access.",
   "ok": "OK",
   "myTransactions": "My Transactions",
-  "aiChat": "AI Chat",
+  "aiChat": "Chatbot",
   "notifications": "Notifications",
   "test": "Test",
   "clearAll": "Clear All",
@@ -181,8 +181,8 @@
   "incorrectPasswordForWithdraw": "Password is incorrect.",
   "withdrawFailed": "Withdrawal failed.",
   "chatbot": {
-    "title": "AI Chatbot",
-    "welcome": "Hello! I'm the HongBookStore AI chatbot. How can I help you?",
+    "title": "Chatbot",
+    "welcome": "Hello! I'm the HongBookStore chatbot. How can I help you?",
     "reset": "Reset Conversation",
     "back": "Go Back",
     "questions": {
@@ -213,14 +213,12 @@
     },
     "subQuestions": {
       "withdraw": "Account Withdrawal",
-      "findId": "Find ID",
-      "findPassword": "Find Password",
+      "signupLogin": "Sign Up & Login",
       "studentVerification": "Student Verification"
     },
     "subAnswers": {
       "withdraw": "How to withdraw your account:\n\n1. Click 'Account Withdrawal' in My Page\n2. Enter your password for verification\n3. Review and agree to the withdrawal terms\n\nAll data will be permanently deleted upon withdrawal.",
-      "findId": "How to find your ID:\n\n1. Click 'Find ID' on the login page\n2. Enter the email you used during registration\n3. We'll send your ID to your email",
-      "findPassword": "How to find your password:\n\n1. Click 'Find Password' on the login page\n2. Enter your ID and email\n3. We'll send a temporary password to your email",
+      "signupLogin": "How to sign up and log in:\n\n1. Click the 'Login' button in the top right corner\n2. Choose one of Naver, Kakao, or Google accounts\n3. Log in with your SNS account and it will automatically sign you up\n\nYou can log in anytime with your existing SNS account.",
       "studentVerification": "How to verify student status:\n\n1. Click 'School Email Verification' in My Page\n2. Enter your g.hongik.ac.kr email\n3. Check your email and enter the verification code\n\nOnce verified, you can use all services including second-hand trading without restrictions."
     }
   }

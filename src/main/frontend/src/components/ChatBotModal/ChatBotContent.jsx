@@ -61,7 +61,7 @@ const Message = styled.div`
   display: flex;
   flex-direction: column;
   align-items: ${props => props.sender === "bot" ? "flex-start" : "flex-end"};
-  max-width: 80%;
+  max-width: ${props => props.isAsianLanguage ? '70%' : '80%'};
   margin: ${props => props.sender === "bot" ? "0 0 0 0" : "0 0 0 auto"};
 `;
 
@@ -73,7 +73,7 @@ const MessageBubble = styled.div`
   box-shadow: var(--shadow-sm);
   border: ${props => props.sender === "bot" ? "1px solid var(--border-light)" : "none"};
   position: relative;
-  word-break: keep-all;
+  word-break: ${props => props.isAsianLanguage ? 'break-word' : 'keep-all'};
   line-height: 1.6;
   
   &::before {
@@ -287,24 +287,27 @@ const BackButton = styled.button`
 `;
 
 const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [currentOptions, setCurrentOptions] = useState([]);
   const [optionHistory, setOptionHistory] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+  
+  // 현재 언어가 일본어 또는 중국어인지 확인
+  const isAsianLanguage = i18n.language === 'ja' || i18n.language === 'zh';
 
   // 번역된 옵션들을 생성하는 함수
   const getTranslatedOptions = () => [
     {
       label: t("chatbot.questions.sellBook"),
-      answer: t("chatbot.answers.sellBook"),
-      image: "/images/book-register-guide.png",
-      image2: "/images/book-register-guide2.png"
+      answer: t("chatbot.answers.sellBook")
+      // image: "/images/book-register-guide.png",
+      // image2: "/images/book-register-guide2.png"
     },
     {
       label: t("chatbot.questions.buyBook"),
-      answer: t("chatbot.answers.buyBook"),
-      image: "/images/trade-guide.png",
-      image2: "/images/trade-guide2.png"
+      answer: t("chatbot.answers.buyBook")
+      // image: "/images/trade-guide.png",
+      // image2: "/images/trade-guide2.png"
     },
     {
       label: t("chatbot.questions.safeTrade"),
@@ -316,21 +319,16 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
     },
     {
       label: t("chatbot.questions.accountIssues"),
+      answer: t("chatbot.answers.accountIssues"),
       subOptions: [
         {
           label: t("chatbot.subQuestions.withdraw"),
-          answer: t("chatbot.subAnswers.withdraw"),
-          image: "/images/register-withdraw.png"
+          answer: t("chatbot.subAnswers.withdraw")
+          // image: "/images/register-withdraw.png"
         },
         {
-          label: t("chatbot.subQuestions.findId"),
-          answer: t("chatbot.subAnswers.findId"),
-          image: "/images/find-password.png"
-        },
-        {
-          label: t("chatbot.subQuestions.findPassword"),
-          answer: t("chatbot.subAnswers.findPassword"),
-          image: "/images/find-password.png"
+          label: t("chatbot.subQuestions.signupLogin"),
+          answer: t("chatbot.subAnswers.signupLogin")
         },
         {
           label: t("chatbot.subQuestions.studentVerification"),
@@ -364,9 +362,10 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
     }
   ];
 
-  // 언어 변경 시 옵션 업데이트
+  // 언어 변경 시 옵션 업데이트 및 히스토리 초기화
   useEffect(() => {
     setCurrentOptions(getTranslatedOptions());
+    setOptionHistory([]); // 언어 변경 시 옵션 히스토리 초기화
   }, [t]);
 
   const handleImageClick = (imageSrc) => {
@@ -386,7 +385,12 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
         { sender: "bot", text: option.answer }
       ]);
       setCurrentOptions(option.subOptions);
-      setOptionHistory((prev) => [...prev, { options: getTranslatedOptions(), message: option.label }]);
+      setOptionHistory((prev) => [...prev, { 
+        options: getTranslatedOptions(), 
+        message: option.label,
+        hasSubOptions: true,
+        messageCount: 2 // 사용자 메시지 + 봇 답변
+      }]);
     } else {
       // 일반 옵션인 경우
       setMessages((prev) => [
@@ -403,8 +407,7 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
       setCurrentOptions(lastHistory.options);
       setOptionHistory((prev) => prev.slice(0, -1));
       
-      // 마지막 사용자 메시지와 봇 응답 제거
-      setMessages((prev) => prev.slice(0, -2));
+      // 메시지는 삭제하지 않고 옵션 리스트만 이전으로 돌아감
     }
   };
 
@@ -417,12 +420,16 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
       <ChatArea>
         {messages.map((msg, idx) => (
           <MessageContainer key={idx} sender={msg.sender}>
-            <Message sender={msg.sender}>
+            <Message sender={msg.sender} isAsianLanguage={isAsianLanguage}>
               <MessageSender sender={msg.sender}>
                 {msg.sender === "bot" ? t("chatbot.title") : "나"}
               </MessageSender>
-              <MessageBubble sender={msg.sender}>
-                {msg.text}
+              <MessageBubble sender={msg.sender} isAsianLanguage={isAsianLanguage}>
+                {msg.text.split('\n').map((line, index) => (
+                  <div key={index} style={{ marginBottom: line === '' ? '0.5rem' : '0' }}>
+                    {line}
+                  </div>
+                ))}
               </MessageBubble>
               {msg.image && (
                 <ImageContainer>
