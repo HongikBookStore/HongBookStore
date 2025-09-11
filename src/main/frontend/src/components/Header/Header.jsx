@@ -420,8 +420,6 @@ const NotificationItem = styled.div`
   &.unread { background: var(--primary-50); }
 `;
 
-import React from 'react';
-
 const NotificationIcon = styled.div`
   width: 32px; height: 32px; border-radius: var(--radius-full);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;

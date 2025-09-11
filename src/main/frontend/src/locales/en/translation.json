@@ -28,7 +28,8 @@
     "submit": "Submit",
     "yes": "Yes",
     "no": "No",
-    "won": "Won"
+    "won": "Won",
+    "view": "View"
   },
   "myBookstore": {
     "title": "My Bookstore",
@@ -81,9 +82,10 @@
     "deleteConfirm": "Are you sure you want to delete this book? Deleted data cannot be recovered.",
     "deleteSuccess": "Post has been deleted.",
     "deleteError": "An error occurred while deleting the post.",
+    "statusChangeConfirm": "Are you sure you want to change to '{{status}}'?",
+    "statusChangedToSold": "Changed to sold out.",
     "wishlistError": "An error occurred while removing from wishlist.",
     "wantedDeleteConfirm": "Are you sure you want to delete this wanted post?",
-    "statusChangeConfirm": "Are you sure you want to change to '{status}'?",
     "statusChangeSuccess": "Status has been changed.",
     "statusChangeError": "An error occurred while changing status.",
     "buyerSelect": "Select Buyer",

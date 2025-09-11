@@ -28,7 +28,8 @@
     "submit": "提交",
     "yes": "是",
     "no": "否",
-    "won": "韩元"
+    "won": "韩元",
+    "view": "查看"
   },
   "myBookstore": {
     "title": "我的书店",
@@ -70,9 +71,10 @@
     "deleteConfirm": "您确定要删除这本书吗？删除的数据无法恢复。",
     "deleteSuccess": "帖子已删除。",
     "deleteError": "删除帖子时发生错误。",
+    "statusChangeConfirm": "您确定要更改为「{{status}}」吗？",
+    "statusChangedToSold": "已更改为售罄。",
     "wishlistError": "从收藏夹移除时发生错误。",
     "wantedDeleteConfirm": "您确定要删除这个求物帖子吗？",
-    "statusChangeConfirm": "您确定要更改为'{status}'吗？",
     "statusChangeSuccess": "状态已更改。",
     "statusChangeError": "更改状态时发生错误。",
     "buyerSelect": "选择买家",

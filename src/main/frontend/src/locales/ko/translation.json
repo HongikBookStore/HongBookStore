@@ -28,7 +28,8 @@
     "submit": "제출",
     "yes": "예",
     "no": "아니오",
-    "won": "원"
+    "won": "원",
+    "view": "보기"
   },
   "postWrite": {
     "title": "판매글 등록",
@@ -984,9 +985,10 @@
     "deleteConfirm": "이 책을 정말 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.",
     "deleteSuccess": "게시글이 삭제되었습니다.",
     "deleteError": "게시글 삭제 중 오류가 발생했습니다.",
+    "statusChangeConfirm": "정말로 '{{status}}'으로 변경하시겠습니까?",
+    "statusChangedToSold": "판매완료로 변경되었습니다.",
     "wishlistError": "찜 해제 중 오류가 발생했습니다.",
     "wantedDeleteConfirm": "이 구해요 글을 삭제하시겠습니까?",
-    "statusChangeConfirm": "정말로 '{status}'으로 변경하시겠습니까?",
     "statusChangeSuccess": "상태가 변경되었습니다.",
     "statusChangeError": "상태 변경 중 오류가 발생했습니다.",
     "buyerSelect": "구매자 선택",
