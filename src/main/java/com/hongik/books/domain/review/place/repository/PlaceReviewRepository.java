@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,4 +23,8 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
     double avgByPlace(@Param("placeId") Long placeId);
 
     long countByPlaceId(Long placeId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from ReviewPhoto rp where rp.review.id = :reviewId")
+    void deleteByReviewId(@Param("reviewId") Long reviewId);
 }
