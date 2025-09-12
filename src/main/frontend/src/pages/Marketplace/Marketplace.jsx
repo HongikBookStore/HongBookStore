@@ -1343,9 +1343,10 @@ const Marketplace = () => {
               🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
             </div>
           )}
-        </div>
-      </PageWrapper>
-    </MarketplaceContainer>
+        </MarketplaceContainer>
+      </MainContent>
+      </div>
+    </PageWrapper>
   );
 };
 

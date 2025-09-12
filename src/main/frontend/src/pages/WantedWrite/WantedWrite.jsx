@@ -259,7 +259,7 @@ export default function WantedWrite() {
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [catTree, setCatTree] = useState(null);
+  // 카테고리 트리: 상태로 보관하지 않고 계산값으로 사용
 
   const navigate = useNavigate();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
