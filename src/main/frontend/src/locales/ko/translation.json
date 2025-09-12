@@ -1122,6 +1122,18 @@
     "reservationSaveFailed": "예약 저장에 실패했습니다"
   },
   "mypage": {
+    "transactionRating": "거래 평점",
+    "cases": "건",
+    "transactionReview": "거래 후기",
+    "sellerReview": "판매자 후기",
+    "buyerReview": "구매자 후기",
+    "average": "평균",
+    "recentlyViewedPosts": "최근 본 게시물",
+    "studentVerification": "학생 인증",
+    "accountInfo": "계정 정보",
+    "currentStudentVerification": "현재 학생 인증 상태",
+    "verificationCompleteMessage": "인증 완료",
+    "verificationComplete": "인증 완료",
     "nicknameChangeFailed": "닉네임 변경에 실패했습니다.",
     "nicknameChangeError": "닉네임 변경 중 오류가 발생했습니다.",
     "profileLoadFailed": "프로필 정보를 불러오는 데 실패했습니다.",
