@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
+import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton } from '../../components/ui';
 import axios from 'axios';
 
@@ -23,19 +23,18 @@ const pulse = keyframes`
 `;
 
 const MarketplaceContainer = styled.div`
-  padding: 8rem 2rem 4rem;
-  max-width: 1440px;
-  margin: 0 auto;
   width: 100%;
+  margin: 0 auto;
+  padding: 32px;
   box-sizing: border-box;
-  padding-top: 96px;
+  padding-top: 0;
   @media (max-width: 900px) {
-    padding-top: 72px;
+    padding: 16px 8px;
+    padding-top: 0;
   }
   @media (max-width: 600px) {
-    padding-top: 56px;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding: 8px 2px;
+    padding-top: 0;
   }
 `;
 
@@ -878,6 +877,26 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  // 사이드바 메뉴 핸들러
+  const handleSidebarMenu = (menu) => {
+    switch (menu) {
+      case 'bookstore/add':
+        navigate('/bookstore/add');
+        break;
+      case 'wanted':
+        navigate('/wanted');
+        break;
+      case 'mybookstore':
+        navigate('/bookstore');
+        break;
+      case 'chat':
+        navigate('/chat');
+        break;
+      default:
+        break;
+    }
+  };
+
   // API 데이터 상태
   const [posts, setPosts] = useState([]); // API로부터 받아온 게시글 목록
   const [page, setPage] = useState(0); // 현재 페이지 번호 (무한 스크롤용)
@@ -1178,17 +1197,18 @@ const Marketplace = () => {
   };
 
   return (
-    <MarketplaceContainer>
-        <Header>
-          <Title>{t('marketplace.title')}</Title>
-          <Description>{t('marketplace.description')}</Description>
-        </Header>
-      <PageWrapper>
-        <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Controls>
-            <SearchBar as="form" onSubmit={handleSearch}>
-              <SearchIcon />
+    <PageWrapper>
+      <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+      <MainContent>
+        <MarketplaceContainer>
+          <Header>
+            <Title>{t('marketplace.title')}</Title>
+            <Description>{t('marketplace.description')}</Description>
+          </Header>
+            <Controls>
+              <SearchBar as="form" onSubmit={handleSearch}>
+                <SearchIcon />
                 <input
                     type="text"
                     value={searchQuery}
@@ -1323,9 +1343,10 @@ const Marketplace = () => {
               🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
             </div>
           )}
-        </div>
-      </PageWrapper>
-    </MarketplaceContainer>
+        </MarketplaceContainer>
+      </MainContent>
+      </div>
+    </PageWrapper>
   );
 };
 

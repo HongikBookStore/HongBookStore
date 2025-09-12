@@ -896,11 +896,7 @@ const PostWrite = () => {
   const isEdit = Boolean(id);
 
   // WritingContext 사용
-  const { startWriting, stopWriting, setUnsavedChanges } = useWriting() || {
-    startWriting: () => {},
-    stopWriting: () => {},
-    setUnsavedChanges: () => {},
-  };
+  const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
 
   // 모든 필드 명시적으로 정의
   const [formData, setFormData] = useState({
@@ -993,20 +989,16 @@ const PostWrite = () => {
       const expiryTime = DRAFT_EXPIRY_HOURS * 60 * 60 * 1000;
 
       if (draftAge < expiryTime) {
-        const shouldLoad = window.confirm(t('postWrite.loadDraftConfirm'));
-        if (shouldLoad) {
-          const { timestamp, ...dataWithoutTimestamp } = draftData;
-          setFormData(prev => ({
-            ...prev,
-            ...dataWithoutTimestamp,
-          }));
-          if (draftData.images) {
-            setImages(draftData.images);
-          }
-          console.log('임시저장된 데이터 불러옴');
-        } else {
-          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        // 임시저장된 데이터가 있으면 자동으로 불러오기 (팝업 없이)
+        const { timestamp, ...dataWithoutTimestamp } = draftData;
+        setFormData(prev => ({
+          ...prev,
+          ...dataWithoutTimestamp,
+        }));
+        if (draftData.images) {
+          setImages(draftData.images);
         }
+        console.log('임시저장된 데이터 자동 불러옴');
       } else {
         localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
@@ -1019,7 +1011,9 @@ const PostWrite = () => {
   // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
     console.log('PostWrite 컴포넌트 마운트됨');
+    console.log('startWriting 호출 전');
     startWriting('sale');
+    console.log('startWriting 호출 후');
     loadDraftData();
 
     return () => {
@@ -2034,7 +2028,7 @@ const PostWrite = () => {
                 </CancelButton>
 
                 {!isEdit && (
-                    <SaveDraftButton type="button" onClick={handleSaveDraft}>
+                    <SaveDraftButton type="button" onClick={handleSaveDraftAndExit}>
                       <FaSave /> {t('postWrite.saveDraft')}
                     </SaveDraftButton>
                 )}
@@ -2055,12 +2049,33 @@ const PostWrite = () => {
         {showBookSearch && (
             <BookSearchModal>
               <BookSearchContent>
-                <h3>{t('postWrite.bookSearchModal')}</h3>
+                <h3>📚 {t('postWrite.bookSearchModal')}</h3>
+                
+                {/* ISBN 입력 가이드 */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+                  border: '1px solid #bbdefb',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  marginBottom: '16px',
+                  fontSize: '13px',
+                  color: '#1976d2'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px' }}>💡</span>
+                    <span>ISBN은 <strong>하이픈(-) 없이</strong> 숫자만 입력하세요</span>
+                  </div>
+                </div>
+                
                 <SearchInput
                     type="text"
                     placeholder={t('postWrite.searchPlaceholder')}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      // ISBN 입력 시 자동으로 하이픈 제거
+                      const value = e.target.value.replace(/-/g, '');
+                      setSearchQuery(value);
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
                 />
                 <BookSearchButton

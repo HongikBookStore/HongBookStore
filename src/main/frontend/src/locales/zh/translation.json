@@ -303,7 +303,7 @@
     "loading": "加载中...",
     "nicknameLengthError": "请输入2-25个字符的昵称。"
   },
-  "login": {
+  "loginNs": {
     "socialLoginFailed": "社交登录失败。请稍后重试。",
     "loginWithNaver": "使用Naver登录",
     "loginWithKakao": "使用Kakao登录",

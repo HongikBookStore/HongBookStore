@@ -295,7 +295,7 @@
     "loading": "Loading...",
     "nicknameLengthError": "Please enter a nickname between 2 and 25 characters."
   },
-  "login": {
+  "loginNs": {
     "socialLoginFailed": "Social login failed. Please try again later.",
     "loginWithNaver": "Login with Naver",
     "loginWithKakao": "Login with Kakao",

@@ -126,9 +126,10 @@ const BookCard = styled.div`
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
-  padding: 20px;
+  padding: 16px;
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden; /* 버튼이 카드 밖으로 나가지 않도록 */
 
   &:hover {
     transform: translateY(-2px);
@@ -202,22 +203,27 @@ const BookStatus = styled.span`
 
 const BookActions = styled.div`
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 15px;
+  justify-content: flex-start;
 `;
 
 const ActionButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 6px 10px;
   border: 1px solid #ddd;
   background: white;
   color: #666;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   transition: all 0.3s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  
   &:hover {
     background: #f8f9fa;
     border-color: #007bff;
@@ -226,6 +232,12 @@ const ActionButton = styled.button`
   &.delete:hover {
     border-color: #dc3545;
     color: #dc3545;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 3px;
   }
 `;
 
@@ -339,6 +351,7 @@ const CompactBookCard = styled.div`
   gap: 15px;
   transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
+  overflow: hidden; /* 버튼이 카드 밖으로 나가지 않도록 */
 
   &:hover {
     transform: translateY(-1px);
@@ -414,7 +427,9 @@ const CompactBookStatus = styled.span`
 
 const CompactBookActions = styled.div`
   display: flex;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-start;
 `;
 
 const EmptyState = styled.div`
@@ -826,7 +841,7 @@ const MyBookstore = () => {
 
   const handleSidebarMenu = (menu) => {
     switch(menu) {
-      case 'booksale':
+      case 'bookstore/add':
         navigate('/bookstore/add'); break;
       case 'wanted':
         navigate('/wanted'); break;

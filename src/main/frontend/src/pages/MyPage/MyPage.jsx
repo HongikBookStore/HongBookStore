@@ -347,28 +347,31 @@ const SettingsSection = styled.div`
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    padding: 0.4rem 0.8rem;
-    border-radius: 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    background: var(--background);
-    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: var(--surface);
+    border: 2px solid var(--border);
     transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     
     &.verified {
-      color: var(--primary);
-      background: rgba(124, 58, 237, 0.1);
-      border-color: rgba(124, 58, 237, 0.2);
+      color: #ffffff;
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      border-color: #7c3aed;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
     }
     
     &.not-verified {
-      color: var(--accent);
-      background: rgba(249, 115, 22, 0.1);
-      border-color: rgba(249, 115, 22, 0.2);
+      color: #ffffff;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-color: #f97316;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
     }
     
     i {
-      font-size: 0.9rem;
+      font-size: 1rem;
     }
   }
   
@@ -655,7 +658,8 @@ const Input = styled.input`
   }
   
   &::placeholder {
-    color: var(--text-light);
+    color: #adb5bd;
+    opacity: 0.7;
   }
 `;
 
@@ -681,11 +685,18 @@ const IconButton = styled.button`
 `;
 
 const VerificationForm = styled.div`
-  background: var(--background);
-  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(124, 58, 237, 0.15) 100%);
+  border-radius: 1rem;
   padding: 1.5rem;
   margin-top: 1rem;
-  border: 1px solid var(--border);
+  border: none;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.15);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 6px 25px rgba(124, 58, 237, 0.2);
+    transform: translateY(-1px);
+  }
 `;
 
 // ---
@@ -1564,6 +1575,7 @@ const MyPage = () => {
           </ModalOverlay>
         )}
         <SettingsSection>
+          <h3><i className="fas fa-user-cog" style={{color: 'var(--primary)'}}></i> 계정 정보</h3>
           <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> {t('mypage.recentlyViewedPosts')}</h3>
           {recentLoading ? (
             <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.loading')}</div>
@@ -1626,7 +1638,7 @@ const MyPage = () => {
         </SettingsSection>
 
         <SettingsSection>
-          <h3>{t('mypage.studentVerification')}</h3>
+          <h3><i className="fas fa-graduation-cap" style={{color: 'var(--primary)'}}></i> {t('mypage.studentVerification')}</h3>
           <SettingsList>
             <SettingsItem>
               <span><i className="fas fa-university" style={{marginRight:8, color: '#6B7280'}}></i>{t('mypage.currentStudentVerification')}</span>
@@ -1651,6 +1663,11 @@ const MyPage = () => {
                 value={univEmail}
                 onChange={(e) => setUnivEmail(e.target.value)}
                 disabled={isSubmitting}
+                style={{
+                  background: '#f8f9fa',
+                  border: '2px solid #e9ecef',
+                  color: '#495057'
+                }}
               />
               <SmallButton onClick={handleSendVerification} disabled={isSubmitting}>
                 {isSubmitting ? '전송 중...' : '인증 메일 발송'}

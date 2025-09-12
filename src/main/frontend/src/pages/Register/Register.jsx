@@ -50,10 +50,12 @@ const SocialButton = styled.button`
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 0;
 
   img {
-    width: 50%;
-    height: 50%;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
   }
 
   &:hover {
@@ -68,7 +70,10 @@ function Register() {
   // 소셜 로그인 버튼 클릭 시, 백엔드의 인증 URL로 이동시키는 함수
   const handleSocialLogin = (provider) => {
     // 이 URL은 로그인 페이지의 함수와 동일해.
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+    const API_BASE =
+      import.meta?.env?.VITE_API_BASE ??
+      (window.location.port === '5173' ? 'http://localhost:8080' : '');
+    window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
   };
 
   const [lang, setLang] = useState(i18n.language || 'ko');
@@ -93,13 +98,13 @@ function Register() {
         
         <SocialButtonContainer>
           <SocialButton aria-label="네이버로 시작하기" onClick={() => handleSocialLogin('naver')}>
-            <img src={naverLogo} alt="Naver" style={{width:40, height:40}} />
+            <img src={naverLogo} alt="Naver" />
           </SocialButton>
           <SocialButton aria-label="카카오로 시작하기" onClick={() => handleSocialLogin('kakao')}>
-            <img src={kakaoLogo} alt="Kakao" style={{width:40, height:40}} />
+            <img src={kakaoLogo} alt="Kakao" />
           </SocialButton>
           <SocialButton aria-label="구글로 시작하기" onClick={() => handleSocialLogin('google')}>
-            <img src={googleLogo} alt="Google" style={{width:40, height:40}} />
+            <img src={googleLogo} alt="Google" />
           </SocialButton>
         </SocialButtonContainer>
       </RegisterContainer>

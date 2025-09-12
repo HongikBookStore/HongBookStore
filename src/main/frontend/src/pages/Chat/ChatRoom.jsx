@@ -359,7 +359,24 @@ const RetryModalButton = styled.button`
 `;
 
 const ReserveModalBox = styled(ModalBox)`
-  min-width: 380px; max-width: 95vw;
+  min-width: 320px; max-width: 90vw; max-height: 80vh;
+  overflow-y: auto; padding: 20px 16px 16px 16px;
+  
+  /* 스크롤바 스타일링 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
 `;
 
 const PlaceList = styled.div`
