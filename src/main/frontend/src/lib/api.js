@@ -1,8 +1,15 @@
 import axios from 'axios';
 
 // 1. axios 인스턴스 생성 및 기본 URL 설정
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_BASE)
+    ? import.meta.env.VITE_API_BASE
+    : (typeof window !== 'undefined' && window.location && window.location.port === '5173')
+      ? 'http://localhost:8080'
+      : '';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: `${API_BASE}/api`,
 });
 
 // 2. 요청(Request) 인터셉터

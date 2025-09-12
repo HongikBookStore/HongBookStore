@@ -165,21 +165,24 @@ const Hero = () => {
       description: t('slides.welcome.description'),
       buttonText: t('slides.welcome.buttonText'),
       backgroundImage: 'url("/images/onboarding-welcome.png")',
-      background: '#f8f4f0'
+      background: '#f8f4f0',
+      path: '/marketplace',
     },
     {
       title: t('slides.marketplace.title'),
       description: t('slides.marketplace.description'),
       buttonText: t('slides.marketplace.buttonText'),
       backgroundImage: 'url("/images/onboarding-marketplace.png")',
-      background: '#f0f8f8'
+      background: '#f0f8f8',
+      path: '/marketplace',
     },
     {
       title: t('slides.map.title'),
       description: t('slides.map.description'),
       buttonText: t('slides.map.buttonText'),
       backgroundImage: 'url("/images/onboarding-map.png")',
-      background: '#f8f0f8'
+      background: '#f8f0f8',
+      path: '/hongikmap',
     }
   ];
 
