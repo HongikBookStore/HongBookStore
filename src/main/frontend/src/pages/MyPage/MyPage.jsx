@@ -1712,7 +1712,7 @@ const MyPage = () => {
                         readOnly
                       />
                       <SmallButton onClick={() => handlePostcodeSelect(true)}>
-                        우편번호로 찾기
+                        {t('mypage.useZipcodeSearch')}
                       </SmallButton>
                     </div>
                     {/* 검색/지도 선택 제거: 우편번호 전용 */}
@@ -1761,7 +1761,7 @@ const MyPage = () => {
                 />
                 <div style={{display:'flex', gap:8, alignItems:'flex-start'}}>
                   <SmallButton onClick={() => handlePostcodeSelect(false)}>
-                    우편번호로 찾기
+                    {t('mypage.useZipcodeSearch')}
                   </SmallButton>
                 </div>
                 <div className="button-group">
