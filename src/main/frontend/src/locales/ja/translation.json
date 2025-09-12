@@ -468,7 +468,7 @@
   "kakao": "カカオ",
   "google": "グーグル",
   "registerSuccess": "新規登録が完了しました！",
-  "login": "ログイン",
+  "loginButton": "ログイン",
   "loginSuccess": "ログイン成功！",
   "loginRequired": "IDとパスワードを入力してください。",
   "findId": "IDを探す",

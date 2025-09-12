@@ -166,7 +166,7 @@
   "kakao": "카카오",
   "google": "구글",
   "registerSuccess": "회원가입이 완료되었습니다!",
-  "login": "로그인",
+  "loginButton": "로그인",
   "loginSuccess": "로그인 성공!",
   "loginRequired": "아이디와 비밀번호를 입력하세요.",
   "rememberMe": "아이디/비밀번호 기억하기",

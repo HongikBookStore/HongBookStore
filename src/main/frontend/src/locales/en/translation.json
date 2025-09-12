@@ -484,7 +484,7 @@
   "kakao": "Kakao",
   "google": "Google",
   "registerSuccess": "Registration completed!",
-  "login": "Login",
+  "loginButton": "Login",
   "loginSuccess": "Login successful!",
   "loginRequired": "Please enter your ID and password.",
   "findId": "Find ID",

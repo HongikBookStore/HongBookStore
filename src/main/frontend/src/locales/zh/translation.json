@@ -493,7 +493,7 @@
   "kakao": "KakaoTalk",
   "google": "Google",
   "registerSuccess": "注册成功！",
-  "login": "登录",
+  "loginButton": "登录",
   "loginSuccess": "登录成功！",
   "loginRequired": "请输入用户名和密码",
   "findId": "找回用户名",
