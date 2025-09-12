@@ -5,6 +5,7 @@ import com.hongik.books.auth.jwt.JwtTokenProvider;
 import com.hongik.books.security.oauth.CustomOAuth2User;
 import com.hongik.books.domain.user.domain.CustomUserDetails;
 import com.hongik.books.domain.user.domain.User;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,10 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final JwtTokenProvider jwtTokenProvider;
 
+    // 프론트엔드 베이스 URL (예: https://<project>.vercel.app)
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
@@ -40,7 +45,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("소셜 로그인 성공. 사용자 ID: {}, Access Token 발급 완료.", userId);
 
         // 프론트엔드로 리다이렉트할 URL에 토큰들을 쿼리 파라미터로 추가
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendBaseUrl)
+                .path("/oauth/callback")
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
                 .build().toUriString();
