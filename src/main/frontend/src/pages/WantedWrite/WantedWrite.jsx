@@ -530,7 +530,7 @@ export default function WantedWrite() {
       setUnsavedChanges(false);
       setHasUnsavedChanges(false);
       alert(isEdit ? t('wantedWrite.success.update') : t('wantedWrite.success.create'));
-      navigate(isEdit ? '/mybookstore' : '/wanted');
+      navigate(isEdit ? `/wanted/${id}` : '/wanted', { replace: false });
     } catch (err) {
       console.error(err);
       // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감

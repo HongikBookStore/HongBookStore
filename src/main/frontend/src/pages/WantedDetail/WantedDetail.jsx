@@ -350,7 +350,7 @@ export default function WantedDetail() {
             <MainContent>
                 <Container>
                     <TopBar>
-                        <BackButton onClick={() => navigate(-1)}><FaArrowLeft /> {t('wantedDetail.back')}</BackButton>
+                        <BackButton onClick={() => navigate('/wanted')}><FaArrowLeft /> {t('wantedDetail.back')}</BackButton>
                         <Actions>
                             <Button onClick={() => navigate('/wanted')}>{t('wantedDetail.list')}</Button>
                             {mine ? (
