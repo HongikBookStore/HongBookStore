@@ -1,5 +1,6 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
+import { useTranslation } from 'react-i18next';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(20px); }
@@ -80,28 +81,32 @@ const SubMenuButton = styled.button`
   }
 `;
 
-const menus = [
-  { key: 'bookstore/add', label: '책 판매 글쓰기' },
-  { key: 'wanted', label: '구하기 게시판' },
-  { key: 'mybookstore', label: '나의 책방' },
-  { key: 'chat', label: '거래 채팅' },
-];
+const SidebarMenu = ({ active, onMenuClick }) => {
+  const { t } = useTranslation();
+  
+  const menus = [
+    { key: 'bookstore/add', label: t('sidebar.sellBook') },
+    { key: 'wanted', label: t('sidebar.wantedBoard') },
+    { key: 'mybookstore', label: t('sidebar.myBookstore') },
+    { key: 'chat', label: t('sidebar.chat') },
+  ];
 
-const SidebarMenu = ({ active, onMenuClick }) => (
-  <Sidebar>
-    <SubMenuContainer>
-      {menus.map(menu => (
-        <SubMenuButton
-          key={menu.key}
-          active={active === menu.key}
-          onClick={() => onMenuClick(menu.key)}
-        >
-          {menu.label}
-        </SubMenuButton>
-      ))}
-    </SubMenuContainer>
-  </Sidebar>
-);
+  return (
+    <Sidebar>
+      <SubMenuContainer>
+        {menus.map(menu => (
+          <SubMenuButton
+            key={menu.key}
+            active={active === menu.key}
+            onClick={() => onMenuClick(menu.key)}
+          >
+            {menu.label}
+          </SubMenuButton>
+        ))}
+      </SubMenuContainer>
+    </Sidebar>
+  );
+};
 
 export const MainContent = styled.div`
   flex: 1;

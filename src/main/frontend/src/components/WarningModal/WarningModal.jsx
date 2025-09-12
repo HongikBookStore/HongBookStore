@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { FaExclamationTriangle } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 
 const ModalOverlay = styled.div`
   display: ${props => props.$isOpen ? 'flex' : 'none'};
@@ -106,20 +107,24 @@ const WarningModal = ({
   type = 'wanted', // 'wanted' or 'sale'
   title = '',
   message = '',
+  confirmText = '',
+  cancelText = '',
   showSaveDraft = false 
 }) => {
+  const { t } = useTranslation();
+  
   if (!isOpen) return null;
 
   const getDefaultContent = () => {
     if (type === 'wanted') {
       return {
-        title: '작성 중인 내용이 있습니다',
-        message: '현재 작성 중인 구해요 글이 저장되지 않습니다. 정말 나가시겠습니까?'
+        title: t('warningModal.unsavedChanges.title'),
+        message: t('warningModal.unsavedChanges.wantedMessage')
       };
     } else {
       return {
-        title: '작성 중인 내용이 있습니다',
-        message: '현재 작성 중인 판매 글이 저장되지 않습니다. 어떻게 하시겠습니까?'
+        title: t('warningModal.unsavedChanges.title'),
+        message: t('warningModal.unsavedChanges.saleMessage')
       };
     }
   };
@@ -145,7 +150,7 @@ const WarningModal = ({
               className="success" 
               onClick={onSaveDraft}
             >
-              임시저장
+              {t('warningModal.unsavedChanges.saveDraft')}
             </Button>
           )}
           
@@ -153,14 +158,14 @@ const WarningModal = ({
             className="secondary" 
             onClick={onCancel}
           >
-            계속 작성
+            {cancelText || t('warningModal.unsavedChanges.continueWriting')}
           </Button>
           
           <Button 
             className="danger" 
             onClick={onConfirm}
           >
-            나가기
+            {confirmText || t('warningModal.unsavedChanges.exit')}
           </Button>
         </ButtonGroup>
       </ModalContent>

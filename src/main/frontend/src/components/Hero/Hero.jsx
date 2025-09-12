@@ -372,23 +372,23 @@ const Hero = () => {
 
   const slides = [
     {
-      title: '홍책방',
-      description: '홍익대 학생들을 위한 중고책 거래 플랫폼입니다.',
-      buttonText: '회원가입',
+      title: t('slides.welcome.title'),
+      description: t('slides.welcome.description'),
+      buttonText: t('slides.welcome.buttonText'),
       backgroundImage: 'url("/images/onboarding-welcome.png")',
       background: '#f8f4f0'
     },
     {
-      title: '북마켓',
-      description: '전공서적, 교양서적을 안전하고 간편하게 이용하세요',
-      buttonText: '책거래 시작하기',
+      title: t('slides.marketplace.title'),
+      description: t('slides.marketplace.description'),
+      buttonText: t('slides.marketplace.buttonText'),
       backgroundImage: 'url("/images/onboarding-marketplace.png")',
       background: '#f0f8f8'
     },
     {
-      title: '홍익지도',
-      description: '홍익대학교 주변의 여러 장소들을 공유해요',
-      buttonText: '지도 보기',
+      title: t('slides.map.title'),
+      description: t('slides.map.description'),
+      buttonText: t('slides.map.buttonText'),
       backgroundImage: 'url("/images/onboarding-map.png")',
       background: '#f8f0f8'
     }

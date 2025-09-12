@@ -8,6 +8,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import Stomp from 'stompjs';
 import { AuthCtx } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 /* ----------------------------- styled components ----------------------------- */
 const ChatContainer = styled.div`
@@ -633,6 +634,7 @@ const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
 const SSE_ENDPOINT = (token) => `/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
 
 const ChatRoom = () => {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -724,24 +726,24 @@ const ChatRoom = () => {
     if (width <= 600) return '';
     if (width <= 900) {
       switch (type) {
-        case 'report': return '신고';
-        case 'reserve': return '예약';
-        case 'reserve-cancel': return '예약 취소';
-        case 'complete': return '완료';
-        case 'complete-cancel': return '완료 취소';
-        case 'accept': return '수락';
-        case 'decline': return '거절';
+        case 'report': return t('chat.getLabel.report');
+        case 'reserve': return t('chat.getLabel.reserve');
+        case 'reserve-cancel': return t('chat.getLabel.reserveCancel');
+        case 'complete': return t('chat.getLabel.complete');
+        case 'complete-cancel': return t('chat.getLabel.completeCancel');
+        case 'accept': return t('chat.getLabel.accept');
+        case 'decline': return t('chat.getLabel.decline');
         default: return '';
       }
     }
     switch (type) {
-      case 'report': return '신고하기';
-      case 'reserve': return '예약하기';
-      case 'reserve-cancel': return '예약 취소하기';
-      case 'complete': return '거래 완료';
-      case 'complete-cancel': return '거래 완료 취소';
-      case 'accept': return '예약 수락';
-      case 'decline': return '예약 거절';
+      case 'report': return t('chat.getLabel.reportLong');
+      case 'reserve': return t('chat.getLabel.reserveLong');
+      case 'reserve-cancel': return t('chat.getLabel.reserveCancelLong');
+      case 'complete': return t('chat.getLabel.completeLong');
+      case 'complete-cancel': return t('chat.getLabel.completeCancelLong');
+      case 'accept': return t('chat.getLabel.acceptLong');
+      case 'decline': return t('chat.getLabel.declineLong');
       default: return '';
     }
   };
@@ -761,7 +763,7 @@ const ChatRoom = () => {
         if (!token) return;
 
         const res = await fetch(`/api/chat/rooms/${roomId}`, { headers: { Authorization: `Bearer ${token}` }});
-        if (!res.ok) throw new Error('채팅방 정보 불러오기 실패');
+        if (!res.ok) throw new Error(t('chat.chatRoomError'));
 
         const room = await res.json();
 
@@ -795,7 +797,7 @@ const ChatRoom = () => {
           }
         }
       } catch (err) {
-        console.error('❌ 채팅방 정보 불러오기 실패:', err);
+        console.error(t('chat.chatRoomError'), err);
       }
     }
     loadRoomInfo();
@@ -808,11 +810,11 @@ const ChatRoom = () => {
     const loadPreviousMessages = async () => {
       try {
         const res = await fetch(`/api/chat/room/${roomId}/messages`, { headers: { Authorization: `Bearer ${token}` }});
-        if (!res.ok) throw new Error('이전 메시지 불러오기 실패');
+        if (!res.ok) throw new Error(t('chat.chatListError'));
         const data = await res.json();
         setMessages(data);
       } catch (err) {
-        console.error("❌ 이전 메시지 로딩 실패:", err);
+        console.error(t('chat.chatListError'), err);
       }
     };
     loadPreviousMessages();
@@ -846,7 +848,7 @@ const ChatRoom = () => {
           });
         }
       } catch (e) {
-        console.error('예약 조회 실패', e);
+        console.error(t('chat.reservationFailed'), e);
       }
     })();
   }, [roomId]);
@@ -868,7 +870,7 @@ const ChatRoom = () => {
       stomp.subscribe('/user/queue/chat-errors', (frame) => {
         try {
           const payload = JSON.parse(frame.body);
-          const msg = payload?.message || '메시지 전송이 차단되었습니다.';
+          const msg = payload?.message || t('chat.profanityWarning');
           const d = payload?.data;
           const extra = d?.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? ", " + Math.round(d.malicious*100) + "%" : ''})` : '';
           setHasProfanity(true);
@@ -908,7 +910,7 @@ const ChatRoom = () => {
           setIsCompleted(false);
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: '구매자가 예약을 요청했습니다. 수락 여부를 결정해주세요.', sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationRequested'), sentAt: new Date().toISOString() }
           ]));
         }
 
@@ -919,7 +921,7 @@ const ChatRoom = () => {
           setPostStatus('reserved');
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: '예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
           ]));
         }
 
@@ -930,7 +932,7 @@ const ChatRoom = () => {
           setPostStatus('for_sale');
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: `예약이 취소되었습니다${data.reason ? ` (사유: ${data.reason})` : ''}.`, cancel: true, sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationCancelledWithReason', { reason: data.reason }), cancel: true, sentAt: new Date().toISOString() }
           ]));
         }
 
@@ -941,7 +943,7 @@ const ChatRoom = () => {
           setPostStatus('sold_out');
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
           ]));
         }
       } catch (e) {
@@ -968,7 +970,7 @@ const ChatRoom = () => {
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
     if (hasProfanity) {
-      alert(profanityWarning || '부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
+      alert(profanityWarning || t('chat.profanityWarning'));
       return;
     }
     if (!roomId) return;
@@ -999,7 +1001,7 @@ const ChatRoom = () => {
     setNewMessage(text);
     if (detectProfanity(text)) {
       setHasProfanity(true);
-      setProfanityWarning('부적절한 표현이 감지되었습니다. 다른 표현으로 작성해주세요.');
+      setProfanityWarning(t('chat.profanityWarning'));
     } else {
       setHasProfanity(false);
       setProfanityWarning('');
@@ -1008,8 +1010,8 @@ const ChatRoom = () => {
 
   const handleQuickAction = (action) => {
     const quickMessages = {
-      '가격 협의 가능': '가격 협의 가능하신가요?',
-      '책 상태 확인': '책 상태를 더 자세히 알 수 있을까요?'
+      [t('chat.quickAction.price')]: t('chat.quickAction.priceMessage'),
+      [t('chat.quickAction.condition')]: t('chat.quickAction.conditionMessage')
     };
     setNewMessage(quickMessages[action]);
   };
@@ -1031,23 +1033,23 @@ const ChatRoom = () => {
       const latest = await fetchPost(salePostId);
       const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
       setPostStatus(st || null);
-      if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
-      if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
+      if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
+      if (st === 'sold_out') { alert(t('chat.alreadySold')); return; }
     } catch (e) {
-      console.warn('게시글 상태 확인 실패:', e);
+      console.warn(t('chat.reservationFailed'), e);
     }
     setShowReserveModal(true);
   };
 
   // 예약 요청(구매자)
   const handleReserveConfirm = async () => {
-    if (!selectedPlace || !selectedDate) { alert('장소와 날짜를 선택해주세요.'); return; }
+    if (!selectedPlace || !selectedDate) { alert(t('chat.selectPlaceAndDate')); return; }
     try {
       if (salePostId) {
         const latest = await fetchPost(salePostId);
         const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
-        if (st === 'reserved') { alert('이미 예약중인 교재입니다.'); return; }
-        if (st === 'sold_out') { alert('이미 판매 완료된 교재입니다.'); return; }
+        if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
+        if (st === 'sold_out') { alert(t('chat.alreadySold')); return; }
       }
 
       const base = {
@@ -1076,11 +1078,11 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: `예약 요청을 보냈습니다. 판매자의 수락을 기다리는 중입니다.\n장소: ${res.placeLabel || selectedPlace}${when ? `, 날짜: ${when}` : ''}`, sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.reservationRequestSent'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       console.error(e);
-      alert('예약 저장에 실패했습니다.');
+      alert(t('chat.reservationFailed'));
     }
   };
 
@@ -1101,16 +1103,16 @@ const ChatRoom = () => {
           setPostStatus('reserved');
         }
       } catch (e) {
-        console.error('게시글 상태 reserved 설정 실패:', e);
+        console.error(t('chat.reservationAcceptFailed'), e);
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       console.error(e);
-      alert('예약 수락에 실패했습니다.');
+      alert(t('chat.reservationAcceptFailed'));
     }
   };
 
@@ -1118,12 +1120,12 @@ const ChatRoom = () => {
   const handleDeclineReservation = async () => {
     if (!reservationId) return;
     try {
-      await apiCancelReservation(roomId, reservationId, '판매자에 의해 거절되었습니다.');
+      await apiCancelReservation(roomId, reservationId, t('chat.systemMessage.declinedBySeller'));
       setIsPending(false);
       setIsReserved(false);
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '예약 요청이 판매자에 의해 거절되었습니다.', cancel: true, sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationDeclined'), cancel: true, sentAt: new Date().toISOString() }
       ]));
       // 게시글 상태 복구
       try {
@@ -1131,7 +1133,7 @@ const ChatRoom = () => {
       } catch {}
     } catch (e) {
       console.error(e);
-      alert('예약 거절에 실패했습니다.');
+      alert(t('chat.reservationDeclineFailed'));
     }
   };
 
@@ -1146,7 +1148,7 @@ const ChatRoom = () => {
       setShowCancelModal(false);
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: `예약이 취소되었습니다.${cancelReason ? ` 사유: ${cancelReason}` : ''}`, cancel: true, sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationCancelledWithReason', { reason: cancelReason }), cancel: true, sentAt: new Date().toISOString() }
       ]));
       setCancelReason('');
       // 게시글 상태를 되돌림
@@ -1155,14 +1157,14 @@ const ChatRoom = () => {
       } catch {}
     } catch (e) {
       console.error(e);
-      alert('예약 취소에 실패했습니다.');
+      alert(t('chat.reservationCancelFailed'));
     }
   };
 
   const handleComplete = async () => {
     if (!reservationId) return;
-    if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
-    if (isCompleted) { alert('이미 거래 완료 처리되었습니다.'); return; }
+    if (!isSeller) { alert(t('chat.sellerOnly')); return; }
+    if (isCompleted) { alert(t('chat.alreadyCompleted')); return; }
     try {
       await apiCompleteReservation(roomId, reservationId);
       setIsPending(false);
@@ -1172,17 +1174,17 @@ const ChatRoom = () => {
       try {
         if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
       } catch (e) {
-        console.error('게시글 상태 sold_out 설정 실패:', e);
-        alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다.');
+        console.error(t('chat.completeTransactionFailed'), e);
+        alert(t('chat.completeTransactionFailed'));
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       console.error(e);
-      alert('거래 완료 처리에 실패했습니다.');
+      alert(t('chat.completeTransactionFailed'));
     }
   };
 
@@ -1197,7 +1199,7 @@ const ChatRoom = () => {
     e.preventDefault();
     if (!reportReason) return;
     if (reportReason === '기타' && !reportEtcText.trim()) return;
-    if (!otherUserId) { alert('상대 사용자를 식별할 수 없어 신고를 보낼 수 없습니다.'); return; }
+    if (!otherUserId) { alert(t('chat.reportTargetMissing')); return; }
 
     const reasonText = reportReason === '기타' ? reportEtcText.trim() : reportReason;
 
@@ -1219,15 +1221,15 @@ const ChatRoom = () => {
       if (!res.ok) {
         const t = await res.text().catch(()=> '');
         if (res.status === 409) {
-          alert('이미 해당 상대를 신고했습니다.');
+          alert(t('chat.alreadyReported'));
         } else if (res.status === 400) {
-          alert(t || '잘못된 신고 요청입니다.');
+          alert(t || t('chat.invalidReport'));
         } else if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          alert(t('chat.loginRequired'));
         } else if (res.status === 404) {
-          alert('대상을 찾을 수 없습니다.');
+          alert(t('chat.targetNotFound'));
         } else {
-          alert('신고 처리 중 오류가 발생했습니다.');
+          alert(t('chat.reportError'));
         }
         setShowReportModal(false);
         return;
@@ -1238,7 +1240,7 @@ const ChatRoom = () => {
       setShowReportExitModal(true);
     } catch (err) {
       console.warn('report failed:', err);
-      alert('신고 요청을 보내는 중 오류가 발생했습니다.');
+      alert(t('chat.reportFailed'));
       setShowReportModal(false);
     }
   };
@@ -1266,7 +1268,7 @@ const ChatRoom = () => {
     const res = await fetch(`/api/weather/weekly?${q}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
     });
-    if (!res.ok) throw new Error('날씨 조회 실패');
+    if (!res.ok) throw new Error(t('chat.weatherError'));
     return res.json();
   }
 
@@ -1315,10 +1317,10 @@ const ChatRoom = () => {
             }}
         >
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-            잘못된 채팅방 주소
+            {t('chat.invalidChatRoomTitle')}
           </div>
           <div style={{ color: '#666', marginBottom: 16 }}>
-            유효하지 않은 채팅방 ID입니다. 올바른 링크로 다시 접속해주세요.
+            {t('chat.invalidChatRoomDescription')}
           </div>
           <button
               onClick={() => navigate('/chat')}
@@ -1332,7 +1334,7 @@ const ChatRoom = () => {
                 cursor: 'pointer',
               }}
           >
-            채팅 목록으로 이동
+            {t('chat.goToChatList')}
           </button>
         </div>
     );
@@ -1365,7 +1367,7 @@ const ChatRoom = () => {
               {/* 신고 버튼 */}
               <ChatMenuButton
                   onClick={() => { setShowReportModal(true); setReportReason(''); setReportEtcText(''); }}
-                  title="신고하기"
+                  title={t('chat.getLabel.reportLong')}
                   onMouseEnter={() => setHovered('report')}
                   onMouseLeave={() => setHovered('')}
               >
@@ -1378,7 +1380,7 @@ const ChatRoom = () => {
                   <>
                     <ChatMenuButton
                         onClick={handleAcceptReservation}
-                        title="예약 수락"
+                        title={t('chat.getLabel.acceptLong')}
                         onMouseEnter={() => setHovered('accept')}
                         onMouseLeave={() => setHovered('')}
                     >
@@ -1389,7 +1391,7 @@ const ChatRoom = () => {
                     <ChatMenuButton
                         className="danger"
                         onClick={handleDeclineReservation}
-                        title="예약 거절"
+                        title={t('chat.getLabel.declineLong')}
                         onMouseEnter={() => setHovered('decline')}
                         onMouseLeave={() => setHovered('')}
                     >
@@ -1404,7 +1406,7 @@ const ChatRoom = () => {
                   (isBuyer || isSeller) && (
                       <ChatMenuButton
                           onClick={handleCancelReserve}
-                          title="예약 취소하기"
+                          title={t('chat.getLabel.reserveCancelLong')}
                           disabled={isCompleted}
                           onMouseEnter={() => setHovered('reserve-cancel')}
                           onMouseLeave={() => setHovered('')}
@@ -1417,7 +1419,7 @@ const ChatRoom = () => {
                   isBuyer && (
                       <ChatMenuButton
                           onClick={handleReserve}
-                          title="예약하기"
+                          title={t('chat.getLabel.reserveLong')}
                           disabled={isCompleted || postStatus === 'reserved' || postStatus === 'sold_out'}
                           onMouseEnter={() => setHovered('reserve')}
                           onMouseLeave={() => setHovered('')}
@@ -1432,7 +1434,7 @@ const ChatRoom = () => {
               {isSeller && (
                   <ChatMenuButton
                       onClick={handleComplete}
-                      title="거래 완료"
+                      title={t('chat.getLabel.completeLong')}
                       disabled={!isReserved || isCompleted}
                       onMouseEnter={() => setHovered('complete')}
                       onMouseLeave={() => setHovered('')}
@@ -1442,8 +1444,8 @@ const ChatRoom = () => {
                   </ChatMenuButton>
               )}
 
-              <ExitButton onClick={() => { if(window.confirm('채팅방을 나가시겠습니까?')) navigate('/chat'); }} title="채팅방 나가기">
-                <FaSignOutAlt /> {width > 600 && '나가기'}
+              <ExitButton onClick={() => { if(window.confirm(t('chat.confirmExit'))) navigate('/chat'); }} title={t('chat.exitChatRoom')}>
+                <FaSignOutAlt /> {width > 600 && t('chat.exit')}
               </ExitButton>
             </HeaderRight>
           </ChatHeader>
@@ -1457,15 +1459,15 @@ const ChatRoom = () => {
           {showCancelModal && (
               <ModalOverlay>
                 <ModalBox>
-                  <ModalTitle>예약 취소 사유를 입력하세요</ModalTitle>
+                  <ModalTitle>{t('chat.cancelReservationTitle')}</ModalTitle>
                   <ModalTextarea
                       value={cancelReason}
                       onChange={e => setCancelReason(e.target.value)}
-                      placeholder="예: 일정 변경, 거래 취소 등"
+                      placeholder={t('chat.cancelReservationPlaceholder')}
                   />
                   <ModalActions>
-                    <ModalButton data-variant="cancel" onClick={() => { setShowCancelModal(false); setCancelReason(''); }}>취소</ModalButton>
-                    <ModalButton onClick={handleCancelConfirm} disabled={!cancelReason.trim()}>확인</ModalButton>
+                    <ModalButton data-variant="cancel" onClick={() => { setShowCancelModal(false); setCancelReason(''); }}>{t('common.cancel')}</ModalButton>
+                    <ModalButton onClick={handleCancelConfirm} disabled={!cancelReason.trim()}>{t('common.confirm')}</ModalButton>
                   </ModalActions>
                 </ModalBox>
               </ModalOverlay>
@@ -1475,52 +1477,52 @@ const ChatRoom = () => {
           {showReportModal && (
               <ModalOverlay>
                 <ModalBox as="form" onSubmit={handleReportSubmit}>
-                  <ModalTitle>신고 사유를 선택하세요</ModalTitle>
+                  <ModalTitle>{t('chat.reportReasonTitle')}</ModalTitle>
 
                   <ReportRadio>
                     <RadioInput type="radio" name="report" value="욕설/비방"
                                 checked={reportReason === '욕설/비방'}
                                 onChange={e => setReportReason(e.target.value)} />
-                    욕설/비방
+                    {t('chat.reportReasons.abuse')}
                   </ReportRadio>
 
                   <ReportRadio>
                     <RadioInput type="radio" name="report" value="사기/허위매물"
                                 checked={reportReason === '사기/허위매물'}
                                 onChange={e => setReportReason(e.target.value)} />
-                    사기/허위매물
+                    {t('chat.reportReasons.fraud')}
                   </ReportRadio>
 
                   <ReportRadio>
                     <RadioInput type="radio" name="report" value="스팸/광고"
                                 checked={reportReason === '스팸/광고'}
                                 onChange={e => setReportReason(e.target.value)} />
-                    스팸/광고
+                    {t('chat.reportReasons.spam')}
                   </ReportRadio>
 
                   <ReportRadio>
-                    <RadioInput type="radio" name="report" value="기타"
-                                checked={reportReason === '기타'}
+                    <RadioInput type="radio" name="report" value="other"
+                                checked={reportReason === 'other'}
                                 onChange={e => setReportReason(e.target.value)} />
-                    기타
+                    {t('chat.reportReasons.other')}
                   </ReportRadio>
 
                   {/* ✅ '기타' 선택 시 상세 사유 입력 */}
-                  {reportReason === '기타' && (
+                  {reportReason === 'other' && (
                       <ModalTextarea
                           value={reportEtcText}
                           onChange={e => setReportEtcText(e.target.value)}
-                          placeholder="자세한 신고 사유를 입력해주세요."
+                          placeholder={t('chat.reportReasonPlaceholder')}
                       />
                   )}
 
                   <ModalActions>
-                    <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
+                    <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>{t('common.cancel')}</ModalButton>
                     <ModalButton
                         type="submit"
                         disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}
                     >
-                      제출
+                      {t('common.submit')}
                     </ModalButton>
                   </ModalActions>
                 </ModalBox>
@@ -1531,10 +1533,10 @@ const ChatRoom = () => {
           {showReportExitModal && (
               <ModalOverlay>
                 <ModalBox>
-                  <ModalTitle>신고가 접수되었습니다.<br/>채팅방에서 나가시겠습니까?</ModalTitle>
+                  <ModalTitle>{t('chat.reportSubmittedTitle')}</ModalTitle>
                   <ModalActions>
-                    <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>아니오</ModalButton>
-                    <ModalButton onClick={() => { setShowReportExitModal(false); navigate('/chat'); }}>예</ModalButton>
+                    <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>{t('common.no')}</ModalButton>
+                    <ModalButton onClick={() => { setShowReportExitModal(false); navigate('/chat'); }}>{t('common.yes')}</ModalButton>
                   </ModalActions>
                 </ModalBox>
               </ModalOverlay>
@@ -1544,52 +1546,52 @@ const ChatRoom = () => {
           {showReserveModal && (
               <ModalOverlay>
                 <ReserveModalBox>
-                  <ModalTitle>스마트 예약</ModalTitle>
+                  <ModalTitle>{t('chat.smartReserveTitle')}</ModalTitle>
 
                   {/* 거래 방식 선택 */}
-                  <div style={{fontWeight:700, margin:'6px 0'}}>거래 방식</div>
+                  <div style={{fontWeight:700, margin:'6px 0'}}>{t('chat.tradeType')}</div>
                   <div style={{display:'flex', gap:8, margin:'6px 0 12px'}}>
                     <button
                         type="button"
                         onClick={()=>setMeetType('on')}
                         style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='on'?'#0b63d1':'#e5e7eb'), background:meetType==='on'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='on'?'#0b63d1':'#334155'}}
-                    ><FaUniversity/> 교내</button>
+                    ><FaUniversity/> {t('chat.onCampus')}</button>
                     <button
                         type="button"
                         onClick={()=>setMeetType('off')}
                         style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='off'?'#0b63d1':'#e5e7eb'), background:meetType==='off'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='off'?'#0b63d1':'#334155'}}
-                    ><FaSubway/> 교외</button>
+                    ><FaSubway/> {t('chat.offCampus')}</button>
                   </div>
 
                   {/* 판매자 설정 위치 */}
                   <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
-                    <div style={{fontWeight:800, marginBottom:6}}>판매자 설정 위치</div>
+                    <div style={{fontWeight:800, marginBottom:6}}>{t('chat.sellerLocation')}</div>
                     {meetType==='on' ? (
                         sellerDefault.oncampusPlaceCode
                             ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
                         <FaUniversity/>{ONCAMPUS_LABELS[sellerDefault.oncampusPlaceCode] || sellerDefault.oncampusPlaceCode}
                       </span>
-                            : <span style={{color:'#64748b'}}>판매자가 교내 위치를 설정하지 않았습니다.</span>
+                            : <span style={{color:'#64748b'}}>{t('chat.noSellerLocationOnCampus')}</span>
                     ) : (
                         sellerDefault.offcampusStationCode
                             ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
                         <FaSubway/>{`${getLineByStation(sellerDefault.offcampusStationCode) || ''} · ${sellerDefault.offcampusStationCode}`}
                       </span>
-                            : <span style={{color:'#64748b'}}>판매자가 교외 지하철역을 설정하지 않았습니다.</span>
+                            : <span style={{color:'#64748b'}}>{t('chat.noSellerLocationOffCampus')}</span>
                     )}
                   </div>
 
                   {/* 교내 / 교외 입력 + 중간지점 추천 */}
                   {meetType === 'on' ? (
                       <>
-                        <div style={{fontWeight:700, marginBottom:8}}>구매자 교내 위치</div>
+                        <div style={{fontWeight:700, marginBottom:8}}>{t('chat.buyerLocationOnCampus')}</div>
                         <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
                           <select
                               value={buyerCampusCode}
                               onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
                               style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:200, fontWeight:700}}
                           >
-                            <option value="">건물/지점 선택</option>
+                            <option value="">{t('chat.selectBuilding')}</option>
                             {CAMPUS_OPTIONS.map(code => (
                                 <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>
                             ))}
@@ -1598,73 +1600,73 @@ const ChatRoom = () => {
                           <button
                               type="button"
                               onClick={()=>{
-                                if(!sellerDefault.oncampusPlaceCode) return alert('판매자 교내 위치 없음');
-                                if(!buyerCampusCode) return alert('구매자 교내 위치를 선택하세요');
+                                if(!sellerDefault.oncampusPlaceCode) return alert(t('chat.noSellerLocationOnCampus'));
+                                if(!buyerCampusCode) return alert(t('chat.selectBuyerLocationOnCampus'));
                                 const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
-                                if(!r) return alert('경로를 찾을 수 없습니다.');
+                                if(!r) return alert(t('chat.noPathFound'));
                                 setCampusSuggest(r);
                               }}
                               style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
                           >
-                            <FaTrophy/> 중간지점 추천
+                            <FaTrophy/> {t('chat.recommendMidpoint')}
                           </button>
                         </div>
 
                         {campusSuggest && (
                             <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
                               <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
-                                추천 중간지점: {campusSuggest.midLabel}
+                                {t('chat.recommendedMidpoint')}: {campusSuggest.midLabel}
                               </div>
                               <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
-                                최단 경로: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
+                                {t('chat.shortestPath')}: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
                               </div>
-                              <button type="button" onClick={()=>setSelectedPlace(`교내 · ${campusSuggest.midLabel}`)}
+                              <button type="button" onClick={()=>setSelectedPlace(`${t('chat.onCampus')} · ${campusSuggest.midLabel}`)}
                                       style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
-                                <FaMapMarkerAlt/> 이 장소 사용
+                                <FaMapMarkerAlt/> {t('chat.useThisLocation')}
                               </button>
                             </div>
                         )}
                       </>
                   ) : (
                       <>
-                        <div style={{fontWeight:700, marginBottom:8}}>구매자 교외 위치</div>
+                        <div style={{fontWeight:700, marginBottom:8}}>{t('chat.buyerLocationOffCampus')}</div>
                         <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
                           <select value={buyerLine} onChange={e=>{ setBuyerLine(e.target.value); setBuyerStation(''); setOffSuggest(null); }}
                                   style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:160, fontWeight:700}}>
-                            <option value="">노선 선택</option>
+                            <option value="">{t('chat.selectLine')}</option>
                             {Object.keys(SUBWAY_MAP).map(line => <option key={line} value={line}>{line}</option>)}
                           </select>
                           <select value={buyerStation} onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }} disabled={!buyerLine}
                                   style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
-                            <option value="">{buyerLine ? '역 선택' : '노선을 먼저 선택'}</option>
+                            <option value="">{buyerLine ? t('chat.selectStation') : t('chat.selectLineFirst')}</option>
                             {(buyerLine ? getUniqueStations(buyerLine) : []).map(st => <option key={st} value={st}>{st}</option>)}
                           </select>
                           <button
                               type="button"
                               onClick={()=>{
-                                if(!sellerDefault.offcampusStationCode) return alert('판매자 교외 역 없음');
-                                if(!buyerStation) return alert('구매자 역을 선택하세요');
+                                if(!sellerDefault.offcampusStationCode) return alert(t('chat.noSellerLocationOffCampus'));
+                                if(!buyerStation) return alert(t('chat.selectBuyerStation'));
                                 const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
-                                if(!r) return alert('경로를 찾을 수 없습니다.');
+                                if(!r) return alert(t('chat.noPathFound'));
                                 setOffSuggest(r);
                               }}
                               style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
                           >
-                            <FaTrophy/> 중간역 추천
+                            <FaTrophy/> {t('chat.recommendMidpointStation')}
                           </button>
                         </div>
 
                         {offSuggest && (
                             <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
                               <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
-                                추천 중간역: {getLineByStation(offSuggest.midStation) ? `${getLineByStation(offSuggest.midStation)} · ` : ''}{offSuggest.midStation}
+                                {t('chat.recommendedMidpointStation')}: {getLineByStation(offSuggest.midStation) ? `${getLineByStation(offSuggest.midStation)} · ` : ''}{offSuggest.midStation}
                               </div>
                               <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
-                                최적 경로: {offSuggest.path.join(' → ')}
+                                {t('chat.optimalPath')}: {offSuggest.path.join(' → ')}
                               </div>
-                              <button type="button" onClick={()=>setSelectedPlace(`교외 · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
+                              <button type="button" onClick={()=>setSelectedPlace(`${t('chat.offCampus')} · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
                                       style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
-                                <FaMapMarkerAlt/> 이 장소 사용
+                                <FaMapMarkerAlt/> {t('chat.useThisLocation')}
                               </button>
                             </div>
                         )}
@@ -1673,13 +1675,13 @@ const ChatRoom = () => {
 
                   {/* 선택된 장소 */}
                   <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
-                    <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> 선택된 장소</div>
-                    <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || '아직 선택되지 않았습니다.'}</div>
+                    <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> {t('chat.selectedLocation')}</div>
+                    <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || t('chat.notSelectedYet')}</div>
                   </div>
 
                   {/* 추천 날짜 */}
-                  <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>추천 날짜 (강수확률 중심)</div>
-                  {weatherLoading && <div style={{color:'#555'}}>날씨 불러오는 중...</div>}
+                  <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>{t('chat.recommendedDate')}</div>
+                  {weatherLoading && <div style={{color:'#555'}}>{t('chat.loadingWeather')}</div>}
                   {!weatherLoading && (
                       <DateList>
                         {dateOptions.map(opt => {
@@ -1690,12 +1692,12 @@ const ChatRoom = () => {
                                 <div style={{display:'flex', flexDirection:'column', gap:4}}>
                                   <div style={{display:'flex', alignItems:'center', gap:8}}>
                                     <span style={{fontWeight:700}}>{opt.date}</span>
-                                    {opt.best && <span style={{fontSize:11, color:'#fff', background:'#16a34a', padding:'2px 6px', borderRadius:999}}>추천</span>}
+                                    {opt.best && <span style={{fontSize:11, color:'#fff', background:'#16a34a', padding:'2px 6px', borderRadius:999}}>{t('chat.recommended')}</span>}
                                   </div>
                                   <div style={{fontSize:13, color:'#374151'}}>
                                     {opt.am!=null && opt.pm!=null
-                                        ? <>오전 {opt.am}% / 오후 {opt.pm}% (평균 {opt.pop}%)</>
-                                        : <>강수확률 {opt.pop}%</>}
+                                        ? <>{t('chat.am')} {opt.am}% / {t('chat.pm')} {opt.pm}% ({t('chat.avg')} {opt.pop}%)</>
+                                        : <>{t('chat.precipitation')} {opt.pop}%</>}
                                   </div>
                                 </div>
                               </DateItem>
@@ -1708,22 +1710,22 @@ const ChatRoom = () => {
                   )}
 
                   <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
-                    <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> 경로 안내</ModalButton>
-                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> 예약 요청 보내기</ModalButton>
-                    <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>취소</ModalButton>
+                    <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> {t('chat.routeGuidance')}</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> {t('chat.sendReservationRequest')}</ModalButton>
+                    <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>{t('common.cancel')}</ModalButton>
                   </div>
 
                   {showRoute && (
                       <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
-                        <b>예상 이동 경로/시간 안내</b><br/>
-                        (카카오맵/네이버지도 API 연동 예정, 현재는 임시 안내)<br/>
-                        <span style={{fontSize:'0.95em'}}>내 위치 → {selectedPlace || '선택된 장소 없음'} (예상 15분)</span>
+                        <b>{t('chat.estimatedRoute')}</b><br/>
+                        {t('chat.apiIntegration')}<br/>
+                        <span style={{fontSize:'0.95em'}}>{t('chat.myLocation')} → {selectedPlace || t('chat.noLocationSelected')} ({t('chat.estimatedTime')})</span>
                       </div>
                   )}
 
                   {reserveConfirmed && (
                       <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
-                        예약 요청이 전송되었습니다! 판매자의 수락을 기다려주세요.
+                        {t('chat.reservationRequestSent')}
                       </div>
                   )}
                 </ReserveModalBox>
@@ -1775,7 +1777,7 @@ const ChatRoom = () => {
                   value={newMessage}
                   onChange={handleMessageChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="메시지를 입력하세요..."
+                  placeholder={t('chat.typeMessage')}
                   rows={1}
                   hasProfanity={hasProfanity}
               />
@@ -1784,8 +1786,8 @@ const ChatRoom = () => {
               </SendButton>
             </InputContainer>
             <QuickActions>
-              <QuickActionButton onClick={() => handleQuickAction('가격 협의 가능')}>가격 협의 가능</QuickActionButton>
-              <QuickActionButton onClick={() => handleQuickAction('책 상태 확인')}>책 상태 확인</QuickActionButton>
+              <QuickActionButton onClick={() => handleQuickAction(t('chat.quickAction.price'))}>{t('chat.quickAction.price')}</QuickActionButton>
+              <QuickActionButton onClick={() => handleQuickAction(t('chat.quickAction.condition'))}>{t('chat.quickAction.condition')}</QuickActionButton>
             </QuickActions>
           </ChatInput>
         </ChatContainer>
@@ -1794,11 +1796,11 @@ const ChatRoom = () => {
         {showRetryModal && (
             <RetryModalOverlay onClick={() => setShowRetryModal(false)}>
               <RetryModalBox onClick={e => e.stopPropagation()}>
-                <RetryModalTitle>메시지 재전송</RetryModalTitle>
-                <RetryModalMessage>전송에 실패한 메시지를 다시 전송하시겠습니까?</RetryModalMessage>
+                <RetryModalTitle>{t('chat.retryTitle')}</RetryModalTitle>
+                <RetryModalMessage>{t('chat.retryMessage')}</RetryModalMessage>
                 <RetryModalActions>
-                  <RetryModalButton className="cancel" onClick={() => setShowRetryModal(false)}>취소</RetryModalButton>
-                  <RetryModalButton className="confirm" onClick={() => setShowRetryModal(false)}>재전송</RetryModalButton>
+                  <RetryModalButton className="cancel" onClick={() => setShowRetryModal(false)}>{t('common.cancel')}</RetryModalButton>
+                  <RetryModalButton className="confirm" onClick={() => setShowRetryModal(false)}>{t('chat.retry')}</RetryModalButton>
                 </RetryModalActions>
               </RetryModalBox>
             </RetryModalOverlay>
@@ -1808,11 +1810,12 @@ const ChatRoom = () => {
 };
 
 const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
+  const { t } = useTranslation();
   const getStatusText = () => {
     switch (status) {
-      case 'sending': return '전송 중...';
-      case 'read': return '읽음';
-      case 'failed': return '전송 실패';
+      case 'sending': return t('chat.messageStatus.sending');
+      case 'read': return t('chat.messageStatus.read');
+      case 'failed': return t('chat.messageStatus.failed');
       default: return '';
     }
   };
@@ -1829,7 +1832,7 @@ const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
         <StatusIcon $status={status}>{getStatusIcon()}</StatusIcon>
         <span>{getStatusText()}</span>
         {status === 'failed' && onRetry && (
-            <RetryButton onClick={onRetry} title="재전송">↻</RetryButton>
+            <RetryButton onClick={onRetry} title={t('chat.retry')}>↻</RetryButton>
         )}
       </MessageStatus>
   );

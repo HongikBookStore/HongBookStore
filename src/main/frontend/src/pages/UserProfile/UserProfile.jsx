@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 
 const Container = styled.div`
@@ -23,6 +24,7 @@ const SmallBtn = styled.button`padding:6px 10px; border-radius:8px; border:1px s
 const UserProfile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [role, setRole] = useState('SELLER');
   const [sumSeller, setSumSeller] = useState(null);
   const [sumBuyer, setSumBuyer] = useState(null);
@@ -52,7 +54,7 @@ const UserProfile = () => {
       setSize(typeof data.size === 'number' ? data.size : z);
       setLast(Boolean(data.last));
     } catch (e) {
-      setList([]); setError(e.response?.data?.message || '후기 목록을 불러오지 못했습니다.');
+      setList([]); setError(e.response?.data?.message || t('userProfile.error.loadReviews'));
     } finally { setLoading(false); }
   }, [size]);
 
@@ -70,32 +72,32 @@ const UserProfile = () => {
   return (
     <Container>
       <Header>
-        <Title>사용자 프로필 #{userId}</Title>
-        <SmallBtn onClick={() => navigate(-1)}>뒤로</SmallBtn>
+        <Title>{t('userProfile.title', { userId })}</Title>
+        <SmallBtn onClick={() => navigate(-1)}>{t('userProfile.back')}</SmallBtn>
       </Header>
 
       <Summary>
-        <Badge>판매자 평균 {Number(sumSeller?.averageScore ?? 0).toFixed(2)}★ · {sumSeller?.reviewCount ?? 0}건</Badge>
-        <Badge>구매자 평균 {Number(sumBuyer?.averageScore ?? 0).toFixed(2)}★ · {sumBuyer?.reviewCount ?? 0}건</Badge>
+        <Badge>{t('userProfile.sellerAverage', { score: Number(sumSeller?.averageScore ?? 0).toFixed(2), count: sumSeller?.reviewCount ?? 0 })}</Badge>
+        <Badge>{t('userProfile.buyerAverage', { score: Number(sumBuyer?.averageScore ?? 0).toFixed(2), count: sumBuyer?.reviewCount ?? 0 })}</Badge>
       </Summary>
 
       <Tabs>
-        <TabBtn $active={role==='SELLER'} onClick={() => setRole('SELLER')}>판매자 후기</TabBtn>
-        <TabBtn $active={role==='BUYER'} onClick={() => setRole('BUYER')}>구매자 후기</TabBtn>
+        <TabBtn $active={role==='SELLER'} onClick={() => setRole('SELLER')}>{t('userProfile.sellerReviews')}</TabBtn>
+        <TabBtn $active={role==='BUYER'} onClick={() => setRole('BUYER')}>{t('userProfile.buyerReviews')}</TabBtn>
       </Tabs>
 
       {loading ? (
-        <div style={{color:'#666'}}>불러오는 중...</div>
+        <div style={{color:'#666'}}>{t('userProfile.loading')}</div>
       ) : error ? (
         <div style={{color:'#d32f2f'}}>{error}</div>
       ) : list.length === 0 ? (
-        <div style={{color:'#666'}}>등록된 후기가 없습니다.</div>
+        <div style={{color:'#666'}}>{t('userProfile.noReviews')}</div>
       ) : (
         <List>
           {list.map(rv => (
             <Item key={rv.reviewId}>
               <div>
-                <div style={{fontWeight:600}}>{rv.reviewerNickname || '사용자'}</div>
+                <div style={{fontWeight:600}}>{rv.reviewerNickname || t('userProfile.defaultUser')}</div>
                 {Array.isArray(rv.ratingKeywords) && rv.ratingKeywords.length > 0 && (
                   <div style={{fontSize:'0.9rem', color:'#666'}}>{rv.ratingKeywords.join(', ')}</div>
                 )}
@@ -110,8 +112,8 @@ const UserProfile = () => {
       )}
 
       <Pager>
-        <SmallBtn onClick={() => fetchList(userId, role, Math.max(0, page-1), size)} disabled={page<=0}>이전</SmallBtn>
-        <SmallBtn onClick={() => !last && fetchList(userId, role, page+1, size)} disabled={last}>다음</SmallBtn>
+        <SmallBtn onClick={() => fetchList(userId, role, Math.max(0, page-1), size)} disabled={page<=0}>{t('userProfile.previous')}</SmallBtn>
+        <SmallBtn onClick={() => !last && fetchList(userId, role, page+1, size)} disabled={last}>{t('userProfile.next')}</SmallBtn>
       </Pager>
     </Container>
   );

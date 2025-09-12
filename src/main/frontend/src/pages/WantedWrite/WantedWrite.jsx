@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaBook, FaArrowLeft, FaSearch } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import api from '../../lib/api';
@@ -209,32 +210,33 @@ const SelectedBookDisplay = styled.div`
 `;
 
 /* -------------------- 카테고리 -------------------- */
-const CATEGORIES = {
-  '전공': {
-    '경영대학': ['경영학부'],
-    '공과대학': ['전자전기공학부', '신소재공학전공', '화학공학전공', '컴퓨터공학과', '산업데이터공학과', '기계시스템디자인공학과', '건설환경공학과'],
-    '법과대학': ['법학부'],
-    '미술대학': ['동양학과', '회화과', '판화과', '조소과', '시각디자인전공', '산업디자인전공', '금속조형디자인과', '도예유리과', '목조형가구학과', '섬유미술패션디자인과', '예술학과'],
-    '디자인,예술경영학부': ['디자인경영전공', '예술경영전공'],
-    '공연예술학부': ['뮤지컬전공', '실용음악전공'],
-    '경제학부': ['경제학전공'],
-    '사범대학': ['수학교육과', '국어교육과', '영어교육과', '역사교육과', '교육학과'],
-    '문과대학': ['영어영문학과', '독어독문학과', '불어불문학과', '국어국문학과'],
-    '건축도시대학': ['건축학전공', '실내건축학전공', '도시공학과']
+const getCategories = (t) => ({
+  [t('wantedWrite.category.major')]: {
+    [t('categories.major.경영대학')]: [t('departments.경영학부')],
+    [t('categories.major.공과대학')]: [t('departments.전자전기공학부'), t('departments.신소재공학전공'), t('departments.화학공학전공'), t('departments.컴퓨터공학과'), t('departments.산업데이터공학과'), t('departments.기계시스템디자인공학과'), t('departments.건설환경공학과')],
+    [t('categories.major.법과대학')]: [t('departments.법학부')],
+    [t('categories.major.미술대학')]: [t('departments.동양학과'), t('departments.회화과'), t('departments.판화과'), t('departments.조소과'), t('departments.시각디자인전공'), t('departments.산업디자인전공'), t('departments.금속조형디자인과'), t('departments.도예유리과'), t('departments.목조형가구학과'), t('departments.섬유미술패션디자인과'), t('departments.예술학과')],
+    [t('categories.major.디자인,예술경영학부')]: [t('departments.디자인경영전공'), t('departments.예술경영전공')],
+    [t('categories.major.공연예술학부')]: [t('departments.뮤지컬전공'), t('departments.실용음악전공')],
+    [t('categories.major.경제학부')]: [t('departments.경제학전공')],
+    [t('categories.major.사범대학')]: [t('departments.수학교육과'), t('departments.국어교육과'), t('departments.영어교육과'), t('departments.역사교육과'), t('departments.교육학과')],
+    [t('categories.major.문과대학')]: [t('departments.영어영문학과'), t('departments.독어독문학과'), t('departments.불어불문학과'), t('departments.국어국문학과')],
+    [t('categories.major.건축도시대학')]: [t('departments.건축학전공'), t('departments.실내건축학전공'), t('departments.도시공학과')]
   },
-  '교양': {
-    'ABEEK 교양': ['ABEEK 교양'],
-    '인문계열': ['인문계열'],
-    '영어계열': ['영어계열'],
-    '사회계열': ['사회계열'],
-    '제2외국어계열': ['제2외국어계열'],
-    '자연계열': ['자연계열'],
-    '예체능계열': ['예체능계열'],
-    '교직': ['교직']
+  [t('wantedWrite.category.general')]: {
+    [t('categories.general.ABEEK 교양')]: [t('departments.ABEEK 교양')],
+    [t('categories.general.인문계열')]: [t('departments.인문계열')],
+    [t('categories.general.영어계열')]: [t('departments.영어계열')],
+    [t('categories.general.사회계열')]: [t('departments.사회계열')],
+    [t('categories.general.제2외국어계열')]: [t('departments.제2외국어계열')],
+    [t('categories.general.자연계열')]: [t('departments.자연계열')],
+    [t('categories.general.예체능계열')]: [t('departments.예체능계열')],
+    [t('categories.general.교직')]: [t('departments.교직')]
   }
-};
+});
 
 export default function WantedWrite() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
     isbn: '',            // 검색으로 채움(현재 API 전송 X)
@@ -262,6 +264,16 @@ export default function WantedWrite() {
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
   const { id } = useParams();
   const isEdit = Boolean(id);
+
+  // CATEGORIES를 트리 형태로 변환
+  const CATEGORIES = getCategories(t);
+  const catTree = Object.entries(CATEGORIES).map(([mainName, subCategories]) => ({
+    name: mainName,
+    children: Object.entries(subCategories).map(([subName, details]) => ({
+      name: subName,
+      children: details.map(detailName => ({ name: detailName }))
+    }))
+  }));
 
   useEffect(() => {
     startWriting('wanted');
@@ -298,19 +310,23 @@ export default function WantedWrite() {
     (async () => {
       try {
         const res = await fetch(`/api/wanted/${id}`);
-        if (!res.ok) throw new Error('상세 불러오기 실패');
+        if (!res.ok) throw new Error(t('wantedWrite.error.loadDetail'));
         const ct = res.headers.get('content-type') || '';
         const json = ct.includes('application/json') ? await res.json() : null;
         const detail = json?.data || json || {};
 
         // 카테고리 역매핑
         let mainCategory = detail.category || '';
-        if (!mainCategory) mainCategory = detail.department ? '전공' : '교양';
+        if (!mainCategory) mainCategory = detail.department ? t('wantedWrite.category.major') : t('wantedWrite.category.general');
         let subCategory = '';
         let detailCategory = '';
-        if (mainCategory === '전공' && detail.department) {
-          for (const [sub, list] of Object.entries(CATEGORIES['전공'])) {
+        if (mainCategory === t('wantedWrite.category.major') && detail.department) {
+          for (const [sub, list] of Object.entries(CATEGORIES[t('wantedWrite.category.major')])) {
             if (list.includes(detail.department)) { subCategory = sub; detailCategory = detail.department; break; }
+          }
+        } else if (mainCategory === t('wantedWrite.category.general')) {
+          for (const [sub, list] of Object.entries(CATEGORIES[t('wantedWrite.category.general')])) {
+            if (list.includes(detail.category || '')) { subCategory = sub; detailCategory = detail.category || ''; break; }
           }
         }
 
@@ -330,7 +346,8 @@ export default function WantedWrite() {
         // 수정 진입 시 입력 방식은 수동으로(선택 사항)
         setInputType('title');
       } catch (e) {
-        console.error(e);
+        console.error(t('wantedWrite.error.loadDetail'), e);
+        alert(t('wantedWrite.error.loadDetail'));
       }
     })();
   }, [isEdit, id]);
@@ -365,7 +382,7 @@ export default function WantedWrite() {
   const closeSearch = () => { setShowBookSearch(false); setSearchQuery(''); setSearchResults([]); setSearchLoading(false); };
 
   const handleBookSearch = async () => {
-    if (!searchQuery.trim()) { alert('검색어를 입력해줘! 🔍'); return; }
+    if (!searchQuery.trim()) { alert(t('wantedWrite.search.enterQuery')); return; }
     setSearchLoading(true);
     try {
       const res = await axios.get('/api/search/books', {
@@ -374,10 +391,10 @@ export default function WantedWrite() {
       });
       const results = toBookArray(res?.data).map(normalizeBook);
       setSearchResults(results);
-      if (results.length === 0) alert('검색 결과가 없어! 다른 키워드로 시도해봐 📚');
+      if (results.length === 0) alert(t('wantedWrite.search.noResults'));
     } catch (err) {
-      console.error('책 검색 실패:', err);
-      alert('책 검색 중 오류가 발생했어! 다시 시도해줘 😅');
+      console.error(t('wantedWrite.search.error'), err);
+      alert(t('wantedWrite.search.error'));
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -385,6 +402,24 @@ export default function WantedWrite() {
   };
 
   const handleBookSelect = (book) => {
+    const mainCategory = book.category || '';
+    if (!mainCategory) {
+      const mainCategory = book.department ? t('wantedWrite.category.major') : t('wantedWrite.category.general');
+      let subCategory = '';
+      let detailCategory = '';
+      if (mainCategory === t('wantedWrite.category.major') && book.department) {
+        for (const [sub, list] of Object.entries(CATEGORIES[t('wantedWrite.category.major')])) {
+          if (list.includes(book.department)) { subCategory = sub; detailCategory = book.department; break; }
+        }
+      } else if (mainCategory === t('wantedWrite.category.general')) {
+        for (const [sub, list] of Object.entries(CATEGORIES[t('wantedWrite.category.general')])) {
+          if (list.includes(book.category || '')) { subCategory = sub; detailCategory = book.category || ''; break; }
+        }
+      }
+      setFormData(prev => ({ ...prev, mainCategory, subCategory, detailCategory }));
+    } else {
+      setFormData(prev => ({ ...prev, mainCategory }));
+    }
     setFormData(prev => ({
       ...prev,
       title: book.title || '',
@@ -399,15 +434,15 @@ export default function WantedWrite() {
 
     // 제목/본문 최소 입력 보장: 두 항목 모두 비어있으면 에러
     if (!formData.title.trim() && !formData.content.trim()) {
-      newErrors.title = '제목 또는 요청 내용을 입력해주세요';
+      newErrors.title = t('wantedWrite.validation.titleRequired');
     }
 
-    if (!formData.condition) newErrors.condition = '상태를 선택해주세요';
+    if (!formData.condition) newErrors.condition = t('wantedWrite.validation.conditionRequired');
     const priceNum = Number(formData.price);
     if (formData.price === '' || Number.isNaN(priceNum) || priceNum < PRICE_MIN || priceNum > PRICE_MAX) {
-      newErrors.price = `희망 가격은 ${PRICE_MIN.toLocaleString()}~${PRICE_MAX.toLocaleString()}원 범위로 입력해주세요`;
+      newErrors.price = t('wantedWrite.validation.priceRequired');
     }
-    if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = '카테고리를 선택해주세요';
+    if (!formData.mainCategory || !formData.subCategory || !formData.detailCategory) newErrors.category = t('wantedWrite.validation.categoryRequired');
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -422,27 +457,31 @@ export default function WantedWrite() {
 
     const token = localStorage.getItem('accessToken');
     const userId = await ensureUserId(); // ✅ userId 보장
-    if (!userId) { alert('로그인이 필요합니다. (userId가 없습니다)'); return; }
+    if (!userId) { alert(t('wantedWrite.error.loginRequired')); return; }
 
-    // ✅ 백엔드 규격에 맞게 전송
-    const topCategory = formData.mainCategory || '교양';
+    // ✅ 백엔드 규격에 맞게 전송 (원본 한국어 값 사용)
+    const topCategory = formData.mainCategory || t('wantedWrite.category.general');
     const dept =
-        topCategory === '전공'
+        topCategory === t('wantedWrite.category.major')
             ? (formData.detailCategory || formData.subCategory || '').trim()
             : '';
+
+    // 번역된 카테고리를 원본 한국어 값으로 역매핑
+    const originalCategory = topCategory === t('wantedWrite.category.major') ? '전공' : '교양';
+    const originalDept = dept; // department는 이미 원본 한국어 값
 
     const basePayload = {
       title: formData.title.trim(),
       author: (formData.author || '').trim(),
       condition: formData.condition,
       price: Number(formData.price),
-      category: topCategory,
+      category: originalCategory,
       content: formData.content?.trim() || ''
       // ⚠️ 서버 준비되면 다음 줄의 주석 해제(현재는 보내지 않음)
       // ,isbn: formData.isbn?.trim() || ''
     };
-    const payload = (topCategory === '전공' && dept)
-        ? { ...basePayload, department: dept }
+    const payload = (topCategory === t('wantedWrite.category.major') && dept)
+        ? { ...basePayload, department: originalDept }
         : basePayload;
 
     try {
@@ -470,7 +509,7 @@ export default function WantedWrite() {
           if (res.status === 400 && success === false && data && data.field) {
             const lvl = data.predictionLevel ? ` (${data.predictionLevel}${typeof data.malicious === 'number' ? 
                 `, ${Math.round(data.malicious * 100)}%` : ''})` : '';
-            const fieldMsg = (message || '부적절한 표현이 감지되었습니다.') + lvl;
+            const fieldMsg = (message || t('wantedWrite.validation.inappropriateContent')) + lvl;
             setErrors(prev => ({ ...prev, [data.field]: fieldMsg }));
             // 해당 필드로 포커스 이동(가능한 경우)
             const el = document.querySelector(`[name="${data.field}"]`);
@@ -478,10 +517,10 @@ export default function WantedWrite() {
             return; // 모더레이션 에러는 알림창 없이 필드 에러로 처리
           }
           // 그 외 JSON 에러 메시지
-          throw new Error(message || `요청 실패 (${res.status})`);
+          throw new Error(message || t('wantedWrite.error.requestFailed'));
         } else {
           const txt = await res.text();
-          throw new Error(`요청 실패 (${res.status}) ${txt}`);
+          throw new Error(t('wantedWrite.error.requestFailed'));
         }
       }
 
@@ -490,12 +529,13 @@ export default function WantedWrite() {
       stopWriting();
       setUnsavedChanges(false);
       setHasUnsavedChanges(false);
+      alert(isEdit ? t('wantedWrite.success.update') : t('wantedWrite.success.create'));
       navigate(isEdit ? '/mybookstore' : '/wanted');
     } catch (err) {
       console.error(err);
       // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감
       if (!Object.values(errors).some(Boolean)) {
-        alert(isEdit ? '수정 중 오류가 발생했습니다.' : '등록 중 오류가 발생했습니다.');
+        alert(isEdit ? t('wantedWrite.error.updateFailed') : t('wantedWrite.error.createFailed'));
       }
     } finally {
       setSubmitting(false);
@@ -528,30 +568,30 @@ export default function WantedWrite() {
         <div className="header-spacer" />
         <WriteContainer>
           <WriteHeader>
-            <BackButton onClick={handleCancel}><FaArrowLeft /> 뒤로가기</BackButton>
-            <WriteTitle>구해요 글 작성</WriteTitle>
+            <BackButton onClick={handleCancel}><FaArrowLeft /> {t('wantedWrite.back')}</BackButton>
+            <WriteTitle>{t('wantedWrite.title')}</WriteTitle>
           </WriteHeader>
 
           <WriteForm onSubmit={handleSubmit}>
             <FormSection>
-              <SectionTitle><FaBook /> 기본 정보</SectionTitle>
+              <SectionTitle><FaBook /> {t('wantedWrite.basicInfo')}</SectionTitle>
 
               <InputTypeSelector>
-                <Label>입력 방식 선택 <Required>*</Required></Label>
+                <Label>{t('wantedWrite.inputMethod')} <Required>*</Required></Label>
                 <InputTypeButtons>
                   <InputTypeButton
                       type="button"
                       $active={inputType === 'title'}
                       onClick={() => setInputType('title')}
                   >
-                    직접 입력(제목/저자)
+                    {t('wantedWrite.inputType.manual')}
                   </InputTypeButton>
                   <InputTypeButton
                       type="button"
                       $active={inputType === 'search'}
                       onClick={() => setInputType('search')}
                   >
-                    ISBN/제목으로 검색
+                    {t('wantedWrite.inputType.search')}
                   </InputTypeButton>
                 </InputTypeButtons>
               </InputTypeSelector>
@@ -559,25 +599,25 @@ export default function WantedWrite() {
               {inputType === 'title' ? (
                   <>
                     <FormGroup>
-                      <Label>제목 <Required>*</Required></Label>
+                      <Label>{t('wantedWrite.titleLabel')} <Required>*</Required></Label>
                       <Input
                           type="text"
                           name="title"
                           value={formData.title}
                           onChange={handleInputChange}
-                          placeholder="원하는 책의 제목을 입력해주세요"
+                          placeholder={t('wantedWrite.titlePlaceholder')}
                       />
                       {errors.title && <ErrorMessage>{errors.title}</ErrorMessage>}
                     </FormGroup>
 
                     <FormGroup>
-                      <Label>저자 <Required>*</Required></Label>
+                      <Label>{t('wantedWrite.authorLabel')} <Required>*</Required></Label>
                       <Input
                           type="text"
                           name="author"
                           value={formData.author}
                           onChange={handleInputChange}
-                          placeholder="저자를 입력해주세요"
+                          placeholder={t('wantedWrite.authorPlaceholder')}
                       />
                       {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
                     </FormGroup>
@@ -585,7 +625,7 @@ export default function WantedWrite() {
               ) : (
                   <>
                     <FormGroup>
-                      <Label>책 검색 <Required>*</Required></Label>
+                      <Label>{t('wantedWrite.search.title')} <Required>*</Required></Label>
                       <button
                           type="button"
                           onClick={openSearch}
@@ -601,7 +641,7 @@ export default function WantedWrite() {
                             gap: '8px'
                           }}
                       >
-                        <FaSearch /> 책 검색하기
+                        <FaSearch /> {t('wantedWrite.search.button')}
                       </button>
                     </FormGroup>
 
@@ -609,7 +649,7 @@ export default function WantedWrite() {
                         <SelectedBookDisplay>
                           <BookTitle>{formData.title}</BookTitle>
                           <BookInfo>
-                            저자: {formData.author || '-'} {formData.isbn ? `| ISBN: ${formData.isbn}` : ''}
+                            {t('wantedWrite.authorLabel')}: {formData.author || '-'} {formData.isbn ? `| ISBN: ${formData.isbn}` : ''}
                           </BookInfo>
                           <button
                               type="button"
@@ -625,7 +665,7 @@ export default function WantedWrite() {
                                 cursor: 'pointer'
                               }}
                           >
-                            다시 선택
+                            {t('wantedWrite.search.reselect')}
                           </button>
                         </SelectedBookDisplay>
                     )}
@@ -636,24 +676,24 @@ export default function WantedWrite() {
               )}
 
               <FormGroup>
-                <Label>상태 <Required>*</Required></Label>
+                <Label>{t('wantedWrite.condition.label')} <Required>*</Required></Label>
                 <Select name="condition" value={formData.condition} onChange={handleInputChange}>
-                  <option value="">상태를 선택해주세요</option>
-                  <option value="상">상</option>
-                  <option value="중">중</option>
-                  <option value="하">하</option>
+                  <option value="">{t('wantedWrite.condition.select')}</option>
+                  <option value="HIGH">{t('wantedWrite.condition.high')}</option>
+                  <option value="MEDIUM">{t('wantedWrite.condition.medium')}</option>
+                  <option value="LOW">{t('wantedWrite.condition.low')}</option>
                 </Select>
                 {errors.condition && <ErrorMessage>{errors.condition}</ErrorMessage>}
               </FormGroup>
 
               <FormGroup>
-                <Label>희망 가격 <Required>*</Required></Label>
+                <Label>{t('wantedWrite.price.label')} <Required>*</Required></Label>
                 <Input
                     type="number"
                     name="price"
                     value={formData.price}
                     onChange={handleInputChange}
-                    placeholder="희망 가격을 입력해주세요"
+                    placeholder={t('wantedWrite.price.placeholder')}
                     min={PRICE_MIN}
                     max={PRICE_MAX}
                     step={1}
@@ -662,10 +702,10 @@ export default function WantedWrite() {
               </FormGroup>
 
               <FormGroup>
-                <Label>카테고리 <Required>*</Required></Label>
+                <Label>{t('wantedWrite.category.label')} <Required>*</Required></Label>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <Select value={formData.mainCategory} onChange={handleMajorChange}>
-                    <option value="">대분류</option>
+                    <option value="">{t('wantedWrite.category.mainCategory')}</option>
                     {(catTree && catTree.length
                         ? catTree.map(n => n.name)
                         : Object.keys(CATEGORIES)
@@ -675,7 +715,7 @@ export default function WantedWrite() {
                   </Select>
                   {formData.mainCategory && (
                       <Select value={formData.subCategory} onChange={handleSubChange}>
-                        <option value="">중분류</option>
+                        <option value="">{t('wantedWrite.category.subCategory')}</option>
                         {(() => {
                           const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                           const subs = (mainNode?.children || []).map(s => s.name);
@@ -688,7 +728,7 @@ export default function WantedWrite() {
                   )}
                   {formData.subCategory && (
                       <Select value={formData.detailCategory} onChange={handleDetailChange}>
-                        <option value="">소분류</option>
+                        <option value="">{t('wantedWrite.category.detailCategory')}</option>
                         {(() => {
                           const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                           const subNode = mainNode?.children?.find(s => s.name === formData.subCategory);
@@ -706,20 +746,20 @@ export default function WantedWrite() {
 
               {/* ✅ 요청 내용 */}
               <FormGroup>
-                <Label>요청 내용</Label>
+                <Label>{t('wantedWrite.content.label')}</Label>
                 <TextArea
                     name="content"
                     value={formData.content}
                     onChange={handleInputChange}
-                    placeholder={`예) 교양 수업 과제로 급하게 필요합니다.\n가능하면 밑줄/필기 적은 책이면 좋겠어요.`}
+                    placeholder={t('wantedWrite.content.placeholder')}
                 />
               </FormGroup>
             </FormSection>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-              <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
+              <CancelButton type="button" onClick={handleCancel}>{t('common.cancel')}</CancelButton>
               <SubmitButton type="submit" disabled={submitting}>
-                {isEdit ? (submitting ? '수정 중...' : '수정') : (submitting ? '등록 중...' : '등록')}
+                {isEdit ? (submitting ? t('wantedWrite.button.updating') : t('wantedWrite.button.update')) : (submitting ? t('wantedWrite.button.registering') : t('wantedWrite.button.register'))}
               </SubmitButton>
             </div>
           </WriteForm>
@@ -729,10 +769,10 @@ export default function WantedWrite() {
         {showBookSearch && (
             <BookSearchModal>
               <BookSearchContent>
-                <h3>📚 책 검색</h3>
+                <h3>📚 {t('wantedWrite.search.modalTitle')}</h3>
                 <SearchInput
                     type="text"
-                    placeholder="ISBN 또는 책 제목으로 검색하세요"
+                    placeholder={t('wantedWrite.search.inputPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
@@ -753,7 +793,7 @@ export default function WantedWrite() {
                       gap: '8px'
                     }}
                 >
-                  <FaSearch /> {searchLoading ? '검색 중...' : '검색'}
+                  <FaSearch /> {searchLoading ? t('wantedWrite.button.searching') : t('wantedWrite.button.search')}
                 </button>
 
                 <BookList>
@@ -768,7 +808,7 @@ export default function WantedWrite() {
                         )}
                         <div>
                           <BookTitle>{book.title}</BookTitle>
-                          <BookInfo>저자: {book.author || '정보 없음'} | 출판사: {book.publisher || '정보 없음'}</BookInfo>
+                          <BookInfo>{t('wantedWrite.search.author')}: {book.author || t('wantedWrite.search.noInfo')} | {t('wantedWrite.search.publisher')}: {book.publisher || t('wantedWrite.search.noInfo')}</BookInfo>
                           {book.isbn && <BookInfo>ISBN: {book.isbn}</BookInfo>}
                         </div>
                       </BookItem>
@@ -777,7 +817,7 @@ export default function WantedWrite() {
 
                 <ModalButtons>
                   <ModalButton type="button" className="secondary" onClick={closeSearch}>
-                    닫기
+                    {t('common.close')}
                   </ModalButton>
                 </ModalButtons>
               </BookSearchContent>

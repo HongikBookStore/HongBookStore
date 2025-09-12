@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaTrash, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io';
+import { useTranslation } from 'react-i18next';
 
 const UserCategory = ({ categories, onAddCategory, onDeleteCategory, onUpdateCategory }) => {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,9 +50,9 @@ const UserCategory = ({ categories, onAddCategory, onDeleteCategory, onUpdateCat
   return (
     <CategoryContainer>
       <CategoryHeader>
-        <h3>내 카테고리</h3>
+        <h3>{t('map.myCategories')}</h3>
         <AddCategoryButton onClick={openAddModal}>
-          <FaPlus /> 카테고리 추가하기
+          <FaPlus /> {t('map.addCategory')}
         </AddCategoryButton>
       </CategoryHeader>
 
@@ -94,7 +96,7 @@ const UserCategory = ({ categories, onAddCategory, onDeleteCategory, onUpdateCat
         <Modal>
           <ModalContent>
             <ModalHeader>
-              <h3>새 카테고리 추가</h3>
+              <h3>{t('map.addNewCategory')}</h3>
               <CloseButton onClick={closeAddModal}>
                 <IoMdClose />
               </CloseButton>
@@ -102,7 +104,7 @@ const UserCategory = ({ categories, onAddCategory, onDeleteCategory, onUpdateCat
             <ModalBody>
               <Input
                 type="text"
-                placeholder="카테고리 이름을 입력하세요"
+                placeholder={t('map.enterCategoryName')}
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
@@ -110,10 +112,10 @@ const UserCategory = ({ categories, onAddCategory, onDeleteCategory, onUpdateCat
               />
               <ButtonGroup>
                 <CancelModalButton onClick={closeAddModal}>
-                  취소
+                  {t('common.cancel')}
                 </CancelModalButton>
                 <AddModalButton onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
-                  추가
+                  {t('map.add')}
                 </AddModalButton>
               </ButtonGroup>
             </ModalBody>
