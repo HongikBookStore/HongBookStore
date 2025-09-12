@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
 import { getMyReceivedPeerReviews } from '../../api/peerReviews';
+import { useTranslation } from 'react-i18next';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -590,14 +591,15 @@ const getAuthHeader = () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
-// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
-const statusMap = {
-  'FOR_SALE': '판매중',
-  'RESERVED': '예약중',
-  'SOLD_OUT': '판매완료'
-};
-
 const MyBookstore = () => {
+  const { t } = useTranslation();
+  
+  // 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
+  const statusMap = {
+    'FOR_SALE': t('myBookstore.forSale'),
+    'RESERVED': t('myBookstore.reserved'),
+    'SOLD_OUT': t('myBookstore.soldOut')
+  };
   const [activeTab, setActiveTab] = useState('all'); // 기본 탭을 '전체'로
   const [myPosts, setMyPosts] = useState([]);
 
@@ -629,8 +631,8 @@ const MyBookstore = () => {
       const response = await axios.get('/api/my/posts', { headers: getAuthHeader() });
       setMyPosts(response.data);
     } catch (error) {
-      console.error("내 판매글 목록을 불러오는 데 실패했습니다.", error);
-      setError(prev => ({ ...prev, myPosts: '내 판매글을 불러오는 데 실패했습니다.' })); // 에러 상태 설정
+      console.error(t('myBookstore.fetchPostsError'), error);
+      setError(prev => ({ ...prev, myPosts: t('myBookstore.fetchPostsError') })); // 에러 상태 설정
     } finally {
       setLoading(prev => ({ ...prev, myPosts: false }));
     }
@@ -644,8 +646,8 @@ const MyBookstore = () => {
       const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
       setWishlist(response.data);
     } catch (error) {
-      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
-      setError(prev => ({ ...prev, wishlist: '찜 목록을 불러오는 데 실패했습니다.' })); // 에러 상태 설정
+      console.error(t('myBookstore.fetchWishlistError'), error);
+      setError(prev => ({ ...prev, wishlist: t('myBookstore.fetchWishlistError') })); // 에러 상태 설정
     } finally {
       setLoading(prev => ({ ...prev, wishlist: false }));
     }
@@ -671,8 +673,8 @@ const MyBookstore = () => {
       setReviewTotalPages(typeof data.totalPages === 'number' ? data.totalPages : 0);
       setReviewLast(Boolean(data.last));
     } catch (e) {
-      console.error('내가 받은 후기 조회 실패', e);
-      setErrorReviews('후기를 불러오는 중 오류가 발생했습니다.');
+      console.error(t('myBookstore.fetchReviewsError'), e);
+      setErrorReviews(t('myBookstore.fetchReviewsError'));
     } finally {
       setLoadingReviews(false);
     }
@@ -717,14 +719,14 @@ const MyBookstore = () => {
 
   // 게시글 삭제 핸들러
   const handleDeleteBook = async (postId) => {
-    if (window.confirm('이 책을 정말 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
+    if (window.confirm(t('myBookstore.deleteConfirm'))) {
       try {
         await axios.delete(`/api/posts/${postId}`, { headers: getAuthHeader() });
-        alert("게시글이 삭제되었습니다.");
+        alert(t('myBookstore.deleteSuccess'));
         fetchMyPosts(); // 목록 새로고침
       } catch (error) {
         console.error("게시글 삭제에 실패했습니다.", error);
-        alert("게시글 삭제 중 오류가 발생했습니다.");
+        alert(t('myBookstore.deleteError'));
       }
     }
   };
@@ -775,7 +777,7 @@ const MyBookstore = () => {
   const [confirmingBuyer, setConfirmingBuyer] = useState(false);
 
   const handleStatusChange = async (postId, status) => {
-    if (!window.confirm(`정말로 '${status === 'SOLD_OUT' ? '판매완료' : '예약중'}'으로 변경하시겠습니까?`)) return;
+    if (!window.confirm(t('myBookstore.statusChangeConfirm', { status: status === 'SOLD_OUT' ? t('myBookstore.soldOut') : t('myBookstore.reserved') }))) return;
 
     if (status === 'SOLD_OUT') {
       // 채팅방 기반 구매자 선택 모달
@@ -803,11 +805,11 @@ const MyBookstore = () => {
 
     try {
       await axios.patch(`/api/posts/${postId}/status`, { status }, { headers: getAuthHeader() });
-      alert('상태가 변경되었습니다.');
+      alert(t('myBookstore.statusChangeSuccess'));
       fetchMyPosts();
     } catch (e) {
       console.error('상태 변경 실패', e);
-      alert(e.response?.data?.message || '상태 변경 중 오류가 발생했습니다.');
+      alert(e.response?.data?.message || t('myBookstore.statusChangeError'));
     }
   };
 
@@ -820,18 +822,18 @@ const MyBookstore = () => {
 
   const handleConfirmBuyer = async () => {
     if (!selectedBuyerId) {
-      alert('구매자를 선택하거나 직접 입력해 주세요.');
+      alert(t('myBookstore.buyerSelectError'));
       return;
     }
     try {
       setConfirmingBuyer(true);
       await axios.patch(`/api/posts/${buyerModal.postId}/status`, { status: 'SOLD_OUT', buyerId: selectedBuyerId }, { headers: getAuthHeader() });
-      alert('판매완료로 변경되었습니다.');
+      alert(t('myBookstore.statusChangedToSold'));
       closeBuyerModal();
       fetchMyPosts();
     } catch (e) {
       console.error('구매자 지정 실패', e);
-      alert(e.response?.data?.message || '구매자 지정 중 오류가 발생했습니다.');
+      alert(e.response?.data?.message || t('myBookstore.buyerConfirmError'));
     } finally {
       setConfirmingBuyer(false);
     }
@@ -857,7 +859,7 @@ const MyBookstore = () => {
       <MainContent>
         <BookstoreContainer>
           <BookstoreHeader>
-            <BookstoreTitle>나의 책방</BookstoreTitle>
+            <BookstoreTitle>{t('myBookstore.title')}</BookstoreTitle>
             <HeaderButtons>
             </HeaderButtons>
           </BookstoreHeader>
@@ -865,9 +867,9 @@ const MyBookstore = () => {
           {/* 1. 내가 등록한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle><FaBook /> 내가 등록한 책</SectionTitle>
+              <SectionTitle><FaBook /> {t('myBookstore.myRegisteredBooks')}</SectionTitle>
               <ViewMoreButton onClick={() => setShowAllMyBooks(!showAllMyBooks)}>
-                {showAllMyBooks ? '접기' : '더보기'}
+                {showAllMyBooks ? t('common.collapse') : t('common.viewMore')}
                 <FaArrowRight style={{ transform: showAllMyBooks ? 'rotate(90deg)' : 'none' }} />
               </ViewMoreButton>
             </SectionHeader>
@@ -875,16 +877,16 @@ const MyBookstore = () => {
             <TabSection>
               <TabList>
                 <Tab $active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
-                  전체 ({myPosts.length})
+                  {t('myBookstore.all')} ({myPosts.length})
                 </Tab>
                 <Tab $active={activeTab === 'selling'} onClick={() => setActiveTab('selling')}>
-                  판매중 ({myPosts.filter(p => p.status === 'FOR_SALE').length})
+                  {t('myBookstore.forSale')} ({myPosts.filter(p => p.status === 'FOR_SALE').length})
                 </Tab>
                 <Tab $active={activeTab === 'reserved'} onClick={() => setActiveTab('reserved')}>
-                  예약중 ({myPosts.filter(p => p.status === 'RESERVED').length})
+                  {t('myBookstore.reserved')} ({myPosts.filter(p => p.status === 'RESERVED').length})
                 </Tab>
                 <Tab $active={activeTab === 'sold'} onClick={() => setActiveTab('sold')}>
-                  판매완료 ({myPosts.filter(p => p.status === 'SOLD_OUT').length})
+                  {t('myBookstore.soldOut')} ({myPosts.filter(p => p.status === 'SOLD_OUT').length})
                 </Tab>
               </TabList>
 
@@ -892,14 +894,14 @@ const MyBookstore = () => {
               {loading.myPosts ? (
                 <LoadingSpinner>
                   <FaBook style={{ marginRight: '8px' }} />
-                  목록을 불러오는 중...
+                  {t('myBookstore.loadingPosts')}
                 </LoadingSpinner>
               ) : error.myPosts ? (
                 <EmptyState>
                   <EmptyIcon><FaBook /></EmptyIcon>
                   <h3>{error.myPosts}</h3>
                   <button onClick={fetchMyPosts} style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    다시 시도
+                    {t('common.retry')}
                   </button>
                 </EmptyState>
               ) : filteredBooks.length > 0 ? (
@@ -923,38 +925,38 @@ const MyBookstore = () => {
                         {/* <span><FaEye size={12} /> {post.views}</span> */}
                       </BookMeta>
                       
-                      <BookPrice>{post.price.toLocaleString()}원</BookPrice>
+                      <BookPrice>{post.price.toLocaleString()}{t('common.won')}</BookPrice>
                       
                       <BookStatus $status={post.status}>
                         {statusMap[post.status]}
                       </BookStatus>
                       
                       <BookActions>
-                        <ActionButton onClick={() => handleViewBook(post.postId)} title="상세보기">
-                          <FaSearch /> 보기
+                        <ActionButton onClick={() => handleViewBook(post.postId)}>
+                          <FaSearch /> {t('common.view')}
                         </ActionButton>
                         {post.status === 'FOR_SALE' && (
-                          <ActionButton onClick={() => handleEditBook(post.postId)} title="수정하기">
-                            <FaEdit /> 수정
+                          <ActionButton onClick={() => handleEditBook(post.postId)}>
+                            <FaEdit /> {t('common.edit')}
+                          </ActionButton>
+                        )}
+                        {post.status === 'FOR_SALE' && (
+                          <ActionButton onClick={() => handleStatusChange(post.postId, 'RESERVED')}>
+                            {t('myBookstore.reserved')}
                           </ActionButton>
                         )}
                         {post.status === 'RESERVED' && (
-                          <ActionButton onClick={() => handleStatusChange(post.postId, 'FOR_SALE')} title="예약 해제">
-                            해제
+                          <ActionButton onClick={() => handleStatusChange(post.postId, 'FOR_SALE')}>
+                            {t('myBookstore.unreserve')}
                           </ActionButton>
                         )}
                         {(post.status === 'FOR_SALE' || post.status === 'RESERVED') && (
-                          <ActionButton onClick={() => handleStatusChange(post.postId, 'SOLD_OUT')} title="판매완료로 변경">
-                            판매완료
+                          <ActionButton onClick={() => handleStatusChange(post.postId, 'SOLD_OUT')}>
+                            {t('myBookstore.soldOut')}
                           </ActionButton>
                         )}
-                        {post.status === 'FOR_SALE' && (
-                          <ActionButton onClick={() => handleStatusChange(post.postId, 'RESERVED')} title="예약중으로 변경">
-                            예약중
-                          </ActionButton>
-                        )}
-                        <ActionButton className="delete" onClick={() => handleDeleteBook(post.postId)} title="삭제하기">
-                          <FaTrash /> 삭제
+                        <ActionButton className="delete" onClick={() => handleDeleteBook(post.postId)}>
+                          <FaTrash /> {t('common.delete')}
                         </ActionButton>
                       </BookActions>
                     </BookCard>
@@ -964,7 +966,7 @@ const MyBookstore = () => {
             <NoBooks>
               <EmptyIcon><FaBook /></EmptyIcon>
               {/* 탭에 따른 메시지 조건 수정 */}
-              <h3>{activeTab === 'all' ? '등록한 책이 없습니다' : `${statusMap[activeTab] || '해당 상태'}인 책이 없습니다`}</h3>
+              <h3>{activeTab === 'all' ? t('myBookstore.noRegisteredBooks') : t('myBookstore.noBooksInStatus', { status: statusMap[activeTab] || t('myBookstore.unknownStatus') })}</h3>
             </NoBooks>
           )}
         </TabSection>
@@ -973,20 +975,20 @@ const MyBookstore = () => {
           {/* 3. 받은 거래 후기 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle>받은 거래 후기</SectionTitle>
+              <SectionTitle>{t('myBookstore.receivedReviews')}</SectionTitle>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <ViewMoreButton onClick={() => fetchMyReviews(0, reviewSize)}>새로고침</ViewMoreButton>
+                <ViewMoreButton onClick={() => fetchMyReviews(0, reviewSize)}>{t('common.refresh')}</ViewMoreButton>
                 <ViewMoreButton onClick={() => reviewPage > 0 && fetchMyReviews(reviewPage - 1, reviewSize)} disabled={reviewPage <= 0}>
-                  이전
+                  {t('common.previous')}
                 </ViewMoreButton>
                 <ViewMoreButton onClick={() => !reviewLast && fetchMyReviews(reviewPage + 1, reviewSize)} disabled={reviewLast}>
-                  다음
+                  {t('common.next')}
                 </ViewMoreButton>
               </div>
             </SectionHeader>
             <ReviewSection>
               {loadingReviews ? (
-                <LoadingSpinner>후기를 불러오는 중...</LoadingSpinner>
+                <LoadingSpinner>{t('myBookstore.loadingReviews')}</LoadingSpinner>
               ) : errorReviews ? (
                 <EmptyState>
                   <EmptyIcon>😥</EmptyIcon>
@@ -995,21 +997,21 @@ const MyBookstore = () => {
               ) : myReviews.length === 0 ? (
                 <EmptyState>
                   <EmptyIcon>🙂</EmptyIcon>
-                  <h3>아직 받은 후기가 없습니다</h3>
+                  <h3>{t('myBookstore.noReviewsYet')}</h3>
                 </EmptyState>
               ) : (
                 <>
                   <div style={{marginBottom: 12, color: '#333', fontWeight: 600}}>
-                    페이지 평균: {(
+                    {t('myBookstore.pageAverage')}: {(
                       myReviews.reduce((acc, r) => acc + (Number(r.ratingScore) || 0), 0) / (myReviews.length || 1)
                     ).toFixed(2)} / 5.00
                     {overallAvg != null && (
                       <span style={{ marginLeft: 12, color:'#555', fontWeight: 500 }}>
-                        전체 평균: {Number(overallAvg).toFixed(2)} / 5.00
+                        {t('myBookstore.overallAverage')}: {Number(overallAvg).toFixed(2)} / 5.00
                       </span>
                     )}
-                    <span style={{ marginLeft: 12 }}>총 {myReviewsTotal}개</span>
-                    <span style={{ marginLeft: 12 }}>페이지 {reviewPage + 1} / {Math.max(reviewTotalPages, 1)}</span>
+                    <span style={{ marginLeft: 12 }}>{t('myBookstore.total')} {myReviewsTotal}{t('myBookstore.items')}</span>
+                    <span style={{ marginLeft: 12 }}>{t('myBookstore.page')} {reviewPage + 1} / {Math.max(reviewTotalPages, 1)}</span>
                   </div>
                   <ReviewList>
                     {myReviews.slice(0, 5).map(rv => (
@@ -1035,20 +1037,20 @@ const MyBookstore = () => {
           {/* 2. 찜한 책 */}
           <SectionContainer>
             <SectionHeader>
-              <SectionTitle><FaHeart /> 찜한 책 ({Array.isArray(wishlist) ? wishlist.length : 0})</SectionTitle> {/* 배열 체크 추가 */}
+              <SectionTitle><FaHeart /> {t('myBookstore.wishlist')} ({Array.isArray(wishlist) ? wishlist.length : 0})</SectionTitle> {/* 배열 체크 추가 */}
             </SectionHeader>
             {/* 수정: 로딩과 에러 상태를 더 명확하게 처리 */}
             {loading.wishlist ? (
               <LoadingSpinner>
                 <FaHeart style={{ marginRight: '8px' }} />
-                찜 목록을 불러오는 중...
+                {t('myBookstore.loadingWishlist')}
               </LoadingSpinner>
             ) : error.wishlist ? (
               <EmptyState>
                 <EmptyIcon><FaHeart /></EmptyIcon>
                 <h3>{error.wishlist}</h3>
                 <button onClick={fetchWishlist} style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                  다시 시도
+                  {t('common.retry')}
                 </button>
               </EmptyState>
             ) : Array.isArray(wishlist) && wishlist.length > 0 ? (
@@ -1065,11 +1067,11 @@ const MyBookstore = () => {
                         <span><FaUser size={10} /> {item.sellerNickname}</span>
                         <span><FaClock size={10} /> {new Date(item.createdAt).toLocaleDateString()}</span>
                       </CompactBookMeta>
-                      <CompactBookPrice>{item.price.toLocaleString()}원</CompactBookPrice>
+                      <CompactBookPrice>{item.price.toLocaleString()}{t('common.won')}</CompactBookPrice>
                     </CompactBookInfo>
                     <BookActions>
-                      <ActionButton onClick={() => handleViewBook(item.postId)} title="상세보기"><FaEye /> 보기</ActionButton>
-                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)} title="찜 해제"><FaHeart /> 해제</ActionButton>
+                      <ActionButton onClick={() => handleViewBook(item.postId)}><FaEye /> {t('common.view')}</ActionButton>
+                      <ActionButton className="delete" onClick={() => handleRemoveFromWishlist(item.postId)}><FaHeart /> {t('myBookstore.removeFromWishlist')}</ActionButton>
                     </BookActions>
                   </CompactBookCard>
                 ))}
@@ -1077,7 +1079,7 @@ const MyBookstore = () => {
             ) : (
               <EmptyState>
                 <EmptyIcon><FaHeart /></EmptyIcon>
-                <h3>찜한 책이 없습니다</h3>
+                <h3>{t('myBookstore.noWishlist')}</h3>
               </EmptyState>
             )}
           </SectionContainer>
@@ -1135,7 +1137,7 @@ const MyBookstore = () => {
                   />
                 </div>
                 <ModalActions>
-                  <ModalButton className="cancel" onClick={closeBuyerModal} disabled={confirmingBuyer}>취소</ModalButton>
+                  <ModalButton className="cancel" onClick={closeBuyerModal} disabled={confirmingBuyer}>{t('common.cancel')}</ModalButton>
                   <ModalButton onClick={handleConfirmBuyer} disabled={!selectedBuyerId || confirmingBuyer}>
                     {confirmingBuyer ? '처리 중...' : '확인'}
                   </ModalButton>

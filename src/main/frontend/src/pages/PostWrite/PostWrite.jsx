@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef} from 'react';
 import styled from 'styled-components';
 import { FaBook, FaCamera, FaSave, FaArrowLeft, FaImage, FaTimes, FaCheck, FaSearch, FaMoneyBillWave, FaInfoCircle, FaHeart, FaClock, FaUser, FaMapMarkerAlt } from 'react-icons/fa';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import WarningModal from '../../components/WarningModal/WarningModal';
 import { useWriting } from '../../contexts/WritingContext';
@@ -888,6 +889,7 @@ const normalizeBook = (doc) => ({
 });
 
 const PostWrite = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
@@ -1069,10 +1071,10 @@ const PostWrite = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       setHasUnsavedChanges(false);
       setUnsavedChanges(false);
-      alert('게시글을 임시저장했어! 📂');
+      alert(t('postWrite.draftSaved'));
     } catch (error) {
       console.error('임시저장 실패:', error);
-      alert('임시저장에 실패했어! 😅');
+      alert(t('postWrite.draftSaveFailed'));
     }
   }, [formData, images, setUnsavedChanges]);
 
@@ -1259,7 +1261,7 @@ const PostWrite = () => {
   // 책 검색
   const handleBookSearch = useCallback(async () => {
     if (!searchQuery.trim()) {
-      alert('검색어를 입력해줘! 🔍');
+      alert(t('postWrite.enterSearchQuery'));
       return;
     }
 
@@ -1273,16 +1275,16 @@ const PostWrite = () => {
       const results = toBookArray(raw).map(normalizeBook);
       setSearchResults(results);
       if (results.length === 0) {
-        alert('검색 결과가 없어! 다른 키워드로 시도해봐 📚');
+        alert(t('postWrite.noSearchResults'));
       }
     } catch (error) {
       console.error("책 검색 실패:", error);
-      alert("책 검색 중 오류가 발생했어! 다시 시도해줘 😅");
+      alert(t('postWrite.searchError'));
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, t]);
 
   const handleBookSelect = useCallback((book) => {
     setFormData(prev => ({
@@ -1604,7 +1606,7 @@ const PostWrite = () => {
     return (
         <WriteContainer>
           <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>게시글 정보를 불러오는 중... ⏳</p>
+            <p>{t('postWrite.loadingPost')}</p>
           </div>
         </WriteContainer>
     );
@@ -1621,71 +1623,71 @@ const PostWrite = () => {
               setPendingNavigation('/marketplace');
               setShowWarningModal(true);
             }}>
-              <FaArrowLeft /> 뒤로가기
+              <FaArrowLeft /> {t('postWrite.backButton')}
             </BackButton>
-            <WriteTitle>{isEdit ? '판매글 수정' : '판매글 등록'}</WriteTitle>
+            <WriteTitle>{isEdit ? t('postWrite.editTitle') : t('postWrite.title')}</WriteTitle>
           </WriteHeader>
 
           <WriteForm onSubmit={handleSubmit}>
             {!isEdit && (
                 <FormSection>
-                  <SectionTitle><FaBook /> 등록 방식</SectionTitle>
+                  <SectionTitle><FaBook /> {t('postWrite.registrationMethod')}</SectionTitle>
                   <InputTypeButtons>
-                    <InputTypeButton type="button" $active={inputType === 'search'} onClick={() => setInputType('search')}>ISBN / 책 제목 검색</InputTypeButton>
-                    <InputTypeButton type="button" $active={inputType === 'custom'} onClick={() => setInputType('custom')}>직접 입력 (제본 등)</InputTypeButton>
+                    <InputTypeButton type="button" $active={inputType === 'search'} onClick={() => setInputType('search')}>{t('postWrite.bookSearch')}</InputTypeButton>
+                    <InputTypeButton type="button" $active={inputType === 'custom'} onClick={() => setInputType('custom')}>{t('postWrite.directInput')}</InputTypeButton>
                   </InputTypeButtons>
                 </FormSection>
             )}
 
             {/* --- 책 정보 섹션 --- */}
             <FormSection>
-              <SectionTitle>📖 책 정보</SectionTitle>
+              <SectionTitle>📖 {t('postWrite.bookInfo')}</SectionTitle>
               {inputType === 'search' ? (
                   <>
                     {!isEdit && (
                         <FormGroup>
-                          <Label>책 검색 <Required>*</Required></Label>
+                          <Label>{t('postWrite.bookSearch')} <Required>*</Required></Label>
                           <BookSearchButton type="button" onClick={() => setShowBookSearch(true)}>
-                            <FaSearch /> 책 검색하기
+                            <FaSearch /> {t('postWrite.bookSearchButton')}
                           </BookSearchButton>
                         </FormGroup>
                     )}
                     {formData.bookTitle && (
                         <SelectedBookDisplay>
                           <BookItemTitle>{formData.bookTitle}</BookItemTitle>
-                          <BookInfo>저자: {formData.author} | 출판사: {formData.publisher}</BookInfo>
+                          <BookInfo>{t('postWrite.author')}: {formData.author} | {t('postWrite.publisher')}: {formData.publisher}</BookInfo>
                         </SelectedBookDisplay>
                     )}
                   </>
               ) : (
                   <>
                     <FormGroup>
-                      <Label>책 제목 <Required>*</Required></Label>
+                      <Label>{t('postWrite.bookTitle')} <Required>*</Required></Label>
                       <Input
                           name="bookTitle"
                           value={formData.bookTitle}
                           onChange={handleInputChange}
-                          placeholder="책 제목을 입력해줘"
+                          placeholder={t('postWrite.bookSearchPlaceholder')}
                       />
                       {errors.bookTitle && <ErrorMessage>{errors.bookTitle}</ErrorMessage>}
                     </FormGroup>
                     <FormGroup>
-                      <Label>저자 <Required>*</Required></Label>
+                      <Label>{t('postWrite.author')} <Required>*</Required></Label>
                       <Input
                           name="author"
                           value={formData.author}
                           onChange={handleInputChange}
-                          placeholder="저자를 입력해줘"
+                          placeholder={t('postWrite.authorPlaceholder')}
                       />
                       {errors.author && <ErrorMessage>{errors.author}</ErrorMessage>}
                     </FormGroup>
                     <FormGroup>
-                      <Label>출판사</Label>
+                      <Label>{t('postWrite.publisher')}</Label>
                       <Input
                           name="publisher"
                           value={formData.publisher}
                           onChange={handleInputChange}
-                          placeholder="출판사를 입력해줘"
+                          placeholder={t('postWrite.publisherPlaceholder')}
                       />
                     </FormGroup>
                   </>
@@ -1693,7 +1695,7 @@ const PostWrite = () => {
             </FormSection>
 
             <FormSection>
-              <SectionTitle><FaCamera /> 실물 사진 등록 (최대 {MAX_IMAGES}장)</SectionTitle>
+              <SectionTitle><FaCamera /> {t('postWrite.photoRegistration')} ({t('postWrite.maxPhotos')})</SectionTitle>
               <input
                   ref={imageInputRef}
                   id="imageInput"
@@ -1706,15 +1708,15 @@ const PostWrite = () => {
               {images.length < MAX_IMAGES && (
                   <ImageUploadArea onClick={() => imageInputRef.current && imageInputRef.current.click()}>
                     <ImageUploadIcon><FaImage /></ImageUploadIcon>
-                    <ImageUploadText>클릭해서 사진을 업로드해줘! 📷</ImageUploadText>
-                    <HelpText>최대 {MAX_IMAGES}장, 각 파일당 5MB 이하</HelpText>
+                    <ImageUploadText>{t('postWrite.clickToUpload')}</ImageUploadText>
+                    <HelpText>{t('postWrite.photoHelp')}</HelpText>
                   </ImageUploadArea>
               )}
               {images.length > 0 && (
                   <ImagePreview>
                     {images.map(image => (
                         <ImagePreviewItem key={image.id}>
-                          <ImagePreviewImg src={image.preview} alt="미리보기" />
+                          <ImagePreviewImg src={image.preview} alt={t('common.preview')} />
                           <RemoveImageButton onClick={() => handleRemoveImage(image.id)}>
                             <FaTimes />
                           </RemoveImageButton>
@@ -1726,9 +1728,9 @@ const PostWrite = () => {
 
             {/* --- 판매글 정보 섹션 --- */}
             <FormSection>
-              <SectionTitle>📝 판매글 정보</SectionTitle>
+              <SectionTitle>📝 {t('postWrite.postInfo')}</SectionTitle>
               <FormGroup>
-                <Label>카테고리 <Required>*</Required></Label>
+                <Label>{t('postWrite.category')} <Required>*</Required></Label>
                 <CategoryRow>
                   <CategorySelect
                     value={formData.mainCategory}
@@ -1741,7 +1743,7 @@ const PostWrite = () => {
                       clearErrors('category');
                     }}
                   >
-                    <option value="">대분류</option>
+                    <option value="">{t('postWrite.mainCategory')}</option>
                     {(catTree || []).map(node => (
                       <option key={node.name} value={node.name}>{node.name}</option>
                     ))}
@@ -1757,7 +1759,7 @@ const PostWrite = () => {
                     }}
                     disabled={!formData.mainCategory}
                   >
-                    <option value="">중분류</option>
+                    <option value="">{t('postWrite.subCategory')}</option>
                     {(() => {
                       const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                       return (mainNode?.children || []).map(s => (
@@ -1770,7 +1772,7 @@ const PostWrite = () => {
                     onChange={e => { setFormData(prev => ({ ...prev, detailCategory: e.target.value })); clearErrors('category'); }}
                     disabled={!formData.subCategory}
                   >
-                    <option value="">소분류</option>
+                    <option value="">{t('postWrite.detailCategory')}</option>
                     {(() => {
                       const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                       const subNode = mainNode?.children?.find(s => s.name === formData.subCategory);
@@ -1783,18 +1785,18 @@ const PostWrite = () => {
                 {errors.category && <ErrorMessage>{errors.category}</ErrorMessage>}
               </FormGroup>
               <FormGroup>
-                <Label>글 제목 <Required>*</Required></Label>
+                <Label>{t('postWrite.postTitle')} <Required>*</Required></Label>
                 <Input
                     name="postTitle"
                     value={formData.postTitle}
                     onChange={handleInputChange}
-                    placeholder="판매글 제목을 입력해줘 (최소 5자)"
+                    placeholder={t('postWrite.postTitlePlaceholder')}
                 />
                 {errors.postTitle && <ErrorMessage>{errors.postTitle}</ErrorMessage>}
               </FormGroup>
 
               <FormGroup>
-                <Label>필기 상태 <Required>*</Required></Label>
+                <Label>{t('postWrite.writingCondition')} <Required>*</Required></Label>
                 <ToggleContainer>
                   {['상', '중', '하'].map(condition => (
                       <ToggleOption
@@ -1809,7 +1811,7 @@ const PostWrite = () => {
                             onChange={handleInputChange}
                         />
                         <ToggleText $checked={formData.writingCondition === condition}>
-                          {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 필기' : '많이 필기'})
+                          {condition} ({condition === '상' ? t('postWrite.writingHigh') : condition === '중' ? t('postWrite.writingMedium') : t('postWrite.writingLow')})
                         </ToggleText>
                       </ToggleOption>
                   ))}
@@ -1818,7 +1820,7 @@ const PostWrite = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label>찢어짐 정도 <Required>*</Required></Label>
+                <Label>{t('postWrite.tearCondition')} <Required>*</Required></Label>
                 <ToggleContainer>
                   {['상', '중', '하'].map(condition => (
                       <ToggleOption
@@ -1833,7 +1835,7 @@ const PostWrite = () => {
                             onChange={handleInputChange}
                         />
                         <ToggleText $checked={formData.tearCondition === condition}>
-                          {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 찢어짐' : '많이 찢어짐'})
+                          {condition} ({condition === '상' ? t('postWrite.tearHigh') : condition === '중' ? t('postWrite.tearMedium') : t('postWrite.tearLow')})
                         </ToggleText>
                       </ToggleOption>
                   ))}
@@ -1842,7 +1844,7 @@ const PostWrite = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label>물기 상태 <Required>*</Required></Label>
+                <Label>{t('postWrite.waterCondition')} <Required>*</Required></Label>
                 <ToggleContainer>
                   {['상', '중', '하'].map(condition => (
                       <ToggleOption
@@ -1857,7 +1859,7 @@ const PostWrite = () => {
                             onChange={handleInputChange}
                         />
                         <ToggleText $checked={formData.waterCondition === condition}>
-                          {condition} ({condition === '상' ? '깨끗함' : condition === '중' ? '약간 물기' : '많이 물기'})
+                          {condition} ({condition === '상' ? t('postWrite.waterHigh') : condition === '중' ? t('postWrite.waterMedium') : t('postWrite.waterLow')})
                         </ToggleText>
                       </ToggleOption>
                   ))}
@@ -1866,7 +1868,7 @@ const PostWrite = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label>네고 가능 여부</Label>
+                <Label>{t('postWrite.negotiable')}</Label>
                 <ToggleContainer>
                   <ToggleOption $checked={formData.negotiable === true}>
                     <input
@@ -1876,7 +1878,7 @@ const PostWrite = () => {
                         checked={formData.negotiable === true}
                         onChange={() => setFormData(prev => ({ ...prev, negotiable: true }))}
                     />
-                    <ToggleText $checked={formData.negotiable === true}>네고 가능 💬</ToggleText>
+                    <ToggleText $checked={formData.negotiable === true}>{t('postWrite.negotiableYes')}</ToggleText>
                   </ToggleOption>
                   <ToggleOption $checked={formData.negotiable === false}>
                     <input
@@ -1886,35 +1888,35 @@ const PostWrite = () => {
                         checked={formData.negotiable === false}
                         onChange={() => setFormData(prev => ({ ...prev, negotiable: false }))}
                     />
-                    <ToggleText $checked={formData.negotiable === false}>네고 불가 🚫</ToggleText>
+                    <ToggleText $checked={formData.negotiable === false}>{t('postWrite.negotiableNo')}</ToggleText>
                   </ToggleOption>
                 </ToggleContainer>
               </FormGroup>
 
               <FormGroup>
-                <Label>원가 <Required>*</Required></Label>
+                <Label>{t('postWrite.originalPrice')} <Required>*</Required></Label>
                 <Input
                     type="number"
                     name="originalPrice"
                     value={formData.originalPrice}
                     onChange={handleOriginalPriceChange}
-                    placeholder="정가를 입력해줘"
+                    placeholder={t('postWrite.originalPricePlaceholder')}
                     min={PRICE_MIN}
                     max={ORIGINAL_PRICE_MAX}
                     step={1}
                 />
                 {errors.originalPrice && <ErrorMessage>{errors.originalPrice}</ErrorMessage>}
-                <HelpText>책의 정가를 입력해줘 </HelpText>
+                <HelpText>{t('postWrite.originalPriceHelp')} </HelpText>
               </FormGroup>
 
               <FormGroup>
-                <Label>판매가 <Required>*</Required></Label>
+                <Label>{t('postWrite.sellingPrice')} <Required>*</Required></Label>
                 <Input
                     type="number"
                     name="price"
                     value={formData.price}
                     onChange={handlePriceChange}
-                    placeholder="판매 희망가를 입력해줘"
+                    placeholder={t('postWrite.sellingPricePlaceholder')}
                     min={PRICE_MIN}
                     max={PRICE_MAX}
                     step={1}
@@ -1923,10 +1925,10 @@ const PostWrite = () => {
 
                 {formData.originalPrice && recommended && (
                     <DiscountInfo>
-                      할인율: {recommended.discountRate}%
-                      ({(parseInt(formData.originalPrice) - recommended.recommendedPrice).toLocaleString()}원 할인)
+                      {t('postWrite.discountRate')}: {recommended.discountRate}%
+                      ({(parseInt(formData.originalPrice) - recommended.recommendedPrice).toLocaleString()}{t('postWrite.discountAmount')})
                       <br />
-                      <strong>추천가: {recommended.recommendedPrice.toLocaleString()}원</strong>
+                      <strong>{t('postWrite.recommendedPrice')}: {recommended.recommendedPrice.toLocaleString()}원</strong>
                       <RecommendButton
                           type="button"
                           onClick={() => setFormData(prev => ({
@@ -1934,12 +1936,12 @@ const PostWrite = () => {
                             price: recommended.recommendedPrice.toString()
                           }))}
                       >
-                        추천 가격으로 입력 ✨
+                        {t('postWrite.useRecommendedPrice')}
                       </RecommendButton>
                       <InfoButton
                           type="button"
                           onClick={() => setShowInfoModal(true)}
-                          title="추천 거래 가격 산정 기준 안내"
+                          title={t('postWrite.priceInfo')}
                       >
                         <FaInfoCircle />
                       </InfoButton>
@@ -1948,41 +1950,41 @@ const PostWrite = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label>상세 설명</Label>
+                <Label>{t('postWrite.description')}</Label>
                 <TextArea
                     name="postContent"
                     value={formData.postContent}
                     onChange={handleInputChange}
-                    placeholder="책 상태나 거래 방법 등 자세한 설명을 써줘! 📝 예: 필기는 연필로 되어있어서 지우개로 지울 수 있어! T동에서 직거래 가능해!"
+                    placeholder={t('postWrite.descriptionPlaceholder')}
                 />
-                <HelpText>구매자가 궁금해할 만한 내용을 상세히 적어주면 좋아! 🤗</HelpText>
+                <HelpText>{t('postWrite.descriptionHelp')}</HelpText>
               </FormGroup>
             </FormSection>
 
             {/* ✅ 거래 기준 위치(필수) 섹션 */}
             <FormSection>
-              <SectionTitle><FaMapMarkerAlt /> 거래 기준 위치(판매자) <Required>*</Required></SectionTitle>
+              <SectionTitle><FaMapMarkerAlt /> {t('postWrite.tradeLocation')} <Required>*</Required></SectionTitle>
 
               {/* 교내: 드롭다운 */}
               <FormGroup>
-                <Label>교내 기본 위치 (동/건물) <Required>*</Required></Label>
+                <Label>{t('postWrite.onCampusLocation')} <Required>*</Required></Label>
                 <Select
                     name="oncampusPlaceCode"
                     value={formData.oncampusPlaceCode}
                     onChange={handleInputChange}
                 >
-                  <option value="">선택해줘</option>
+                  <option value="">{t('postWrite.selectBuilding')}</option>
                   {ONCAMPUS_CODES.map(code => (
                       <option key={code} value={code}>{code}</option>
                   ))}
                 </Select>
                 {errors.oncampusPlaceCode && <ErrorMessage>{errors.oncampusPlaceCode}</ErrorMessage>}
-                <HelpText>스마트 예약 모달의 “교내 중간거리 추천” 기준점으로 사용돼.</HelpText>
+                <HelpText>{t('postWrite.onCampusHelp')}</HelpText>
               </FormGroup>
 
               {/* 교외: 호선 → 역 2단 드롭다운 */}
               <FormGroup>
-                <Label>교외 기본 위치 (지하철역) <Required>*</Required></Label>
+                <Label>{t('postWrite.offCampusLocation')} <Required>*</Required></Label>
 
                 {/* 1) 호선 */}
                 <Select
@@ -1993,7 +1995,7 @@ const PostWrite = () => {
                       clearErrors('offcampusStationCode');
                     }}
                 >
-                  <option value="">호선을 선택해줘</option>
+                  <option value="">{t('postWrite.selectLine')}</option>
                   {Object.keys(SUBWAY_MAP).map(line => (
                       <option key={line} value={line}>{line}</option>
                   ))}
@@ -2007,14 +2009,14 @@ const PostWrite = () => {
                     onChange={handleInputChange}
                     disabled={!offcampusLine}
                 >
-                  <option value="">{offcampusLine ? '역을 선택해줘' : '호선을 먼저 선택해줘'}</option>
+                  <option value="">{offcampusLine ? t('postWrite.selectStation') : t('postWrite.selectLineFirst')}</option>
                   {(SUBWAY_MAP[offcampusLine] || []).map(st => (
                       <option key={st} value={st}>{st}</option>
                   ))}
                 </Select>
 
                 {errors.offcampusStationCode && <ErrorMessage>{errors.offcampusStationCode}</ErrorMessage>}
-                <HelpText>스마트 예약 모달의 “교외(지하철) 중간거리 추천” 기준점으로 사용돼.</HelpText>
+                <HelpText>{t('postWrite.offCampusHelp')}</HelpText>
               </FormGroup>
             </FormSection>
 
@@ -2022,20 +2024,20 @@ const PostWrite = () => {
             <ButtonSection>
               <ButtonGroup>
                 <CancelButton type="button" onClick={handleCancel}>
-                  취소
+                  {t('postWrite.cancel')}
                 </CancelButton>
 
                 {!isEdit && (
                     <SaveDraftButton type="button" onClick={handleSaveDraftAndExit}>
-                      <FaSave /> 임시저장
+                      <FaSave /> {t('postWrite.saveDraft')}
                     </SaveDraftButton>
                 )}
 
                 <SubmitButton type="submit" disabled={loading}>
                   {loading ? (
-                      isEdit ? '수정 중... ⏳' : '등록 중... ⏳'
+                      isEdit ? t('postWrite.editing') : t('postWrite.submitting')
                   ) : (
-                      isEdit ? '수정하기 ✅' : '등록하기 🚀'
+                      isEdit ? t('postWrite.edit') : t('postWrite.submit')
                   )}
                 </SubmitButton>
               </ButtonGroup>
@@ -2047,7 +2049,7 @@ const PostWrite = () => {
         {showBookSearch && (
             <BookSearchModal>
               <BookSearchContent>
-                <h3>📚 책 검색</h3>
+                <h3>📚 {t('postWrite.bookSearchModal')}</h3>
                 
                 {/* ISBN 입력 가이드 */}
                 <div style={{
@@ -2067,7 +2069,7 @@ const PostWrite = () => {
                 
                 <SearchInput
                     type="text"
-                    placeholder="ISBN 또는 책 제목으로 검색해줘!"
+                    placeholder={t('postWrite.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => {
                       // ISBN 입력 시 자동으로 하이픈 제거
@@ -2081,12 +2083,12 @@ const PostWrite = () => {
                     onClick={handleBookSearch}
                     disabled={searchLoading}
                 >
-                  <FaSearch /> {searchLoading ? '검색 중... ⏳' : '검색하기'}
+                  <FaSearch /> {searchLoading ? t('postWrite.searching') : t('postWrite.searchButton')}
                 </BookSearchButton>
 
                 {searchLoading && (
                     <div style={{ textAlign: 'center', padding: '1rem' }}>
-                      검색 중이야... 잠시만 기다려줘! ⏳
+                      {t('postWrite.searchingText')}
                     </div>
                 )}
 
@@ -2103,7 +2105,7 @@ const PostWrite = () => {
                         <div>
                           <BookItemTitle>{book.title}</BookItemTitle>
                           <BookInfo>
-                            저자: {book.author || '정보 없음'} | 출판사: {book.publisher || '정보 없음'}
+                            {t('postWrite.author')}: {book.author || t('postWrite.noAuthor')} | {t('postWrite.publisher')}: {book.publisher || t('postWrite.noPublisher')}
                           </BookInfo>
                           {book.isbn && <BookInfo>ISBN: {book.isbn}</BookInfo>}
                         </div>
@@ -2117,7 +2119,7 @@ const PostWrite = () => {
                       className="secondary"
                       onClick={handleCloseBookSearch}
                   >
-                    닫기
+                    {t('postWrite.close')}
                   </ModalButton>
                 </ModalButtons>
               </BookSearchContent>
@@ -2139,63 +2141,63 @@ const PostWrite = () => {
         {showInfoModal && (
             <InfoModalOverlay onClick={() => setShowInfoModal(false)}>
               <InfoModalContent onClick={e => e.stopPropagation()}>
-                <h3>📚 추천 거래 가격 산정 기준표</h3>
+                <h3>{t('postWrite.priceCalculationTitle')}</h3>
                 <InfoDescription>
-                  <p>원가 대비 책 상태를 종합적으로 평가해서 추천 가격을 계산해줘! 🤖</p>
-                  <p>각 항목별 할인율이 누적되어 적용돼.</p>
+                  <p>{t('postWrite.priceCalculationDesc')}</p>
+                  <p>{t('postWrite.priceCalculationNote')}</p>
                 </InfoDescription>
                 <InfoTable>
                   <thead>
                   <tr>
-                    <th>평가 항목</th>
-                    <th>가중치</th>
-                    <th>상태별 할인율</th>
-                    <th>상세 설명</th>
+                    <th>{t('postWrite.evaluationItem')}</th>
+                    <th>{t('postWrite.weight')}</th>
+                    <th>{t('postWrite.discountByStatus')}</th>
+                    <th>{t('postWrite.description')}</th>
                   </tr>
                   </thead>
                   <tbody>
                   <tr>
-                    <td><strong>필기 상태</strong></td>
+                    <td><strong>{t('postWrite.writingStatus')}</strong></td>
                     <td>15%</td>
                     <td>상: 2.25% / 중: 5.25% / 하: 8.25%</td>
                     <td>연필, 펜 등으로 필기된 정도에 따라 할인</td>
                   </tr>
                   <tr>
-                    <td><strong>찢어짐 정도</strong></td>
+                    <td><strong>{t('postWrite.tearStatus')}</strong></td>
                     <td>35%</td>
                     <td>상: 5.25% / 중: 12.25% / 하: 19.25%</td>
                     <td>책장, 표지 등의 찢어짐 정도에 따라 할인</td>
                   </tr>
                   <tr>
-                    <td><strong>물흘림 정도</strong></td>
+                    <td><strong>{t('postWrite.waterStatus')}</strong></td>
                     <td>50%</td>
                     <td>상: 7.5% / 중: 17.5% / 하: 27.5%</td>
                     <td>물에 젖은 흔적이나 얼룩 정도에 따라 할인</td>
                   </tr>
                   <tr style={{backgroundColor: '#f8f9fa'}}>
-                    <td><strong>중고책 기본 할인</strong></td>
+                    <td><strong>{t('postWrite.usedBookDiscount')}</strong></td>
                     <td>-</td>
                     <td>10%</td>
                     <td>새책이 아닌 모든 중고책에 기본 적용</td>
                   </tr>
                   <tr style={{backgroundColor: '#e3f2fd', fontWeight: 'bold'}}>
-                    <td colSpan={2}><strong>최대 총 할인율</strong></td>
+                    <td colSpan={2}><strong>{t('postWrite.maxDiscount')}</strong></td>
                     <td><strong>약 65%</strong></td>
-                    <td><strong>모든 상태가 '하'일 때</strong></td>
+                    <td><strong>{t('postWrite.allLow')}</strong></td>
                   </tr>
                   </tbody>
                 </InfoTable>
                 <InfoNote>
-                  <p><strong>💡 참고사항:</strong></p>
+                  <p><strong>{t('postWrite.priceNote')}</strong></p>
                   <ul>
-                    <li>각 항목의 상태는 '상/중/하'로 평가해줘</li>
-                    <li>할인율은 원가에서 차감되어 추천가가 계산돼</li>
-                    <li>실제 판매가는 자유롭게 설정할 수 있어!</li>
-                    <li>이 기준은 참고용이니까 시장 상황에 맞게 조정해도 좋아 📊</li>
+                    <li>{t('postWrite.priceNote1')}</li>
+                    <li>{t('postWrite.priceNote2')}</li>
+                    <li>{t('postWrite.priceNote3')}</li>
+                    <li>{t('postWrite.priceNote4')}</li>
                   </ul>
                 </InfoNote>
                 <InfoModalClose onClick={() => setShowInfoModal(false)}>
-                  확인 👍
+                  {t('postWrite.confirm')}
                 </InfoModalClose>
               </InfoModalContent>
             </InfoModalOverlay>

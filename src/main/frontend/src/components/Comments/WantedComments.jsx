@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
 import { FaReply, FaTrash, FaUser, FaClock } from 'react-icons/fa';
 
 const Box = styled.div`
@@ -118,6 +119,7 @@ function buildTree(list) {
 }
 
 export default function WantedComments({ wantedId }) {
+    const { t } = useTranslation();
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [text, setText] = useState('');
@@ -168,13 +170,13 @@ export default function WantedComments({ wantedId }) {
                     setTextError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
                     return;
                 }
-                throw new Error(json?.message || `댓글 등록 실패 (${res.status})`);
+                throw new Error(json?.message || t('wantedComments.error.createFailed', { status: res.status }));
             }
             setText('');
             await fetchList();
         } catch (e) {
             console.error(e);
-            alert(e.message || '댓글 등록 실패');
+            alert(e.message || t('wantedComments.error.createFailed'));
         }
     }
 
@@ -196,19 +198,19 @@ export default function WantedComments({ wantedId }) {
                     setReplyError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
                     return;
                 }
-                throw new Error(json?.message || `대댓글 등록 실패 (${res.status})`);
+                throw new Error(json?.message || t('wantedComments.error.replyFailed', { status: res.status }));
             }
             setReplyFor(null);
             setReplyText('');
             await fetchList();
         } catch (e) {
             console.error(e);
-            alert(e.message || '대댓글 등록 실패');
+            alert(e.message || t('wantedComments.error.replyFailed'));
         }
     }
 
     async function remove(commentId) {
-        if (!window.confirm('정말 삭제할까요?')) return;
+        if (!window.confirm(t('wantedComments.confirmDelete'))) return;
         try {
             const res = await fetch(`/api/wanted/${wantedId}/comments/${commentId}`, {
                 method: 'DELETE',
@@ -216,12 +218,12 @@ export default function WantedComments({ wantedId }) {
             });
             if (!res.ok && res.status !== 204) {
                 const json = await toJsonSafely(res);
-                throw new Error(json?.message || `삭제 실패 (${res.status})`);
+                throw new Error(json?.message || t('wantedComments.error.deleteFailed', { status: res.status }));
             }
             await fetchList();
         } catch (e) {
             console.error(e);
-            alert(e.message || '삭제 실패');
+            alert(e.message || t('wantedComments.error.deleteFailed'));
         }
     }
 
@@ -232,7 +234,7 @@ export default function WantedComments({ wantedId }) {
             <Item key={c.id}>
                 <Meta>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                        <FaUser/>{c.authorNickname || '익명'}
+                        <FaUser/>{c.authorNickname || t('common.anonymous')}
                     </span>
                     {created && (
                         <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
@@ -255,14 +257,16 @@ export default function WantedComments({ wantedId }) {
                         경고
                     </div>
                 )}
-                <Content $deleted={c.deleted}>{c.content}</Content>
+                <Content $deleted={c.deleted}>
+                    {c.deleted ? t('wantedComments.deletedComment') : c.content}
+                </Content>
                 <Actions>
                     <Button onClick={() => { setReplyFor(c.id); setReplyText(''); }}>
-                        <FaReply/> 답글
+                        <FaReply/> {t('wantedComments.reply')}
                     </Button>
                     {mine && (
                         <Button $variant="danger" onClick={() => remove(c.id)}>
-                            <FaTrash/> 삭제
+                            <FaTrash/> {t('wantedComments.delete')}
                         </Button>
                     )}
                 </Actions>
@@ -273,14 +277,14 @@ export default function WantedComments({ wantedId }) {
                             <Textarea
                                 value={replyText}
                                 onChange={e => setReplyText(e.target.value)}
-                                placeholder="대댓글을 입력하세요"
+                                placeholder={t('wantedComments.replyPlaceholder')}
                             />
                             {replyError && (
                                 <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{replyError}</div>
                             )}
                             <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                                <Button $variant="primary" onClick={() => submitReply(c.id)}>등록</Button>
-                                <Button onClick={() => { setReplyFor(null); setReplyText(''); }}>취소</Button>
+                                <Button $variant="primary" onClick={() => submitReply(c.id)}>{t('wantedComments.submit')}</Button>
+                                <Button onClick={() => { setReplyFor(null); setReplyText(''); }}>{t('wantedComments.cancel')}</Button>
                             </div>
                         </EditorRow>
                     </ReplyBox>
@@ -298,31 +302,31 @@ export default function WantedComments({ wantedId }) {
 
     return (
         <Box>
-            <Title>댓글</Title>
+            <Title>{t('wantedComments.title')}</Title>
 
             {/* 원댓글 입력기 */}
             <EditorRow>
                 <Textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    placeholder="댓글을 입력하세요"
+                    placeholder={t('wantedComments.commentPlaceholder')}
                 />
                 {textError && (
                     <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{textError}</div>
                 )}
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                    <Button $variant="primary" onClick={submitRoot}>등록</Button>
-                    <Button onClick={() => setText('')}>취소</Button>
+                    <Button $variant="primary" onClick={submitRoot}>{t('wantedComments.submit')}</Button>
+                    <Button onClick={() => setText('')}>{t('wantedComments.cancel')}</Button>
                 </div>
             </EditorRow>
 
             {/* 목록 */}
             {loading ? (
-                <div style={{color:'#6b7280'}}>불러오는 중…</div>
+                <div style={{color:'#6b7280'}}>{t('wantedComments.loading')}</div>
             ) : (
                 <List>
                     {tree.length === 0 ? (
-                        <li style={{color:'#6b7280'}}>첫 댓글을 남겨보세요.</li>
+                        <li style={{color:'#6b7280'}}>{t('wantedComments.noComments')}</li>
                     ) : (
                         tree.map(renderItem)
                     )}

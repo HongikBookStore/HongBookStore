@@ -5,17 +5,17 @@ import com.hongik.books.domain.review.place.domain.ReviewPhoto;
 import com.hongik.books.domain.review.place.domain.ReviewReaction;
 import com.hongik.books.domain.review.place.dto.ReviewDtos;
 import com.hongik.books.domain.review.place.repository.PlaceReviewRepository;
+import com.hongik.books.domain.review.place.repository.ReviewReactionRepository;
 import com.hongik.books.moderation.ModerationPolicyProperties;
 import com.hongik.books.moderation.ModerationService;
-import com.hongik.books.domain.review.place.repository.ReviewReactionRepository;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -25,6 +25,7 @@ import java.util.List;
 public class PlaceReviewService {
     private final PlaceReviewRepository reviewRepo;
     private final ReviewReactionRepository reactionRepo;
+    private final ReviewReactionRepository photoRepo;   // ✅ 추가
     private final UserRepository userRepository;
     private final ModerationService moderationService;
     private final ModerationPolicyProperties moderationPolicy;
@@ -37,6 +38,11 @@ public class PlaceReviewService {
         // 1인 1리뷰 (중복 방지)
         if (reviewRepo.existsByPlaceIdAndUserId(placeId, userId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 이 장소에 리뷰를 작성하셨습니다.");
+        }
+
+        // ✅ 사진/미디어 개수 제한: 최대 3
+        if (photoUrls != null && photoUrls.size() > 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "사진/GIF는 최대 3개까지만 업로드 가능합니다.");
         }
 
         // 유해표현 검사
@@ -74,8 +80,7 @@ public class PlaceReviewService {
     public void react(Long reviewId, Long userId, ReviewReaction.ReactionType type) {
         var review = reviewRepo.findById(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("review not found"));
-        // (리액션 저장 로직 생략되어 있었다면 기존 코드 유지)
-        // 예시) 기존에 저장/취소 후 카운트 재계산
+
         reactionRepo.findByReviewIdAndUserId(reviewId, userId).ifPresentOrElse(
                 r -> {
                     if (r.getReaction() == type) {
@@ -104,6 +109,10 @@ public class PlaceReviewService {
         if (!review.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 리뷰만 삭제할 수 있습니다.");
         }
+
+        // ✅ 자식 먼저 제거 → 부모 삭제
+        reactionRepo.deleteByReviewId(reviewId);
+        photoRepo.deleteByReviewId(reviewId);
         reviewRepo.delete(review);
     }
 
@@ -118,6 +127,10 @@ public class PlaceReviewService {
         if (!review.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 리뷰만 삭제할 수 있습니다.");
         }
+
+        // ✅ 자식 먼저 제거 → 부모 삭제
+        reactionRepo.deleteByReviewId(reviewId);
+        photoRepo.deleteByReviewId(reviewId);
         reviewRepo.delete(review);
     }
 
@@ -128,16 +141,16 @@ public class PlaceReviewService {
 
         double avg = reviewRepo.avgByPlace(placeId);
         long cnt = reviewRepo.countByPlaceId(placeId);
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
         var res = new ReviewDtos.ListRes();
         res.setAverageRating(avg);
         res.setReviewCount(cnt);
+        var dtf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         res.setReviews(slice.getContent().stream().map(r ->
                 ReviewDtos.ReviewRes.builder()
                         .id(r.getId())
                         .userName(r.getUserName())
-                        .userId(r.getUserId())          // ⬅️ 프런트로 userId 전달
+                        .userId(r.getUserId())
                         .rating(r.getRating())
                         .content(r.getContent())
                         .likes(r.getLikesCount())

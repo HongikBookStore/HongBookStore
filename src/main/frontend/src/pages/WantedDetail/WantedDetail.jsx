@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaBook, FaTag, FaUser, FaClock, FaEye, FaExclamationTriangle } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import WarningModal from '../../components/WarningModal/WarningModal';
@@ -65,9 +66,9 @@ const Chip = styled.span`
 `;
 const PriceChip = styled(Chip)` background: #eef5ff; border-color: #d7e7ff; color: #0d6efd; `;
 const ConditionChip = styled(Chip)`
-    background: ${({$lv}) => $lv === '상' ? '#eaf7ee' : $lv === '중' ? '#fff6e5' : $lv === '하' ? '#fdeaea' : '#f8fafc'};
-    border-color: ${({$lv}) => $lv === '상' ? '#cfeedd' : $lv === '중' ? '#ffe7bf' : $lv === '하' ? '#f7c7c7' : '#e5e7eb'};
-    color: ${({$lv}) => $lv === '상' ? '#2e7d32' : $lv === '중' ? '#b26a00' : $lv === '하' ? '#c62828' : '#374151'};
+    background: ${({$condition}) => $condition === 'HIGH' ? '#eaf7ee' : $condition === 'MEDIUM' ? '#fff6e5' : $condition === 'LOW' ? '#fdeaea' : '#f8fafc'};
+    border-color: ${({$condition}) => $condition === 'HIGH' ? '#cfeedd' : $condition === 'MEDIUM' ? '#ffe7bf' : $condition === 'LOW' ? '#f7c7c7' : '#e5e7eb'};
+    color: ${({$condition}) => $condition === 'HIGH' ? '#2e7d32' : $condition === 'MEDIUM' ? '#b26a00' : $condition === 'LOW' ? '#c62828' : '#374151'};
 `;
 const SubMeta = styled.div` display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; color: #6b7280; font-size: .92rem; `;
 
@@ -116,16 +117,29 @@ function getAuthHeader() {
 }
 
 // ✅ 상태 문자열을 UI 친화적으로 정규화 (상/중/하)
-function normalizeCondition(v) {
-    const t = (v ?? '').toString().trim();
-    const up = t.toUpperCase();
-    if (up === 'HIGH' || t === '상') return '상';
-    if (up === 'MEDIUM' || t === '중') return '중';
-    if (up === 'LOW' || t === '하') return '하';
-    return t || '미지정';
+function normalizeCondition(v, t) {
+    const val = (v ?? '').toString().trim();
+    const up = val.toUpperCase();
+    if (up === 'HIGH' || val === t('wantedWrite.condition.high')) return t('wantedDetail.condition.high');
+    if (up === 'MEDIUM' || val === t('wantedWrite.condition.medium')) return t('wantedDetail.condition.medium');
+    if (up === 'LOW' || val === t('wantedWrite.condition.low')) return t('wantedDetail.condition.low');
+    return val || t('wantedDetail.condition.unspecified');
+}
+
+// ✅ 카테고리 문자열을 번역
+function translateCategory(category, t) {
+    if (!category) return '-';
+    
+    // 교양/전공 번역 (백엔드에서 오는 원본 한국어 값)
+    if (category === '교양') return t('wantedDetail.category.general');
+    if (category === '전공') return t('wantedDetail.category.major');
+    
+    // 기타 카테고리들도 필요하면 추가
+    return category;
 }
 
 export default function WantedDetail() {
+    const { t } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
     const { setUnsavedChanges, stopWriting } = useWriting();
@@ -203,8 +217,6 @@ export default function WantedDetail() {
 
     /* ------------------------------ 삭제 핸들러 ------------------------------ */
     const openDelete = () => {
-        stopWriting();
-        setUnsavedChanges(false);
         setShowDeleteModal(true);
     };
 
@@ -321,13 +333,15 @@ export default function WantedDetail() {
     }
 
     // ✅ 상태/카테고리/날짜/조회수 등 표시용 파생값
-    const conditionKor = normalizeCondition(data.condition);
+    const conditionKor = normalizeCondition(data.condition, t);
     const createdAt = data.createdAt ? new Date(data.createdAt) : null;
     const views = (typeof data.views !== 'undefined' ? Number(data.views) : (typeof data.viewCount !== 'undefined' ? Number(data.viewCount) : null));
     const rawCategory = (data.category || '').trim();
+    const categoryName = rawCategory.split('>')[0]?.trim() || rawCategory;
+    const translatedCategory = translateCategory(categoryName, t);
     const displayCategory = data.department
-        ? `${(rawCategory.split('>')[0]?.trim() || rawCategory || '전공')} / ${data.department}`
-        : (rawCategory.split('>').pop()?.trim() || rawCategory || '-');
+        ? `${translatedCategory} / ${data.department}`
+        : translatedCategory;
 
     return (
         <PageWrapper>
@@ -336,13 +350,13 @@ export default function WantedDetail() {
             <MainContent>
                 <Container>
                     <TopBar>
-                        <BackButton onClick={() => navigate(-1)}><FaArrowLeft /> 뒤로가기</BackButton>
+                        <BackButton onClick={() => navigate(-1)}><FaArrowLeft /> {t('wantedDetail.back')}</BackButton>
                         <Actions>
-                            <Button onClick={() => navigate('/wanted')}>목록</Button>
+                            <Button onClick={() => navigate('/wanted')}>{t('wantedDetail.list')}</Button>
                             {mine ? (
                                 <>
-                                    <Button $variant="primary" onClick={() => navigate(`/wanted/write/${id}`)}>수정</Button>
-                                    <Button $variant="danger" onClick={openDelete}>삭제</Button>
+                                    <Button $variant="primary" onClick={() => navigate(`/wanted/write/${id}`)}>{t('wantedDetail.edit')}</Button>
+                                    <Button $variant="danger" onClick={openDelete}>{t('wantedDetail.delete')}</Button>
                                 </>
                             ) : null /* 신고 버튼은 제목 옆으로 이동 */}
                         </Actions>
@@ -353,30 +367,30 @@ export default function WantedDetail() {
                         <TitleRow>
                             <Title>{data.title}</Title>
                             {!mine && (
-                                <ReportTitleButton title="신고하기" onClick={openReport}>
+                                <ReportTitleButton title={t('wantedDetail.report')} onClick={openReport}>
                                     <FaExclamationTriangle />
-                                    신고
+                                    {t('wantedDetail.report')}
                                 </ReportTitleButton>
                             )}
                         </TitleRow>
 
                         <MetaRow>
                             <Chip><FaUser /> {displayAuthor}</Chip>
-                            <ConditionChip $lv={conditionKor}><FaTag /> 상태: {conditionKor}</ConditionChip>
-                            <PriceChip><FaTag /> 희망가: {Number(data.price || 0).toLocaleString()}원</PriceChip>
+                            <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {conditionKor}</ConditionChip>
+                            <PriceChip><FaTag /> {t('wantedDetail.desiredPrice')}: {Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</PriceChip>
                         </MetaRow>
                         <SubMeta>
                             {displayCategory && <span><FaBook /> {displayCategory}</span>}
-                            {createdAt && <span><FaClock /> 작성일: {createdAt.toLocaleString('ko-KR')}</span>}
-                            {views !== null && <span><FaEye /> 조회수: {views.toLocaleString()}</span>}
+                            {createdAt && <span><FaClock /> {t('wantedDetail.createdDate')}: {createdAt.toLocaleString('ko-KR')}</span>}
+                            {views !== null && <span><FaEye /> {t('wantedDetail.viewCount')}: {views.toLocaleString()}</span>}
                         </SubMeta>
                     </HeaderCard>
 
                     {/* 본문 / 요약 / 댓글 */}
                     <Layout>
-                        <div>
-                            <Card>
-                                <SectionTitle><FaBook /> 요청 내용</SectionTitle>
+                            <div>
+                                <Card>
+                                    <SectionTitle><FaBook /> {t('wantedDetail.requestContent')}</SectionTitle>
                                 {data.contentToxic && (
                                     <div style={{
                                         marginBottom: 10,
@@ -407,14 +421,14 @@ export default function WantedDetail() {
                         </div>
 
                         <Card>
-                            <SectionTitle><FaTag /> 요청 요약</SectionTitle>
+                            <SectionTitle><FaTag /> {t('wantedDetail.requestSummary')}</SectionTitle>
                             <InfoGrid>
-                                <InfoItem><Label>책 제목</Label><Value>{data.title || '-'}</Value></InfoItem>
-                                <InfoItem><Label>저자</Label><Value>{data.author || '-'}</Value></InfoItem>
-                                <InfoItem><Label>상태</Label><Value>{conditionKor}</Value></InfoItem>
-                                <InfoItem><Label>희망 가격</Label><Value>{Number(data.price || 0).toLocaleString()}원</Value></InfoItem>
-                                <InfoItem><Label>카테고리</Label><Value>{displayCategory}</Value></InfoItem>
-                                <InfoItem><Label>작성자</Label><Value>{displayAuthor}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.bookTitle')}</Label><Value>{data.title || '-'}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.author')}</Label><Value>{data.author || '-'}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{conditionKor}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.desiredPrice')}</Label><Value>{Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.category.label')}</Label><Value>{displayCategory}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayAuthor}</Value></InfoItem>
                             </InfoGrid>
                         </Card>
                     </Layout>
@@ -428,10 +442,10 @@ export default function WantedDetail() {
                 onConfirm={onDelete}
                 onCancel={() => setShowDeleteModal(false)}
                 type="wanted"
-                title="정말 삭제할까요?"
-                description="삭제하면 되돌릴 수 없습니다."
-                confirmText="삭제"
-                cancelText="취소"
+                title={t('wantedDetail.deleteModal.title')}
+                message={t('wantedDetail.deleteModal.description')}
+                confirmText={t('wantedDetail.deleteModal.confirm')}
+                cancelText={t('wantedDetail.deleteModal.cancel')}
                 showSaveDraft={false}
                 data-warning-modal-open="true"
             />
@@ -440,59 +454,59 @@ export default function WantedDetail() {
             {showReportModal && (
                 <ModalOverlay>
                     <ModalBox as="form" onSubmit={handleReportSubmit}>
-                        <ModalTitle>신고 사유를 선택하세요</ModalTitle>
+                        <ModalTitle>{t('wantedDetail.reportModal.title')}</ModalTitle>
 
                         <ReportRadio>
                             <RadioInput
-                                type="radio" name="report" value="욕설/비방"
-                                checked={reportReason === '욕설/비방'}
+                                type="radio" name="report" value={t('wantedDetail.reportModal.reasons.abuse')}
+                                checked={reportReason === t('wantedDetail.reportModal.reasons.abuse')}
                                 onChange={e => setReportReason(e.target.value)}
                             />
-                            욕설/비방
+                            {t('wantedDetail.reportModal.reasons.abuse')}
                         </ReportRadio>
 
                         <ReportRadio>
                             <RadioInput
-                                type="radio" name="report" value="사기/허위매물"
-                                checked={reportReason === '사기/허위매물'}
+                                type="radio" name="report" value={t('wantedDetail.reportModal.reasons.fraud')}
+                                checked={reportReason === t('wantedDetail.reportModal.reasons.fraud')}
                                 onChange={e => setReportReason(e.target.value)}
                             />
-                            사기/허위매물
+                            {t('wantedDetail.reportModal.reasons.fraud')}
                         </ReportRadio>
 
                         <ReportRadio>
                             <RadioInput
-                                type="radio" name="report" value="스팸/광고"
-                                checked={reportReason === '스팸/광고'}
+                                type="radio" name="report" value={t('wantedDetail.reportModal.reasons.spam')}
+                                checked={reportReason === t('wantedDetail.reportModal.reasons.spam')}
                                 onChange={e => setReportReason(e.target.value)}
                             />
-                            스팸/광고
+                            {t('wantedDetail.reportModal.reasons.spam')}
                         </ReportRadio>
 
                         <ReportRadio>
                             <RadioInput
-                                type="radio" name="report" value="기타"
-                                checked={reportReason === '기타'}
+                                type="radio" name="report" value={t('common.other')}
+                                checked={reportReason === t('common.other')}
                                 onChange={e => setReportReason(e.target.value)}
                             />
-                            기타
+                            {t('wantedDetail.reportModal.reasons.other')}
                         </ReportRadio>
 
                         {/* ✅ '기타' 선택 시 세부 사유 입력 */}
-                        {reportReason === '기타' && (
+                        {reportReason === t('common.other') && (
                             <div>
-                                <div style={{ marginBottom: 6, fontSize: '.92rem', color: '#555' }}>세부 사유</div>
+                                <div style={{ marginBottom: 6, fontSize: '.92rem', color: '#555' }}>{t('wantedDetail.reportModal.detailReason')}</div>
                                 <ModalTextarea
                                     value={reportEtcText}
                                     onChange={e => setReportEtcText(e.target.value)}
-                                    placeholder="자세한 신고 사유를 입력해주세요."
+                                    placeholder={t('wantedDetail.reportModal.detailPlaceholder')}
                                 />
                             </div>
                         )}
 
                         <ModalActions>
-                            <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>취소</ModalButton>
-                            <ModalButton type="submit" disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}>제출</ModalButton>
+                            <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>{t('wantedDetail.reportModal.cancel')}</ModalButton>
+                            <ModalButton type="submit" disabled={!reportReason || (reportReason === t('common.other') && !reportEtcText.trim())}>{t('wantedDetail.reportModal.submit')}</ModalButton>
                         </ModalActions>
                     </ModalBox>
                 </ModalOverlay>
@@ -502,10 +516,10 @@ export default function WantedDetail() {
             {showReportExitModal && (
                 <ModalOverlay>
                     <ModalBox>
-                        <ModalTitle>신고가 접수되었습니다.<br/>목록으로 이동할까요?</ModalTitle>
+                        <ModalTitle>{t('wantedDetail.reportModal.submitted')}<br/>{t('wantedDetail.reportModal.goToList')}</ModalTitle>
                         <ModalActions>
-                            <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>아니오</ModalButton>
-                            <ModalButton onClick={handleReportExit}>예</ModalButton>
+                            <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>{t('wantedDetail.reportModal.no')}</ModalButton>
+                            <ModalButton onClick={handleReportExit}>{t('wantedDetail.reportModal.yes')}</ModalButton>
                         </ModalActions>
                     </ModalBox>
                 </ModalOverlay>

@@ -1,6 +1,7 @@
 // src/components/PlaceDetailModal/PlaceDetailModal.jsx
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext, useMemo } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
 import { AuthCtx } from '../../contexts/AuthContext.jsx';
 import {
   FaStar, FaThumbsUp, FaThumbsDown, FaRoute, FaClock, FaMapMarkerAlt,
@@ -61,6 +62,7 @@ function extractLatLngFromNaverItem(item) {
 }
 
 const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCategory, userLocation }) => {
+  const { t } = useTranslation();
   const { user } = useContext(AuthCtx);
   const currentUserId =
       (user && user.id) || (JSON.parse(localStorage.getItem('user') || '{}').id) || null;
@@ -75,6 +77,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [expandedReview, setExpandedReview] = useState(null);
   const [newReview, setNewReview] = useState({ rating: 5, content: '', photos: [] });
   const [reviewError, setReviewError] = useState('');
+
+  // ✅ 업로드할 실제 파일 상태(누적 관리, 최대 3개)
+  const [newReviewFiles, setNewReviewFiles] = useState([]);
 
   // 카테고리
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -122,15 +127,20 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const totalReviews  = (typeof reviewCount === 'number' ? reviewCount : reviews.length);
 
   /* ===================== API ===================== */
-  // 리뷰 목록
+  // 공통: 리뷰 목록 가져오기(중복 판별에도 사용)
+  const fetchReviewsRaw = async () => {
+    const res = await fetch(REVIEW_LIST(place.id), {
+      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
+    });
+    if (!res.ok) throw new Error('리뷰 조회 실패');
+    return res.json();
+  };
+
+  // 목록 → 화면 반영
   const fetchReviews = async () => {
     if (!place?.id) return;
     try {
-      const res = await fetch(REVIEW_LIST(place.id), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
-      });
-      if (!res.ok) throw new Error('리뷰 조회 실패');
-      const data = await res.json();
+      const data = await fetchReviewsRaw();
       setAvgRating(typeof data.averageRating === 'number' ? data.averageRating : null);
       setReviewCount(typeof data.reviewCount === 'number' ? data.reviewCount : 0);
       const mapped = (data.reviews || []).map(r => ({
@@ -150,6 +160,33 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
+  // ❗️중요: 상태코드가 500이어도 "이미 작성" 문구/상태를 판별하는 보조 함수
+  const detectDuplicateOnError = async (res) => {
+    try {
+      // 1) 응답 본문에서 직접 탐지
+      const clone = res.clone();
+      const ct = clone.headers.get('content-type') || '';
+      let bodyText = '';
+      if (ct.includes('application/json')) {
+        const j = await clone.json().catch(() => null);
+        bodyText = (j?.message || j?.error || j?.detail || JSON.stringify(j || '')) + '';
+      } else {
+        bodyText = await clone.text().catch(() => '');
+      }
+      if (/이미\s*이\s*장소.*리뷰.*작성/i.test(bodyText)) return true;
+
+      // 2) 목록 재조회로 판별 (내 userId가 이미 존재하면 중복)
+      if (!currentUserId) return false;
+      const data = await fetchReviewsRaw().catch(() => null);
+      if (!data) return false;
+      const list = Array.isArray(data.reviews) ? data.reviews : [];
+      const found = list.some(r => String(r.userId ?? r.user_id) === String(currentUserId));
+      return found;
+    } catch {
+      return false;
+    }
+  };
+
   // 사진 업로드(엔드포인트 없으면 무시)
   async function uploadReviewPhotos(files) {
     if (!files || files.length === 0) return [];
@@ -161,7 +198,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` },
         body: form
       });
-      if (!res.ok) throw new Error('upload endpoint not available');
+
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        const msg = ct.includes('application/json')
+            ? (await res.json().catch(() => ({})))?.error || ''
+            : (await res.text().catch(() => ''));
+        if (/최대\s*3개/i.test(msg)) showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+        throw new Error('upload failed');
+      }
+
       const data = await res.json(); // { urls: [...] }
       return data.urls || [];
     } catch {
@@ -170,15 +216,20 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   }
 
-  // ✅ 리뷰 등록 (409 → 토스트)
+  // ✅ 리뷰 등록 (상태코드 의존 X : 본문/목록 기반으로 "이미 작성" 판별)
   const handleSubmitReview = async () => {
-    if (!newReview.content.trim()) return showToast('리뷰 내용을 입력해주세요.');
+    if (!newReview.content.trim()) return showToast(t('map.enterReviewContent'));
 
     try {
       setReviewError('');
-      const fileInput = fileInputRef.current;
-      const files = fileInput?.files ? Array.from(fileInput.files) : [];
-      const photoUrls = await uploadReviewPhotos(files);
+
+      // 최종 방어: 파일 개수 3개 초과 시 중단
+      if (newReviewFiles.length > 3) {
+        showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+        return;
+      }
+
+      const photoUrls = await uploadReviewPhotos(newReviewFiles);
 
       const res = await fetch(REVIEW_LIST(place.id), {
         method: 'POST',
@@ -194,41 +245,65 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       });
 
       if (!res.ok) {
-        if (res.status === 409) {
-          setReviewError('이미 이 장소에 리뷰를 작성하셨습니다. 기존 리뷰를 삭제 후 다시 등록해주세요.');
-          showToast('이미 작성된 리뷰가 있어요. 삭제 후 재등록해주세요.');
+        // ✅ 상태코드가 500이어도, 본문/목록으로 "이미 작성"인지 판별
+        const isDup = await detectDuplicateOnError(res);
+        if (isDup) {
+          setReviewError(t('map.reviewAlreadyExists'));
+          showToast(t('map.reviewAlreadyExistsToast'));
           return;
         }
-        const ct = res.headers.get('content-type') || '';
-        if (res.status === 400 && ct.includes('application/json')) {
-          const json = await res.json().catch(() => null);
-          if (json?.success === false && json?.data?.field) {
-            const d = json.data;
-            const lvl = d.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})` : '';
-            setReviewError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
-            const el = document.querySelector('textarea');
-            if (el && typeof el.focus === 'function') el.focus();
-            return;
+
+        // 모더레이션/필드 에러(가능한 경우)
+        try {
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const json = await res.clone().json().catch(() => null);
+            if (json?.success === false && json?.data?.field) {
+              const d = json.data;
+              const lvl = d.predictionLevel
+                  ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? `, ${Math.round(d.malicious*100)}%` : ''})`
+                  : '';
+              setReviewError((json.message || '부적절한 표현이 감지되었습니다.') + lvl);
+              const el = document.querySelector('textarea');
+              if (el && typeof el.focus === 'function') el.focus();
+              return;
+            }
+            // 사진 제한 메시지
+            const msg = (json?.message || json?.error || json?.detail || '') + '';
+            if (/최대\s*3개/i.test(msg)) {
+              showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+              return;
+            }
+          } else {
+            const text = await res.clone().text().catch(() => '');
+            if (/최대\s*3개/i.test(text)) {
+              showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+              return;
+            }
           }
+        } catch {
+          // no-op
         }
-        showToast('리뷰 등록에 실패했습니다.');
+        showToast(t('map.reviewRegistrationFailed'));
         return;
       }
 
+      // 성공 후 초기화
       setNewReview({ rating: 5, content: '', photos: [] });
-      if (fileInput) fileInput.value = '';
+      setNewReviewFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       await fetchReviews();
       showToast('리뷰가 등록되었습니다.');
     } catch (e) {
       console.error(e);
-      showToast('리뷰 등록에 실패했습니다.');
+      showToast(t('map.reviewRegistrationFailed'));
     }
   };
 
   // ✅ 리뷰 삭제 (상태코드별 안내)
   const handleDeleteReview = async (reviewId) => {
     if (!currentUserId) return showToast('로그인이 필요합니다.');
-    if (!confirm('이 리뷰를 삭제하시겠습니까?')) return;
+    if (!confirm(t('map.confirmDeleteReview'))) return;
 
     try {
       const res = await fetch(REVIEW_DELETE(place.id, reviewId), {
@@ -241,11 +316,10 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         return showToast('리뷰를 삭제했습니다.');
       }
 
-      // 상태 코드별 메시지
       if (res.status === 401) return showToast('로그인이 필요합니다.');
-      if (res.status === 403) return showToast('본인 리뷰만 삭제할 수 있어요.');
-      if (res.status === 404) return showToast('리뷰를 찾을 수 없습니다.');
-      if (res.status === 409) return showToast('삭제할 수 없는 상태입니다.');
+      if (res.status === 403) return showToast(t('map.onlyOwnReviewCanDelete'));
+      if (res.status === 404) return showToast(t('map.reviewNotFound'));
+      if (res.status === 409) return showToast(t('map.cannotDeleteReview'));
       // 프록시 미설정 등으로 404/NoResourceFound가 날아오는 경우도 있으니 안내
       if (res.status === 500) return showToast('서버 오류로 삭제에 실패했습니다.');
 
@@ -256,13 +330,37 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     }
   };
 
-  /* ===================== 프론트 미리보기용 사진 ===================== */
+  /* ===================== 프론트 미리보기 + 파일 선택 제한(최대 3개) ===================== */
   const handlePhotoUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    setNewReview(p => ({ ...p, photos: [...p.photos, ...files.map(f => URL.createObjectURL(f))] }));
+    const picked = Array.from(e.target.files || []);
+    if (picked.length === 0) return;
+
+    const existing = newReviewFiles.length;
+    const remain = Math.max(0, 3 - existing);
+
+    if (remain <= 0) {
+      showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
+      e.target.value = '';
+      return;
+    }
+
+    const filesToAdd = picked.slice(0, remain); // ✅ 초과 컷오프
+    const newPreviews = filesToAdd.map(f => URL.createObjectURL(f));
+
+    setNewReviewFiles(prev => [...prev, ...filesToAdd]);
+    setNewReview(p => ({ ...p, photos: [...p.photos, ...newPreviews] }));
+
+    e.target.value = '';
+
+    if (picked.length > remain) {
+      showToast('최대 3개까지만 추가됩니다. 초과분은 제외했어요.');
+    }
   };
-  const handleRemovePhoto = (idx) =>
-      setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
+
+  const handleRemovePhoto = (idx) => {
+    setNewReview(p => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
+    setNewReviewFiles(prev => prev.filter((_, i) => i !== idx));
+  };
 
   /* ===================== 좋아요/싫어요 ===================== */
   const handleLikeReview = async (id) => {
@@ -284,8 +382,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     } catch (e) { console.error(e); }
   };
 
-  const getTypeName = (type) =>
-      ({ restaurant: '음식점', cafe: '카페', partner: '제휴업체', convenience: '편의점', other: '기타' }[type] || '기타');
+  const getTypeName = useMemo(() => (type) =>
+      ({ restaurant: t('map.restaurant'), cafe: t('map.cafe'), partner: t('map.partner'), convenience: t('map.convenience'), other: t('map.other') }[type] || t('map.other')), [t]);
   const stripTags = (s) => (s || '').replace(/<[^>]+>/g, '');
 
   /* ===================== 네이버 지도 로더 ===================== */
@@ -439,9 +537,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   };
 
   const maskUserName = (name) => {
-    if (!name) return '익명';
+    if (!name) return t('map.anonymous');
     const trimmed = String(name).trim();
-    if (trimmed.length === 0) return '익명';
+    if (trimmed.length === 0) return t('map.anonymous');
     return trimmed[0] + '**';
   };
 
@@ -468,7 +566,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         <Star key={star} $isFilled={star <= Number(averageRating)}><FaStar /></Star>
                     ))}
                   </Stars>
-                  <RatingText>{Number(averageRating || 0).toFixed(1)} ({Number(totalReviews || 0)}개 리뷰)</RatingText>
+                  <RatingText>{Number(averageRating || 0).toFixed(1)} ({t('map.ratingWithCount', { count: Number(totalReviews || 0) })})</RatingText>
                 </PlaceRating>
               </PlaceDetails>
             </PlaceInfo>
@@ -476,31 +574,31 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           </ModalHeader>
 
           <TabContainer>
-            <TabButton $isActive={activeTab === 'info'} onClick={() => setActiveTab('info')}>정보</TabButton>
-            <TabButton $isActive={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>리뷰</TabButton>
-            <TabButton $isActive={activeTab === 'route'} onClick={() => setActiveTab('route')}>경로</TabButton>
+            <TabButton $isActive={activeTab === 'info'} onClick={() => setActiveTab('info')}>{t('map.info')}</TabButton>
+            <TabButton $isActive={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>{t('map.reviews')}</TabButton>
+            <TabButton $isActive={activeTab === 'route'} onClick={() => setActiveTab('route')}>{t('map.route')}</TabButton>
           </TabContainer>
 
           <ModalBody>
             {activeTab === 'info' && (
                 <InfoTab>
                   <InfoSection>
-                    <InfoTitle><FaMapMarkerAlt /> 주소</InfoTitle>
+                    <InfoTitle><FaMapMarkerAlt /> {t('map.address')}</InfoTitle>
                     <InfoContent><FaMapMarkerAlt /> {place.address}</InfoContent>
                   </InfoSection>
 
                   {place.description && (
                       <InfoSection>
-                        <InfoTitle><FaInfoCircle /> 설명</InfoTitle>
+                        <InfoTitle><FaInfoCircle /> {t('map.description')}</InfoTitle>
                         <InfoContent>{place.description}</InfoContent>
                       </InfoSection>
                   )}
 
                   <InfoSection>
-                    <InfoTitle><FaPlus /> 내 카테고리에 추가</InfoTitle>
+                    <InfoTitle><FaPlus /> {t('map.addToMyCategory')}</InfoTitle>
                     <CategorySelectContainer>
                       <CategorySelect value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                        <option value="">카테고리 선택</option>
+                        <option value="">{t('map.selectCategory')}</option>
                         {userCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </CategorySelect>
                       <AddToCategoryButton onClick={() => {
@@ -520,7 +618,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
             {activeTab === 'reviews' && (
                 <ReviewsTab>
                   <ReviewForm>
-                    <ReviewFormTitle>리뷰 작성</ReviewFormTitle>
+                    <ReviewFormTitle>{t('map.writeReview')}</ReviewFormTitle>
                     <RatingContainer>
                       {[1, 2, 3, 4, 5].map(star => (
                           <StarButton
@@ -533,7 +631,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                       ))}
                     </RatingContainer>
                     <ReviewTextarea
-                        placeholder="리뷰를 작성해주세요..."
+                        placeholder={t('map.writeReviewPlaceholder')}
                         value={newReview.content}
                         onChange={(e) => setNewReview({ ...newReview, content: e.target.value })}
                     />
@@ -542,9 +640,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                     )}
 
                     <PhotoUploadSection>
-                      <PhotoUploadTitle>사진 추가</PhotoUploadTitle>
+                      <PhotoUploadTitle>{t('map.addPhoto')}</PhotoUploadTitle>
                       <PhotoUploadArea onClick={() => fileInputRef.current?.click()}>
-                        <FaUpload /><span>사진을 선택하거나 클릭하여 업로드</span>
+                        <FaUpload /><span>{t('map.uploadPhotoText')}</span>
                       </PhotoUploadArea>
                       <input
                           ref={fileInputRef}
@@ -566,15 +664,15 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                       )}
                     </PhotoUploadSection>
 
-                    <ReviewSubmitButton onClick={handleSubmitReview}>리뷰 등록</ReviewSubmitButton>
+                    <ReviewSubmitButton onClick={handleSubmitReview}>{t('map.registerReview')}</ReviewSubmitButton>
                   </ReviewForm>
 
                   <ReviewsList>
                     <ReviewsHeader>
-                      <ReviewsTitle>리뷰 ({Number(totalReviews || 0)})</ReviewsTitle>
+                      <ReviewsTitle>{t('map.reviews')} ({Number(totalReviews || 0)})</ReviewsTitle>
                       {reviews.length > 3 && (
                           <ShowMoreButton onClick={() => setShowAllReviews(!showAllReviews)}>
-                            {showAllReviews ? '접기' : '더보기'}
+                            {showAllReviews ? t('map.collapse') : t('map.showMore')}
                           </ShowMoreButton>
                       )}
                     </ReviewsHeader>
@@ -617,7 +715,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                                 <>
                                   {review.content.slice(0, 100)}
                                   {review.content.length > 100 && (
-                                      <ExpandButton onClick={() => setExpandedReview(review.id)}>...더보기</ExpandButton>
+                                      <ExpandButton onClick={() => setExpandedReview(review.id)}>...{t('map.showMore')}</ExpandButton>
                                   )}
                                 </>
                             )}
@@ -645,16 +743,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
             {activeTab === 'route' && (
                 <RouteTab>
                   <RouteInfo>
-                    <RouteTitle>경로 안내</RouteTitle>
+                    <RouteTitle>{t('map.routeGuidance')}</RouteTitle>
                     <RouteDetails>
-                      <RouteItem><FaMapMarkerAlt /><span>출발지: {startLabel || '미설정 (아래에서 검색)'}</span></RouteItem>
-                      <RouteItem><FaMapMarkerAlt /><span>도착지: {place.name}</span></RouteItem>
-                      <RouteItem><FaClock /><span>상태: {(() => {
-                        if (!startPoint) return '출발지를 검색해서 선택하세요';
+                      <RouteItem><FaMapMarkerAlt /><span>{t('map.departure')}: {startLabel || t('map.notSetSearchBelow')}</span></RouteItem>
+                      <RouteItem><FaMapMarkerAlt /><span>{t('map.destination')}: {place.name}</span></RouteItem>
+                      <RouteItem><FaClock /><span>{t('map.status')}: {(() => {
+                        if (!startPoint) return t('map.searchAndSelectDeparture');
                         if (routeSummary) {
                           const mins = Math.round(routeSummary.duration / 60000);
                           const km = (routeSummary.distance / 1000).toFixed(1);
-                          return `예상 ${mins}분 · ${km} km`;
+                          return t('map.estimatedTime', { mins, km });
                         }
                         // 대략치
                         const dx = place.lng - startPoint.lng;
@@ -666,21 +764,21 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         const distanceKm = distanceMeters / 1000;
                         const HUMAN_WALK_SPEED_KMH = 3;
                         const estMin = Math.round(distanceKm / (HUMAN_WALK_SPEED_KMH * 0.8) * 60);
-                        return `예상 약 ${estMin}분 (2.4 km/h 보행 기준)`;
+                        return t('map.estimatedWalkingTime', { mins: estMin });
                       })()}</span></RouteItem>
                     </RouteDetails>
 
                     <SearchRow>
-                      <label>출발지 검색</label>
+                      <label>{t('map.searchDeparture')}</label>
                       <SearchControls>
                         <SearchInput
                             value={startQuery}
                             onChange={(e) => setStartQuery(e.target.value)}
-                            placeholder="예) 홍대입구역 2번출구, 스타벅스 상수역"
+                            placeholder={t('map.searchDeparturePlaceholder')}
                             onKeyDown={(e) => { if (e.key === 'Enter') searchStartPlaces(); }}
                         />
                         <SearchBtn onClick={searchStartPlaces} disabled={searching}>
-                          {searching ? '검색 중...' : '검색'}
+                          {searching ? t('map.searching') : t('map.search')}
                         </SearchBtn>
                       </SearchControls>
                     </SearchRow>
@@ -1014,12 +1112,12 @@ const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
           </LBImageWrapper>
 
           <LBControls>
-            <LBButton onClick={onPrev} aria-label="이전"><FaChevronLeft /></LBButton>
-            <LBButton onClick={zoomOut} aria-label="축소"><FaSearchMinus /></LBButton>
-            <LBButton onClick={reset} aria-label="원래 크기">1x</LBButton>
-            <LBButton onClick={zoomIn} aria-label="확대"><FaSearchPlus /></LBButton>
-            <LBButton onClick={onNext} aria-label="다음"><FaChevronRight /></LBButton>
-            <LBClose onClick={onClose} aria-label="닫기"><FaTimes /></LBClose>
+            <LBButton onClick={onPrev} aria-label={t('common.previous')}><FaChevronLeft /></LBButton>
+            <LBButton onClick={zoomOut} aria-label={t('common.zoomOut')}><FaSearchMinus /></LBButton>
+            <LBButton onClick={reset} aria-label={t('common.reset')}>1x</LBButton>
+            <LBButton onClick={zoomIn} aria-label={t('common.zoomIn')}><FaSearchPlus /></LBButton>
+            <LBButton onClick={onNext} aria-label={t('common.next')}><FaChevronRight /></LBButton>
+            <LBClose onClick={onClose} aria-label={t('common.close')}><FaTimes /></LBClose>
           </LBControls>
 
           {images.length > 1 && (

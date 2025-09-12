@@ -161,19 +161,25 @@ const Hero = () => {
 
   const menuItems = [
     {
-      title: '책거래게시판',
-      description: '전공서적, 교양서적을 안전하고 간편하게 거래하세요',
-      path: '/marketplace'
+      title: t('slides.welcome.title'),
+      description: t('slides.welcome.description'),
+      buttonText: t('slides.welcome.buttonText'),
+      backgroundImage: 'url("/images/onboarding-welcome.png")',
+      background: '#f8f4f0'
     },
     {
-      title: '나의 책방',
-      description: '내가 등록한 책과 거래 내역을 관리하세요',
-      path: '/bookstore'
+      title: t('slides.marketplace.title'),
+      description: t('slides.marketplace.description'),
+      buttonText: t('slides.marketplace.buttonText'),
+      backgroundImage: 'url("/images/onboarding-marketplace.png")',
+      background: '#f0f8f8'
     },
     {
-      title: '홍익지도',
-      description: '홍익대학교 주변의 여러 장소들을 공유해요',
-      path: '/hongikmap'
+      title: t('slides.map.title'),
+      description: t('slides.map.description'),
+      buttonText: t('slides.map.buttonText'),
+      backgroundImage: 'url("/images/onboarding-map.png")',
+      background: '#f8f0f8'
     }
   ];
 

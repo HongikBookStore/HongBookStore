@@ -420,8 +420,6 @@ const NotificationItem = styled.div`
   &.unread { background: var(--primary-50); }
 `;
 
-import React from 'react';
-
 const NotificationIcon = styled.div`
   width: 32px; height: 32px; border-radius: var(--radius-full);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -661,21 +659,21 @@ const Header = () => {
                         className={location.pathname === '/marketplace' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/marketplace'); }}
                     >
-                      책 거래 게시판
+                      {t('navigation.bookTradingBoard')}
                     </NavLinkItem>
                     <NavLinkItem
                         to="/bookstore"
                         className={location.pathname === '/bookstore' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}
                     >
-                      나의 책방
+                      {t('myTransactions')}
                     </NavLinkItem>
                     <NavLinkItem
                         to="/hongikmap"
                         className={location.pathname === '/hongikmap' ? 'active' : ''}
                         onClick={(e) => { e.preventDefault(); safeNavigate('/hongikmap'); }}
                     >
-                      지도
+                      {t('navigation.map')}
                     </NavLinkItem>
                   </NavLinks>
               )}
@@ -751,10 +749,10 @@ const Header = () => {
                       </UserAvatar>
                       <UserDropdown $isOpen={isDropdownOpen}>
                         <DropdownItem to="/mypage" onClick={(e) => { e.preventDefault(); safeNavigate('/mypage'); }}>
-                          {t('mypage')}
+                          {t('mypageTitle')}
                         </DropdownItem>
                         <DropdownItem to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
-                          {t('나의 책방')}
+                          {t('myTransactions')}
                         </DropdownItem>
                         <LogoutButton onClick={handleLogout}>
                           {t('logout')}
@@ -817,10 +815,10 @@ const Header = () => {
               {isLoggedIn ? (
                   <>
                     <MobileNavLink to="/mypage" onClick={(e) => { e.preventDefault(); safeNavigate('/mypage'); }}>
-                      {t('mypage')}
+                      {t('mypageTitle')}
                     </MobileNavLink>
                     <MobileNavLink to="/bookstore" onClick={(e) => { e.preventDefault(); safeNavigate('/bookstore'); }}>
-                      {t('bookstore')}
+                      {t('myTransactions')}
                     </MobileNavLink>
                     <MobileNavLink as="button" onClick={handleLogout}>
                       {t('logout')}

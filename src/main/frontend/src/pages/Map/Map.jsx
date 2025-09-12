@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaSearch, FaMapMarkerAlt, FaChevronDown, FaSyncAlt, FaTrash, FaTimes, FaMinus, FaTrashAlt } from 'react-icons/fa';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 import NaverMap from '../../components/NaverMap/Navermap';
 import UserCategory from '../../components/UserCategory/UserCategory';
@@ -44,6 +45,8 @@ api.interceptors.response.use(
 );
 
 /* ==================== 백엔드 API ==================== */
+
+const HONGIK_CENTER = { lat: 37.5513, lng: 126.9246 };
 
 // 장소 검색
 const searchPlacesFromBackend = async (query) => {
@@ -178,18 +181,19 @@ const getPlacesOfUserCategory = async (categoryId) => {
 /* ==================== 컴포넌트 ==================== */
 
 const MapPage = () => {
+  const { t } = useTranslation();
   const { userLocation } = useLocation();
   const mapRef = useRef(null);
 
   // 장소 유형 필터(고정 목록)
   const [selectedType, setSelectedType] = useState('all');
-  const [categories] = useState([
-    { id: 'restaurant', name: '음식점', icon: '🍽️', color: '#FF6B6B' },
-    { id: 'cafe', name: '카페', icon: '☕', color: '#4ECDC4' },
-    { id: 'partner', name: '제휴업체', icon: '🤝', color: '#FFB3BA' },
-    { id: 'convenience', name: '편의점', icon: '🏪', color: '#FFD93D' },
-    { id: 'other', name: '기타', icon: '📍', color: '#9E9E9E' }
-  ]);
+  const categories = useMemo(() => [
+    { id: 'restaurant', name: t('map.restaurant'), icon: '🍽️', color: '#FF6B6B' },
+    { id: 'cafe', name: t('map.cafe'), icon: '☕', color: '#4ECDC4' },
+    { id: 'partner', name: t('map.partner'), icon: '🤝', color: '#FFB3BA' },
+    { id: 'convenience', name: t('map.convenience'), icon: '🏪', color: '#FFD93D' },
+    { id: 'other', name: t('map.other'), icon: '📍', color: '#9E9E9E' }
+  ], [t]);
 
   // DB 장소
   const [places, setPlaces] = useState([]);
@@ -261,18 +265,23 @@ const MapPage = () => {
     }
   };
 
-  // 검색 디바운스
+  // 검색 디바운스 (검색 시작 시 지도 중심을 홍대로 이동)
   useEffect(() => {
     const debounce = setTimeout(async () => {
       if (searchQuery.trim()) {
-        setIsSearching(true);
         try {
+          // 지도 컴포넌트 ref가 있다면, 홍익대 중심으로 이동(줌은 프로젝트 컨벤션에 맞게)
+          if (mapRef?.current?.moveToLocation) {
+            mapRef.current.moveToLocation(HONGIK_CENTER.lat, HONGIK_CENTER.lng, 15);
+          }
+          setIsSearching(true);
           const results = await searchPlacesFromBackend(searchQuery);
-          setSearchResults(results);
+          setSearchResults(results);     // 백엔드가 이미 홍대 근접 순으로 5개 정렬
           setShowSearchResults(true);
         } catch (e) {
           console.error('Search error:', e);
           setSearchResults([]);
+          setShowSearchResults(false);
         } finally {
           setIsSearching(false);
         }
@@ -284,6 +293,7 @@ const MapPage = () => {
     }, 300);
     return () => clearTimeout(debounce);
   }, [searchQuery]);
+
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {
@@ -315,7 +325,7 @@ const MapPage = () => {
   // 장소 저장
   const addPlace = async () => {
     if (!newPlace.name.trim() || !newPlace.address.trim()) {
-      alert('장소 이름과 주소를 입력해주세요.');
+      alert(t('map.enterPlaceNameAndAddress'));
       return;
     }
     const fullAddress = newPlace.detailedAddress.trim()
@@ -401,7 +411,7 @@ const MapPage = () => {
       setUserCategories(prev => [...prev, created]);
     } catch (e) {
       console.error('카테고리 추가 실패:', e);
-      alert('카테고리 추가에 실패했습니다.\n로그인 여부 또는 서버 로그를 확인해주세요.');
+      alert(t('map.categoryAddFailed'));
     }
   };
 
@@ -474,16 +484,19 @@ const MapPage = () => {
       <MapPageContainer>
         <Sidebar>
           <SidebarHeader>
-            <h2>홍익지도</h2>
+            <h2>{t('map.title')}</h2>
             <HeaderButtons>
               <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
-                <FaSyncAlt /> {loadingDB ? '불러오는 중...' : '새로고침'}
+                <FaSyncAlt /> {loadingDB ? t('map.loading') : t('map.refresh')}
+              </AddButton>
+              <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
+                <FaSyncAlt /> {loadingDB ? t('map.loading') : t('map.refresh')}
               </AddButton>
             </HeaderButtons>
 
             {!loadingCats && userCategories.length === 0 && (
                 <HintBanner>
-                  카테고리가 없습니다. 아래에서 새 카테고리를 추가해 주세요. (로그인이 필요할 수 있어요)
+                  {t('map.noCategoriesMessage')}
                 </HintBanner>
             )}
           </SidebarHeader>
@@ -502,9 +515,9 @@ const MapPage = () => {
           {/* 백업 UI: 드롭다운으로도 선택 가능 (onSelectCategory가 없을 때 사용) */}
           {userCategories.length > 0 && (
               <BackupSelectWrap>
-                <label>선택한 카테고리(보기/필터)</label>
+                <label>{t('map.selectedCategoryFilter')}</label>
                 <select value={selectedUserCategoryId ?? ''} onChange={handleBackupSelectChange}>
-                  <option value="">-- 전체(선택 해제) --</option>
+                  <option value="">-- {t('map.allDeselect')} --</option>
                   {userCategories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -516,19 +529,19 @@ const MapPage = () => {
           {selectedUserCategoryId && (
               <SelectedCategoryPanel>
                 <SelectedCatHeader>
-                  <span>선택한 카테고리: <b>{selectedUserCategoryName}</b></span>
+                  <span>{t('map.selectedCategory')}: <b>{selectedUserCategoryName}</b></span>
                   <SelectedCatButtons>
                     <SmallBtn onClick={() => handleSelectUserCategory(selectedUserCategoryId, selectedUserCategoryName)}>
-                      새로고침
+                      {t('map.refresh')}
                     </SmallBtn>
-                    <SmallBtn onClick={clearSelectedUserCategory}>선택 해제</SmallBtn>
+                    <SmallBtn onClick={clearSelectedUserCategory}>{t('map.deselect')}</SmallBtn>
                   </SelectedCatButtons>
                 </SelectedCatHeader>
 
                 {loadingSelectedCat ? (
-                    <EmptyText>불러오는 중...</EmptyText>
+                    <EmptyText>{t('map.loading')}</EmptyText>
                 ) : selectedCategoryPlaces.length === 0 ? (
-                    <EmptyText>이 카테고리에 담긴 장소가 없습니다.</EmptyText>
+                    <EmptyText>{t('map.noPlacesInCategory')}</EmptyText>
                 ) : (
                     <PlaceList>
                       {selectedCategoryPlaces.map(p => {
@@ -565,7 +578,7 @@ const MapPage = () => {
         <StyledMapContainer>
           <MapSearchContainer>
             <MapSearchInput
-                placeholder="장소 검색..."
+                placeholder={t('map.searchPlace')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -574,7 +587,7 @@ const MapPage = () => {
 
           <TypeFilterDropdown className="type-filter-dropdown">
             <TypeFilterButton onClick={() => setShowTypeDropdown(!showTypeDropdown)}>
-              <span>{selectedType === 'all' ? '전체' : (categories.find(cat => cat.id === selectedType)?.name || '전체')}</span>
+              <span>{selectedType === 'all' ? t('map.all') : (categories.find(cat => cat.id === selectedType)?.name || t('map.all'))}</span>
               <FaChevronDown />
             </TypeFilterButton>
             {showTypeDropdown && (
@@ -583,7 +596,7 @@ const MapPage = () => {
                       $isSelected={selectedType === 'all'}
                       onClick={() => { setSelectedType('all'); setShowTypeDropdown(false); }}
                   >
-                    전체
+                    {t('map.all')}
                   </TypeDropdownItem>
                   {categories.map(category => (
                       <TypeDropdownItem
@@ -615,7 +628,7 @@ const MapPage = () => {
                       <SearchResultItem key={place.id} onClick={() => handleSearchResultClick(place)}>
                         <SearchResultHeader>
                           <SearchResultName>{place.name}</SearchResultName>
-                          <SearchResultCategory>{(place.category || '').split('>').pop() || '정보 없음'}</SearchResultCategory>
+                          <SearchResultCategory>{(place.category || '').split('>').pop() || t('map.noInfo')}</SearchResultCategory>
                         </SearchResultHeader>
                         <SearchResultAddress><FaMapMarkerAlt /> {place.address}</SearchResultAddress>
                       </SearchResultItem>
@@ -643,12 +656,12 @@ const MapPage = () => {
             <Modal>
               <ModalContent>
                 <ModalHeader>
-                  <h3>새 장소 추가</h3>
+                  <h3>{t('map.addNewPlace')}</h3>
                   <CloseButton onClick={() => setShowAddPlace(false)}><FaTimes /></CloseButton>
                 </ModalHeader>
                 <ModalBody>
                   <Input
-                      placeholder="장소 이름 *"
+                      placeholder={t('map.placeName')}
                       value={newPlace.name}
                       onChange={(e) => setNewPlace({ ...newPlace, name: e.target.value })}
                   />
@@ -670,22 +683,22 @@ const MapPage = () => {
                   </CategorySection>
 
                   <Input
-                      placeholder="도로명 주소 *"
+                      placeholder={t('map.roadAddress')}
                       value={newPlace.address}
                       onChange={(e) => setNewPlace({ ...newPlace, address: e.target.value })}
                   />
                   <Input
-                      placeholder="세부 주소 (건물명, 층수 등)"
+                      placeholder={t('map.detailedAddress')}
                       value={newPlace.detailedAddress}
                       onChange={(e) => setNewPlace({ ...newPlace, detailedAddress: e.target.value })}
                   />
                   <TextArea
-                      placeholder="장소에 대한 설명을 입력하세요"
+                      placeholder={t('map.enterPlaceDescription')}
                       value={newPlace.description}
                       onChange={(e) => setNewPlace({ ...newPlace, description: e.target.value })}
                   />
                   <Button onClick={addPlace} disabled={isGeocoding}>
-                    {isGeocoding ? '주소 변환 중...' : '장소 추가'}
+                    {isGeocoding ? t('map.convertingAddress') : t('map.addPlace')}
                   </Button>
                 </ModalBody>
               </ModalContent>

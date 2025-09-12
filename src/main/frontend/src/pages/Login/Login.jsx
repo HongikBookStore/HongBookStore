@@ -185,7 +185,7 @@ function Login() {
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
-      setErrorMsg('소셜 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      setErrorMsg(t('login.socialLoginFailed'));
     }
   }, [searchParams]);
 
@@ -204,22 +204,22 @@ function Login() {
     <>
       <Header lang={lang} onLangChange={handleLangChange} />
       <LoginContainer>
-        <Title>{t('socialLoginTitle', 'SNS 계정으로 시작하기')}</Title>
+        <Title>{t('socialLoginTitle')}</Title>
         <Subtitle>
-          {t('socialLoginDesc', '복잡한 가입 절차 없이, 사용하던 계정으로 바로 로그인하고 서비스를 이용해보세요.')}
+          {t('socialLoginDesc')}
         </Subtitle>
 
         {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
         
         <SocialButtonContainer>
-          <SocialButton aria-label="네이버로 로그인" onClick={() => handleSocialLogin('naver')}>
-            <img src={naverLogo} alt="Naver" />
+          <SocialButton aria-label={t('login.loginWithNaver')} onClick={() => handleSocialLogin('naver')}>
+            <img src={naverLogo} alt="Naver" }/>
           </SocialButton>
-          <SocialButton aria-label="카카오로 로그인" onClick={() => handleSocialLogin('kakao')}>
-            <img src={kakaoLogo} alt="Kakao" />
+          <SocialButton aria-label={t('login.loginWithKakao')} onClick={() => handleSocialLogin('kakao')}>
+            <img src={kakaoLogo} alt="Kakao" }/>
           </SocialButton>
-          <SocialButton aria-label="구글로 로그인" onClick={() => handleSocialLogin('google')}>
-            <img src={googleLogo} alt="Google" />
+          <SocialButton aria-label={t('login.loginWithGoogle')} onClick={() => handleSocialLogin('google')}>
+            <img src={googleLogo} alt="Google" }/>
           </SocialButton>
         </SocialButtonContainer>
       </LoginContainer>
