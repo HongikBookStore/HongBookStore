@@ -50,7 +50,6 @@ public class NotificationService {
                     .build();
             sendInternal(emitter, ping);
         } catch (Exception e) {
-            log.warn("Failed to send initial event to user {}", userId, e);
         }
         return emitter;
     }
@@ -167,7 +166,6 @@ public class NotificationService {
     public void sendToUser(Long userId, NotificationEvent event) {
         Map<String, SseEmitter> map = emitterRepository.get(userId);
         if (map.isEmpty()) {
-            log.debug("No active SSE emitters for user {}", userId);
             return;
         }
         for (SseEmitter emitter : map.values()) {
@@ -175,7 +173,6 @@ public class NotificationService {
                 sendInternal(emitter, event);
             } catch (Exception e) {
                 emitterRepository.remove(userId, emitter);
-                log.warn("Emitter removed for user {} due to error", userId, e);
             }
         }
     }
