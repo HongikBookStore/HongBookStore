@@ -81,9 +81,7 @@ export const LocationProvider = ({ children }) => {
           setUserLocation(def ? { lat: def.lat, lng: def.lng, name: def.name, address: def.address } : null);
         }
       } catch (e) {
-        // 서버 불가 시 로컬 유지
-        console.warn('Failed to load my locations from server:', e?.response?.data?.message || e.message);
-      }
+        }
     })();
   }, [user?.id, token]);
 
@@ -110,7 +108,6 @@ export const LocationProvider = ({ children }) => {
         if (def) setUserLocation({ lat: def.lat, lng: def.lng, name: def.name, address: def.address });
         return;
       } catch (e) {
-        console.error('Failed to set default location on server', e);
       }
     }
     // 로컬 폴백
@@ -139,7 +136,6 @@ export const LocationProvider = ({ children }) => {
         if (def) setUserLocation({ lat: def.lat, lng: def.lng, name: def.name, address: def.address });
         return;
       } catch (e) {
-        console.error('Failed to add location on server', e);
       }
     }
     // 로컬 폴백
@@ -162,7 +158,6 @@ export const LocationProvider = ({ children }) => {
         else setUserLocation(null);
         return;
       } catch (e) {
-        console.error('Failed to delete location on server', e);
       }
     }
     // 로컬 폴백
@@ -204,7 +199,6 @@ export const LocationProvider = ({ children }) => {
           if (def) setUserLocation({ lat: def.lat, lng: def.lng, name: def.name, address: def.address });
           return;
         } catch (e) {
-          console.error('Failed to update location on server', e);
         }
       }
       // 로컬 폴백 업데이트

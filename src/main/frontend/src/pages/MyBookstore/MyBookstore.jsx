@@ -631,7 +631,6 @@ const MyBookstore = () => {
       const response = await axios.get('/api/my/posts', { headers: getAuthHeader() });
       setMyPosts(response.data);
     } catch (error) {
-      console.error(t('myBookstore.fetchPostsError'), error);
       setError(prev => ({ ...prev, myPosts: t('myBookstore.fetchPostsError') })); // 에러 상태 설정
     } finally {
       setLoading(prev => ({ ...prev, myPosts: false }));
@@ -646,7 +645,6 @@ const MyBookstore = () => {
       const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
       setWishlist(response.data);
     } catch (error) {
-      console.error(t('myBookstore.fetchWishlistError'), error);
       setError(prev => ({ ...prev, wishlist: t('myBookstore.fetchWishlistError') })); // 에러 상태 설정
     } finally {
       setLoading(prev => ({ ...prev, wishlist: false }));
@@ -673,7 +671,6 @@ const MyBookstore = () => {
       setReviewTotalPages(typeof data.totalPages === 'number' ? data.totalPages : 0);
       setReviewLast(Boolean(data.last));
     } catch (e) {
-      console.error(t('myBookstore.fetchReviewsError'), e);
       setErrorReviews(t('myBookstore.fetchReviewsError'));
     } finally {
       setLoadingReviews(false);
@@ -725,7 +722,6 @@ const MyBookstore = () => {
         alert(t('myBookstore.deleteSuccess'));
         fetchMyPosts(); // 목록 새로고침
       } catch (error) {
-        console.error("게시글 삭제에 실패했습니다.", error);
         alert(t('myBookstore.deleteError'));
       }
     }
@@ -745,7 +741,6 @@ const MyBookstore = () => {
         alert("찜이 해제되었습니다.");
         fetchWishlist(); // 찜 목록 새로고침
       } catch (error) {
-        console.error("찜 해제에 실패했습니다.", error);
         alert("찜 해제 중 오류가 발생했습니다.");
       }
     }
@@ -757,13 +752,6 @@ const MyBookstore = () => {
 
   const handleEditWanted = (wantedId) => {
     navigate(`/wantedwrite/${wantedId}`);
-  };
-
-  const handleDeleteWanted = (wantedId) => {
-    if (window.confirm('이 구해요 글을 삭제하시겠습니까?')) {
-      // 실제로는 API 호출
-      console.log('구해요 글 삭제:', wantedId);
-    }
   };
 
   const filteredBooks = getFilteredBooks();
@@ -794,7 +782,6 @@ const MyBookstore = () => {
           .filter((v, i, arr) => arr.findIndex(x => x.buyerId === v.buyerId) === i);
         setBuyerCandidates(candidates);
       } catch (e) {
-        console.error('채팅방 목록 조회 실패', e);
         setBuyerCandidates([]);
         setBuyerError(e.response?.data?.message || '채팅방 정보를 불러오지 못했습니다. 구매자 ID를 직접 입력해 주세요.');
       } finally {
@@ -808,7 +795,6 @@ const MyBookstore = () => {
       alert(t('myBookstore.statusChangeSuccess'));
       fetchMyPosts();
     } catch (e) {
-      console.error('상태 변경 실패', e);
       alert(e.response?.data?.message || t('myBookstore.statusChangeError'));
     }
   };
@@ -832,7 +818,6 @@ const MyBookstore = () => {
       closeBuyerModal();
       fetchMyPosts();
     } catch (e) {
-      console.error('구매자 지정 실패', e);
       alert(e.response?.data?.message || t('myBookstore.buyerConfirmError'));
     } finally {
       setConfirmingBuyer(false);

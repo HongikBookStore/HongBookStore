@@ -13,7 +13,6 @@ export const getMyInfo = async () => {
   try {
     const response = await api.get('/my/profile');
 
-    console.log("getMyInfo() response:", response);
 
     if (response && response.success) {
       return response.data;  // 이게 이미 UserResponseDTO면 OK!
@@ -24,7 +23,6 @@ export const getMyInfo = async () => {
       throw new Error(response?.message || '내 정보 조회에 실패했습니다.');
     }
   } catch (error) {
-    console.error('내 정보 조회 API 호출 실패:', error);
     throw error;
   }
 
@@ -46,7 +44,6 @@ export const deleteAccount = async () => {
       throw new Error(response?.message || '계정 탈퇴에 실패했습니다.');
     }
   } catch (error) {
-    console.error('계정 탈퇴 API 호출 실패:', error);
     throw error;
   }
 };
@@ -64,17 +61,14 @@ export const logout = async () => {
     // (api 인스턴스에 인터셉터가 설정되어 있다면 자동으로 처리됩니다.)
     if (accessToken) {
       await api.post('/auth/logout'); // 우리 백엔드 API는 헤더의 토큰을 읽음
-      console.log('서버에 로그아웃(토큰 만료) 요청을 보냈습니다.');
     }
   } catch (error) {
     // 서버 요청이 실패하더라도 클라이언트의 로그아웃은 진행
-    console.error('서버 로그아웃 요청 실패:', error);
   } finally {
     // 서버 요청의 성공/실패 여부와 관계없이 로컬 스토리지의 토큰들은 반드시 삭제
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user'); // 사용자 정보도 함께 삭제
-    console.log('로컬 스토리지의 토큰과 사용자 정보를 모두 삭제했습니다.');
 
     // 로그아웃 후 로그인 페이지로 이동시키는 것이 일반적
     window.location.href = '/login'; 

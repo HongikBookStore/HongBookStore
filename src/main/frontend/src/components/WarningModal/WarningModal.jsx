@@ -111,7 +111,6 @@ const WarningModal = ({
   cancelText = '',
   showSaveDraft = false 
 }) => {
-  console.log('WarningModal render:', { isOpen, type, showSaveDraft });
   const { t } = useTranslation();
   
   if (!isOpen) return null;

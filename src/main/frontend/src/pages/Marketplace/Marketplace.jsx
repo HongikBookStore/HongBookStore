@@ -936,7 +936,6 @@ const Marketplace = () => {
       const likedIds = new Set(response.data.map(post => post.postId));
       setLikedPostIds(likedIds);
     } catch (error) {
-      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
     }
   }, []);
 
@@ -968,7 +967,6 @@ const Marketplace = () => {
       setPage(pageToFetch + 1); // 다음에 로드할 페이지 번호 설정
 
     } catch (error) {
-      console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
       if (error.code === 'ECONNABORTED') {
         setError('요청 시간이 초과되었어요. 네트워크 상태를 확인해주세요 📡');
       } else if (error.response?.status === 404) {
@@ -1066,7 +1064,6 @@ const Marketplace = () => {
         });
       }
     } catch (error) {
-      console.error("찜 처리 실패:", error);
       // API 실패 시 UI 원상 복구
       setLikedPostIds(prev => {
         const newSet = new Set(prev);

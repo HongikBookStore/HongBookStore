@@ -998,26 +998,20 @@ const PostWrite = () => {
         if (draftData.images) {
           setImages(draftData.images);
         }
-        console.log('임시저장된 데이터 자동 불러옴');
       } else {
         localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
     } catch (error) {
-      console.error('임시저장 데이터 파싱 오류:', error);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
     }
   }, [isEdit]);
 
   // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
-    console.log('PostWrite 컴포넌트 마운트됨');
-    console.log('startWriting 호출 전');
     startWriting('sale');
-    console.log('startWriting 호출 후');
     loadDraftData();
 
     return () => {
-      console.log('PostWrite 컴포넌트 언마운트됨');
       stopWriting();
     };
   }, [startWriting, stopWriting, loadDraftData]);
@@ -1051,7 +1045,6 @@ const PostWrite = () => {
           URL.revokeObjectURL(url);
         } catch (err) {
           if (typeof console !== 'undefined') {
-            console.debug('[cleanup] revokeObjectURL 실패:', err);
           }
         }
       });
@@ -1067,13 +1060,11 @@ const PostWrite = () => {
         timestamp: new Date().toISOString()
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
-      console.log('임시저장 완료:', draftData);
       await new Promise(resolve => setTimeout(resolve, 500));
       setHasUnsavedChanges(false);
       setUnsavedChanges(false);
       alert(t('postWrite.draftSaved'));
     } catch (error) {
-      console.error('임시저장 실패:', error);
       alert(t('postWrite.draftSaveFailed'));
     }
   }, [formData, images, setUnsavedChanges]);
@@ -1156,7 +1147,6 @@ const PostWrite = () => {
 
         setInputType(postData.isbn ? 'search' : 'custom');
       } catch (error) {
-        console.error("수정할 게시글 정보를 불러오는 데 실패했습니다.", error);
         alert("게시글 정보를 불러올 수 없어! 🥺");
         navigate('/marketplace');
       } finally {
@@ -1278,7 +1268,6 @@ const PostWrite = () => {
         alert(t('postWrite.noSearchResults'));
       }
     } catch (error) {
-      console.error("책 검색 실패:", error);
       alert(t('postWrite.searchError'));
       setSearchResults([]);
     } finally {
@@ -1404,7 +1393,6 @@ const PostWrite = () => {
           // 디버그 출력
           try {
             for (const [k, v] of fd.entries()) {
-              console.debug('[edit-upload] part', k, v && v.name ? v.name : v);
             }
           } catch {}
 
@@ -1474,20 +1462,7 @@ const PostWrite = () => {
           }
         });
 
-        // 디버그: 전송되는 FormData 내용을 콘솔에서 확인 (개발 편의)
-        try {
-          for (const [k, v] of apiData.entries()) {
-            if (k === 'images' && v && typeof v === 'object') {
-              console.debug('[upload] part', k, (v.name || ''), (v.type || ''), (v.size || ''));
-            } else if (k === 'request') {
-              console.debug('[upload] part', k, '(JSON)');
-            } else {
-              console.debug('[upload] part', k, v);
-            }
-          }
-        } catch {}
-
-        await axios.post(endpoint, apiData, { 
+          await axios.post(endpoint, apiData, {
           // Content-Type은 브라우저가 boundary 포함해 자동 설정하도록 둡니다.
           headers: { 
             ...getAuthHeader()
@@ -1499,7 +1474,6 @@ const PostWrite = () => {
         navigate('/marketplace');
       }
     } catch (error) {
-      console.error("게시글 처리 중 오류 발생:", error);
       const serverData = error.response?.data;
       const serverMessage = serverData?.message;
 
@@ -1563,7 +1537,6 @@ const PostWrite = () => {
       navigate(targetPath);
       setPendingNavigation(null);
     } catch (error) {
-      console.error('임시저장 후 나가기 실패:', error);
       setShowWarningModal(false);
       const targetPath = pendingNavigation || '/marketplace';
       navigate(targetPath);
@@ -1597,8 +1570,6 @@ const PostWrite = () => {
   const isNegotiableChecked = useCallback((isNegotiable) => {
     return formData.negotiable === isNegotiable;
   }, [formData.negotiable]);
-
-  console.log('PostWrite 컴포넌트 렌더링 완료');
 
   const recommended = getRecommendedPrice();
 

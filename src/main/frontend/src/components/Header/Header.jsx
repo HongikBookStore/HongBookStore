@@ -456,16 +456,6 @@ const Header = () => {
   const userMenuRef = useRef(null);
   const isHome = location.pathname === '/';
   
-  // WritingContext 상태 디버깅
-  useEffect(() => {
-    console.log('Header: isWriting state changed to:', isWriting, 'writingType:', writingType);
-  }, [isWriting, writingType]);
-  
-  // WarningModal 상태 디버깅
-  useEffect(() => {
-    console.log('Header: showWarningModal state changed to:', showWarningModal);
-  }, [showWarningModal]);
-
   // 외부 클릭 시 유저 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -490,7 +480,6 @@ const Header = () => {
       await logout();
       navigate('/');
     } catch (error) {
-      console.error("로그아웃 처리 중 에러 발생", error);
       alert("로그아웃 중 문제가 발생했습니다.");
     }
   };
@@ -498,13 +487,10 @@ const Header = () => {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   const safeNavigate = (path) => {
-    console.log('safeNavigate called with path:', path, 'isWriting:', isWriting);
     if (isWriting) {
-      console.log('Writing in progress, showing warning modal');
       setPendingNavigation(path);
       setShowWarningModal(true);
     } else {
-      console.log('No writing in progress, navigating directly');
       navigate(path);
     }
     setIsMobileMenuOpen(false);
@@ -535,7 +521,6 @@ const Header = () => {
         setPendingNavigation(null);
       }
     } catch (error) {
-      console.error('임시저장 실패:', error);
       setShowWarningModal(false);
       if (pendingNavigation) {
         navigate(pendingNavigation);
@@ -553,7 +538,6 @@ const Header = () => {
         if (parsedUser && parsedUser.username) return parsedUser.username.charAt(0).toUpperCase();
       }
     } catch (error) {
-      console.error('사용자 정보 파싱 오류:', error);
     }
     return 'U';
   };
@@ -564,7 +548,6 @@ const Header = () => {
       const localUser = localStorage.getItem('user');
       return localUser ? JSON.parse(localUser) : null;
     } catch (error) {
-      console.error('사용자 정보 파싱 오류:', error);
       return null;
     }
   };

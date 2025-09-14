@@ -814,7 +814,6 @@ const ChatRoom = () => {
           }
         }
       } catch (err) {
-        console.error(t('chat.chatRoomError'), err);
       }
     }
     loadRoomInfo();
@@ -831,7 +830,6 @@ const ChatRoom = () => {
         const data = await res.json();
         setMessages(data);
       } catch (err) {
-        console.error(t('chat.chatListError'), err);
       }
     };
     loadPreviousMessages();
@@ -865,7 +863,6 @@ const ChatRoom = () => {
           });
         }
       } catch (e) {
-        console.error(t('chat.reservationFailed'), e);
       }
     })();
   }, [roomId]);
@@ -1053,7 +1050,6 @@ const ChatRoom = () => {
       if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
       if (st === 'sold_out') { alert(t('chat.alreadySold')); return; }
     } catch (e) {
-      console.warn(t('chat.reservationFailed'), e);
     }
     setShowReserveModal(true);
   };
@@ -1098,7 +1094,6 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: t('chat.reservationRequestSent'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationFailed'));
     }
   };
@@ -1120,7 +1115,6 @@ const ChatRoom = () => {
           setPostStatus('reserved');
         }
       } catch (e) {
-        console.error(t('chat.reservationAcceptFailed'), e);
       }
 
       setMessages(prev => ([
@@ -1128,7 +1122,6 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationAcceptFailed'));
     }
   };
@@ -1149,7 +1142,6 @@ const ChatRoom = () => {
         if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
       } catch {}
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationDeclineFailed'));
     }
   };
@@ -1173,7 +1165,6 @@ const ChatRoom = () => {
         if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
       } catch {}
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationCancelFailed'));
     }
   };
@@ -1191,7 +1182,6 @@ const ChatRoom = () => {
       try {
         if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
       } catch (e) {
-        console.error(t('chat.completeTransactionFailed'), e);
         alert(t('chat.completeTransactionFailed'));
       }
 
@@ -1200,7 +1190,6 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      console.error(e);
       alert(t('chat.completeTransactionFailed'));
     }
   };
@@ -1256,7 +1245,6 @@ const ChatRoom = () => {
       setShowReportModal(false);
       setShowReportExitModal(true);
     } catch (err) {
-      console.warn('report failed:', err);
       alert(t('chat.reportFailed'));
       setShowReportModal(false);
     }
@@ -1299,7 +1287,6 @@ const ChatRoom = () => {
         const r = await fetchWeeklyWeather({ lat, lng, sido });
         setWeeklyWeather(r);
       } catch (e) {
-        console.error(e);
         setWeeklyWeather(null);
       } finally {
         setWeatherLoading(false);

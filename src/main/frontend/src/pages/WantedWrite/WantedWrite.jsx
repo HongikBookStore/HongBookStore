@@ -277,12 +277,8 @@ export default function WantedWrite() {
   }));
 
   useEffect(() => {
-    console.log('WantedWrite 컴포넌트 마운트됨');
-    console.log('startWriting 호출 전');
     startWriting('wanted');
-    console.log('startWriting 호출 후');
-    return () => { 
-      console.log('WantedWrite 컴포넌트 언마운트됨');
+    return () => {
       stopWriting(); 
     };
   }, [startWriting, stopWriting]);
@@ -353,7 +349,6 @@ export default function WantedWrite() {
         // 수정 진입 시 입력 방식은 수동으로(선택 사항)
         setInputType('title');
       } catch (e) {
-        console.error(t('wantedWrite.error.loadDetail'), e);
         alert(t('wantedWrite.error.loadDetail'));
       }
     })();
@@ -400,7 +395,6 @@ export default function WantedWrite() {
       setSearchResults(results);
       if (results.length === 0) alert(t('wantedWrite.search.noResults'));
     } catch (err) {
-      console.error(t('wantedWrite.search.error'), err);
       alert(t('wantedWrite.search.error'));
       setSearchResults([]);
     } finally {
@@ -539,7 +533,6 @@ export default function WantedWrite() {
       alert(isEdit ? t('wantedWrite.success.update') : t('wantedWrite.success.create'));
       navigate(isEdit ? `/wanted/${id}` : '/wanted', { replace: false });
     } catch (err) {
-      console.error(err);
       // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감
       if (!Object.values(errors).some(Boolean)) {
         alert(isEdit ? t('wantedWrite.error.updateFailed') : t('wantedWrite.error.createFailed'));

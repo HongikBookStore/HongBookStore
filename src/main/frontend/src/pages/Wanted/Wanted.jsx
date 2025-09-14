@@ -191,7 +191,6 @@ const Wanted = () => {
 
       setWantedPosts(Array.isArray(list) ? list : []);
     } catch (e) {
-      console.error(t('wanted.error.loadFailed'), e);
       setWantedPosts([]);
     } finally {
       setLoading(false);

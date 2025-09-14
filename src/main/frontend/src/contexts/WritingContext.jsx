@@ -16,18 +16,14 @@ export const WritingProvider = ({ children }) => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const startWriting = (type) => {
-    console.log('WritingContext: startWriting called with type:', type);
     setIsWriting(true);
     setWritingType(type);
-    console.log('WritingContext: isWriting set to true');
   };
 
   const stopWriting = () => {
-    console.log('WritingContext: stopWriting called');
     setIsWriting(false);
     setWritingType(null);
     setHasUnsavedChanges(false);
-    console.log('WritingContext: isWriting set to false');
   };
 
   const setUnsavedChanges = (hasChanges) => {

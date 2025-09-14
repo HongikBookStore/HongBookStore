@@ -156,7 +156,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       setReviews(mapped);
       setShowAllReviews(false);
     } catch (e) {
-      console.error(e);
     }
   };
 
@@ -211,7 +210,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       const data = await res.json(); // { urls: [...] }
       return data.urls || [];
     } catch {
-      console.warn('사진 업로드 실패 또는 엔드포인트 없음 → 사진 없이 진행');
       return [];
     }
   }
@@ -295,7 +293,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       await fetchReviews();
       showToast('리뷰가 등록되었습니다.');
     } catch (e) {
-      console.error(e);
       showToast(t('map.reviewRegistrationFailed'));
     }
   };
@@ -325,7 +322,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
       showToast('리뷰 삭제에 실패했습니다.');
     } catch (e) {
-      console.error(e);
       showToast('리뷰 삭제에 실패했습니다.');
     }
   };
@@ -370,7 +366,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
       await fetchReviews();
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
   const handleDislikeReview = async (id) => {
     try {
@@ -379,7 +375,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
       await fetchReviews();
-    } catch (e) { console.error(e); }
+    } catch (e) {}
   };
 
   const getTypeName = useMemo(() => (type) =>
@@ -445,7 +441,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           }
         }, 0);
       } catch (e) {
-        console.error('네이버 지도 로드 실패:', e);
       }
     };
     if (isOpen && activeTab === 'route') init();
@@ -493,7 +488,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           pathLatLngs.forEach(ll => bounds.extend(ll));
           map.fitBounds(bounds);
         } catch (err) {
-          console.error(err);
         }
       } else {
         map.setCenter(dest);
@@ -518,7 +512,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
       setStartResults(items);
     } catch (e) {
-      console.error('출발지 검색 실패:', e);
       showToast('검색에 실패했습니다.');
     } finally {
       setSearching(false);

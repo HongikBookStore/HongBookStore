@@ -1013,7 +1013,6 @@ const MyPage = () => {
         }
       }
     } catch (error) {
-      console.error(t('mypage.profileLoadFailed'), error);
       // 토큰 만료 등의 이유로 실패 시 로그인 페이지로 이동
       navigate('/login');
     } finally {
@@ -1066,7 +1065,6 @@ const MyPage = () => {
         const res = await axios.get(`/api/reviews/summary/users/${uid}`, { headers: getAuthHeader() });
         setRatingSummary(res.data);
       } catch (e) {
-        console.error(t('mypage.ratingSummaryFailed'), e);
         setRatingError(e.response?.data?.message || t('mypage.ratingLoadFailed'));
       } finally {
         setRatingLoading(false);
@@ -1095,7 +1093,6 @@ const MyPage = () => {
       setRoleTotal(typeof data.totalElements === 'number' ? data.totalElements : (Array.isArray(data.content) ? data.content.length : 0));
       setRoleLast(Boolean(data.last));
     } catch (e) {
-      console.error(t('mypage.reviewLoadFailed'), e);
       setRoleError(e.response?.data?.message || t('mypage.reviewListLoadFailed'));
       setRoleReviews([]);
     } finally {
@@ -1197,7 +1194,6 @@ const MyPage = () => {
           }
         }
       } catch (e) {
-        console.warn('Forward geocoding failed:', e?.response?.data?.message || e.message);
       }
     } catch (e) {
       // 사용자가 창을 닫은 경우 등 무시

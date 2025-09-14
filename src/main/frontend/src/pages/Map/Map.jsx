@@ -39,7 +39,6 @@ api.interceptors.response.use(
     (err) => {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-      console.warn('[API ERROR]', status, msg);
       return Promise.reject(err);
     }
 );
@@ -66,7 +65,6 @@ const searchPlacesFromBackend = async (query) => {
     }
     return [];
   } catch (e) {
-    console.error('Backend Search API Error:', e);
     return [];
   }
 };
@@ -77,7 +75,6 @@ const getPlacesFromBackend = async () => {
     const { data } = await api.get('/api/places');
     return Array.isArray(data) ? data : [];
   } catch (e) {
-    console.error('Error fetching places from DB:', e);
     alert('저장된 장소를 불러오는 데 실패했습니다.');
     return [];
   }
@@ -89,7 +86,6 @@ const savePlaceToBackend = async (placeData) => {
     const { data } = await api.post('/api/places', placeData);
     return data;
   } catch (e) {
-    console.error('Error saving place to DB:', e);
     alert('장소 저장에 실패했습니다.');
     return null;
   }
@@ -101,7 +97,6 @@ const getAddressFromCoordinates = async (lat, lng) => {
     const { data } = await api.get('/api/places/geocode', { params: { lat, lng } });
     return data;
   } catch (e) {
-    console.error('Error getting address from coordinates:', e);
     return null;
   }
 };
@@ -236,7 +231,6 @@ const MapPage = () => {
         const cats = await getUserCategories();
         setUserCategories(cats || []);
       } catch (e) {
-        console.error('유저 카테고리 로드 실패:', e);
         setUserCategories([]);
       } finally {
         setLoadingCats(false);
@@ -279,7 +273,6 @@ const MapPage = () => {
           setSearchResults(results);     // 백엔드가 이미 홍대 근접 순으로 5개 정렬
           setShowSearchResults(true);
         } catch (e) {
-          console.error('Search error:', e);
           setSearchResults([]);
           setShowSearchResults(false);
         } finally {
@@ -362,7 +355,6 @@ const MapPage = () => {
   };
 
   const handleMapClick = useCallback((lat, lng) => {
-    console.log(`지도 클릭: 위도 ${lat}, 경도 ${lng}`);
   }, []);
 
   // 장소 유형 필터
@@ -380,7 +372,6 @@ const MapPage = () => {
       const list = await getPlacesOfUserCategory(categoryId);
       setSelectedCategoryPlaces(list);
     } catch (e) {
-      console.error('선택한 카테고리의 장소 조회 실패:', e);
       setSelectedCategoryPlaces([]);
       alert('카테고리에 담긴 장소를 불러오지 못했습니다.');
     } finally {
@@ -410,7 +401,6 @@ const MapPage = () => {
       const created = await createUserCategory(trimmed);
       setUserCategories(prev => [...prev, created]);
     } catch (e) {
-      console.error('카테고리 추가 실패:', e);
       alert(t('map.categoryAddFailed'));
     }
   };
@@ -421,7 +411,6 @@ const MapPage = () => {
       setUserCategories(prev => prev.filter(cat => cat.id !== categoryId));
       if (selectedUserCategoryId === categoryId) clearSelectedUserCategory();
     } catch (e) {
-      console.error('카테고리 삭제 실패:', e);
       alert('카테고리 삭제에 실패했습니다.');
     }
   };
@@ -434,7 +423,6 @@ const MapPage = () => {
       setUserCategories(prev => prev.map(cat => cat.id === categoryId ? updated : cat));
       if (selectedUserCategoryId === categoryId) setSelectedUserCategoryName(updated.name);
     } catch (e) {
-      console.error('카테고리 이름 변경 실패:', e);
       alert('카테고리 이름 변경에 실패했습니다.');
     }
   };
@@ -447,7 +435,6 @@ const MapPage = () => {
         await handleSelectUserCategory(categoryId, selectedUserCategoryName);
       }
     } catch (e) {
-      console.error('카테고리에 장소 담기 실패:', e);
       alert('카테고리에 장소를 담는 데 실패했습니다.');
     }
   };
@@ -458,7 +445,6 @@ const MapPage = () => {
       await removePlaceFromUserCategory(selectedUserCategoryId, placeId);
       setSelectedCategoryPlaces(prev => prev.filter(p => p.id !== placeId));
     } catch (e) {
-      console.error('카테고리에서 제거 실패:', e);
       alert('카테고리에서 장소 제거에 실패했습니다.');
     }
   };
