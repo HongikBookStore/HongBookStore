@@ -879,7 +879,7 @@ const MyBookstore = () => {
               {/* 로딩과 에러 상태를 더 명확하게 처리 */}
               {loading.myPosts ? (
                 <LoadingSpinner>
-                  <Loading type="bookstack" size="md" subtext="내가 등록한 책을 불러오고 있어요" />
+                  <Loading type="bookstack" size="md" subtext={t('myBookstore.loadingBooks')} />
                 </LoadingSpinner>
               ) : error.myPosts ? (
                 <EmptyState>
@@ -1027,7 +1027,7 @@ const MyBookstore = () => {
             {/* 수정: 로딩과 에러 상태를 더 명확하게 처리 */}
             {loading.wishlist ? (
               <LoadingSpinner>
-                <Loading type="hongbook" size="md" subtext="찜한 책을 불러오고 있어요" />
+                <Loading type="hongbook" size="md" subtext={t('myBookstore.loadingWishlist')} />
               </LoadingSpinner>
             ) : error.wishlist ? (
               <EmptyState>

@@ -161,15 +161,15 @@ const Hero = () => {
 
   const menuItems = [
     {
-      title: '책거래게시판',
+      title: t('hero.bookstore'),
       path: '/marketplace'
     },
     {
-      title: '나의 책방',
+      title: t('hero.myBookstore'),
       path: '/mybookstore'
     },
     {
-      title: '홍익지도',
+      title: t('hero.map'),
       path: '/hongikmap'
     }
   ];

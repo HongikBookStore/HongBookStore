@@ -695,7 +695,7 @@ const LoadingMessage = styled.div`
 `;
 
 const getCategories = (t) => ({
-  [t('categories.major')]: {
+  [t('categories.Major')]: {
     [t('categories.colleges.business')]: [t('categories.departments.business')],
     [t('categories.colleges.engineering')]: [t('categories.departments.electronics'), t('categories.departments.materials'), t('categories.departments.chemical'), t('categories.departments.computer'), t('categories.departments.industrial'), t('categories.departments.mechanical'), t('categories.departments.civil')],
     [t('categories.colleges.law')]: [t('categories.departments.law')],
@@ -1293,7 +1293,7 @@ const Marketplace = () => {
           {/* 로딩 및 결과 없음 상태 표시 */}
             {isLoading && posts.length === 0 && (
                 <LoadingMessage>
-                  <Loading type="bookstack" size="lg" subtext="홍익대 선배들의 책을 찾고 있어요" />
+                  <Loading type="bookstack" size="lg" subtext={t('marketplace.loadingMessage')} />
                 </LoadingMessage>
             )}
 
@@ -1313,7 +1313,7 @@ const Marketplace = () => {
             <>
               {renderSkeletonCards(4)}
               <LoadingMessage>
-                <Loading type="hongbook" size="md" subtext="더 많은 책들을 불러오고 있어요" />
+                <Loading type="hongbook" size="md" subtext={t('marketplace.loadingMessage')} />
               </LoadingMessage>
             </>
           )}

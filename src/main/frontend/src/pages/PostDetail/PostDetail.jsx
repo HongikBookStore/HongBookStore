@@ -1148,12 +1148,12 @@ const PostDetail = () => {
                 <InfoGrid>
                   <InfoItem>
                     <InfoLabel>{t('postDetail.category')}</InfoLabel>
-                    <InfoValue>{post.category || '컴퓨터공학'}</InfoValue>
+                    <InfoValue>{t(post.category)}</InfoValue>
                   </InfoItem>
 
                   <InfoItem>
                     <InfoLabel>{t('postDetail.tradeLocation')}</InfoLabel>
-                    <InfoValue>{post.tradeLocation || '교내'}</InfoValue>
+                    <InfoValue>{post.tradeLocation}</InfoValue>
                   </InfoItem>
 
                   {/* ✅ 교내 기준 위치(사람 친화 라벨) */}

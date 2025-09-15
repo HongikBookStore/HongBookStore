@@ -338,7 +338,7 @@ export default function WantedDetail() {
     const categoryName = rawCategory.split('>')[0]?.trim() || rawCategory;
     const translatedCategory = translateCategory(categoryName, t);
     const displayCategory = data.department
-        ? `${translatedCategory} / ${data.department}`
+        ? `${translatedCategory} / ${t(data.department)}`
         : translatedCategory;
 
     return (
@@ -374,7 +374,7 @@ export default function WantedDetail() {
 
                         <MetaRow>
                             <Chip><FaUser /> {displayAuthor}</Chip>
-                            <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {conditionKor}</ConditionChip>
+                            <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {t(conditionKor)}</ConditionChip>
                             <PriceChip><FaTag /> {t('wantedDetail.desiredPrice')}: {Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</PriceChip>
                         </MetaRow>
                         <SubMeta>
@@ -408,7 +408,7 @@ export default function WantedDetail() {
                                 {data.content ? (
                                     <BodyText>{data.content}</BodyText>
                                 ) : (
-                                    <Small>작성된 설명이 없습니다.</Small>
+                                    <Small>{t('noDescription')}</Small>
                                 )}
                             </Card>
 
@@ -423,7 +423,7 @@ export default function WantedDetail() {
                             <InfoGrid>
                                 <InfoItem><Label>{t('wantedDetail.bookTitle')}</Label><Value>{data.title || '-'}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.author')}</Label><Value>{data.author || '-'}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{conditionKor}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{t(conditionKor)}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.desiredPrice')}</Label><Value>{Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.category.label')}</Label><Value>{displayCategory}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayAuthor}</Value></InfoItem>

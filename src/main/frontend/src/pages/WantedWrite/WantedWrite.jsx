@@ -783,7 +783,7 @@ export default function WantedWrite() {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: '14px' }}>💡</span>
-                    <span>ISBN은 <strong>하이픈(-) 없이</strong> 숫자만 입력하세요</span>
+                    <span>{t('ISBNWithoutHyphen')}</span>
                   </div>
                 </div>
 

@@ -1716,7 +1716,7 @@ const PostWrite = () => {
                   >
                     <option value="">{t('postWrite.mainCategory')}</option>
                     {(catTree || []).map(node => (
-                      <option key={node.name} value={node.name}>{node.name}</option>
+                      <option key={node.name} value={node.name}>{t(node.name)}</option>
                     ))}
                   </CategorySelect>
                   <CategorySelect
@@ -1734,7 +1734,7 @@ const PostWrite = () => {
                     {(() => {
                       const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                       return (mainNode?.children || []).map(s => (
-                        <option key={s.name} value={s.name}>{s.name}</option>
+                        <option key={s.name} value={s.name}>{t(s.name)}</option>
                       ));
                     })()}
                   </CategorySelect>
@@ -1748,7 +1748,7 @@ const PostWrite = () => {
                       const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                       const subNode = mainNode?.children?.find(s => s.name === formData.subCategory);
                       return (subNode?.children || []).map(d => (
-                        <option key={d.name} value={d.name}>{d.name}</option>
+                        <option key={d.name} value={d.name}>{t(d.name)}</option>
                       ));
                     })()}
                   </CategorySelect>
@@ -2034,7 +2034,7 @@ const PostWrite = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: '14px' }}>💡</span>
-                    <span>ISBN은 <strong>하이픈(-) 없이</strong> 숫자만 입력하세요</span>
+                    <span>{t('ISBNWithoutHyphen')}</span>
                   </div>
                 </div>
                 
@@ -2130,30 +2130,30 @@ const PostWrite = () => {
                   <tr>
                     <td><strong>{t('postWrite.writingStatus')}</strong></td>
                     <td>15%</td>
-                    <td>상: 2.25% / 중: 5.25% / 하: 8.25%</td>
-                    <td>연필, 펜 등으로 필기된 정도에 따라 할인</td>
+                    <td>{t('상')}: 2.25% / {t('중')}: 5.25% / {t('하')}: 8.25%</td>
+                    <td>{t('used1')}</td>
                   </tr>
                   <tr>
                     <td><strong>{t('postWrite.tearStatus')}</strong></td>
                     <td>35%</td>
-                    <td>상: 5.25% / 중: 12.25% / 하: 19.25%</td>
-                    <td>책장, 표지 등의 찢어짐 정도에 따라 할인</td>
+                    <td>{t('상')}: 5.25% / {t('중')}: 12.25% / {t('하')}: 19.25%</td>
+                    <td>{t('used2')}</td>
                   </tr>
                   <tr>
                     <td><strong>{t('postWrite.waterStatus')}</strong></td>
                     <td>50%</td>
-                    <td>상: 7.5% / 중: 17.5% / 하: 27.5%</td>
-                    <td>물에 젖은 흔적이나 얼룩 정도에 따라 할인</td>
+                    <td>{t('상')}: 7.5% / {t('중')}: 17.5% / {t('하')}: 27.5%</td>
+                    <td>{t('used3')}</td>
                   </tr>
                   <tr style={{backgroundColor: '#f8f9fa'}}>
                     <td><strong>{t('postWrite.usedBookDiscount')}</strong></td>
                     <td>-</td>
                     <td>10%</td>
-                    <td>새책이 아닌 모든 중고책에 기본 적용</td>
+                    <td>{t('used4')}</td>
                   </tr>
                   <tr style={{backgroundColor: '#e3f2fd', fontWeight: 'bold'}}>
                     <td colSpan={2}><strong>{t('postWrite.maxDiscount')}</strong></td>
-                    <td><strong>약 65%</strong></td>
+                    <td><strong>{t('about')} 65%</strong></td>
                     <td><strong>{t('postWrite.allLow')}</strong></td>
                   </tr>
                   </tbody>
