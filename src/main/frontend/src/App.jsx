@@ -232,7 +232,7 @@ function App() {
                                     <RequireAuth>
                                         <>
                                             <Header />
-                                            <MyBookstore />
+                                            <PostWrite />
                                         </>
                                     </RequireAuth>
                                 }

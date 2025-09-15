@@ -1154,27 +1154,34 @@ const ChatRoom = () => {
   const handleAcceptReservation = async () => {
     if (!reservationId) return;
     try {
-      await apiAcceptReservation(roomId, reservationId);
+      const res = await apiAcceptReservation(roomId, reservationId);
 
       setIsPending(false);
       setIsReserved(true);
       setIsCompleted(false);
 
+      // 게시글 상태 reserved + buyerId 필수 전달
       try {
-        const buyerForPatch = buyerId || currentUserId;
-        if (salePostId) {
-          await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
+        if (salePostId && buyerId) {
+          await patchPostStatus(salePostId, 'reserved', buyerId); // ← 핵심
           setPostStatus('reserved');
         }
       } catch (e) {
+        console.error('게시글 상태 reserved 설정 실패:', e);
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: buildReservationText(data, 'CONFIRMED'), sentAt: new Date().toISOString() , meta: { reservationBanner: true } }
+        {
+          id: Date.now(),
+          type: 'system',
+          message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.',
+          sentAt: new Date().toISOString()
+        }
       ]));
     } catch (e) {
-      alert(t('chat.reservationAcceptFailed'));
+      console.error(e);
+      alert('예약 수락에 실패했습니다.');
     }
   };
 
@@ -1223,26 +1230,36 @@ const ChatRoom = () => {
 
   const handleComplete = async () => {
     if (!reservationId) return;
-    if (!isSeller) { alert(t('chat.sellerOnly')); return; }
-    if (isCompleted) { alert(t('chat.alreadyCompleted')); return; }
+    if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
+    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
+
     try {
+      // 1) 예약 완료 처리 (백엔드 예약 상태: COMPLETED)
       await apiCompleteReservation(roomId, reservationId);
+
       setIsPending(false);
       setIsReserved(false);
       setIsCompleted(true);
 
+      // 2) 게시글 상태 SOLD_OUT + buyerId 필수 전달
       try {
-        if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
+        if (!salePostId) throw new Error('salePostId 없음');
+        if (!buyerId) throw new Error('buyerId 없음(거래 상대 사용자 ID)');
+
+        await patchPostStatus(salePostId, 'sold_out', buyerId); // ← 핵심
+        setPostStatus('sold_out');
       } catch (e) {
-        alert(t('chat.completeTransactionFailed'));
+        console.error('게시글 상태 sold_out 설정 실패:', e);
+        alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다. (구매자 ID 필요)');
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      alert(t('chat.completeTransactionFailed'));
+      console.error(e);
+      alert('거래 완료 처리에 실패했습니다.');
     }
   };
 
