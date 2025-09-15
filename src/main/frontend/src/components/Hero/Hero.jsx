@@ -182,8 +182,8 @@ const Hero = () => {
     <HeroSection>
       <OnboardingSection>
         <OnboardingContainer>
-          <Title>홍책방</Title>
-          <Description>홍익대 학생들을 위한 중고책 거래 플랫폼입니다.</Description>
+          <Title>{t('title')}</Title>
+          <Description>{t('heroDescription')}</Description>
           
           <ButtonContainer>
             {menuItems.map((item, index) => (

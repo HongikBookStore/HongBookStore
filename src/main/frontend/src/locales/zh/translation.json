@@ -40,6 +40,11 @@
     "reviews": "交易评价",
     "rating": "评分",
     "all": "全部",
+    "buyer": "买家",
+    "cancel": "取消",
+    "confirm": "确认",
+    "error": "错误",
+    "loading": "加载中...",
     "forSale": "在售",
     "reserved": "已预订",
     "soldOut": "已售出",
@@ -57,17 +62,12 @@
     "fetchPostsError": "获取帖子失败",
     "fetchWishlistError": "获取收藏夹失败",
     "fetchReviewsError": "获取评价时发生错误",
-    "buyer": "买家",
     "select": "选择",
-    "confirm": "确认",
-    "cancel": "取消",
     "delete": "删除",
     "edit": "编辑",
     "register": "注册",
     "complete": "完成",
     "failed": "失败",
-    "error": "错误",
-    "loading": "加载中...",
     "deleteConfirm": "您确定要删除这本书吗？删除的数据无法恢复。",
     "deleteSuccess": "帖子已删除。",
     "deleteError": "删除帖子时发生错误。",
@@ -81,16 +81,9 @@
     "buyerSelectError": "请选择买家或直接输入。",
     "buyerConfirmSuccess": "已更改为已售出。",
     "buyerConfirmError": "指定买家时发生错误。",
-    "fetchPostsError": "加载我的帖子失败。",
-    "fetchWishlistError": "加载收藏夹失败。",
-    "fetchReviewsError": "加载评价时发生错误。",
-    "all": "全部",
     "loadingPosts": "正在加载列表...",
     "view": "查看",
-    "edit": "编辑",
     "unreserve": "取消预约",
-    "delete": "删除",
-    "wishlist": "收藏夹",
     "noWishlist": "收藏夹中没有书籍",
     "loadingWishlist": "正在加载收藏夹...",
     "removeFromWishlist": "从收藏夹移除",
@@ -299,11 +292,9 @@
     "average": "平均",
     "recentlyViewedPosts": "最近查看的帖子",
     "noRecentlyViewedPosts": "没有最近查看的帖子。",
-    "loadingReviews": "正在加载评价...",
-    "loading": "加载中...",
     "nicknameLengthError": "请输入2-25个字符的昵称。"
   },
-  "login": {
+  "loginNs": {
     "socialLoginFailed": "社交登录失败。请稍后重试。",
     "loginWithNaver": "使用Naver登录",
     "loginWithKakao": "使用Kakao登录",
@@ -448,7 +439,6 @@
     "evaluationItem": "评估项目",
     "weight": "权重",
     "discountByStatus": "状态别折扣率",
-    "description": "详细说明",
     "writingStatus": "书写状态",
     "tearStatus": "破损程度",
     "waterStatus": "水渍程度",
@@ -493,7 +483,7 @@
   "kakao": "KakaoTalk",
   "google": "Google",
   "registerSuccess": "注册成功！",
-  "login": "登录",
+  "loginButton": "登录",
   "loginSuccess": "登录成功！",
   "loginRequired": "请输入用户名和密码",
   "findId": "找回用户名",
@@ -530,7 +520,6 @@
   "mockingbird": "杀死一只知更鸟",
   "harperlee": "哈珀·李",
   "emailAddress": "电子邮箱地址",
-  "schoolVerification": "学校认证",
   "verified": "已认证",
   "notVerified": "未认证",
   "verifySchoolEmail": "验证学校邮箱",
@@ -545,7 +534,7 @@
   "deleteLocation": "删除位置",
   "changePassword": "修改密码",
   "changePasswordDesc": "修改您的账户密码",
-  "deleteAccount": "注销账户",
+  "deleteAccount": "删除账户",
   "deleteAccountDesc": "永久删除您的账户和所有数据",
   "enterSchoolEmail": "输入学校邮箱",
   "enterVerificationCode": "输入验证码",
@@ -784,15 +773,6 @@
       "spam": "垃圾/廣告",
       "other": "其他"
     },
-    "reportModal": {
-      "title": "檢舉",
-      "selectReason": "請選擇檢舉原因",
-      "otherReason": "請輸入其他原因",
-      "submit": "提交檢舉",
-      "cancel": "取消",
-      "success": "檢舉已提交",
-      "successMessage": "感謝您的檢舉，我們會審查並處理。"
-    },
     "condition": {
       "excellent": "上",
       "good": "中",
@@ -849,7 +829,9 @@
       "save": "儲存"
     },
     "reportModal": {
+      "title": "檢舉",
       "selectReason": "請選擇檢舉原因",
+      "otherReason": "請輸入其他原因",
       "detailedReason": "詳細原因",
       "detailedReasonPlaceholder": "請輸入詳細的檢舉原因。",
       "submitted": "檢舉已受理。",
@@ -862,6 +844,8 @@
       },
       "cancel": "取消",
       "submit": "提交",
+      "success": "檢舉已提交",
+      "successMessage": "感謝您的檢舉，我們會審查並處理。",
       "close": "關閉"
     },
     "registrationDate": "註冊日期",
@@ -913,37 +897,6 @@
     "error": {
       "fetchFailed": "取得求購列表失敗",
       "loadFailed": "載入求購列表失敗"
-    }
-  },
-  "wantedWrite": {
-    "title": "撰寫求購貼文",
-    "back": "返回",
-    "basicInfo": "基本資訊",
-    "inputMethod": "輸入方式選擇",
-    "inputType": {
-      "manual": "手動輸入（標題/作者）",
-      "search": "以ISBN/標題搜尋"
-    },
-    "titleLabel": "標題",
-    "titlePlaceholder": "請輸入您想要的書籍標題",
-    "authorLabel": "作者",
-    "authorPlaceholder": "請輸入作者",
-    "search": {
-      "enterQuery": "請輸入搜尋詞！🔍",
-      "noResults": "沒有搜尋結果！請嘗試其他關鍵字📚",
-      "error": "搜尋書籍時發生錯誤！請重試😅"
-    },
-    "validation": {
-      "titleOrContent": "請輸入標題或請求內容",
-      "selectCondition": "請選擇狀態",
-      "priceRange": "請輸入{{min}}~{{max}}韓元範圍內的期望價格",
-      "selectCategory": "請選擇類別"
-    },
-    "error": {
-      "loadDetail": "載入詳細資訊失敗",
-      "loginRequired": "需要登入（找不到userId）",
-      "updateFailed": "更新時發生錯誤。",
-      "createFailed": "建立時發生錯誤。"
     }
   },
   "wantedDetail": {
@@ -1043,30 +996,14 @@
   "wantedShort": "求購",
   "cookiePolicy": "Cookie政策",
   "accessibility": "無障礙",
-  "hongikUniversity": "弘益大學",
-  "profileEmail": "個人資料郵箱",
-  "schoolVerification": "學校郵箱驗證",
-  "verified": "已驗證",
-  "notVerified": "未驗證",
-  "verifySchoolEmail": "驗證學校郵箱",
-  "enterSchoolEmail": "輸入學校郵箱",
-  "enterVerificationCode": "輸入驗證碼",
-  "sendVerificationCode": "發送驗證碼",
-  "invalidVerificationCode": "無效的驗證碼",
-  "yourSchoolEmailVerified": "您的學校郵箱已驗證",
-  "resendCode": "重新發送驗證碼",
-  "resendCodeIn": "{{sec}}秒後重新發送",
-  "changePassword": "更改密碼",
-  "deleteAccount": "刪除帳戶",
-  "locationName": "位置名稱",
-  "address": "地址",
-  "addNewLocation": "添加新位置",
-  "cancel": "取消",
-  "defaultLocation": "默認位置",
-  "setDefault": "設為默認",
-  "deleteLocation": "刪除位置",
+  "hongikUniversity": "弘益大学",
+  "schoolVerification": "学校邮箱验证",
   "myLocation": "我的位置",
   "change": "修改",
+  "totalBooks": "總書數",
+  "completedTrades": "已完成的交易",
+  "averageRating": "平均評分",
+  "daysActive": "活動天數",
   "enterNewEmail": "輸入新郵箱",
   "noEmail": "無郵箱",
   "emailUpdated": "郵箱更新成功。",
@@ -1075,16 +1012,13 @@
   "changePasswordTitle": "更改密碼",
   "currentPassword": "當前密碼",
   "enterCurrentPassword": "請輸入當前密碼",
-  "newPassword": "新密碼",
   "enterNewPassword": "請輸入新密碼",
   "confirmNewPassword": "確認新密碼",
-  "confirmNewPassword": "請重新輸入新密碼",
   "passwordHint": "包含大小寫字母、數字和特殊字符的8-16位字符",
   "confirm": "確認",
   "currentPasswordRequired": "請輸入當前密碼。",
   "newPasswordRequired": "請輸入新密碼。",
   "passwordFormatError": "密碼必須包含大小寫字母、數字和特殊字符（8-16位）。",
-  "passwordMismatch": "新密碼不匹配。",
   "samePasswordError": "新密碼必須與當前密碼不同。",
   "passwordChangeSuccess": "密碼更改成功。",
   "currentPasswordIncorrect": "當前密碼不正確。",
@@ -1148,17 +1082,12 @@
     "inputMethod": "输入方式",
     "inputType": {
       "manual": "手动输入",
-      "search": "搜索输入"
+      "search": "以ISBN/搜索输入"
     },
     "titleLabel": "标题",
     "titlePlaceholder": "请输入标题",
     "authorLabel": "作者",
     "authorPlaceholder": "请输入作者",
-    "search": {
-      "enterQuery": "请输入搜索词",
-      "noResults": "没有搜索结果",
-      "error": "搜索时发生错误"
-    },
     "validation": {
       "titleRequired": "请输入标题",
       "authorRequired": "请输入作者",
@@ -1167,7 +1096,11 @@
       "conditionRequired": "请选择状态",
       "categoryRequired": "请选择分类",
       "contentRequired": "请输入请求内容",
-      "inappropriateContent": "检测到不当内容"
+      "inappropriateContent": "检测到不当内容",
+      "titleOrContent": "請輸入標題或請求內容",
+      "selectCondition": "請選擇狀態",
+      "priceRange": "請輸入{{min}}~{{max}}韓元範圍內的期望價格",
+      "selectCategory": "請選擇類別"
     },
     "error": {
       "loadDetail": "加载帖子失败",
@@ -1204,7 +1137,10 @@
       "inputPlaceholder": "通过ISBN或书名搜索",
       "author": "作者",
       "publisher": "出版社",
-      "noInfo": "无信息"
+      "noInfo": "无信息",
+      "enterQuery": "请输入搜索词",
+      "noResults": "没有搜索结果",
+      "error": "搜索时发生错误"
     },
     "price": {
       "label": "期望价格",

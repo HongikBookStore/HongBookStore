@@ -754,7 +754,7 @@ const Header = () => {
                           to="/login"
                           onClick={(e) => { e.preventDefault(); safeNavigate('/login'); }}
                       >
-                        {t('login')}
+                        {t('loginButton')}
                       </LoginButton>
                       <RegisterButton
                           to="/register"
@@ -816,7 +816,7 @@ const Header = () => {
               ) : (
                   <>
                     <MobileNavLink to="/login" onClick={(e) => { e.preventDefault(); safeNavigate('/login'); }}>
-                      {t('login')}
+                      {t('loginButton')}
                     </MobileNavLink>
                     <MobileNavLink to="/register" onClick={(e) => { e.preventDefault(); safeNavigate('/register'); }}>
                       {t('signup')}

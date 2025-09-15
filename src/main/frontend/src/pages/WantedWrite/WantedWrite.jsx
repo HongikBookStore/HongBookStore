@@ -259,6 +259,7 @@ export default function WantedWrite() {
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // 카테고리 트리: 상태로 보관하지 않고 계산값으로 사용
 
   const navigate = useNavigate();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
@@ -532,7 +533,7 @@ export default function WantedWrite() {
       setUnsavedChanges(false);
       setHasUnsavedChanges(false);
       alert(isEdit ? t('wantedWrite.success.update') : t('wantedWrite.success.create'));
-      navigate(isEdit ? '/mybookstore' : '/wanted');
+      navigate(isEdit ? `/wanted/${id}` : '/wanted', { replace: false });
     } catch (err) {
       console.error(err);
       // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감

@@ -57,13 +57,11 @@
     "fetchPostsError": "Failed to fetch posts",
     "fetchWishlistError": "Failed to fetch wishlist",
     "fetchReviewsError": "Error occurred while fetching reviews",
-    "all": "All",
     "loadingPosts": "Loading posts...",
     "view": "View",
     "edit": "Edit",
     "unreserve": "Unreserve",
     "delete": "Delete",
-    "wishlist": "Wishlist",
     "noWishlist": "No books in wishlist",
     "loadingWishlist": "Loading wishlist...",
     "removeFromWishlist": "Remove from Wishlist",
@@ -85,10 +83,7 @@
     "buyerSelect": "Select Buyer",
     "buyerSelectError": "Please select a buyer or enter one directly.",
     "buyerConfirmSuccess": "Changed to sold out.",
-    "buyerConfirmError": "An error occurred while specifying buyer.",
-    "fetchPostsError": "Failed to load my posts.",
-    "fetchWishlistError": "Failed to load wishlist.",
-    "fetchReviewsError": "An error occurred while loading reviews."
+    "buyerConfirmError": "An error occurred while specifying buyer."
   },
   "chat": {
     "title": "Transaction Chat",
@@ -291,11 +286,9 @@
     "average": "Average",
     "recentlyViewedPosts": "Recently Viewed Posts",
     "noRecentlyViewedPosts": "No recently viewed posts.",
-    "loadingReviews": "Loading reviews...",
-    "loading": "Loading...",
     "nicknameLengthError": "Please enter a nickname between 2 and 25 characters."
   },
-  "login": {
+  "loginNs": {
     "socialLoginFailed": "Social login failed. Please try again later.",
     "loginWithNaver": "Login with Naver",
     "loginWithKakao": "Login with Kakao",
@@ -348,7 +341,26 @@
     "제2외국어계열": "Second Foreign Language",
     "자연계열": "Natural Sciences",
     "예체능계열": "Arts & Physical Education",
-    "교직": "Teaching"
+    "교직": "Teaching",
+    "loading": "Loading...",
+    "loadingRating": "Loading transaction rating...",
+    "transactionRating": "Transaction Rating",
+    "total": "Total",
+    "cases": "cases",
+    "transactionReview": "Transaction Review",
+    "sellerReview": "Seller Review",
+    "buyerReview": "Buyer Review",
+    "accountInfo": "Account Information",
+    "studentVerification": "Student Verification",
+    "currentStudentVerification": "Current Student Verification",
+    "verificationComplete": "Verification Complete",
+    "notVerified": "Not Verified",
+    "verificationCompleteMessage": "Student verification has been completed for the {{email}} account.",
+    "average": "Average",
+    "recentlyViewedPosts": "Recently Viewed Posts",
+    "noRecentlyViewedPosts": "No recently viewed posts.",
+    "loadingReviews": "Loading reviews...",
+    "nicknameLengthError": "Please enter a nickname between 2 and 25 characters."
   },
   "postWrite": {
     "title": "Register Sales Post",
@@ -440,7 +452,6 @@
     "evaluationItem": "Evaluation Item",
     "weight": "Weight",
     "discountByStatus": "Discount by Status",
-    "description": "Description",
     "writingStatus": "Writing Status",
     "tearStatus": "Tear Status",
     "waterStatus": "Water Damage Status",
@@ -484,7 +495,7 @@
   "kakao": "Kakao",
   "google": "Google",
   "registerSuccess": "Registration completed!",
-  "login": "Login",
+  "loginButton": "Login",
   "loginSuccess": "Login successful!",
   "loginRequired": "Please enter your ID and password.",
   "findId": "Find ID",
@@ -521,12 +532,12 @@
   "mockingbird": "To Kill a Mockingbird",
   "harperlee": "Harper Lee",
   "emailAddress": "Email Address",
-  "schoolVerification": "School Verification",
+  "schoolVerification": "University Email Verification",
   "notVerified": "Not Verified",
-  "verifySchoolEmail": "Verify School Email",
+  "verifySchoolEmail": "Verify University Email",
   "locationManagement": "Location Management",
   "verified": "Verified",
-  "verifySchoolEmailDesc": "Verify your school email to access all features.",
+  "verifySchoolEmailDesc": "Verify your university email to access all features.",
   "addNewLocation": "Add New Location",
   "manageLocations": "Manage your preferred meeting locations for book exchanges",
   "locationName": "Location Name",
@@ -538,13 +549,13 @@
   "changePasswordDesc": "Update your account password",
   "deleteAccount": "Delete Account",
   "deleteAccountDesc": "Permanently delete your account and all associated data",
-  "enterSchoolEmail": "Enter School Email",
+  "enterSchoolEmail": "Enter University Email",
   "enterVerificationCode": "Enter Verification Code",
   "sendVerificationCode": "Send Verification Code",
   "invalidVerificationCode": "Invalid verification code. Please try again.",
   "resendCode": "Resend verification code",
   "resendCodeIn": "Resend code in {{sec}}s",
-  "yourSchoolEmailVerified": "Your school email has been successfully verified.",
+  "yourSchoolEmailVerified": "Your university email has been successfully verified.",
   "cancel": "Cancel",
   "save": "Save",
   "search": "Search",
@@ -686,10 +697,10 @@
     "major": "Major",
     "liberal": "Liberal Arts",
     "colleges": {
-      "business": "Business School",
-      "engineering": "Engineering School",
-      "law": "Law School",
-      "art": "Art School",
+      "business": "Business",
+      "engineering": "Engineering",
+      "law": "Law",
+      "art": "Art",
       "design": "Design & Art Management",
       "performing": "Performing Arts",
       "economics": "Economics",
@@ -783,7 +794,18 @@
       "submit": "Submit Report",
       "cancel": "Cancel",
       "success": "Report submitted",
-      "successMessage": "Thank you for your report. We will review and take action."
+      "successMessage": "Thank you for your report. We will review and take action.",
+      "detailedReason": "Detailed Reason",
+      "detailedReasonPlaceholder": "Please enter detailed reason for reporting.",
+      "submitted": "Report has been submitted.",
+      "thankYou": "We will review it quickly. Thank you for your report.",
+      "options": {
+        "abuse": "Abuse/Slander",
+        "fraud": "Fraud/Fake Listing",
+        "spam": "Spam/Advertisement",
+        "other": "Other"
+      },
+      "close": "Close"
     },
     "condition": {
       "excellent": "Excellent",
@@ -839,22 +861,6 @@
       "saveError": "An error occurred while saving the review.",
       "saving": "Saving...",
       "save": "Save"
-    },
-    "reportModal": {
-      "selectReason": "Please select a reason for reporting",
-      "detailedReason": "Detailed Reason",
-      "detailedReasonPlaceholder": "Please enter detailed reason for reporting.",
-      "submitted": "Report has been submitted.",
-      "thankYou": "We will review it quickly. Thank you for your report.",
-      "options": {
-        "abuse": "Abuse/Slander",
-        "fraud": "Fraud/Fake Listing",
-        "spam": "Spam/Advertisement",
-        "other": "Other"
-      },
-      "cancel": "Cancel",
-      "submit": "Submit",
-      "close": "Close"
     },
     "registrationDate": "Registration Date",
     "viewCount": "Views"
@@ -921,21 +927,74 @@
     "authorLabel": "Author",
     "authorPlaceholder": "Enter the author",
     "search": {
-      "enterQuery": "Please enter a search term! 🔍",
-      "noResults": "No search results! Try with different keywords 📚",
-      "error": "An error occurred while searching for books! Please try again 😅"
+      "enterQuery": "Please enter a search term!",
+      "noResults": "No search results! Try with different keywords",
+      "error": "An error occurred while searching for books! Please try again",
+      "title": "Book Search",
+      "button": "Search Books",
+      "reselect": "Reselect",
+      "modalTitle": "Book Search",
+      "inputPlaceholder": "Search by ISBN or book title",
+      "author": "Author",
+      "publisher": "Publisher",
+      "noInfo": "No information"
     },
     "validation": {
       "titleOrContent": "Please enter a title or request content",
       "selectCondition": "Please select a condition",
       "priceRange": "Please enter desired price within {{min}}~{{max}} KRW range",
-      "selectCategory": "Please select a category"
+      "selectCategory": "Please select a category",
+      "titleRequired": "Please enter title",
+      "authorRequired": "Please enter author",
+      "priceRequired": "Please enter desired price",
+      "priceInvalid": "Please enter valid price",
+      "conditionRequired": "Please select condition",
+      "categoryRequired": "Please select category",
+      "contentRequired": "Please enter request content",
+      "inappropriateContent": "Inappropriate content detected"
     },
     "error": {
       "loadDetail": "Failed to load details",
       "loginRequired": "Login required (userId not found)",
       "updateFailed": "An error occurred while updating.",
-      "createFailed": "An error occurred while creating."
+      "createFailed": "An error occurred while creating.",
+      "requestFailed": "Request failed",
+      "userIdPrompt": "userId is missing. Please enter a test userId"
+    },
+    "success": {
+      "update": "Updated successfully",
+      "create": "Registered successfully"
+    },
+    "condition": {
+      "label": "Condition",
+      "select": "Please select condition",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "button": {
+      "searching": "Searching...",
+      "search": "Search",
+      "updating": "Updating...",
+      "update": "Update",
+      "registering": "Registering...",
+      "register": "Register"
+    },
+    "price": {
+      "label": "Desired Price",
+      "placeholder": "Please enter desired price"
+    },
+    "category": {
+      "label": "Category",
+      "mainCategory": "Main Category",
+      "subCategory": "Sub Category",
+      "detailCategory": "Detail Category",
+      "major": "Major",
+      "general": "General"
+    },
+    "content": {
+      "label": "Request Content",
+      "placeholder": "e.g.) Urgently needed for general education assignment.\nPreferably a book with underlines/notes."
     }
   },
   "wantedDetail": {
@@ -1017,19 +1076,19 @@
   "heroDescription": "Second-hand book trading platform for Hongik University students",
   "slides": {
     "welcome": {
-  "title": "HongBookStore",
-  "common": {
-    "loading": "Loading...",
-    "error": "An error occurred",
-    "retry": "Retry",
-    "confirm": "Confirm",
-    "cancel": "Cancel",
-    "save": "Save",
-    "delete": "Delete",
-    "edit": "Edit",
-    "close": "Close",
-    "anonymous": "Anonymous"
-  },
+      "title": "HongBookStore",
+      "common": {
+        "loading": "Loading...",
+        "error": "An error occurred",
+        "retry": "Retry",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close",
+        "anonymous": "Anonymous"
+      },
       "description": "A used book trading platform for Hongik University students.",
       "buttonText": "Sign Up"
     },
@@ -1048,27 +1107,6 @@
   "cookiePolicy": "Cookie Policy",
   "accessibility": "Accessibility",
   "hongikUniversity": "Hongik University",
-  "profileEmail": "Profile Email",
-  "schoolVerification": "School Email Verification",
-  "verified": "Verified",
-  "notVerified": "Not Verified",
-  "verifySchoolEmail": "Verify School Email",
-  "enterSchoolEmail": "Enter School Email",
-  "enterVerificationCode": "Enter Verification Code",
-  "sendVerificationCode": "Send Verification Code",
-  "invalidVerificationCode": "Invalid verification code",
-  "yourSchoolEmailVerified": "Your school email has been verified",
-  "resendCode": "Resend Code",
-  "resendCodeIn": "Resend in {{sec}}s",
-  "changePassword": "Change Password",
-  "deleteAccount": "Delete Account",
-  "locationName": "Location Name",
-  "address": "Address",
-  "addNewLocation": "Add New Location",
-  "cancel": "Cancel",
-  "defaultLocation": "Default Location",
-  "setDefault": "Set as Default",
-  "deleteLocation": "Delete Location",
   "myLocation": "My Location",
   "change": "Change",
   "totalBooks": "Total Books",
@@ -1083,16 +1121,13 @@
   "changePasswordTitle": "Change Password",
   "currentPassword": "Current Password",
   "enterCurrentPassword": "Enter your current password",
-  "newPassword": "New Password",
   "enterNewPassword": "Enter your new password",
   "confirmNewPassword": "Confirm New Password",
-  "confirmNewPassword": "Re-enter your new password",
   "passwordHint": "8-16 characters with uppercase, lowercase, numbers, and special characters",
   "confirm": "Confirm",
   "currentPasswordRequired": "Please enter your current password.",
   "newPasswordRequired": "Please enter your new password.",
   "passwordFormatError": "Password must contain uppercase, lowercase, numbers, and special characters (8-16 characters).",
-  "passwordMismatch": "New passwords do not match.",
   "samePasswordError": "New password must be different from current password.",
   "passwordChangeSuccess": "Password changed successfully.",
   "currentPasswordIncorrect": "Current password is incorrect.",
@@ -1146,101 +1181,19 @@
     "subAnswers": {
       "withdraw": "How to withdraw your account:\n\n1. Click 'Account Withdrawal' in My Page\n2. Enter your password for verification\n3. Review and agree to the withdrawal terms\n\nAll data will be permanently deleted upon withdrawal.",
       "signupLogin": "How to sign up and log in:\n\n1. Click the 'Login' button in the top right corner\n2. Choose one of Naver, Kakao, or Google accounts\n3. Log in with your SNS account and it will automatically sign you up\n\nYou can log in anytime with your existing SNS account.",
-      "studentVerification": "How to verify student status:\n\n1. Click 'School Email Verification' in My Page\n2. Enter your g.hongik.ac.kr email\n3. Check your email and enter the verification code\n\nOnce verified, you can use all services including second-hand trading without restrictions."
-    }
-  },
-  "wantedWrite": {
-    "title": "Write Wanted Post",
-    "back": "Back",
-    "basicInfo": "Basic Information",
-    "inputMethod": "Input Method",
-    "inputType": {
-      "manual": "Manual Input",
-      "search": "Search Input"
-    },
-    "titleLabel": "Title",
-    "titlePlaceholder": "Enter title",
-    "authorLabel": "Author",
-    "authorPlaceholder": "Enter author",
-    "search": {
-      "enterQuery": "Enter search query",
-      "noResults": "No search results",
-      "error": "Error occurred during search"
-    },
-    "validation": {
-      "titleRequired": "Please enter title",
-      "authorRequired": "Please enter author",
-      "priceRequired": "Please enter desired price",
-      "priceInvalid": "Please enter valid price",
-      "conditionRequired": "Please select condition",
-      "categoryRequired": "Please select category",
-      "contentRequired": "Please enter request content",
-      "inappropriateContent": "Inappropriate content detected"
-    },
-    "error": {
-      "loadDetail": "Failed to load post",
-      "loginRequired": "Login required",
-      "updateFailed": "Update failed",
-      "createFailed": "Registration failed",
-      "requestFailed": "Request failed",
-      "userIdPrompt": "userId is missing. Please enter a test userId"
-    },
-    "success": {
-      "update": "Updated successfully",
-      "create": "Registered successfully"
-    },
-    "condition": {
-      "label": "Condition",
-      "select": "Please select condition",
-      "high": "High",
-      "medium": "Medium",
-      "low": "Low"
-    },
-    "button": {
-      "searching": "Searching...",
-      "search": "Search",
-      "updating": "Updating...",
-      "update": "Update",
-      "registering": "Registering...",
-      "register": "Register"
-    },
-    "search": {
-      "title": "Book Search",
-      "button": "Search Books",
-      "reselect": "Reselect",
-      "modalTitle": "Book Search",
-      "inputPlaceholder": "Search by ISBN or book title",
-      "author": "Author",
-      "publisher": "Publisher",
-      "noInfo": "No information"
-    },
-    "price": {
-      "label": "Desired Price",
-      "placeholder": "Please enter desired price"
-    },
-    "category": {
-      "label": "Category",
-      "mainCategory": "Main Category",
-      "subCategory": "Sub Category",
-      "detailCategory": "Detail Category",
-      "major": "Major",
-      "general": "General"
-    },
-    "content": {
-      "label": "Request Content",
-      "placeholder": "e.g.) Urgently needed for general education assignment.\nPreferably a book with underlines/notes."
+      "studentVerification": "How to verify student status:\n\n1. Click 'University Email Verification' in My Page\n2. Enter your g.hongik.ac.kr email\n3. Check your email and enter the verification code\n\nOnce verified, you can use all services including second-hand trading without restrictions."
     }
   },
   "categories": {
     "major": {
-      "경영대학": "Business School",
-      "공과대학": "Engineering School",
-      "법과대학": "Law School",
-      "미술대학": "Art School",
+      "경영대학": "Business",
+      "공과대학": "Engineering",
+      "법과대학": "Law",
+      "미술대학": "Art",
       "디자인,예술경영학부": "Design & Art Management",
       "공연예술학부": "Performing Arts",
       "경제학부": "Economics",
-      "사범대학": "Education School",
+      "사범대학": "Education",
       "문과대학": "Liberal Arts",
       "건축도시대학": "Architecture & Urban Planning"
     },
@@ -1253,6 +1206,69 @@
       "자연계열": "Natural Sciences",
       "예체능계열": "Arts & Physical Education",
       "교직": "Teaching"
+    },
+    "major": "Major",
+    "liberal": "Liberal Arts",
+    "colleges": {
+      "business": "Business",
+      "engineering": "Engineering",
+      "law": "Law",
+      "art": "Art",
+      "design": "Design & Art Management",
+      "performing": "Performing Arts",
+      "economics": "Economics",
+      "education": "Education",
+      "liberalArts": "Liberal Arts",
+      "architecture": "Architecture & Urban Planning"
+    },
+    "departments": {
+      "business": "Business",
+      "electronics": "Electronics & Electrical Engineering",
+      "materials": "Materials Science",
+      "chemical": "Chemical Engineering",
+      "computer": "Computer Science",
+      "industrial": "Industrial Data Engineering",
+      "mechanical": "Mechanical System Design",
+      "civil": "Civil & Environmental Engineering",
+      "law": "Law",
+      "eastern": "Eastern Studies",
+      "painting": "Painting",
+      "printmaking": "Printmaking",
+      "sculpture": "Sculpture",
+      "visualDesign": "Visual Design",
+      "industrialDesign": "Industrial Design",
+      "metalwork": "Metalwork",
+      "ceramics": "Ceramics & Glass",
+      "woodwork": "Woodwork & Furniture",
+      "textile": "Textile Art & Fashion Design",
+      "artHistory": "Art History",
+      "designManagement": "Design Management",
+      "artManagement": "Art Management",
+      "musical": "Musical",
+      "practicalMusic": "Practical Music",
+      "economics": "Economics",
+      "mathEducation": "Mathematics Education",
+      "koreanEducation": "Korean Education",
+      "englishEducation": "English Education",
+      "historyEducation": "History Education",
+      "education": "Education",
+      "englishLiterature": "English Literature",
+      "germanLiterature": "German Literature",
+      "frenchLiterature": "French Literature",
+      "koreanLiterature": "Korean Literature",
+      "architecture": "Architecture",
+      "interiorArchitecture": "Interior Architecture",
+      "urbanPlanning": "Urban Planning"
+    },
+    "liberalArts": {
+      "abeek": "ABEEK Liberal Arts",
+      "humanities": "Humanities",
+      "english": "English",
+      "social": "Social Sciences",
+      "secondLanguage": "Second Foreign Language",
+      "natural": "Natural Sciences",
+      "physical": "Physical Education & Arts",
+      "teaching": "Teaching"
     }
   },
   "warningModal": {

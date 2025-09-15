@@ -668,8 +668,8 @@ const PopularSectionTitle = styled.h2`
 // 
 // TODO: 실제 구현 시에는 사용자가 직접 책 상태를 평가할 수 있도록 별도의 상태 입력 필드를 제공
 const getBookCondition = (discountRate, t) => {
-  if (discountRate <= 20) return { text: t('marketplace.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
-  if (discountRate <= 40) return { text: t('marketplace.bookCondition.good'), color: '#ffc107', bgColor: '#fff3cd' };
+  if (discountRate <= 30) return { text: t('marketplace.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
+  if (discountRate <= 50) return { text: t('marketplace.bookCondition.good'), color: '#ffc107', bgColor: '#fff3cd' };
   return { text: t('marketplace.bookCondition.fair'), color: '#dc3545', bgColor: '#f8d7da' };
 };
 
@@ -1344,6 +1344,7 @@ const Marketplace = () => {
           )}
         </MarketplaceContainer>
       </MainContent>
+      </div>
     </PageWrapper>
   );
 };

@@ -185,13 +185,16 @@ function Login() {
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
-      setErrorMsg(t('login.socialLoginFailed'));
+      setErrorMsg(t('loginNs.socialLoginFailed'));
     }
   }, [searchParams]);
 
   // 소셜 로그인 버튼 클릭 시, 백엔드의 인증 URL로 이동시키는 함수
   const handleSocialLogin = (provider) => {
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+    const API_BASE =
+      import.meta?.env?.VITE_API_BASE ??
+      (window.location.port === '5173' ? 'http://localhost:8080' : '');
+    window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
   };
 
   // 언어 변경 핸들러
@@ -212,14 +215,14 @@ function Login() {
         {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
         
         <SocialButtonContainer>
-          <SocialButton aria-label={t('login.loginWithNaver')} onClick={() => handleSocialLogin('naver')}>
-            <img src={naverLogo} alt="Naver" />
+          <SocialButton aria-label={t('loginNs.loginWithNaver')} onClick={() => handleSocialLogin('naver')}>
+            <img src={naverLogo} alt="Naver" ></img>
           </SocialButton>
-          <SocialButton aria-label={t('login.loginWithKakao')} onClick={() => handleSocialLogin('kakao')}>
-            <img src={kakaoLogo} alt="Kakao" />
+          <SocialButton aria-label={t('loginNs.loginWithKakao')} onClick={() => handleSocialLogin('kakao')}>
+            <img src={kakaoLogo} alt="Kakao" ></img>
           </SocialButton>
-          <SocialButton aria-label={t('login.loginWithGoogle')} onClick={() => handleSocialLogin('google')}>
-            <img src={googleLogo} alt="Google" />
+          <SocialButton aria-label={t('loginNs.loginWithGoogle')} onClick={() => handleSocialLogin('google')}>
+            <img src={googleLogo} alt="Google" ></img>
           </SocialButton>
         </SocialButtonContainer>
       </LoginContainer>
