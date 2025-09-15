@@ -456,6 +456,7 @@ const Header = () => {
   const userMenuRef = useRef(null);
   const isHome = location.pathname === '/';
   
+  
   // 외부 클릭 시 유저 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {

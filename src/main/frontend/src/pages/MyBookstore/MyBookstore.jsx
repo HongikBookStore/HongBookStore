@@ -7,6 +7,7 @@ import QRCode from 'react-qr-code';
 import axios from 'axios';
 import { getMyReceivedPeerReviews } from '../../api/peerReviews';
 import { useTranslation } from 'react-i18next';
+import { Loading } from '../../components/ui';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -878,8 +879,7 @@ const MyBookstore = () => {
               {/* 로딩과 에러 상태를 더 명확하게 처리 */}
               {loading.myPosts ? (
                 <LoadingSpinner>
-                  <FaBook style={{ marginRight: '8px' }} />
-                  {t('myBookstore.loadingPosts')}
+                  <Loading type="bookstack" size="md" subtext="내가 등록한 책을 불러오고 있어요" />
                 </LoadingSpinner>
               ) : error.myPosts ? (
                 <EmptyState>
@@ -1027,8 +1027,7 @@ const MyBookstore = () => {
             {/* 수정: 로딩과 에러 상태를 더 명확하게 처리 */}
             {loading.wishlist ? (
               <LoadingSpinner>
-                <FaHeart style={{ marginRight: '8px' }} />
-                {t('myBookstore.loadingWishlist')}
+                <Loading type="hongbook" size="md" subtext="찜한 책을 불러오고 있어요" />
               </LoadingSpinner>
             ) : error.wishlist ? (
               <EmptyState>

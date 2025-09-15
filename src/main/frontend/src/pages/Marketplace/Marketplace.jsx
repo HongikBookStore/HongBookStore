@@ -4,7 +4,7 @@ import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
-import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton } from '../../components/ui';
+import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton, Loading } from '../../components/ui';
 import axios from 'axios';
 
 const shimmer = keyframes`
@@ -1196,7 +1196,6 @@ const Marketplace = () => {
   return (
     <PageWrapper>
       <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
-      <div style={{ flex: 1, minWidth: 0 }}>
       <MainContent>
         <MarketplaceContainer>
           <Header>
@@ -1294,7 +1293,7 @@ const Marketplace = () => {
           {/* 로딩 및 결과 없음 상태 표시 */}
             {isLoading && posts.length === 0 && (
                 <LoadingMessage>
-                  <div>{t('marketplace.loadingMessage')}</div>
+                  <Loading type="bookstack" size="lg" subtext="홍익대 선배들의 책을 찾고 있어요" />
                 </LoadingMessage>
             )}
 
@@ -1314,7 +1313,7 @@ const Marketplace = () => {
             <>
               {renderSkeletonCards(4)}
               <LoadingMessage>
-                <div>📚 더 많은 책들을 불러오고 있어요...</div>
+                <Loading type="hongbook" size="md" subtext="더 많은 책들을 불러오고 있어요" />
               </LoadingMessage>
             </>
           )}

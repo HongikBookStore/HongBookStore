@@ -233,9 +233,9 @@ const ConditionValue = styled.div`
   font-weight: 600;
   color: ${props => {
     // 번역된 텍스트가 아닌 원본 enum 값으로 색깔 결정
-    if (props.condition === 'HIGH') return '#28a745';
-    if (props.condition === 'MEDIUM') return '#ffc107';
-    if (props.condition === 'LOW') return '#dc3545';
+    if (props.$condition === 'HIGH') return '#28a745';
+    if (props.$condition === 'MEDIUM') return '#ffc107';
+    if (props.$condition === 'LOW') return '#dc3545';
     return '#666';
   }};
 `;
@@ -512,7 +512,7 @@ const LikeButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  color: ${props => props.liked ? '#ff4757' : '#666'};
+  color: ${props => props.$liked ? '#ff4757' : '#666'};
   font-size: 1.2rem;
 
   &:hover {
@@ -1071,7 +1071,7 @@ const PostDetail = () => {
                     </ReportButton>
                     )}
                     
-                    <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
+                    <LikeButton $liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
                   </TitleActions>
 
                 </BookTitle>
@@ -1109,7 +1109,7 @@ const PostDetail = () => {
                 <ConditionGrid>
                   <ConditionItem>
                     <ConditionLabel>{t('postDetail.bookCondition.noteCondition')}</ConditionLabel>
-                    <ConditionValue condition={post.writingCondition}>{conditionMap[post.writingCondition]}</ConditionValue>
+                    <ConditionValue $condition={post.writingCondition}>{conditionMap[post.writingCondition]}</ConditionValue>
                   </ConditionItem>
                   <ConditionItem>
                     <ConditionLabel>{t('postDetail.bookCondition.tearCondition')}</ConditionLabel>

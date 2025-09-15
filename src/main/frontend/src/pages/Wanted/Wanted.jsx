@@ -4,7 +4,7 @@ import { FaPlus, FaSearch } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
-import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton } from '../../components/ui';
+import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton, Loading } from '../../components/ui';
 
 const WantedContainer = styled.div`
   width: 100%;
@@ -298,7 +298,9 @@ const Wanted = () => {
 
             {/* 기존 태그 필터 섹션은 그대로 두고 keyword로만 매핑 */}
             {loading ? (
-                <NoWanted>{t('wanted.searching')}</NoWanted>
+                <NoWanted>
+                  <Loading type="bookflip" size="lg" subtext="구하고 있는 책을 찾고 있어요" />
+                </NoWanted>
             ) : wantedPosts.length > 0 ? (
                 <Grid>
                   {wantedPosts.map((post) => {

@@ -106,6 +106,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [lbImages, setLbImages] = useState([]);
   const [lbIndex, setLbIndex] = useState(0);
 
+  // ✅ 리뷰 반응 상태 관리 (리뷰 ID별 사용자 반응 상태)
+  const [userReactions, setUserReactions] = useState({});
+
   const openLightbox = (images, startIndex = 0) => {
     if (!images || images.length === 0) return;
     setLbImages(images);
@@ -151,9 +154,32 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         content: r.content,
         likes: r.likes,
         dislikes: r.dislikes,
-        photos: (r.photos || []).map(p => p.url)
+        photos: (r.photos || []).map(p => p.url),
+        userReaction: r.userReaction || null // 사용자의 반응 상태 추가
       }));
-      setReviews(mapped);
+      
+      // 기존 사용자 반응 상태와 병합
+      setReviews(prev => {
+        const newReviews = mapped.map(newReview => {
+          const existingReview = prev.find(p => p.id === newReview.id);
+          return {
+            ...newReview,
+            // 기존에 사용자가 반응한 상태가 있다면 유지
+            userReaction: existingReview?.userReaction || newReview.userReaction
+          };
+        });
+        return newReviews;
+      });
+      
+      // userReactions 상태도 초기화 (서버에서 가져온 데이터로)
+      const newUserReactions = {};
+      mapped.forEach(review => {
+        if (review.userReaction) {
+          newUserReactions[review.id] = review.userReaction;
+        }
+      });
+      setUserReactions(newUserReactions);
+      
       setShowAllReviews(false);
     } catch (e) {
     }
@@ -359,18 +385,91 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   };
 
   /* ===================== 좋아요/싫어요 ===================== */
-  const handleLikeReview = async (id) => {
+  const handleLikeReview = async (reviewId) => {
     try {
-      await fetch(REVIEW_REACT(id) + '?type=LIKE', {
+      const currentReaction = userReactions[reviewId] || reviews.find(r => r.id === reviewId)?.userReaction;
+      const newReaction = currentReaction === 'LIKE' ? null : 'LIKE';
+      const currentReview = reviews.find(r => r.id === reviewId);
+      
+      // 즉시 UI 업데이트 (낙관적 업데이트)
+      setUserReactions(prev => ({ ...prev, [reviewId]: newReaction }));
+      
+      // 좋아요/싫어요 수 즉시 업데이트
+      setReviews(prev => prev.map(review => {
+        if (review.id === reviewId) {
+          let newLikes = review.likes || 0;
+          let newDislikes = review.dislikes || 0;
+          
+          if (currentReaction === 'LIKE') {
+            // 좋아요 취소
+            newLikes = Math.max(0, newLikes - 1);
+          } else if (currentReaction === 'DISLIKE') {
+            // 싫어요에서 좋아요로 변경
+            newDislikes = Math.max(0, newDislikes - 1);
+            newLikes = newLikes + 1;
+          } else {
+            // 좋아요 추가
+            newLikes = newLikes + 1;
+          }
+          
+          return {
+            ...review,
+            userReaction: newReaction,
+            likes: newLikes,
+            dislikes: newDislikes
+          };
+        }
+        return review;
+      }));
+      
+      // 서버에 반응 저장
+      const response = await fetch(REVIEW_REACT(reviewId) + '?type=LIKE', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
       await fetchReviews();
     } catch (e) { }
   };
-  const handleDislikeReview = async (id) => {
+  
+  const handleDislikeReview = async (reviewId) => {
     try {
-      await fetch(REVIEW_REACT(id) + '?type=DISLIKE', {
+      const currentReaction = userReactions[reviewId] || reviews.find(r => r.id === reviewId)?.userReaction;
+      const newReaction = currentReaction === 'DISLIKE' ? null : 'DISLIKE';
+      const currentReview = reviews.find(r => r.id === reviewId);
+      
+      // 즉시 UI 업데이트 (낙관적 업데이트)
+      setUserReactions(prev => ({ ...prev, [reviewId]: newReaction }));
+      
+      // 좋아요/싫어요 수 즉시 업데이트
+      setReviews(prev => prev.map(review => {
+        if (review.id === reviewId) {
+          let newLikes = review.likes || 0;
+          let newDislikes = review.dislikes || 0;
+          
+          if (currentReaction === 'DISLIKE') {
+            // 싫어요 취소
+            newDislikes = Math.max(0, newDislikes - 1);
+          } else if (currentReaction === 'LIKE') {
+            // 좋아요에서 싫어요로 변경
+            newLikes = Math.max(0, newLikes - 1);
+            newDislikes = newDislikes + 1;
+          } else {
+            // 싫어요 추가
+            newDislikes = newDislikes + 1;
+          }
+          
+          return {
+            ...review,
+            userReaction: newReaction,
+            likes: newLikes,
+            dislikes: newDislikes
+          };
+        }
+        return review;
+      }));
+      
+      // 서버에 반응 저장
+      const response = await fetch(REVIEW_REACT(reviewId) + '?type=DISLIKE', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
@@ -683,10 +782,18 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                             </ReviewerInfo>
 
                             <ReviewActions>
-                              <ActionButton onClick={() => handleLikeReview(review.id)}>
+                              <ActionButton 
+                                $isActive={(userReactions[review.id] || review.userReaction) === 'LIKE'}
+                                $type="like"
+                                onClick={() => handleLikeReview(review.id)}
+                              >
                                 <FaThumbsUp /> {review.likes || 0}
                               </ActionButton>
-                              <ActionButton onClick={() => handleDislikeReview(review.id)}>
+                              <ActionButton 
+                                $isActive={(userReactions[review.id] || review.userReaction) === 'DISLIKE'}
+                                $type="dislike"
+                                onClick={() => handleDislikeReview(review.id)}
+                              >
                                 <FaThumbsDown /> {review.dislikes || 0}
                               </ActionButton>
 
@@ -990,9 +1097,24 @@ const ReviewRating = styled.div` display: flex; gap: 2px; `;
 
 const ReviewActions = styled.div` display: flex; gap: 12px; `;
 const ActionButton = styled.button`
-  background: none; border: 1px solid #e0e0e0; color: #666; cursor: pointer; font-size: 12px;
+  background: ${props => props.$isActive ? (props.$type === 'like' ? '#e8f5e8' : '#ffeaea') : 'none'}; 
+  border: 2px solid ${props => props.$isActive ? (props.$type === 'like' ? '#4caf50' : '#f44336') : '#e0e0e0'}; 
+  color: ${props => props.$isActive ? (props.$type === 'like' ? '#2e7d32' : '#c62828') : '#666'}; 
+  cursor: pointer; font-size: 12px; font-weight: ${props => props.$isActive ? '600' : '400'};
   display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; transition: all .2s ease;
-  &:hover { color: #333; border-color: #ccc; background: #f8f9fa; }
+  transform: ${props => props.$isActive ? 'scale(1.05)' : 'scale(1)'};
+  box-shadow: ${props => props.$isActive ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'};
+  
+  &:hover { 
+    color: ${props => props.$isActive ? (props.$type === 'like' ? '#1b5e20' : '#b71c1c') : '#333'}; 
+    border-color: ${props => props.$isActive ? (props.$type === 'like' ? '#388e3c' : '#e53935') : '#ccc'}; 
+    background: ${props => props.$isActive ? (props.$type === 'like' ? '#f1f8e9' : '#ffebee') : '#f8f9fa'};
+    transform: scale(1.05);
+  }
+  
+  svg {
+    color: ${props => props.$isActive ? (props.$type === 'like' ? '#4caf50' : '#f44336') : 'inherit'};
+  }
 `;
 const DeleteBtn = styled.button`
   background: none; border: 1px solid #f0f0f0; color: #c0392b; cursor: pointer; font-size: 12px;
