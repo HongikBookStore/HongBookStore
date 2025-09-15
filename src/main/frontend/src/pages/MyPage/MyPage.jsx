@@ -8,6 +8,7 @@ import axios from 'axios';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/Modal';
+import { Loading } from '../../components/ui';
 // 지도 선택 기능 제거로 NaverMap import 불필요
 import { openDaumPostcode } from '../../utils/daumPostcode';
 import { AuthCtx } from '../../contexts/AuthContext';
@@ -296,10 +297,10 @@ const TabButton = styled.button`
   padding: 1rem 2rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
+  color: ${props => props.$active ? 'var(--primary)' : 'var(--text-light)'};
   background: none;
   border: none;
-  border-bottom: 2px solid ${props => props.active ? 'var(--primary)' : 'transparent'};
+  border-bottom: 2px solid ${props => props.$active ? 'var(--primary)' : 'transparent'};
   cursor: pointer;
   transition: var(--transition);
 
@@ -1307,7 +1308,9 @@ const MyPage = () => {
   };
 
   if (loading || !profile) {
-    return <MyPageContainer><h2>{t('common.loading')}</h2></MyPageContainer>;
+    return (
+      <Loading type="hongbook" size="xl" subtext="프로필을 불러오고 있어요" fullScreen />
+    );
   }
 
   // 프로필 링(원형) 표시를 위한 퍼센트(0~100) 계산: 0~5 ★ → ×20
@@ -1473,8 +1476,8 @@ const MyPage = () => {
           <h3><i className="fas fa-star" style={{color: 'var(--primary)'}}></i> {t('mypage.transactionReview')}</h3>
           <TabContainer>
             <TabList>
-              <TabButton active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>{t('mypage.sellerReview')}</TabButton>
-              <TabButton active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>{t('mypage.buyerReview')}</TabButton>
+              <TabButton $active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>{t('mypage.sellerReview')}</TabButton>
+              <TabButton $active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>{t('mypage.buyerReview')}</TabButton>
             </TabList>
           </TabContainer>
           {/* 요약 배지 */}

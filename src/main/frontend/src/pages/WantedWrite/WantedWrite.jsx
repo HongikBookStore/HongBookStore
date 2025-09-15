@@ -259,7 +259,6 @@ export default function WantedWrite() {
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [catTree, setCatTree] = useState(null);
 
   const navigate = useNavigate();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
@@ -277,12 +276,8 @@ export default function WantedWrite() {
   }));
 
   useEffect(() => {
-    console.log('WantedWrite 컴포넌트 마운트됨');
-    console.log('startWriting 호출 전');
     startWriting('wanted');
-    console.log('startWriting 호출 후');
     return () => { 
-      console.log('WantedWrite 컴포넌트 언마운트됨');
       stopWriting(); 
     };
   }, [startWriting, stopWriting]);

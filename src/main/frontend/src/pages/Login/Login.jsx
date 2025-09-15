@@ -213,13 +213,13 @@ function Login() {
         
         <SocialButtonContainer>
           <SocialButton aria-label={t('login.loginWithNaver')} onClick={() => handleSocialLogin('naver')}>
-            <img src={naverLogo} alt="Naver" }/>
+            <img src={naverLogo} alt="Naver" />
           </SocialButton>
           <SocialButton aria-label={t('login.loginWithKakao')} onClick={() => handleSocialLogin('kakao')}>
-            <img src={kakaoLogo} alt="Kakao" }/>
+            <img src={kakaoLogo} alt="Kakao" />
           </SocialButton>
           <SocialButton aria-label={t('login.loginWithGoogle')} onClick={() => handleSocialLogin('google')}>
-            <img src={googleLogo} alt="Google" }/>
+            <img src={googleLogo} alt="Google" />
           </SocialButton>
         </SocialButtonContainer>
       </LoginContainer>
