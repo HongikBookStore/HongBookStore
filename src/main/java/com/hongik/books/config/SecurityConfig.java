@@ -7,6 +7,7 @@ import com.hongik.books.security.oauth.handler.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -108,13 +109,18 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "http://localhost:5175"));
+        List<String> origins = List.of(allowedOriginsCsv.split(","))
+                .stream().map(String::trim).filter(s -> !s.isBlank()).toList();
+        // 패턴 지원(Wildcard 도메인 포함). Credentials 사용 시 AllowedOrigins가 '*'이면 안 되므로 패턴 사용.
+        cfg.setAllowedOriginPatterns(origins);
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}")
+    private String allowedOriginsCsv;
         return src;
     }
 }

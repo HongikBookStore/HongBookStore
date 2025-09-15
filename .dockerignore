@@ -1,0 +1,13 @@
+**/node_modules
+**/.gradle
+**/build
+**/.idea
+**/.vscode
+.git
+.gitignore
+Dockerfile
+src/main/frontend
+*.iml
+*.log
+target
+

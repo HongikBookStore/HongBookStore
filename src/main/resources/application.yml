@@ -33,13 +33,14 @@ spring:
             scope: # 기본값 openid, profile, email => profile, email로 설정 변경
               - profile
               - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
 
           naver:
             client-id: ${NAVER_CLIENT_ID} # 발급 받은 Client ID
             client-secret: ${NAVER_CLIENT_SECRET} # 발급 받은 Client Secret
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            redirect-uri: "http://localhost:8080/login/oauth2/code/naver"
+            redirect-uri: "{baseUrl}/login/oauth2/code/naver"
             scope:
               - name
               - email
@@ -55,7 +56,7 @@ spring:
               - profile_nickname
               - profile_image
               - account_email
-            redirect-uri: "http://localhost:8080/login/oauth2/code/kakao"
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
             client-name: Kakao
 
         provider:
@@ -76,15 +77,15 @@ spring:
   ### MySQL DB ###
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://104.198.2.213:3306/hongBookstore?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:104.198.2.213}:${MYSQL_PORT:3306}/${MYSQL_DB:hongBookstore}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
 
   ### Redis DB ###
   data:
     redis:
-      host: 104.198.2.213
-      port: 6379
+      host: ${REDIS_HOST:104.198.2.213}
+      port: ${REDIS_PORT:6379}
 
   ### JPA ###
   jpa:
@@ -103,7 +104,9 @@ spring:
       storage:
         bucket-name: ${GCP_BUCKET_NAME} # .env 파일의 GCP_BUCKET_NAME 값을 사용합니다.
       credentials:
-        location: classpath:gcp-service-account-key.json # 키 파일은 그대로 resources 폴더에서 관리합니다.
+        # 운영(GCE/Cloud Run 등)에서는 ADC(Application Default Credentials)를 권장합니다.
+        # 비워두면 기본 자격증명을 사용하고, 필요 시 classpath: 또는 파일 경로로 지정하세요.
+        location: ${GCP_CREDENTIALS_LOCATION:}
   servlet:
     multipart:
       enabled: true
@@ -161,6 +164,16 @@ springdoc:
     doc-expansion: none # tag, operation 펼치는 방식
   paths-to-match:
     - /**
+
+### Forwarded headers (behind Load Balancer) ###
+server:
+  forward-headers-strategy: framework
+
+### CORS (환경변수로 제어) ###
+app:
+  cors:
+    # 쉼표로 구분된 오리진 목록. 운영에서 Vercel/도메인으로 교체하세요.
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
 
 ### Naver Map ###
 naver:
