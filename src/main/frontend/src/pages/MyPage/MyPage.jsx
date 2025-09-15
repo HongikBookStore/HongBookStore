@@ -1591,34 +1591,6 @@ const MyPage = () => {
             </ModalBox>
           </ModalOverlay>
         )}
-        <SettingsSection>
-          <h3><i className="fas fa-user-cog" style={{color: 'var(--primary)'}}></i> 계정 정보</h3>
-          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> {t('mypage.recentlyViewedPosts')}</h3>
-          {recentLoading ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.loading')}</div>
-          ) : recentPosts.length === 0 ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.noRecentlyViewedPosts')}</div>
-          ) : (
-            <RecentGrid>
-              {recentPosts.map(p => (
-                <RecentCard key={p.postId} onClick={() => openConfirm(p)}>
-                  <RecentThumb>
-                    {p.thumbnailUrl ? (
-                      <img src={p.thumbnailUrl} alt={p.postTitle} />
-                    ) : (
-                      <span>{p.postTitle}</span>
-                    )}
-                  </RecentThumb>
-                  <RecentTitle>{p.postTitle}</RecentTitle>
-                  <RecentMeta>
-                    <span>{(p.price ?? 0).toLocaleString()}{t('common.won')}</span>
-                    <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
-                  </RecentMeta>
-                </RecentCard>
-              ))}
-            </RecentGrid>
-          )}
-        </SettingsSection>
 
         {confirmPost && (
           <ModalOverlay onClick={closeConfirm}>
