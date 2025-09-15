@@ -794,7 +794,6 @@ const PostDetail = () => {
       setSelectedImageIndex(0);
     } catch (err) {
       setError(err);
-      console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
     } finally {
       setLoading(false);
     }
@@ -808,7 +807,6 @@ const PostDetail = () => {
       const likedIds = new Set(response.data.map(p => p.postId ?? p.id));
       setLiked(likedIds.has(parseInt(id)));
     } catch (error) {
-      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
     }
   }, [id]);
 
@@ -819,7 +817,6 @@ const PostDetail = () => {
       const response = await axios.get(`/api/posts/seller/${sellerId}`);
       setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id)));
     } catch (error) {
-      console.error("판매자의 다른 책들을 불러오는 데 실패했습니다.", error);
       setSellerOtherBooks([
         { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
         { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
@@ -851,7 +848,6 @@ const PostDetail = () => {
         await axios.delete(`/api/posts/${id}/like`, { headers: getAuthHeader() });
       }
     } catch (error) {
-      console.error("찜 처리 실패:", error);
       setLiked(!newLikedState);
       alert("오류가 발생했습니다.");
     }
@@ -874,7 +870,6 @@ const PostDetail = () => {
       const chatRoom = response.data;
       navigate(`/chat/${chatRoom.id}`);
     } catch (err) {
-      console.error("채팅방 생성/입장 실패", err);
       const errorMessage = err.response?.data?.message || '채팅방을 열 수 없습니다. 잠시 후 다시 시도해주세요.';
       alert(errorMessage);
     }
@@ -930,7 +925,6 @@ const PostDetail = () => {
       alert('후기가 저장되었습니다.');
       setReviewOpen(false);
     } catch (e) {
-      console.error('후기 저장 실패', e);
       alert(e.response?.data?.message || t('postDetail.review.saveError'));
     } finally {
       setReviewSubmitting(false);
@@ -1235,7 +1229,18 @@ const PostDetail = () => {
                         </SellerRating>
                     )}
                     <div>
-                      <button onClick={() => navigate(`/users/${post.sellerId}`)} style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}>{t('postDetail.seller.profile')}</button>
+                      <button
+                        onClick={() =>
+                            navigate(`/users/${post.sellerId}`, {
+                              state: {
+                                username: post.sellerNickname || post.sellerUsername || post.sellerName || ''
+                              }
+                            })
+                        }
+                        style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}
+                    >
+                      {t('postDetail.seller.profile')}
+                    </button>
                     </div>
                     {post.sellerSalesCount && (
                         <SalesCount>{t('postDetail.seller.salesCount', { count: post.sellerSalesCount })}</SalesCount>

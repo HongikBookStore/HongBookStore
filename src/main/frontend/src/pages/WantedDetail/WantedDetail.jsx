@@ -203,7 +203,6 @@ export default function WantedDetail() {
                     } catch { /* ignore */ }
                 }
             } catch (e) {
-                console.error(e);
                 if (alive) setData(null);
             } finally {
                 if (alive) setLoading(false);
@@ -251,7 +250,6 @@ export default function WantedDetail() {
             }
             throw new Error(message);
         } catch (err) {
-            console.error('❌ onDelete error:', err);
             const msg = String(err?.message || '');
             if (msg.includes('권한') || msg.includes('403')) {
                 alert('삭제 권한이 없습니다. 본인이 작성한 글만 삭제할 수 있습니다.');

@@ -14,11 +14,8 @@ const ChatRoomWrapper = () => {
             const userObj = JSON.parse(userJson);
             username = userObj.username || '익명';
         } catch (e) {
-            console.error('❌ user 파싱 실패', e);
         }
     }
-
-    console.log("✅ 현재 사용자:", username);
 
     return <ChatRoom chatId={chatId} username={username} />;
 };

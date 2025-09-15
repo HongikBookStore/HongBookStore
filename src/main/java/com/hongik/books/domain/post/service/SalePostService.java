@@ -28,6 +28,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// ✅ 추가: detail(학과/전공) 값을 항상 한국어로 맞추기
+import com.hongik.books.domain.post.support.DepartmentNormalizer;
+
 /**
  * 판매 게시글 관련 비즈니스 로직을 처리하는 서비스
  */
@@ -75,11 +78,14 @@ public class SalePostService {
                     return bookRepository.save(newBook);
                 });
 
+        // ✅ detail(학과/전공)만 KO로 정규화해서 카테고리 연결
+        String detailKo = DepartmentNormalizer.toKoreanOrNull(request.getDetailCategory());
+
         // 카테고리 지정(선택): main/sub/detail이 들어오면 Book에 연결
         attachCategoriesIfPresent(book,
-                (request.getMainCategory()),
-                (request.getSubCategory()),
-                (request.getDetailCategory()));
+                request.getMainCategory(),
+                request.getSubCategory(),
+                detailKo);
 
         SalePost newSalePost = createNewSalePost(request, seller, book);
         // 본문 모더레이션 결과 반영 (WARN 또는 BLOCK 허용 시 기록, OFF는 null)
@@ -127,11 +133,14 @@ public class SalePostService {
                 .build();
         bookRepository.save(newBook);
 
+        // ✅ detail(학과/전공)만 KO로 정규화해서 카테고리 연결
+        String detailKo = DepartmentNormalizer.toKoreanOrNull(request.getDetailCategory());
+
         // 카테고리 지정(선택)
         attachCategoriesIfPresent(newBook,
-                (request.getMainCategory()),
-                (request.getSubCategory()),
-                (request.getDetailCategory()));
+                request.getMainCategory(),
+                request.getSubCategory(),
+                detailKo);
 
         SalePost newSalePost = createNewSalePost(request, seller, newBook);
         if (contentModeration != null) {
@@ -154,10 +163,12 @@ public class SalePostService {
      * 판매 게시글 목록을 페이지네이션 및 동적 조건으로 조회
      */
     public Page<SalePostSummaryResponseDTO> getSalePosts(PostSearchCondition condition, Pageable pageable) {
-        // 범위 검증은 @Validated + DTO(@AssertTrue)에서 수행
+        // ✅ 다국어로 들어오는 카테고리 필터도 KO로 정규화 후 검색
+        String categoryKo = DepartmentNormalizer.toKoreanOrNull(condition.getCategory());
+
         Specification<SalePost> spec = Specification.allOf(
                 PostSpecification.hasQuery(condition.getQuery()),
-                PostSpecification.inCategory(condition.getCategory()),
+                PostSpecification.inCategory(categoryKo),
                 PostSpecification.priceBetween(condition.getMinPrice(), condition.getMaxPrice())
         );
 
@@ -297,7 +308,7 @@ public class SalePostService {
                     .tearCondition(req.getTearCondition())
                     .waterCondition(req.getWaterCondition())
                     .negotiable(req.isNegotiable())
-                    // ✅ 추가 매핑
+                    // ✅ 추가 매핑 (위치코드만 기존대로 유지)
                     .oncampusPlaceCode(req.getOncampusPlaceCode())
                     .offcampusStationCode(req.getOffcampusStationCode())
                     .build();
@@ -313,7 +324,7 @@ public class SalePostService {
                     .tearCondition(req.getTearCondition())
                     .waterCondition(req.getWaterCondition())
                     .negotiable(req.isNegotiable())
-                    // ✅ 추가 매핑
+                    // ✅ 추가 매핑 (위치코드만 기존대로 유지)
                     .oncampusPlaceCode(req.getOncampusPlaceCode())
                     .offcampusStationCode(req.getOffcampusStationCode())
                     .build();

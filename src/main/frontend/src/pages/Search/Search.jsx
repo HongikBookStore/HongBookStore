@@ -251,7 +251,6 @@ const Search = () => {
         currentPage: response.data.number,
       });
     } catch (error) {
-      console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
     } finally {
       setLoading(false);
     }

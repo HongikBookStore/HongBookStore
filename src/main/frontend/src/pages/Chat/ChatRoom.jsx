@@ -245,11 +245,11 @@ const MessageStatus = styled.div`
 
 const StatusIcon = styled.span`
   color: ${props => {
-    if (props.$status === 'sending') return '#ffa726';
-    if (props.$status === 'read') return '#2196f3';
-    if (props.$status === 'failed') return '#f44336';
-    return '#9e9e9e';
-  }};
+  if (props.$status === 'sending') return '#ffa726';
+  if (props.$status === 'read') return '#2196f3';
+  if (props.$status === 'failed') return '#f44336';
+  return '#9e9e9e';
+}};
   font-size: 0.8rem;
 `;
 
@@ -672,6 +672,54 @@ const ChatRoom = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
 
+  // === Reservation system banner state (avoid duplicate injections) ===
+  const reservationBannerKeyRef = useRef('');
+
+  // 날짜 문자열을 간단히 표기 (시간 제거)
+  function formatDateLabel(dateStr) {
+    if (!dateStr) return '';
+    const s = String(dateStr).trim();
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) {
+      const mm = String(parseInt(m[2], 10));
+      const dd = String(parseInt(m[3], 10));
+      return `${mm}/${dd}`;
+    }
+    return s;
+  }
+
+  // 예약 안내문 생성 (시간 없이 날짜+장소만)
+  function buildReservationText(info, status) {
+    const s = String(status || info?.status || '').toUpperCase();
+    const rawDate =
+        info?.reservedDate || info?.date || info?.reservedAt ||
+        info?.when || info?.meetAt || info?.scheduledAt || info?.time;
+    const place =
+        info?.placeLabel || info?.placeName || info?.place ||
+        info?.locationName || info?.location || info?.address || '';
+    const base =
+        s === 'CONFIRMED' ? '예약이 승인되었습니다' :
+            s === 'REQUESTED' ? '예약 요청이 전송되었습니다' :
+                '예약 안내';
+    const dateLabel = rawDate ? formatDateLabel(rawDate) : null;
+    return [base, dateLabel, place].filter(Boolean).join(' · ');
+  }
+
+  // 시스템 메시지로 1회 주입
+  const injectReservationBanner = (info) => {
+    if (!info) return;
+    const key = [info.id, info.status, info.reservedAt || info.date || info.when, info.placeLabel || info.placeName || info.location || info.address].join('|');
+    if (reservationBannerKeyRef.current === key) return;
+    reservationBannerKeyRef.current = key;
+    const text = buildReservationText(info);
+    if (!text) return;
+    setMessages(prev => ([
+      ...prev,
+      { id: `res-banner-${Date.now()}`, type: 'system', message: text, sentAt: new Date().toISOString(), meta: { reservationBanner: true, key } }
+    ]));
+  };
+
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportEtcText, setReportEtcText] = useState(''); // ✅ 기타 상세 입력
@@ -814,7 +862,6 @@ const ChatRoom = () => {
           }
         }
       } catch (err) {
-        console.error(t('chat.chatRoomError'), err);
       }
     }
     loadRoomInfo();
@@ -831,11 +878,11 @@ const ChatRoom = () => {
         const data = await res.json();
         setMessages(data);
       } catch (err) {
-        console.error(t('chat.chatListError'), err);
       }
     };
     loadPreviousMessages();
   }, [roomId]);
+
 
   /* ------------------------------ 예약 상태 로드 ------------------------------ */
   useEffect(() => {
@@ -855,21 +902,23 @@ const ChatRoom = () => {
         setIsPending(st === 'REQUESTED');
         setIsReserved(st === 'CONFIRMED');
         setIsCompleted(st === 'COMPLETED');
-        if (r.placeLabel) setSelectedPlace(r.placeLabel);
-        if (r.reservedAt) {
-          const parsed = new Date(r.reservedAt.toString().replace(' ', 'T'));
-          setSelectedDate({
-            date: parsed.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }),
-            iso: normalizeDateTime(r.reservedAt),
-            weather: null
-          });
+
+        if (r.placeLabel || r.placeName || r.location || r.address) {
+          setSelectedPlace(r.placeLabel || r.placeName || r.location || r.address);
         }
+        const raw =
+            r.reservedDate || r.date || r.reservedAt ||
+            r.when || r.meetAt || r.scheduledAt || r.time;
+        if (raw) {
+          setSelectedDate({ date: formatDateLabel(raw), iso: String(raw), weather: null });
+        }
+
+        injectReservationBanner(r);
       } catch (e) {
-        console.error(t('chat.reservationFailed'), e);
+        // ignore
       }
     })();
   }, [roomId]);
-
   /* -------------------------------- STOMP -------------------------------- */
   useEffect(() => {
     if (!roomId) return;
@@ -927,7 +976,7 @@ const ChatRoom = () => {
           setIsCompleted(false);
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationRequested'), sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: buildReservationText(data, 'REQUESTED'), sentAt: new Date().toISOString() , meta: { reservationBanner: true } }
           ]));
         }
 
@@ -938,7 +987,7 @@ const ChatRoom = () => {
           setPostStatus('reserved');
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: buildReservationText(data, 'CONFIRMED'), sentAt: new Date().toISOString() , meta: { reservationBanner: true } }
           ]));
         }
 
@@ -1053,7 +1102,6 @@ const ChatRoom = () => {
       if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
       if (st === 'sold_out') { alert(t('chat.alreadySold')); return; }
     } catch (e) {
-      console.warn(t('chat.reservationFailed'), e);
     }
     setShowReserveModal(true);
   };
@@ -1072,7 +1120,7 @@ const ChatRoom = () => {
       const base = {
         meetType,
         placeLabel: selectedPlace,
-        reservedAt: normalizeDateTime(selectedDate.iso)
+        reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate)
       };
       const payload =
           meetType === 'on'
@@ -1095,10 +1143,9 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.reservationRequestSent'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: buildReservationText({ reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate), placeLabel: selectedPlace }, 'REQUESTED'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationFailed'));
     }
   };
@@ -1107,29 +1154,34 @@ const ChatRoom = () => {
   const handleAcceptReservation = async () => {
     if (!reservationId) return;
     try {
-      await apiAcceptReservation(roomId, reservationId);
+      const res = await apiAcceptReservation(roomId, reservationId);
 
       setIsPending(false);
       setIsReserved(true);
       setIsCompleted(false);
 
+      // 게시글 상태 reserved + buyerId 필수 전달
       try {
-        const buyerForPatch = buyerId || currentUserId;
-        if (salePostId) {
-          await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
+        if (salePostId && buyerId) {
+          await patchPostStatus(salePostId, 'reserved', buyerId); // ← 핵심
           setPostStatus('reserved');
         }
       } catch (e) {
-        console.error(t('chat.reservationAcceptFailed'), e);
+        console.error('게시글 상태 reserved 설정 실패:', e);
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
+        {
+          id: Date.now(),
+          type: 'system',
+          message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.',
+          sentAt: new Date().toISOString()
+        }
       ]));
     } catch (e) {
       console.error(e);
-      alert(t('chat.reservationAcceptFailed'));
+      alert('예약 수락에 실패했습니다.');
     }
   };
 
@@ -1149,7 +1201,6 @@ const ChatRoom = () => {
         if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
       } catch {}
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationDeclineFailed'));
     }
   };
@@ -1173,35 +1224,42 @@ const ChatRoom = () => {
         if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
       } catch {}
     } catch (e) {
-      console.error(e);
       alert(t('chat.reservationCancelFailed'));
     }
   };
 
   const handleComplete = async () => {
     if (!reservationId) return;
-    if (!isSeller) { alert(t('chat.sellerOnly')); return; }
-    if (isCompleted) { alert(t('chat.alreadyCompleted')); return; }
+    if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
+    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
+
     try {
+      // 1) 예약 완료 처리 (백엔드 예약 상태: COMPLETED)
       await apiCompleteReservation(roomId, reservationId);
+
       setIsPending(false);
       setIsReserved(false);
       setIsCompleted(true);
 
+      // 2) 게시글 상태 SOLD_OUT + buyerId 필수 전달
       try {
-        if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
+        if (!salePostId) throw new Error('salePostId 없음');
+        if (!buyerId) throw new Error('buyerId 없음(거래 상대 사용자 ID)');
+
+        await patchPostStatus(salePostId, 'sold_out', buyerId); // ← 핵심
+        setPostStatus('sold_out');
       } catch (e) {
-        console.error(t('chat.completeTransactionFailed'), e);
-        alert(t('chat.completeTransactionFailed'));
+        console.error('게시글 상태 sold_out 설정 실패:', e);
+        alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다. (구매자 ID 필요)');
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       console.error(e);
-      alert(t('chat.completeTransactionFailed'));
+      alert('거래 완료 처리에 실패했습니다.');
     }
   };
 
@@ -1256,7 +1314,6 @@ const ChatRoom = () => {
       setShowReportModal(false);
       setShowReportExitModal(true);
     } catch (err) {
-      console.warn('report failed:', err);
       alert(t('chat.reportFailed'));
       setShowReportModal(false);
     }
@@ -1299,7 +1356,6 @@ const ChatRoom = () => {
         const r = await fetchWeeklyWeather({ lat, lng, sido });
         setWeeklyWeather(r);
       } catch (e) {
-        console.error(e);
         setWeeklyWeather(null);
       } finally {
         setWeatherLoading(false);

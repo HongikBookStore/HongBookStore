@@ -182,7 +182,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       
       setShowAllReviews(false);
     } catch (e) {
-      console.error(e);
     }
   };
 
@@ -237,7 +236,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       const data = await res.json(); // { urls: [...] }
       return data.urls || [];
     } catch {
-      console.warn('사진 업로드 실패 또는 엔드포인트 없음 → 사진 없이 진행');
       return [];
     }
   }
@@ -321,7 +319,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       await fetchReviews();
       showToast('리뷰가 등록되었습니다.');
     } catch (e) {
-      console.error(e);
       showToast(t('map.reviewRegistrationFailed'));
     }
   };
@@ -351,7 +348,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
       showToast('리뷰 삭제에 실패했습니다.');
     } catch (e) {
-      console.error(e);
       showToast('리뷰 삭제에 실패했습니다.');
     }
   };
@@ -431,40 +427,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
-      
-      if (!response.ok) {
-        // 실패 시 이전 상태로 롤백
-        setUserReactions(prev => ({ ...prev, [reviewId]: currentReaction }));
-        setReviews(prev => prev.map(review => 
-          review.id === reviewId ? currentReview : review
-        ));
-        throw new Error('반응 저장 실패');
-      }
-      
-      // 서버 응답에서 업데이트된 데이터 가져오기 (선택적)
-      try {
-        const updatedData = await response.json();
-        if (updatedData.likes !== undefined || updatedData.dislikes !== undefined) {
-          setReviews(prev => prev.map(review => 
-            review.id === reviewId 
-              ? { 
-                  ...review, 
-                  userReaction: updatedData.userReaction || newReaction,
-                  likes: updatedData.likes !== undefined ? updatedData.likes : review.likes,
-                  dislikes: updatedData.dislikes !== undefined ? updatedData.dislikes : review.dislikes
-                }
-              : review
-          ));
-        }
-      } catch (parseError) {
-        // 서버 응답이 JSON이 아닌 경우 무시 (이미 UI는 업데이트됨)
-        console.log('서버 응답 파싱 실패, UI 업데이트는 이미 완료됨');
-      }
-      
-    } catch (e) { 
-      console.error(e);
-      showToast('반응을 저장하는데 실패했습니다.');
-    }
+      await fetchReviews();
+    } catch (e) { }
   };
   
   const handleDislikeReview = async (reviewId) => {
@@ -509,40 +473,8 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
-      
-      if (!response.ok) {
-        // 실패 시 이전 상태로 롤백
-        setUserReactions(prev => ({ ...prev, [reviewId]: currentReaction }));
-        setReviews(prev => prev.map(review => 
-          review.id === reviewId ? currentReview : review
-        ));
-        throw new Error('반응 저장 실패');
-      }
-      
-      // 서버 응답에서 업데이트된 데이터 가져오기 (선택적)
-      try {
-        const updatedData = await response.json();
-        if (updatedData.likes !== undefined || updatedData.dislikes !== undefined) {
-          setReviews(prev => prev.map(review => 
-            review.id === reviewId 
-              ? { 
-                  ...review, 
-                  userReaction: updatedData.userReaction || newReaction,
-                  likes: updatedData.likes !== undefined ? updatedData.likes : review.likes,
-                  dislikes: updatedData.dislikes !== undefined ? updatedData.dislikes : review.dislikes
-                }
-              : review
-          ));
-        }
-      } catch (parseError) {
-        // 서버 응답이 JSON이 아닌 경우 무시 (이미 UI는 업데이트됨)
-        console.log('서버 응답 파싱 실패, UI 업데이트는 이미 완료됨');
-      }
-      
-    } catch (e) { 
-      console.error(e);
-      showToast('반응을 저장하는데 실패했습니다.');
-    }
+      await fetchReviews();
+    } catch (e) {}
   };
 
   const getTypeName = useMemo(() => (type) =>
@@ -608,7 +540,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           }
         }, 0);
       } catch (e) {
-        console.error('네이버 지도 로드 실패:', e);
       }
     };
     if (isOpen && activeTab === 'route') init();
@@ -656,7 +587,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           pathLatLngs.forEach(ll => bounds.extend(ll));
           map.fitBounds(bounds);
         } catch (err) {
-          console.error(err);
         }
       } else {
         map.setCenter(dest);
@@ -681,7 +611,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
       setStartResults(items);
     } catch (e) {
-      console.error('출발지 검색 실패:', e);
       showToast('검색에 실패했습니다.');
     } finally {
       setSearching(false);

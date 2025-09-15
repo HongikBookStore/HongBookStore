@@ -43,8 +43,6 @@ export function AuthProvider({ children }) {
           setUser(normalized);
           localStorage.setItem('user', JSON.stringify(normalized));
         }  catch (error) {
-          // 토큰이 유효하지 않은 경우 등...
-          console.error("자동 로그인 실패. 토큰을 삭제합니다.", error);
           // 실패 시 토큰을 지우고 로그아웃 처리
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
@@ -99,7 +97,6 @@ export function AuthProvider({ children }) {
       setUser(normalized);
       localStorage.setItem('user', JSON.stringify(normalized));
     } catch (e) {
-      console.error('사용자 정보 새로고침 실패', e);
     }
   };
 

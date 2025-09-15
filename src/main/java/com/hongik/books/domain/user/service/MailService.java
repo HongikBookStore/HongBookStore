@@ -42,7 +42,6 @@ public class MailService {
      */
     public void sendEmailHtml(String to, String subject, String text, String html) {
         if (from == null || from.isBlank()) {
-            log.error("'email.from' 또는 'spring.mail.username'이 설정되지 않았습니다. 메일 전송을 건너뜁니다.");
             return;
         }
 
@@ -55,11 +54,8 @@ public class MailService {
             // text는 일반 텍스트 본문, html은 HTML 본문으로 설정
             helper.setText(text, html);
             mailSender.send(message);
-            log.info("Verification email sent via Gmail SMTP. to={}", to);
         } catch (MessagingException e) {
-            log.error("Failed to compose email message: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error sending email: {}", e.getMessage());
         }
     }
 
@@ -122,7 +118,6 @@ public class MailService {
             byte[] bytes = resource.getContentAsByteArray();
             return new String(bytes, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.error("Failed to load email template {}: {}", classpathLocation, e.getMessage());
             return "";
         }
     }

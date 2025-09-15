@@ -136,7 +136,6 @@ public class PlaceService {
             itemsNode.forEach(items::add);
             return items;
         } catch (Exception e) {
-            log.debug("[places] naver fetch fail for '{}': {}", q, e.toString());
             return List.of();
         }
     }

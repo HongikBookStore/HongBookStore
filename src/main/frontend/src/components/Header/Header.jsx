@@ -457,7 +457,6 @@ const Header = () => {
   const isHome = location.pathname === '/';
   
   
-
   // 외부 클릭 시 유저 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -482,7 +481,6 @@ const Header = () => {
       await logout();
       navigate('/');
     } catch (error) {
-      console.error("로그아웃 처리 중 에러 발생", error);
       alert("로그아웃 중 문제가 발생했습니다.");
     }
   };
@@ -524,7 +522,6 @@ const Header = () => {
         setPendingNavigation(null);
       }
     } catch (error) {
-      console.error('임시저장 실패:', error);
       setShowWarningModal(false);
       if (pendingNavigation) {
         navigate(pendingNavigation);
@@ -542,7 +539,6 @@ const Header = () => {
         if (parsedUser && parsedUser.username) return parsedUser.username.charAt(0).toUpperCase();
       }
     } catch (error) {
-      console.error('사용자 정보 파싱 오류:', error);
     }
     return 'U';
   };
@@ -553,7 +549,6 @@ const Header = () => {
       const localUser = localStorage.getItem('user');
       return localUser ? JSON.parse(localUser) : null;
     } catch (error) {
-      console.error('사용자 정보 파싱 오류:', error);
       return null;
     }
   };

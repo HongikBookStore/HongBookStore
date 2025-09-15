@@ -108,7 +108,6 @@ const NaverMapComponent = forwardRef(({
         } else {
             const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
             if (!clientId) {
-                console.error('Naver Maps Client ID가 .env 파일에 설정되지 않았습니다.');
                 return;
             }
             if (!isNaverMapScriptLoaded) {
@@ -117,7 +116,6 @@ const NaverMapComponent = forwardRef(({
                 script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
                 script.async = true;
                 script.onerror = (error) => {
-                    console.error('네이버 지도 스크립트 로드에 실패했습니다:', error);
                     isNaverMapScriptLoaded = false;
                 };
                 script.onload = () => initMap();

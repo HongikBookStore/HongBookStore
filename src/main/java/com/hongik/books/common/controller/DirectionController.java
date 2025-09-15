@@ -2,6 +2,7 @@ package com.hongik.books.common.controller;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +21,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  * - 프론트에 키 노출 방지
  * - 호출 예: GET /api/directions/driving?start=127.1058342,37.359708&goal=129.075986,35.179470&option=traoptimal
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/directions")
 @RequiredArgsConstructor
@@ -37,8 +39,18 @@ public class DirectionController {
 
     @PostConstruct
     public void checkKeys() {
-        System.out.println("ID: " + clientId);
-        System.out.println("SECRET: " + clientSecret);
+        // 값 출력 금지
+        // 필요하면 디버그 레벨에서 마스킹만
+        if (log.isDebugEnabled()) {
+            log.debug("Naver keys loaded. clientId(masked)={}, clientSecret(masked)={}",
+                    mask(clientId), mask(clientSecret));
+        }
+    }
+    private String mask(String v) {
+        if (v == null) return "null";
+        int n = v.length();
+        if (n <= 4) return "*".repeat(n);
+        return v.substring(0, 2) + "*".repeat(n - 4) + v.substring(n - 2);
     }
 
     @GetMapping("/driving")
