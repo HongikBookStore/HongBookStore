@@ -1336,7 +1336,7 @@ const PostDetail = () => {
                     </OtherBooksGrid>
                 ) : (
                     <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                      😅 판매자가 등록한 다른 책이 없어요
+                      {t('noOtherSell')}
                     </div>
                 )}
               </ModalContent>

@@ -1291,5 +1291,6 @@
   "used2": "Discounts based on the degree of tearing of bookshelves, covers, etc.",
   "used3": "Discounts based on the degree of water stains or marks",
   "used4": "Applies to all used books, not just new ones.",
-  "about": "approximately"
+  "about": "approximately",
+  "noOtherSell": "😅 There are no other books registered by the seller."
 } 
