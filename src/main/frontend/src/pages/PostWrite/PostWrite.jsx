@@ -1010,14 +1010,10 @@ const PostWrite = () => {
 
   // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
-    console.log('PostWrite 컴포넌트 마운트됨');
-    console.log('startWriting 호출 전');
     startWriting('sale');
-    console.log('startWriting 호출 후');
     loadDraftData();
 
     return () => {
-      console.log('PostWrite 컴포넌트 언마운트됨');
       stopWriting();
     };
   }, [startWriting, stopWriting, loadDraftData]);

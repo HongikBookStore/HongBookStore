@@ -8,6 +8,7 @@ import NaverMap from '../../components/NaverMap/Navermap';
 import UserCategory from '../../components/UserCategory/UserCategory';
 import PlaceDetailModal from '../../components/PlaceDetailModal/PlaceDetailModal';
 import { useLocation } from '../../contexts/LocationContext';
+import { Loading } from '../../components/ui';
 
 /* ==================== axios 인스턴스 ==================== */
 const API_BASE =
@@ -489,9 +490,6 @@ const MapPage = () => {
               <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
                 <FaSyncAlt /> {loadingDB ? t('map.loading') : t('map.refresh')}
               </AddButton>
-              <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
-                <FaSyncAlt /> {loadingDB ? t('map.loading') : t('map.refresh')}
-              </AddButton>
             </HeaderButtons>
 
             {!loadingCats && userCategories.length === 0 && (
@@ -539,7 +537,9 @@ const MapPage = () => {
                 </SelectedCatHeader>
 
                 {loadingSelectedCat ? (
-                    <EmptyText>{t('map.loading')}</EmptyText>
+                    <EmptyText>
+                      <Loading type="hongbook" size="sm" subtext="장소를 불러오고 있어요" />
+                    </EmptyText>
                 ) : selectedCategoryPlaces.length === 0 ? (
                     <EmptyText>{t('map.noPlacesInCategory')}</EmptyText>
                 ) : (

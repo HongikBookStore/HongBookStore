@@ -39,7 +39,7 @@ const SubMenuButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: ${props => props.active ? 'var(--shadow-lg)' : 'none'};
+  box-shadow: ${props => props.$active ? 'var(--shadow-lg)' : 'none'};
   min-width: 140px;
   text-align: center;
   position: relative;
@@ -97,7 +97,7 @@ const SidebarMenu = ({ active, onMenuClick }) => {
         {menus.map(menu => (
           <SubMenuButton
             key={menu.key}
-            active={active === menu.key}
+            $active={active === menu.key}
             onClick={() => onMenuClick(menu.key)}
           >
             {menu.label}
