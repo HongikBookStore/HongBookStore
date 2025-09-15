@@ -1229,7 +1229,18 @@ const PostDetail = () => {
                         </SellerRating>
                     )}
                     <div>
-                      <button onClick={() => navigate(`/users/${post.sellerId}`)} style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}>{t('postDetail.seller.profile')}</button>
+                      <button
+                        onClick={() =>
+                            navigate(`/users/${post.sellerId}`, {
+                              state: {
+                                username: post.sellerNickname || post.sellerUsername || post.sellerName || ''
+                              }
+                            })
+                        }
+                        style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}
+                    >
+                      {t('postDetail.seller.profile')}
+                    </button>
                     </div>
                     {post.sellerSalesCount && (
                         <SalesCount>{t('postDetail.seller.salesCount', { count: post.sellerSalesCount })}</SalesCount>
