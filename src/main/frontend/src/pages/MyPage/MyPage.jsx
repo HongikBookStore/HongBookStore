@@ -11,6 +11,8 @@ import Modal from '../../components/ui/Modal';
 // 지도 선택 기능 제거로 NaverMap import 불필요
 import { openDaumPostcode } from '../../utils/daumPostcode';
 import { AuthCtx } from '../../contexts/AuthContext';
+import AdminReportCard from './AdminReportCard.jsx';
+
 
 const MyPageContainer = styled.div`
   padding: 2rem 1rem 4rem;
@@ -33,9 +35,21 @@ const MyPageContainer = styled.div`
     gap: 3rem;
     display: grid;
     grid-template-columns: 0.8fr 1.2fr;
+    grid-template-columns: minmax(540px, 1fr) 1fr;
     grid-template-rows: auto;
     align-items: start;
   }
+`;
+// 왼쪽/오른쪽 칼럼 래퍼
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  @media (min-width: 1024px) { grid-column: 1 / 2; }
+`;
+
+const RightColumn = styled.div`
+  @media (min-width: 1024px) { grid-column: 2 / 3; }
 `;
 
 const ProfileCard = styled.div`
@@ -317,6 +331,7 @@ const SettingsContainer = styled.div`
   
   @media (min-width: 1024px) {
     gap: 2.5rem;
+    grid-column: 2 / 3;   /* 오른쪽 칼럼 고정 */
   }
 `;
 
@@ -1312,6 +1327,7 @@ const MyPage = () => {
 
   return (
     <MyPageContainer>
+      <LeftColumn>
       <ProfileCard>
         <ProfileImageBig style={{
           '--score-color': getScoreColor(overallPercent),
@@ -1461,6 +1477,9 @@ const MyPage = () => {
           </div>
         </ProfileInfoBox>
       </ProfileCard>
+
+      <AdminReportCard />
+      </LeftColumn>
 
       {/* 오른쪽 열 - 설정 섹션들 */}
       <SettingsContainer>
