@@ -1285,7 +1285,6 @@ const MyPage = () => {
         localStorage.setItem('user', JSON.stringify({ ...userObj, profileImage: newUrl, profileImageUrl: newUrl }));
       } catch (_) {}
     } catch (err) {
-      console.error(t('mypage.profileImageUploadFailed'), err);
       alert(err?.response?.data?.message || t('mypage.profileImageUploadError'));
     } finally {
       // 같은 파일 재선택 가능하도록 input 리셋
