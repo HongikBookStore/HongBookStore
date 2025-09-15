@@ -122,7 +122,6 @@
     "evaluationItem": "평가 항목",
     "weight": "가중치",
     "discountByStatus": "상태별 할인율",
-    "description": "상세 설명",
     "writingStatus": "필기 상태",
     "tearStatus": "찢어짐 정도",
     "waterStatus": "물흘림 정도",
@@ -471,11 +470,22 @@
     "reportModal": {
       "title": "신고하기",
       "selectReason": "신고 사유를 선택해주세요",
+      "detailedReason": "세부 사유",
+      "detailedReasonPlaceholder": "자세한 신고 사유를 입력해주세요.",
+      "submitted": "신고가 접수되었습니다.",
+      "thankYou": "빠르게 검토하겠습니다. 제보해주셔서 감사합니다.",
       "otherReason": "기타 사유를 입력해주세요",
       "submit": "신고하기",
       "cancel": "취소",
       "success": "신고가 접수되었습니다",
-      "successMessage": "신고해주셔서 감사합니다. 검토 후 조치하겠습니다."
+      "successMessage": "신고해주셔서 감사합니다. 검토 후 조치하겠습니다.",
+      "close": "닫기",
+      "options": {
+        "abuse": "욕설/비방",
+        "fraud": "사기/허위매물",
+        "spam": "스팸/광고",
+        "other": "기타"
+      }
     },
     "condition": {
       "excellent": "상",
@@ -532,22 +542,6 @@
       "saving": "저장 중...",
       "save": "저장"
     },
-    "reportModal": {
-      "selectReason": "신고 사유를 선택하세요",
-      "detailedReason": "세부 사유",
-      "detailedReasonPlaceholder": "자세한 신고 사유를 입력해주세요.",
-      "submitted": "신고가 접수되었습니다.",
-      "thankYou": "빠르게 검토하겠습니다. 제보해주셔서 감사합니다.",
-      "options": {
-        "abuse": "욕설/비방",
-        "fraud": "사기/허위매물",
-        "spam": "스팸/광고",
-        "other": "기타"
-      },
-      "cancel": "취소",
-      "submit": "제출",
-      "close": "닫기"
-    },
     "registrationDate": "등록일",
     "viewCount": "조회수"
   },
@@ -600,7 +594,7 @@
     }
   },
   "wantedWrite": {
-    "title": "구해요 글 작성",
+    "title": "구하기 글 쓰기",
     "back": "뒤로가기",
     "basicInfo": "기본 정보",
     "inputMethod": "입력 방식 선택",
@@ -613,21 +607,74 @@
     "authorLabel": "저자",
     "authorPlaceholder": "저자를 입력해주세요",
     "search": {
-      "enterQuery": "검색어를 입력해주세요! 🔍",
-      "noResults": "검색 결과가 없습니다! 다른 키워드로 시도해보세요 📚",
-      "error": "책 검색 중 오류가 발생했습니다! 다시 시도해주세요 😅"
+      "enterQuery": "검색어를 입력해주세요!",
+      "noResults": "검색 결과가 없습니다! 다른 키워드로 시도해보세요",
+      "error": "책 검색 중 오류가 발생했습니다! 다시 시도해주세요",
+      "title": "책 검색",
+      "button": "책 검색하기",
+      "reselect": "다시 선택",
+      "modalTitle": "책 검색",
+      "inputPlaceholder": "ISBN 또는 책 제목으로 검색하세요",
+      "author": "저자",
+      "publisher": "출판사",
+      "noInfo": "정보 없음"
     },
     "validation": {
       "titleOrContent": "제목 또는 요청 내용을 입력해주세요",
       "selectCondition": "상태를 선택해주세요",
       "priceRange": "희망 가격은 {{min}}~{{max}}원 범위로 입력해주세요",
-      "selectCategory": "카테고리를 선택해주세요"
+      "selectCategory": "카테고리를 선택해주세요",
+      "titleRequired": "제목을 입력해주세요",
+      "authorRequired": "저자를 입력해주세요",
+      "priceRequired": "희망 가격을 입력해주세요",
+      "priceInvalid": "올바른 가격을 입력해주세요",
+      "conditionRequired": "상태를 선택해주세요",
+      "categoryRequired": "카테고리를 선택해주세요",
+      "contentRequired": "요청 내용을 입력해주세요",
+      "inappropriateContent": "부적절한 표현이 감지되었습니다"
     },
     "error": {
       "loadDetail": "상세 불러오기 실패",
-      "loginRequired": "로그인이 필요합니다. (userId가 없습니다)",
+      "loginRequired": "로그인이 필요합니다.",
       "updateFailed": "수정 중 오류가 발생했습니다.",
-      "createFailed": "등록 중 오류가 발생했습니다."
+      "createFailed": "등록 중 오류가 발생했습니다.",
+      "requestFailed": "요청에 실패했습니다",
+      "userIdPrompt": "userId가 없습니다. 테스트용 userId를 입력하세요"
+    },
+    "success": {
+      "update": "수정되었습니다",
+      "create": "등록되었습니다"
+    },
+    "condition": {
+      "label": "상태",
+      "select": "상태를 선택해주세요",
+      "high": "상",
+      "medium": "중",
+      "low": "하"
+    },
+    "button": {
+      "searching": "검색 중...",
+      "search": "검색",
+      "updating": "수정 중...",
+      "update": "수정",
+      "registering": "등록 중...",
+      "register": "등록"
+    },
+    "price": {
+      "label": "희망 가격",
+      "placeholder": "희망 가격을 입력해주세요"
+    },
+    "category": {
+      "label": "카테고리",
+      "mainCategory": "대분류",
+      "subCategory": "중분류",
+      "detailCategory": "소분류",
+      "major": "전공",
+      "general": "교양"
+    },
+    "content": {
+      "label": "요청 내용",
+      "placeholder": "예) 교양 수업 과제로 급하게 필요합니다.\n가능하면 밑줄/필기 적은 책이면 좋겠어요."
     }
   },
   "wantedDetail": {
@@ -728,27 +775,6 @@
   "cookiePolicy": "쿠키 정책",
   "accessibility": "접근성",
   "hongikUniversity": "홍익대학교",
-  "profileEmail": "프로필 이메일",
-  "schoolVerification": "학교 이메일 인증",
-  "verified": "인증됨",
-  "notVerified": "미인증",
-  "verifySchoolEmail": "학교 이메일 인증",
-  "enterSchoolEmail": "학교 이메일 입력",
-  "enterVerificationCode": "인증 코드 입력",
-  "sendVerificationCode": "인증 코드 발송",
-  "invalidVerificationCode": "잘못된 인증 코드입니다",
-  "yourSchoolEmailVerified": "학교 이메일이 인증되었습니다",
-  "resendCode": "인증 코드 재발송",
-  "resendCodeIn": "{{sec}}초 후 재발송",
-  "changePassword": "비밀번호 변경",
-  "deleteAccount": "계정 삭제",
-  "locationName": "위치 이름",
-  "address": "주소",
-  "addNewLocation": "새 위치 추가",
-  "cancel": "취소",
-  "defaultLocation": "기본 위치",
-  "setDefault": "기본으로 설정",
-  "deleteLocation": "위치 삭제",
   "myLocation": "나의 위치",
   "change": "수정",
   "totalBooks": "총 책 수",
@@ -763,16 +789,13 @@
   "changePasswordTitle": "비밀번호 변경",
   "currentPassword": "현재 비밀번호",
   "enterCurrentPassword": "현재 비밀번호를 입력하세요",
-  "newPassword": "새 비밀번호",
   "enterNewPassword": "새 비밀번호를 입력하세요",
   "confirmNewPassword": "새 비밀번호 확인",
-  "confirmNewPassword": "새 비밀번호를 다시 입력하세요",
   "passwordHint": "영문 대소문자, 숫자, 특수문자 포함 8~16자",
   "confirm": "확인",
   "currentPasswordRequired": "현재 비밀번호를 입력해주세요.",
   "newPasswordRequired": "새 비밀번호를 입력해주세요.",
   "passwordFormatError": "비밀번호는 영문 대소문자, 숫자, 특수문자를 포함하여 8~16자여야 합니다.",
-  "passwordMismatch": "새 비밀번호가 일치하지 않습니다.",
   "samePasswordError": "새 비밀번호는 현재 비밀번호와 달라야 합니다.",
   "passwordChangeSuccess": "비밀번호가 성공적으로 변경되었습니다.",
   "currentPasswordIncorrect": "현재 비밀번호가 올바르지 않습니다.",
@@ -829,88 +852,6 @@
       "studentVerification": "재학생 인증 방법:\n\n1. 마이페이지에서 '학교 이메일 인증'을 클릭하세요\n2. g.hongik.ac.kr 이메일을 입력하세요\n3. 인증 코드를 확인하고 입력하세요\n\n인증 완료 시 중고 거래 등의 서비스를 제한 없이 이용할 수 있습니다."
     }
   },
-  "wantedWrite": {
-    "title": "구하기 글쓰기",
-    "back": "뒤로가기",
-    "basicInfo": "기본 정보",
-    "inputMethod": "입력 방법",
-    "inputType": {
-      "manual": "직접 입력",
-      "search": "검색으로 입력"
-    },
-    "titleLabel": "제목",
-    "titlePlaceholder": "제목을 입력하세요",
-    "authorLabel": "저자",
-    "authorPlaceholder": "저자를 입력하세요",
-    "search": {
-      "enterQuery": "검색어를 입력하세요",
-      "noResults": "검색 결과가 없습니다",
-      "error": "검색 중 오류가 발생했습니다"
-    },
-    "error": {
-      "loadDetail": "글을 불러오는데 실패했습니다",
-      "loginRequired": "로그인이 필요합니다",
-      "updateFailed": "수정에 실패했습니다",
-      "createFailed": "등록에 실패했습니다",
-      "requestFailed": "요청에 실패했습니다",
-      "userIdPrompt": "userId가 없습니다. 테스트용 userId를 입력하세요"
-    },
-    "success": {
-      "update": "수정되었습니다",
-      "create": "등록되었습니다"
-    },
-    "validation": {
-      "titleRequired": "제목을 입력해주세요",
-      "authorRequired": "저자를 입력해주세요",
-      "priceRequired": "희망 가격을 입력해주세요",
-      "priceInvalid": "올바른 가격을 입력해주세요",
-      "conditionRequired": "상태를 선택해주세요",
-      "categoryRequired": "카테고리를 선택해주세요",
-      "contentRequired": "요청 내용을 입력해주세요",
-      "inappropriateContent": "부적절한 표현이 감지되었습니다"
-    },
-    "condition": {
-      "label": "상태",
-      "select": "상태를 선택해주세요",
-      "high": "상",
-      "medium": "중",
-      "low": "하"
-    },
-    "button": {
-      "searching": "검색 중...",
-      "search": "검색",
-      "updating": "수정 중...",
-      "update": "수정",
-      "registering": "등록 중...",
-      "register": "등록"
-    },
-    "search": {
-      "title": "책 검색",
-      "button": "책 검색하기",
-      "reselect": "다시 선택",
-      "modalTitle": "책 검색",
-      "inputPlaceholder": "ISBN 또는 책 제목으로 검색하세요",
-      "author": "저자",
-      "publisher": "출판사",
-      "noInfo": "정보 없음"
-    },
-    "price": {
-      "label": "희망 가격",
-      "placeholder": "희망 가격을 입력해주세요"
-    },
-    "category": {
-      "label": "카테고리",
-      "mainCategory": "대분류",
-      "subCategory": "중분류",
-      "detailCategory": "소분류",
-      "major": "전공",
-      "general": "교양"
-    },
-    "content": {
-      "label": "요청 내용",
-      "placeholder": "예) 교양 수업 과제로 급하게 필요합니다.\n가능하면 밑줄/필기 적은 책이면 좋겠어요."
-    }
-  },
   "categories": {
     "major": {
       "경영대학": "경영대학",
@@ -961,13 +902,12 @@
     "fetchPostsError": "내 판매글 목록을 불러오는 데 실패했습니다.",
     "fetchWishlistError": "찜 목록을 불러오는 데 실패했습니다.",
     "fetchReviewsError": "후기를 불러오는 중 오류가 발생했습니다.",
-    "all": "전체",
     "loadingPosts": "목록을 불러오는 중...",
     "view": "보기",
     "edit": "수정",
     "unreserve": "예약 해제",
     "delete": "삭제",
-    "wishlist": "찜한 책",
+
     "noWishlist": "찜한 책이 없습니다",
     "loadingWishlist": "찜 목록을 불러오는 중...",
     "removeFromWishlist": "찜 해제",
@@ -989,10 +929,7 @@
     "buyerSelect": "구매자 선택",
     "buyerSelectError": "구매자를 선택하거나 직접 입력해 주세요.",
     "buyerConfirmSuccess": "판매완료로 변경되었습니다.",
-    "buyerConfirmError": "구매자 지정 중 오류가 발생했습니다.",
-    "fetchPostsError": "내 판매글을 불러오는 데 실패했습니다.",
-    "fetchWishlistError": "찜 목록을 불러오는 데 실패했습니다.",
-    "fetchReviewsError": "후기를 불러오는 중 오류가 발생했습니다."
+    "buyerConfirmError": "구매자 지정 중 오류가 발생했습니다."
   },
   "chat": {
     "title": "거래 채팅",
