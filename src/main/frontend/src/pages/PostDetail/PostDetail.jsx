@@ -817,10 +817,10 @@ const PostDetail = () => {
       const response = await axios.get(`/api/posts/seller/${sellerId}`);
       setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id)));
     } catch (error) {
-      setSellerOtherBooks([
-        { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
-        { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
-      ]);
+      //setSellerOtherBooks([
+      //  { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
+      //  { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
+      //]);
     } finally {
       setLoadingOtherBooks(false);
     }
