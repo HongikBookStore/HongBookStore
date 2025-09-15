@@ -161,25 +161,16 @@ const Hero = () => {
 
   const menuItems = [
     {
-      title: t('slides.welcome.title'),
-      description: t('slides.welcome.description'),
-      buttonText: t('slides.welcome.buttonText'),
-      backgroundImage: 'url("/images/onboarding-welcome.png")',
-      background: '#f8f4f0'
+      title: '책거래게시판',
+      path: '/marketplace'
     },
     {
-      title: t('slides.marketplace.title'),
-      description: t('slides.marketplace.description'),
-      buttonText: t('slides.marketplace.buttonText'),
-      backgroundImage: 'url("/images/onboarding-marketplace.png")',
-      background: '#f0f8f8'
+      title: '나의 책방',
+      path: '/mybookstore'
     },
     {
-      title: t('slides.map.title'),
-      description: t('slides.map.description'),
-      buttonText: t('slides.map.buttonText'),
-      backgroundImage: 'url("/images/onboarding-map.png")',
-      background: '#f8f0f8'
+      title: '홍익지도',
+      path: '/hongikmap'
     }
   ];
 

@@ -8,7 +8,7 @@ import axios from 'axios';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/Modal';
-import { Loading } from '../../components/ui';
+import Loading from '../../components/ui/Loading';
 // 지도 선택 기능 제거로 NaverMap import 불필요
 import { openDaumPostcode } from '../../utils/daumPostcode';
 import { AuthCtx } from '../../contexts/AuthContext';
