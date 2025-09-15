@@ -245,11 +245,11 @@ const MessageStatus = styled.div`
 
 const StatusIcon = styled.span`
   color: ${props => {
-    if (props.$status === 'sending') return '#ffa726';
-    if (props.$status === 'read') return '#2196f3';
-    if (props.$status === 'failed') return '#f44336';
-    return '#9e9e9e';
-  }};
+  if (props.$status === 'sending') return '#ffa726';
+  if (props.$status === 'read') return '#2196f3';
+  if (props.$status === 'failed') return '#f44336';
+  return '#9e9e9e';
+}};
   font-size: 0.8rem;
 `;
 
@@ -672,6 +672,54 @@ const ChatRoom = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
 
+  // === Reservation system banner state (avoid duplicate injections) ===
+  const reservationBannerKeyRef = useRef('');
+
+  // 날짜 문자열을 간단히 표기 (시간 제거)
+  function formatDateLabel(dateStr) {
+    if (!dateStr) return '';
+    const s = String(dateStr).trim();
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) {
+      const mm = String(parseInt(m[2], 10));
+      const dd = String(parseInt(m[3], 10));
+      return `${mm}/${dd}`;
+    }
+    return s;
+  }
+
+  // 예약 안내문 생성 (시간 없이 날짜+장소만)
+  function buildReservationText(info, status) {
+    const s = String(status || info?.status || '').toUpperCase();
+    const rawDate =
+        info?.reservedDate || info?.date || info?.reservedAt ||
+        info?.when || info?.meetAt || info?.scheduledAt || info?.time;
+    const place =
+        info?.placeLabel || info?.placeName || info?.place ||
+        info?.locationName || info?.location || info?.address || '';
+    const base =
+        s === 'CONFIRMED' ? '예약이 승인되었습니다' :
+            s === 'REQUESTED' ? '예약 요청이 전송되었습니다' :
+                '예약 안내';
+    const dateLabel = rawDate ? formatDateLabel(rawDate) : null;
+    return [base, dateLabel, place].filter(Boolean).join(' · ');
+  }
+
+  // 시스템 메시지로 1회 주입
+  const injectReservationBanner = (info) => {
+    if (!info) return;
+    const key = [info.id, info.status, info.reservedAt || info.date || info.when, info.placeLabel || info.placeName || info.location || info.address].join('|');
+    if (reservationBannerKeyRef.current === key) return;
+    reservationBannerKeyRef.current = key;
+    const text = buildReservationText(info);
+    if (!text) return;
+    setMessages(prev => ([
+      ...prev,
+      { id: `res-banner-${Date.now()}`, type: 'system', message: text, sentAt: new Date().toISOString(), meta: { reservationBanner: true, key } }
+    ]));
+  };
+
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportEtcText, setReportEtcText] = useState(''); // ✅ 기타 상세 입력
@@ -835,6 +883,7 @@ const ChatRoom = () => {
     loadPreviousMessages();
   }, [roomId]);
 
+
   /* ------------------------------ 예약 상태 로드 ------------------------------ */
   useEffect(() => {
     if (!roomId) return;
@@ -853,20 +902,23 @@ const ChatRoom = () => {
         setIsPending(st === 'REQUESTED');
         setIsReserved(st === 'CONFIRMED');
         setIsCompleted(st === 'COMPLETED');
-        if (r.placeLabel) setSelectedPlace(r.placeLabel);
-        if (r.reservedAt) {
-          const parsed = new Date(r.reservedAt.toString().replace(' ', 'T'));
-          setSelectedDate({
-            date: parsed.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }),
-            iso: normalizeDateTime(r.reservedAt),
-            weather: null
-          });
+
+        if (r.placeLabel || r.placeName || r.location || r.address) {
+          setSelectedPlace(r.placeLabel || r.placeName || r.location || r.address);
         }
+        const raw =
+            r.reservedDate || r.date || r.reservedAt ||
+            r.when || r.meetAt || r.scheduledAt || r.time;
+        if (raw) {
+          setSelectedDate({ date: formatDateLabel(raw), iso: String(raw), weather: null });
+        }
+
+        injectReservationBanner(r);
       } catch (e) {
+        // ignore
       }
     })();
   }, [roomId]);
-
   /* -------------------------------- STOMP -------------------------------- */
   useEffect(() => {
     if (!roomId) return;
@@ -924,7 +976,7 @@ const ChatRoom = () => {
           setIsCompleted(false);
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationRequested'), sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: buildReservationText(data, 'REQUESTED'), sentAt: new Date().toISOString() , meta: { reservationBanner: true } }
           ]));
         }
 
@@ -935,7 +987,7 @@ const ChatRoom = () => {
           setPostStatus('reserved');
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
+            { id: Date.now(), type: 'system', message: buildReservationText(data, 'CONFIRMED'), sentAt: new Date().toISOString() , meta: { reservationBanner: true } }
           ]));
         }
 
@@ -1068,7 +1120,7 @@ const ChatRoom = () => {
       const base = {
         meetType,
         placeLabel: selectedPlace,
-        reservedAt: normalizeDateTime(selectedDate.iso)
+        reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate)
       };
       const payload =
           meetType === 'on'
@@ -1091,7 +1143,7 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.reservationRequestSent'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: buildReservationText({ reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate), placeLabel: selectedPlace }, 'REQUESTED'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       alert(t('chat.reservationFailed'));
@@ -1119,7 +1171,7 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: buildReservationText(data, 'CONFIRMED'), sentAt: new Date().toISOString() , meta: { reservationBanner: true } }
       ]));
     } catch (e) {
       alert(t('chat.reservationAcceptFailed'));
