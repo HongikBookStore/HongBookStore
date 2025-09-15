@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 "/ws-stomp/**",
                                 "/api/naver/**",
                                 "/actuator/health",
+                                "/actuator/health/**",
                                 "/api/directions/**",
                                 "/api/notifications/stream", // 👈 추가
                                 "/", "/login", "/oauth2/**", "/error"

@@ -11,3 +11,7 @@ src/main/frontend
 *.log
 target
 
+# Prevent env files from being baked into images
+.env
+.env.*
+*.env
