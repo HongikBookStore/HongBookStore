@@ -1341,7 +1341,6 @@ const Marketplace = () => {
           )}
         </MarketplaceContainer>
       </MainContent>
-      </div>
     </PageWrapper>
   );
 };
