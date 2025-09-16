@@ -1,4 +1,3 @@
-**/node_modules
 **/.gradle
 **/build
 **/.idea
@@ -8,10 +7,8 @@
 Dockerfile
 src/main/frontend
 *.iml
-*.log
 target
 
 # Prevent env files from being baked into images
 .env
 .env.*
-*.env

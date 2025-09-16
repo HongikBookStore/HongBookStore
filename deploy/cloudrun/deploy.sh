@@ -26,7 +26,18 @@ BOOTSTRAP_SECRETS=false
 SERVICE_ACCOUNT=${SERVICE_ACCOUNT:-}
 
 usage() {
-  sed -n '1,80p' "$0" | sed -n '1,40p'
+  cat <<'USAGE'
+Usage: PROJECT_ID=... REGION=... REPOSITORY=... ./deploy/cloudrun/deploy.sh [flags]
+
+Flags:
+  --allow-unauthenticated     Make the service publicly accessible
+  --env-file <path>           Load non-secret env vars from file
+  --use-secrets               Map secrets listed in secrets.list
+  --secrets-file <path>       Override secrets list path
+  --bootstrap-secrets         Create/update Secret Manager entries
+  --service-account <email>   Deploy with custom runtime service account
+  -h, --help                  Show this help
+USAGE
 }
 
 while [[ $# -gt 0 ]]; do

@@ -87,6 +87,11 @@ dependencies {
 
 }
 
+// Produce a layered jar for better Docker layer caching
+tasks.named('bootJar') {
+    layered { }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }

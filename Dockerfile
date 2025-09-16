@@ -1,6 +1,6 @@
 ## Multi-stage build for Spring Boot 3 (Java 21)
 
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
 
 # Leverage Gradle wrapper
@@ -14,11 +14,14 @@ COPY build.gradle settings.gradle ./
 # Copy sources
 COPY src src
 
-# Build fat jar (skip tests in container build)
+# Build layered jar (skip tests in container build)
 RUN ./gradlew --no-daemon clean bootJar -x test
 
+# Extract layers for better Docker cache reuse
+RUN java -Djarmode=layertools -jar build/libs/*.jar extract
 
-FROM eclipse-temurin:21-jre AS run
+
+FROM eclipse-temurin:21-jre-alpine AS run
 ENV TZ=Asia/Seoul
 WORKDIR /app
 
@@ -26,7 +29,11 @@ WORKDIR /app
 RUN useradd -ms /bin/bash spring
 USER spring
 
-COPY --from=build /workspace/build/libs/*.jar /app/app.jar
+# Copy Spring Boot layers as separate Docker layers
+COPY --from=build /workspace/dependencies/ ./
+COPY --from=build /workspace/snapshot-dependencies/ ./
+COPY --from=build /workspace/spring-boot-loader/ ./
+COPY --from=build /workspace/application/ ./
 
 EXPOSE 8080
 
@@ -34,5 +41,5 @@ EXPOSE 8080
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -Duser.timezone=Asia/Seoul"
 ENV SPRING_PROFILES_ACTIVE=prod
 
-ENTRYPOINT ["java","-jar","/app/app.jar"]
-
+# Spring Boot 3 launcher for exploded layers
+ENTRYPOINT ["java","org.springframework.boot.loader.launch.JarLauncher"]
