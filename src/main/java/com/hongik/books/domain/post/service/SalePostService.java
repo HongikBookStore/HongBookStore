@@ -23,6 +23,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.io.IOException;
 import java.util.List;
@@ -389,5 +391,17 @@ public class SalePostService {
     private static class CategoryTriple {
         final String main; final String sub; final String detail;
         CategoryTriple(String m, String s, String d){ this.main=m; this.sub=s; this.detail=d; }
+    }
+
+    @Transactional(readOnly = true)
+    public List<SalePostSummaryResponseDTO> getSellerPosts(Long sellerId, int limit) {
+        int size = Math.max(1, Math.min(limit, 50));
+        var page = salePostRepository.findAllBySellerId(
+                sellerId,
+                PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        return page.getContent().stream()
+                .map(SalePostSummaryResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 }
