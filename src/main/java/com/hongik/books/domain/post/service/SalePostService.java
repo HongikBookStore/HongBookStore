@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-// ✅ 추가: detail(학과/전공) 값을 항상 한국어로 맞추기
+// ✅ detail(학과/전공) 값을 항상 한국어로 맞추기
 import com.hongik.books.domain.post.support.DepartmentNormalizer;
 
 /**
@@ -64,31 +64,28 @@ public class SalePostService {
         moderationService.checkOrThrow(request.getPostTitle(), titleMode, "postTitle");
         var contentModeration = moderationService.checkOrThrow(request.getPostContent(), contentMode, "postContent");
 
-        // Book 정보는 ISBN을 기반으로 찾되, 없으면 API에서 받은 정보로 새로 생성
+        // Book (ISBN 기반 존재하면 사용, 없으면 신규 생성)
         Book book = bookRepository.findByIsbn(request.getIsbn())
-                .orElseGet(() -> {
-                    Book newBook = Book.builder()
-                            .isbn(request.getIsbn())
-                            .title(request.getBookTitle())
-                            .author(request.getAuthor())
-                            .publisher(request.getPublisher())
-                            .isCustom(false)
-                            .originalPrice(request.getOriginalPrice())
-                            .build();
-                    return bookRepository.save(newBook);
-                });
+                .orElseGet(() -> bookRepository.save(
+                        Book.builder()
+                                .isbn(request.getIsbn())
+                                .title(request.getBookTitle())
+                                .author(request.getAuthor())
+                                .publisher(request.getPublisher())
+                                .isCustom(false)
+                                .originalPrice(request.getOriginalPrice())
+                                .build()
+                ));
 
-        // ✅ detail(학과/전공)만 KO로 정규화해서 카테고리 연결
-        String detailKo = DepartmentNormalizer.toKoreanOrNull(request.getDetailCategory());
+        // ✅ 카테고리 정규화(특히 detail -> KO)
+        CategoryTriple cats = extractCategories(request);
+        // Book-Category 연결(선택)
+        attachCategoriesIfPresent(book, cats.main, cats.sub, cats.detail);
 
-        // 카테고리 지정(선택): main/sub/detail이 들어오면 Book에 연결
-        attachCategoriesIfPresent(book,
-                request.getMainCategory(),
-                request.getSubCategory(),
-                detailKo);
+        // SalePost 생성 (카테고리 필드까지 저장)
+        SalePost newSalePost = createNewSalePost(request, seller, book, cats);
 
-        SalePost newSalePost = createNewSalePost(request, seller, book);
-        // 본문 모더레이션 결과 반영 (WARN 또는 BLOCK 허용 시 기록, OFF는 null)
+        // Moderation 결과 반영
         if (contentModeration != null) {
             newSalePost.applyContentModeration(
                     contentModeration.predictionLevel(),
@@ -98,17 +95,15 @@ public class SalePostService {
                     contentModeration.reason()
             );
         }
-        salePostRepository.save(newSalePost); // SalePost를 먼저 저장하여 ID를 생성
-        uploadAndAttachImages(imageFiles, newSalePost); // 이미지 처리 로직 추가
+
+        salePostRepository.save(newSalePost);
+        uploadAndAttachImages(imageFiles, newSalePost);
         return newSalePost.getId();
     }
 
     /**
      * ISBN 없는 경우 (프린트물 교재 등)
      * [직접 등록]으로 판매 게시글을 생성 (이미지 업로드 포함)
-     * @param request 게시글 정보 DTO
-     * @param sellerId 판매자 ID
-     * @return 생성된 판매 게시글의 ID
      */
     public Long createSalePostCustom(
             SalePostCustomCreateRequestDTO request,
@@ -123,26 +118,24 @@ public class SalePostService {
         moderationService.checkOrThrow(request.getPostTitle(), titleMode, "postTitle");
         var contentModeration = moderationService.checkOrThrow(request.getPostContent(), contentMode, "postContent");
 
-        // 직접 등록이므로 항상 새로운 Book 엔티티를 생성
-        Book newBook = Book.builder()
-                .title(request.getBookTitle())
-                .author(request.getAuthor())
-                .publisher(request.getPublisher())
-                .isCustom(true)
-                .originalPrice(request.getOriginalPrice())
-                .build();
-        bookRepository.save(newBook);
+        // Book 신규 생성
+        Book newBook = bookRepository.save(
+                Book.builder()
+                        .title(request.getBookTitle())
+                        .author(request.getAuthor())
+                        .publisher(request.getPublisher())
+                        .isCustom(true)
+                        .originalPrice(request.getOriginalPrice())
+                        .build()
+        );
 
-        // ✅ detail(학과/전공)만 KO로 정규화해서 카테고리 연결
-        String detailKo = DepartmentNormalizer.toKoreanOrNull(request.getDetailCategory());
+        // ✅ 카테고리 정규화
+        CategoryTriple cats = extractCategories(request);
+        attachCategoriesIfPresent(newBook, cats.main, cats.sub, cats.detail);
 
-        // 카테고리 지정(선택)
-        attachCategoriesIfPresent(newBook,
-                request.getMainCategory(),
-                request.getSubCategory(),
-                detailKo);
+        // SalePost 생성 (카테고리 포함)
+        SalePost newSalePost = createNewSalePost(request, seller, newBook, cats);
 
-        SalePost newSalePost = createNewSalePost(request, seller, newBook);
         if (contentModeration != null) {
             newSalePost.applyContentModeration(
                     contentModeration.predictionLevel(),
@@ -152,18 +145,16 @@ public class SalePostService {
                     contentModeration.reason()
             );
         }
-        salePostRepository.save(newSalePost); // SalePost를 먼저 저장하여 ID를 생성
-
-        uploadAndAttachImages(imageFiles, newSalePost); // 이미지 처리
-
+        salePostRepository.save(newSalePost);
+        uploadAndAttachImages(imageFiles, newSalePost);
         return newSalePost.getId();
     }
 
     /**
-     * 판매 게시글 목록을 페이지네이션 및 동적 조건으로 조회
+     * 판매 게시글 목록 조회
      */
     public Page<SalePostSummaryResponseDTO> getSalePosts(PostSearchCondition condition, Pageable pageable) {
-        // ✅ 다국어로 들어오는 카테고리 필터도 KO로 정규화 후 검색
+        // ✅ 다국어 카테고리 필터 KO로 정규화
         String categoryKo = DepartmentNormalizer.toKoreanOrNull(condition.getCategory());
 
         Specification<SalePost> spec = Specification.allOf(
@@ -177,7 +168,7 @@ public class SalePostService {
     }
 
     /**
-     * 특정 판매 게시글의 상세 정보를 조회, 조회수 1 증가
+     * 특정 판매 게시글 상세 + 조회수 증가
      */
     public SalePostDetailResponseDTO getSalePostById(Long postId) {
         SalePost salePost = findSalePostById(postId);
@@ -186,7 +177,7 @@ public class SalePostService {
     }
 
     /**
-     * 내 판매글 목록을 조회
+     * 내 판매글 목록
      */
     @Transactional(readOnly = true)
     public List<MyPostSummaryResponseDTO> getMySalePosts(Long userId) {
@@ -196,13 +187,12 @@ public class SalePostService {
     }
 
     /**
-     * 판매 게시글을 수정
+     * 판매 게시글 수정
      */
     public void updateSalePost(Long postId, SalePostUpdateRequestDTO request, Long userId) {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
 
-        // 정책 기반 유해 표현 검사
         var titleMode = moderationPolicy.getSalePost().getTitle();
         var contentMode = moderationPolicy.getSalePost().getContent();
         moderationService.checkOrThrow(request.getPostTitle(), titleMode, "postTitle");
@@ -220,16 +210,13 @@ public class SalePostService {
     }
 
     /**
-     * 판매 게시글 수정 시 이미지 추가 업로드
-     * 기존 이미지 수 + 신규 업로드 수가 최대 3장을 초과하지 않도록 제한
+     * 판매 게시글 이미지 추가
      */
     public void addImagesToPost(Long postId, List<MultipartFile> imageFiles, Long userId) throws IOException {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
 
-        if (imageFiles == null || imageFiles.isEmpty()) {
-            return; // 업로드할 이미지가 없는 경우 그대로 종료
-        }
+        if (imageFiles == null || imageFiles.isEmpty()) return;
 
         int existing = salePost.getPostImages() != null ? salePost.getPostImages().size() : 0;
         int incoming = imageFiles.size();
@@ -241,13 +228,12 @@ public class SalePostService {
     }
 
     /**
-     * 판매 게시글의 상태를 변경 (판매중, 예약중, 판매완료)
+     * 상태 변경
      */
     public void updateSalePostStatus(Long postId, SalePostStatusUpdateRequestDTO request, Long userId) {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
         salePost.changeStatus(request.getStatus());
-        // 거래 완료 시 최종 구매자 기록 (필수)
         if (request.getStatus() == SalePost.SaleStatus.SOLD_OUT) {
             if (request.getBuyerId() == null) {
                 throw new IllegalArgumentException("SOLD_OUT 상태로 변경하려면 buyerId가 필요합니다.");
@@ -256,7 +242,6 @@ public class SalePostService {
             if (buyer.getId().equals(salePost.getSeller().getId())) {
                 throw new IllegalArgumentException("판매자 자신을 구매자로 설정할 수 없습니다.");
             }
-            // 해당 게시글의 채팅 상대인지 검증
             var roomOpt = chatRoomRepository.findBySalePostIdAndBuyerIdAndSellerId(
                     salePost.getId(), buyer.getId(), salePost.getSeller().getId()
             );
@@ -268,7 +253,7 @@ public class SalePostService {
     }
 
     /**
-     * 판매 게시글을 삭제 (GCP 이미지 포함)
+     * 삭제
      */
     public void deleteSalePost(Long postId, Long userId) {
         SalePost salePost = findSalePostById(postId);
@@ -294,8 +279,8 @@ public class SalePostService {
         }
     }
 
-    private SalePost createNewSalePost(Object requestDto, User seller, Book book) {
-        // DTO 타입에 따라 분기하여 SalePost 객체 생성 (중복 코드 제거)
+    // ✅ 카테고리까지 포함해서 엔티티 생성
+    private SalePost createNewSalePost(Object requestDto, User seller, Book book, CategoryTriple cats) {
         if (requestDto instanceof SalePostCreateRequestDTO req) {
             return SalePost.builder()
                     .seller(seller)
@@ -308,9 +293,11 @@ public class SalePostService {
                     .tearCondition(req.getTearCondition())
                     .waterCondition(req.getWaterCondition())
                     .negotiable(req.isNegotiable())
-                    // ✅ 추가 매핑 (위치코드만 기존대로 유지)
                     .oncampusPlaceCode(req.getOncampusPlaceCode())
                     .offcampusStationCode(req.getOffcampusStationCode())
+                    .mainCategory(cats.main)
+                    .subCategory(cats.sub)
+                    .detailCategory(cats.detail)
                     .build();
         } else if (requestDto instanceof SalePostCustomCreateRequestDTO req) {
             return SalePost.builder()
@@ -324,9 +311,11 @@ public class SalePostService {
                     .tearCondition(req.getTearCondition())
                     .waterCondition(req.getWaterCondition())
                     .negotiable(req.isNegotiable())
-                    // ✅ 추가 매핑 (위치코드만 기존대로 유지)
                     .oncampusPlaceCode(req.getOncampusPlaceCode())
                     .offcampusStationCode(req.getOffcampusStationCode())
+                    .mainCategory(cats.main)
+                    .subCategory(cats.sub)
+                    .detailCategory(cats.detail)
                     .build();
         }
         throw new IllegalArgumentException("지원하지 않는 요청 타입입니다.");
@@ -348,11 +337,8 @@ public class SalePostService {
         }
     }
 
-    // 서비스 레이어에서는 가격 보정/검증을 하지 않습니다. (DTO @Valid와 엔티티 불변식으로 보장)
-
     // --- Category helpers ---
-    private void attachCategoriesIfPresent(com.hongik.books.domain.book.domain.Book book,
-                                           String main, String sub, String detail) {
+    private void attachCategoriesIfPresent(Book book, String main, String sub, String detail) {
         if (detail == null || detail.isBlank()) return; // leaf 없으면 스킵
         Category leaf = ensureCategoryPath(main, sub, detail);
         boolean exists = book.getBookCategories().stream()
@@ -371,11 +357,37 @@ public class SalePostService {
 
     private Category findOrCreateCategory(String name, Category parent) {
         return parent == null
-                ? categoryRepository.findByNameAndParentIsNull(name).orElseGet(() -> categoryRepository.save(com.hongik.books.domain.book.domain.Category.builder().name(name).parent(null).build()))
-                : categoryRepository.findByNameAndParent(name, parent).orElseGet(() -> categoryRepository.save(com.hongik.books.domain.book.domain.Category.builder().name(name).parent(parent).build()));
+                ? categoryRepository.findByNameAndParentIsNull(name)
+                .orElseGet(() -> categoryRepository.save(Category.builder().name(name).parent(null).build()))
+                : categoryRepository.findByNameAndParent(name, parent)
+                .orElseGet(() -> categoryRepository.save(Category.builder().name(name).parent(parent).build()));
     }
 
     private String normalize(String v, String def) {
         return (v == null || v.isBlank()) ? def : v.trim();
+    }
+
+    // ✅ DTO에서 카테고리 꺼내고 detail은 한국어로 정규화
+    private CategoryTriple extractCategories(Object dto) {
+        String main = null, sub = null, detail = null;
+        if (dto instanceof SalePostCreateRequestDTO r) {
+            main = safe(r.getMainCategory());
+            sub = safe(r.getSubCategory());
+            detail = safe(r.getDetailCategory());
+        } else if (dto instanceof SalePostCustomCreateRequestDTO r) {
+            main = safe(r.getMainCategory());
+            sub = safe(r.getSubCategory());
+            detail = safe(r.getDetailCategory());
+        }
+        // detail만 한글 정규화
+        detail = DepartmentNormalizer.toKoreanOrNull(detail);
+        return new CategoryTriple(safe(main), safe(sub), safe(detail));
+    }
+
+    private String safe(String v) { return (v == null || v.trim().isEmpty()) ? null : v.trim(); }
+
+    private static class CategoryTriple {
+        final String main; final String sub; final String detail;
+        CategoryTriple(String m, String s, String d){ this.main=m; this.sub=s; this.detail=d; }
     }
 }

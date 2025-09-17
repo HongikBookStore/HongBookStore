@@ -1070,7 +1070,7 @@ const PostDetail = () => {
                       {t('postDetail.report')}
                     </ReportButton>
                     )}
-                    
+
                     <LikeButton $liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
                   </TitleActions>
 
@@ -1148,13 +1148,19 @@ const PostDetail = () => {
                 <InfoGrid>
                   <InfoItem>
                     <InfoLabel>{t('postDetail.category')}</InfoLabel>
-                    <InfoValue>{t(post.category)}</InfoValue>
+                    <InfoValue>
+                      {(() => {
+                        const toLabel = (v) => (v && v.includes('.') ? t(v) : v);
+                        if (post.categoryPath) return post.categoryPath.split(' > ').map(toLabel).join(' > ');
+                        if (post.detailCategory) return toLabel(post.detailCategory);
+                        const parts = [post.mainCategory, post.subCategory, post.detailCategory].filter(Boolean).map(toLabel);
+                        if (parts.length) return parts.join(' > ');
+                        if (post.category) return toLabel(post.category);
+                        return t('postDetail.noInfo');
+                      })()}
+                    </InfoValue>
                   </InfoItem>
 
-                  <InfoItem>
-                    <InfoLabel>{t('postDetail.tradeLocation')}</InfoLabel>
-                    <InfoValue>{post.tradeLocation}</InfoValue>
-                  </InfoItem>
 
                   {/* ✅ 교내 기준 위치(사람 친화 라벨) */}
                   <InfoItem>
