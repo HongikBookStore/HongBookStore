@@ -32,6 +32,8 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    // 상단 필드 부분에 한 줄 추가
+    private final com.hongik.books.auth.filter.DeactivatedUserBlockFilter deactivatedUserBlockFilter;
 
     @Bean // 필터 체인 구성
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -104,7 +106,8 @@ public class SecurityConfig {
                         .loginPage("/login") // 프론트엔드의 소셜 로그인 버튼이 있는 페이지
                 )
                 // JWT 인증 필터 추가
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(deactivatedUserBlockFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

@@ -480,6 +480,12 @@ const ActionButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.2);
+  }
 `;
 
 const ChatButton = styled(ActionButton)`
@@ -702,6 +708,20 @@ const normalizePostSummary = (raw) => {
   return { id, title, author, price, originalPrice, postImageUrls: postImageUrls || [], discountRate };
 };
 
+// ✅ 탈퇴 판매자 판별 & 표시명/클릭 가능 여부
+const isSellerDeactivated = (p) =>
+    Boolean(p?.sellerDeactivated) ||
+    /^탈퇴회원#/i.test(String(p?.sellerNickname ?? '')) ||
+    (p?.sellerId == null && /^탈퇴회원#/i.test(String(p?.sellerUsername ?? '')));
+
+const getDisplaySellerName = (p) =>
+    isSellerDeactivated(p)
+        ? '탈퇴한 회원'
+        : (p?.sellerNickname || p?.sellerUsername || p?.sellerName || '익명 사용자');
+
+const isSellerClickable = (p) =>
+    !isSellerDeactivated(p) && !!p?.sellerId;
+
 const PostDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -827,6 +847,10 @@ const PostDetail = () => {
   }, [liked, id, navigate, t]);
 
   const handleChat = useCallback(async () => {
+    if (isSellerDeactivated(post)) {
+      lert('탈퇴한 회원과는 채팅을 시작할 수 없습니다.');
+      return;
+    }
     const salePostId = id;
     const buyerId = user?.id;
     if (!buyerId) {
@@ -842,18 +866,19 @@ const PostDetail = () => {
       const errorMessage = err.response?.data?.message || '채팅방을 열 수 없습니다. 잠시 후 다시 시도해주세요.';
       alert(errorMessage);
     }
-  }, [id, user, navigate]);
+  }, [id, user, navigate, post]);
 
   const handleCall = useCallback(() => {
     alert(t('postDetail.phone.notAvailable'));
   }, [t]);
 
   const handleViewOtherBooks = useCallback(() => {
+    if (isSellerDeactivated(post)) return;
     setShowOtherBooks(prev => !prev);
     if (!showOtherBooks && post?.sellerId) {
       fetchSellerOtherBooks(post.sellerId);
     }
-  }, [showOtherBooks, post?.sellerId, fetchSellerOtherBooks]);
+  }, [showOtherBooks, post, fetchSellerOtherBooks]);
 
   // ✅ 라우팅 경로 수정: 상세 페이지로 이동
   const handleOtherBookClick = useCallback((bookId) => {
@@ -1168,7 +1193,7 @@ const PostDetail = () => {
                     )}
                   </SellerAvatar>
                   <SellerDetails>
-                    <SellerName>{post.sellerNickname || '익명 사용자'}</SellerName>
+                    <SellerName>{getDisplaySellerName(post)}</SellerName>
                     <SellerLocation>
                       <FaMapMarkerAlt />
                       {post.sellerLocation || '위치 정보 없음'}
@@ -1186,11 +1211,20 @@ const PostDetail = () => {
                     <div>
                       <button
                           onClick={() =>
+                              isSellerClickable(post) &&
                               navigate(`/users/${post.sellerId}`, {
                                 state: { username: post.sellerNickname || post.sellerUsername || post.sellerName || '' }
                               })
                           }
-                          style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}
+                          disabled={!isSellerClickable(post)}
+                          style={{
+                            padding:'6px 10px',
+                            border:'1px solid #e0e0e0',
+                            borderRadius:8,
+                            background: isSellerClickable(post) ? '#f8f9fa' : '#f1f3f5',
+                            color: isSellerClickable(post) ? 'inherit' : '#9ca3af',
+                            cursor: isSellerClickable(post) ? 'pointer' : 'not-allowed'
+                          }}
                       >
                         {t('postDetail.seller.profile')}
                       </button>
@@ -1201,11 +1235,14 @@ const PostDetail = () => {
                   </SellerDetails>
                 </SellerInfo>
                 <ActionButtons>
-                  <ChatButton onClick={handleChat}>
+                  <ChatButton onClick={handleChat} disabled={isSellerDeactivated(post)}>
                     <FaComment />
                     {t('postDetail.contact')}
                   </ChatButton>
-                  <ViewOtherBooksButton onClick={handleViewOtherBooks}>
+                  <ViewOtherBooksButton
+                    onClick={handleViewOtherBooks}
+                    disabled={isSellerDeactivated(post)}
+                  >
                     <FaUser />
                     {t('postDetail.viewOtherBooks')} {sellerOtherBooks.length > 0 && `(${sellerOtherBooks.length})`}
                   </ViewOtherBooksButton>
@@ -1220,7 +1257,7 @@ const PostDetail = () => {
               <ModalContent onClick={(e) => e.stopPropagation()}>
                 <ModalHeader>
                   <ModalTitle>
-                    <FaUser /> {post.sellerNickname || t('postDetail.seller.name')}{t('postDetail.seller.otherBooks')}
+                    <FaUser /> {getDisplaySellerName(post)}{t('postDetail.seller.otherBooks')}
                   </ModalTitle>
                   <CloseButton onClick={() => setShowOtherBooks(false)}>
                     <FaTimes />

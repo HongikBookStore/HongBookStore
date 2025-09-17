@@ -8,6 +8,8 @@ import {
   FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle,
   FaChevronLeft, FaChevronRight, FaSearchPlus, FaSearchMinus
 } from 'react-icons/fa';
+import { displayMaskedName, isClickableUser } from '../../utils/nameMask';
+
 
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 const DIRECTIONS_ENDPOINT = '/api/directions/driving';
@@ -150,6 +152,13 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
         id: r.id,
         userId: r.userId ?? r.user_id,
         userName: r.userName ?? r.username,
+        reviewerDeactivated: Boolean(
+            r.userDeactivated ??
+            r.deactivated ??
+            r.userDeactivatedAt ??
+            (typeof r.user_status === 'string' && r.user_status.toUpperCase() === 'DEACTIVATED') ??
+            r.isDeactivated
+        ),
         rating: r.rating,
         content: r.content,
         likes: r.likes,
@@ -628,11 +637,23 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     setStartLabel(addr ? `${title} · ${addr}` : title);
   };
 
-  const maskUserName = (name) => {
-    if (!name) return t('map.anonymous');
-    const trimmed = String(name).trim();
-    if (trimmed.length === 0) return t('map.anonymous');
-    return trimmed[0] + '**';
+  const maskUserName = (rawName, deactivated = false) => {
+    const raw = (rawName ?? '').toString().trim();
+
+    // 1) 서버가 '탈퇴회원#123' 같은 값을 주거나, 상태 플래그가 true면 → 고정 문구
+    if (
+        deactivated ||
+        /탈퇴\s*(된|한)?\s*회원/i.test(raw) ||
+        /탈퇴회원/i.test(raw)
+    ) {
+      return '탈퇴된 회원';
+    }
+
+// 2) 공용 유틸로 마스킹 (예: 이**)
+    const masked = displayMaskedName(raw, false);
+// 유틸이 '탈퇴한 회원'로 돌려주는 경우도 강제 통일
+    if (masked === '탈퇴한 회원') return '탈퇴된 회원';
+    return masked || t('map.anonymous');
   };
 
   // ✅ 모달 열릴 때 리뷰 불러오기
@@ -773,7 +794,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         <ReviewItem key={review.id || index}>
                           <ReviewHeader>
                             <ReviewerInfo>
-                              <ReviewerName>{maskUserName(review.userName)}</ReviewerName>
+                              <ReviewerName>{maskUserName(review.userName, review.reviewerDeactivated)}</ReviewerName>
                               <ReviewRating>
                                 {[...Array(5)].map((_, i) => (
                                     <Star key={i} $isFilled={i < review.rating}><FaStar /></Star>
