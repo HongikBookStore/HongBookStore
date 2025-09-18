@@ -403,9 +403,6 @@ const ChatListPage = () => {
   const { user } = useContext(AuthCtx);
   const myId = user?.id ?? readMyId();
 
-  // 디버깅용 로그
-  console.log('ChatListPage 렌더링됨', { t, user, myId });
-
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // all | seller | buyer
   const [searchTerm, setSearchTerm] = useState('');
@@ -447,7 +444,6 @@ const ChatListPage = () => {
         if (!rid) throw new Error(t('chat.noChatRoomId'));
         navigate(`/chat/${rid}`, { replace: true });
       } catch (e) {
-        console.error(t('chat.chatRoomError'), e);
         navigate('/chat', { replace: true });
       }
     })();
@@ -467,7 +463,6 @@ const ChatListPage = () => {
         const data = await res.json();
         setRoomsRaw(Array.isArray(data) ? data : (data?.rooms || []));
       } catch (err) {
-        console.error(t('chat.chatListError'), err);
         setError(err);
         setRoomsRaw([]);
       } finally {
@@ -577,7 +572,7 @@ const ChatListPage = () => {
 
   const handleSidebarMenu = (menu) => {
     switch (menu) {
-      case 'booksale': navigate('/bookstore/add'); break;
+      case 'bookstore/add': navigate('/bookstore/add'); break;
       case 'wanted': navigate('/wanted'); break;
       case 'mybookstore': navigate('/bookstore'); break;
       case 'chat': navigate('/chat'); break;
@@ -606,7 +601,6 @@ const ChatListPage = () => {
       await axios.patch(`/api/posts/${postId}/status`, payload, { headers: getAuthHeader() });
       alert(t('chat.statusChangeSuccess'));
     } catch (e) {
-      console.error(t('chat.statusChangeFailed'), e);
       alert(e.response?.data?.message || t('chat.statusChangeError'));
     }
   };
@@ -644,7 +638,6 @@ const ChatListPage = () => {
       alert(t('chat.reviewSaved'));
       setReviewModal({ open: false, postId: null, role: null });
     } catch (e) {
-      console.error(t('chat.reviewSaveFailed'), e);
       if (e.isModeration) {
         const pct = typeof e.malicious === 'number' ? `, ${Math.round(e.malicious*100)}%` : '';
         alert((e.message || t('chat.inappropriateContentDetected')) + (e.predictionLevel ? ` (${e.predictionLevel}${pct})` : ''));

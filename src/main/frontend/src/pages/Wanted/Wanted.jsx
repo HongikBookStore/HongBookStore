@@ -4,7 +4,7 @@ import { FaPlus, FaSearch } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
 import { useNavigate } from 'react-router-dom';
-import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton } from '../../components/ui';
+import { Grid, Card, CardTitle, CardMeta, MetaLabel, MetaValue, FilterSection, FilterButton, SearchButton, Loading } from '../../components/ui';
 
 const WantedContainer = styled.div`
   width: 100%;
@@ -191,7 +191,6 @@ const Wanted = () => {
 
       setWantedPosts(Array.isArray(list) ? list : []);
     } catch (e) {
-      console.error(t('wanted.error.loadFailed'), e);
       setWantedPosts([]);
     } finally {
       setLoading(false);
@@ -221,7 +220,7 @@ const Wanted = () => {
 
   const handleSidebarMenu = (menu) => {
     switch(menu) {
-      case 'booksale': navigate('/bookstore/add'); break;
+      case 'bookstore/add': navigate('/bookstore/add'); break;
       case 'wanted': navigate('/wanted'); break;
       case 'mybookstore': navigate('/bookstore'); break;
       case 'chat': navigate('/chat'); break;
@@ -277,7 +276,7 @@ const Wanted = () => {
                     >
                       <option value="">{t('wanted.department.all')}</option>
                       {DEPARTMENTS.map((d) => (
-                          <option key={d} value={d}>{d}</option>
+                          <option key={d} value={d}>{t(d)}</option>
                       ))}
                     </FilterSelect>
                 ) : (
@@ -299,7 +298,9 @@ const Wanted = () => {
 
             {/* 기존 태그 필터 섹션은 그대로 두고 keyword로만 매핑 */}
             {loading ? (
-                <NoWanted>{t('wanted.searching')}</NoWanted>
+                <NoWanted>
+                  <Loading type="bookflip" size="lg" subtext={t('wanted.loading')} />
+                </NoWanted>
             ) : wantedPosts.length > 0 ? (
                 <Grid>
                   {wantedPosts.map((post) => {
@@ -315,11 +316,19 @@ const Wanted = () => {
                                          catSimple === '교양' ? t('wanted.category.general') : catSimple;
                     
                     // 학과명 번역
-                    const translatedDept = post?.department ? t(`departments.${post.department}`) || post.department : null;
-                    
-                    const displayCat = translatedDept
-                        ? `${translatedCat} / ${translatedDept}`
-                        : (cat.split('>').pop()?.trim() || translatedCat || '-');
+                    // 'department' 필드가 있으면 우선적으로 번역해서 사용
+                    let departmentName = post?.department ? (t(`departments.${post.department}`) || post.department) : null;
+
+                    // 'department' 필드가 없고, 레거시 형식 ('>') 데이터인 경우, '>' 뒤의 값을 사용
+                    if (!departmentName && cat.includes('>')) {
+                      departmentName = cat.split('>')[1]?.trim();
+                    }
+
+                    // 최종 표시 문자열 조합
+                    // 학과명이 있으면 "카테고리 / 학과명" 형식으로, 없으면 카테고리만 표시
+                    const displayCat = departmentName
+                      ? `${translatedCat} / ${departmentName}`
+                      : translatedCat || '-'; // translatedCat이 없을 경우를 대비해 '-' 처리
 
                     return (
                         <ClickableCard

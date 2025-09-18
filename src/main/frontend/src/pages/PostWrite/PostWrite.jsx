@@ -896,11 +896,7 @@ const PostWrite = () => {
   const isEdit = Boolean(id);
 
   // WritingContext 사용
-  const { startWriting, stopWriting, setUnsavedChanges } = useWriting() || {
-    startWriting: () => {},
-    stopWriting: () => {},
-    setUnsavedChanges: () => {},
-  };
+  const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
 
   // 모든 필드 명시적으로 정의
   const [formData, setFormData] = useState({
@@ -993,37 +989,29 @@ const PostWrite = () => {
       const expiryTime = DRAFT_EXPIRY_HOURS * 60 * 60 * 1000;
 
       if (draftAge < expiryTime) {
-        const shouldLoad = window.confirm(t('postWrite.loadDraftConfirm'));
-        if (shouldLoad) {
-          const { timestamp, ...dataWithoutTimestamp } = draftData;
-          setFormData(prev => ({
-            ...prev,
-            ...dataWithoutTimestamp,
-          }));
-          if (draftData.images) {
-            setImages(draftData.images);
-          }
-          console.log('임시저장된 데이터 불러옴');
-        } else {
-          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        // 임시저장된 데이터가 있으면 자동으로 불러오기 (팝업 없이)
+        const { timestamp, ...dataWithoutTimestamp } = draftData;
+        setFormData(prev => ({
+          ...prev,
+          ...dataWithoutTimestamp,
+        }));
+        if (draftData.images) {
+          setImages(draftData.images);
         }
       } else {
         localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
     } catch (error) {
-      console.error('임시저장 데이터 파싱 오류:', error);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
     }
   }, [isEdit]);
 
   // 컴포넌트 마운트 시 글쓰기 시작 및 임시저장 데이터 불러오기
   useEffect(() => {
-    console.log('PostWrite 컴포넌트 마운트됨');
     startWriting('sale');
     loadDraftData();
 
     return () => {
-      console.log('PostWrite 컴포넌트 언마운트됨');
       stopWriting();
     };
   }, [startWriting, stopWriting, loadDraftData]);
@@ -1057,7 +1045,6 @@ const PostWrite = () => {
           URL.revokeObjectURL(url);
         } catch (err) {
           if (typeof console !== 'undefined') {
-            console.debug('[cleanup] revokeObjectURL 실패:', err);
           }
         }
       });
@@ -1073,13 +1060,11 @@ const PostWrite = () => {
         timestamp: new Date().toISOString()
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
-      console.log('임시저장 완료:', draftData);
       await new Promise(resolve => setTimeout(resolve, 500));
       setHasUnsavedChanges(false);
       setUnsavedChanges(false);
       alert(t('postWrite.draftSaved'));
     } catch (error) {
-      console.error('임시저장 실패:', error);
       alert(t('postWrite.draftSaveFailed'));
     }
   }, [formData, images, setUnsavedChanges]);
@@ -1162,7 +1147,6 @@ const PostWrite = () => {
 
         setInputType(postData.isbn ? 'search' : 'custom');
       } catch (error) {
-        console.error("수정할 게시글 정보를 불러오는 데 실패했습니다.", error);
         alert("게시글 정보를 불러올 수 없어! 🥺");
         navigate('/marketplace');
       } finally {
@@ -1284,7 +1268,6 @@ const PostWrite = () => {
         alert(t('postWrite.noSearchResults'));
       }
     } catch (error) {
-      console.error("책 검색 실패:", error);
       alert(t('postWrite.searchError'));
       setSearchResults([]);
     } finally {
@@ -1410,7 +1393,6 @@ const PostWrite = () => {
           // 디버그 출력
           try {
             for (const [k, v] of fd.entries()) {
-              console.debug('[edit-upload] part', k, v && v.name ? v.name : v);
             }
           } catch {}
 
@@ -1480,20 +1462,7 @@ const PostWrite = () => {
           }
         });
 
-        // 디버그: 전송되는 FormData 내용을 콘솔에서 확인 (개발 편의)
-        try {
-          for (const [k, v] of apiData.entries()) {
-            if (k === 'images' && v && typeof v === 'object') {
-              console.debug('[upload] part', k, (v.name || ''), (v.type || ''), (v.size || ''));
-            } else if (k === 'request') {
-              console.debug('[upload] part', k, '(JSON)');
-            } else {
-              console.debug('[upload] part', k, v);
-            }
-          }
-        } catch {}
-
-        await axios.post(endpoint, apiData, { 
+          await axios.post(endpoint, apiData, {
           // Content-Type은 브라우저가 boundary 포함해 자동 설정하도록 둡니다.
           headers: { 
             ...getAuthHeader()
@@ -1505,7 +1474,6 @@ const PostWrite = () => {
         navigate('/marketplace');
       }
     } catch (error) {
-      console.error("게시글 처리 중 오류 발생:", error);
       const serverData = error.response?.data;
       const serverMessage = serverData?.message;
 
@@ -1569,7 +1537,6 @@ const PostWrite = () => {
       navigate(targetPath);
       setPendingNavigation(null);
     } catch (error) {
-      console.error('임시저장 후 나가기 실패:', error);
       setShowWarningModal(false);
       const targetPath = pendingNavigation || '/marketplace';
       navigate(targetPath);
@@ -1603,8 +1570,6 @@ const PostWrite = () => {
   const isNegotiableChecked = useCallback((isNegotiable) => {
     return formData.negotiable === isNegotiable;
   }, [formData.negotiable]);
-
-  console.log('PostWrite 컴포넌트 렌더링 완료');
 
   const recommended = getRecommendedPrice();
 
@@ -1751,7 +1716,7 @@ const PostWrite = () => {
                   >
                     <option value="">{t('postWrite.mainCategory')}</option>
                     {(catTree || []).map(node => (
-                      <option key={node.name} value={node.name}>{node.name}</option>
+                      <option key={node.name} value={node.name}>{t(node.name)}</option>
                     ))}
                   </CategorySelect>
                   <CategorySelect
@@ -1769,7 +1734,7 @@ const PostWrite = () => {
                     {(() => {
                       const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                       return (mainNode?.children || []).map(s => (
-                        <option key={s.name} value={s.name}>{s.name}</option>
+                        <option key={s.name} value={s.name}>{t(s.name)}</option>
                       ));
                     })()}
                   </CategorySelect>
@@ -1783,7 +1748,7 @@ const PostWrite = () => {
                       const mainNode = (catTree || []).find(m => m.name === formData.mainCategory);
                       const subNode = mainNode?.children?.find(s => s.name === formData.subCategory);
                       return (subNode?.children || []).map(d => (
-                        <option key={d.name} value={d.name}>{d.name}</option>
+                        <option key={d.name} value={d.name}>{t(d.name)}</option>
                       ));
                     })()}
                   </CategorySelect>
@@ -2034,7 +1999,7 @@ const PostWrite = () => {
                 </CancelButton>
 
                 {!isEdit && (
-                    <SaveDraftButton type="button" onClick={handleSaveDraft}>
+                    <SaveDraftButton type="button" onClick={handleSaveDraftAndExit}>
                       <FaSave /> {t('postWrite.saveDraft')}
                     </SaveDraftButton>
                 )}
@@ -2055,12 +2020,33 @@ const PostWrite = () => {
         {showBookSearch && (
             <BookSearchModal>
               <BookSearchContent>
-                <h3>{t('postWrite.bookSearchModal')}</h3>
+                <h3>📚 {t('postWrite.bookSearchModal')}</h3>
+                
+                {/* ISBN 입력 가이드 */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+                  border: '1px solid #bbdefb',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  marginBottom: '16px',
+                  fontSize: '13px',
+                  color: '#1976d2'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px' }}>💡</span>
+                    <span>{t('ISBNWithoutHyphen')}</span>
+                  </div>
+                </div>
+                
                 <SearchInput
                     type="text"
                     placeholder={t('postWrite.searchPlaceholder')}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      // ISBN 입력 시 자동으로 하이픈 제거
+                      const value = e.target.value.replace(/-/g, '');
+                      setSearchQuery(value);
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
                 />
                 <BookSearchButton
@@ -2144,30 +2130,30 @@ const PostWrite = () => {
                   <tr>
                     <td><strong>{t('postWrite.writingStatus')}</strong></td>
                     <td>15%</td>
-                    <td>상: 2.25% / 중: 5.25% / 하: 8.25%</td>
-                    <td>연필, 펜 등으로 필기된 정도에 따라 할인</td>
+                    <td>{t('상')}: 2.25% / {t('중')}: 5.25% / {t('하')}: 8.25%</td>
+                    <td>{t('used1')}</td>
                   </tr>
                   <tr>
                     <td><strong>{t('postWrite.tearStatus')}</strong></td>
                     <td>35%</td>
-                    <td>상: 5.25% / 중: 12.25% / 하: 19.25%</td>
-                    <td>책장, 표지 등의 찢어짐 정도에 따라 할인</td>
+                    <td>{t('상')}: 5.25% / {t('중')}: 12.25% / {t('하')}: 19.25%</td>
+                    <td>{t('used2')}</td>
                   </tr>
                   <tr>
                     <td><strong>{t('postWrite.waterStatus')}</strong></td>
                     <td>50%</td>
-                    <td>상: 7.5% / 중: 17.5% / 하: 27.5%</td>
-                    <td>물에 젖은 흔적이나 얼룩 정도에 따라 할인</td>
+                    <td>{t('상')}: 7.5% / {t('중')}: 17.5% / {t('하')}: 27.5%</td>
+                    <td>{t('used3')}</td>
                   </tr>
                   <tr style={{backgroundColor: '#f8f9fa'}}>
                     <td><strong>{t('postWrite.usedBookDiscount')}</strong></td>
                     <td>-</td>
                     <td>10%</td>
-                    <td>새책이 아닌 모든 중고책에 기본 적용</td>
+                    <td>{t('used4')}</td>
                   </tr>
                   <tr style={{backgroundColor: '#e3f2fd', fontWeight: 'bold'}}>
                     <td colSpan={2}><strong>{t('postWrite.maxDiscount')}</strong></td>
-                    <td><strong>약 65%</strong></td>
+                    <td><strong>{t('about')} 65%</strong></td>
                     <td><strong>{t('postWrite.allLow')}</strong></td>
                   </tr>
                   </tbody>

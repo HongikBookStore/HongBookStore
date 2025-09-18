@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import SidebarMenu from '../../components/SidebarMenu/SidebarMenu';
-import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton } from '../../components/ui';
+import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMenu';
+import { SearchButton as OriginalSearchButton, FilterButton as OriginalFilterButton, Loading } from '../../components/ui';
 import axios from 'axios';
 
 const shimmer = keyframes`
@@ -23,19 +23,18 @@ const pulse = keyframes`
 `;
 
 const MarketplaceContainer = styled.div`
-  padding: 8rem 2rem 4rem;
-  max-width: 1440px;
-  margin: 0 auto;
   width: 100%;
+  margin: 0 auto;
+  padding: 32px;
   box-sizing: border-box;
-  padding-top: 96px;
+  padding-top: 0;
   @media (max-width: 900px) {
-    padding-top: 72px;
+    padding: 16px 8px;
+    padding-top: 0;
   }
   @media (max-width: 600px) {
-    padding-top: 56px;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding: 8px 2px;
+    padding-top: 0;
   }
 `;
 
@@ -669,8 +668,8 @@ const PopularSectionTitle = styled.h2`
 // 
 // TODO: 실제 구현 시에는 사용자가 직접 책 상태를 평가할 수 있도록 별도의 상태 입력 필드를 제공
 const getBookCondition = (discountRate, t) => {
-  if (discountRate <= 20) return { text: t('marketplace.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
-  if (discountRate <= 40) return { text: t('marketplace.bookCondition.good'), color: '#ffc107', bgColor: '#fff3cd' };
+  if (discountRate <= 30) return { text: t('marketplace.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
+  if (discountRate <= 50) return { text: t('marketplace.bookCondition.good'), color: '#ffc107', bgColor: '#fff3cd' };
   return { text: t('marketplace.bookCondition.fair'), color: '#dc3545', bgColor: '#f8d7da' };
 };
 
@@ -696,7 +695,7 @@ const LoadingMessage = styled.div`
 `;
 
 const getCategories = (t) => ({
-  [t('categories.major')]: {
+  [t('categories.Major')]: {
     [t('categories.colleges.business')]: [t('categories.departments.business')],
     [t('categories.colleges.engineering')]: [t('categories.departments.electronics'), t('categories.departments.materials'), t('categories.departments.chemical'), t('categories.departments.computer'), t('categories.departments.industrial'), t('categories.departments.mechanical'), t('categories.departments.civil')],
     [t('categories.colleges.law')]: [t('categories.departments.law')],
@@ -878,6 +877,26 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  // 사이드바 메뉴 핸들러
+  const handleSidebarMenu = (menu) => {
+    switch (menu) {
+      case 'bookstore/add':
+        navigate('/bookstore/add');
+        break;
+      case 'wanted':
+        navigate('/wanted');
+        break;
+      case 'mybookstore':
+        navigate('/bookstore');
+        break;
+      case 'chat':
+        navigate('/chat');
+        break;
+      default:
+        break;
+    }
+  };
+
   // API 데이터 상태
   const [posts, setPosts] = useState([]); // API로부터 받아온 게시글 목록
   const [page, setPage] = useState(0); // 현재 페이지 번호 (무한 스크롤용)
@@ -917,7 +936,6 @@ const Marketplace = () => {
       const likedIds = new Set(response.data.map(post => post.postId));
       setLikedPostIds(likedIds);
     } catch (error) {
-      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
     }
   }, []);
 
@@ -949,7 +967,6 @@ const Marketplace = () => {
       setPage(pageToFetch + 1); // 다음에 로드할 페이지 번호 설정
 
     } catch (error) {
-      console.error("게시글 목록을 불러오는 데 실패했습니다.", error);
       if (error.code === 'ECONNABORTED') {
         setError('요청 시간이 초과되었어요. 네트워크 상태를 확인해주세요 📡');
       } else if (error.response?.status === 404) {
@@ -1047,7 +1064,6 @@ const Marketplace = () => {
         });
       }
     } catch (error) {
-      console.error("찜 처리 실패:", error);
       // API 실패 시 UI 원상 복구
       setLikedPostIds(prev => {
         const newSet = new Set(prev);
@@ -1178,17 +1194,17 @@ const Marketplace = () => {
   };
 
   return (
-    <MarketplaceContainer>
-        <Header>
-          <Title>{t('marketplace.title')}</Title>
-          <Description>{t('marketplace.description')}</Description>
-        </Header>
-      <PageWrapper>
-        <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Controls>
-            <SearchBar as="form" onSubmit={handleSearch}>
-              <SearchIcon />
+    <PageWrapper>
+      <SidebarMenu active={'bookstore/add'} onMenuClick={(menu) => navigate(`/${menu}`)} />
+      <MainContent>
+        <MarketplaceContainer>
+          <Header>
+            <Title>{t('marketplace.title')}</Title>
+            <Description>{t('marketplace.description')}</Description>
+          </Header>
+            <Controls>
+              <SearchBar as="form" onSubmit={handleSearch}>
+                <SearchIcon />
                 <input
                     type="text"
                     value={searchQuery}
@@ -1277,7 +1293,7 @@ const Marketplace = () => {
           {/* 로딩 및 결과 없음 상태 표시 */}
             {isLoading && posts.length === 0 && (
                 <LoadingMessage>
-                  <div>{t('marketplace.loadingMessage')}</div>
+                  <Loading type="bookstack" size="lg" subtext={t('marketplace.loadingMessage')} />
                 </LoadingMessage>
             )}
 
@@ -1297,7 +1313,7 @@ const Marketplace = () => {
             <>
               {renderSkeletonCards(4)}
               <LoadingMessage>
-                <div>📚 더 많은 책들을 불러오고 있어요...</div>
+                <Loading type="hongbook" size="md" subtext={t('marketplace.loadingMessage')} />
               </LoadingMessage>
             </>
           )}
@@ -1323,9 +1339,9 @@ const Marketplace = () => {
               🎉 모든 책을 다 보셨네요! 새로운 책들이 올라오면 알려드릴게요.
             </div>
           )}
-        </div>
-      </PageWrapper>
-    </MarketplaceContainer>
+        </MarketplaceContainer>
+      </MainContent>
+    </PageWrapper>
   );
 };
 

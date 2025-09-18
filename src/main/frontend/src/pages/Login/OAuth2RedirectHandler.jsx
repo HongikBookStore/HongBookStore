@@ -57,8 +57,6 @@ function OAuth2RedirectHandler() {
     // history에 현재 페이지를 남기지 않기 위해 replace: true 옵션을 사용.
       navigate('/', { replace: true });
     } else {
-      // 토큰이 없으면 로그인 실패. 에러 메시지와 함께 로그인 페이지로
-      console.error("URL에서 accessToken을 찾을 수 없습니다.");
       navigate('/login?error=token_missing', { replace: true });
     }
     // useEffect의 의존성 배열을 명확하게 설정

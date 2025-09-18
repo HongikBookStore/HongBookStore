@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
-import { FaPlus, FaSearch, FaMapMarkerAlt, FaChevronDown, FaSyncAlt } from 'react-icons/fa';
-import { IoMdClose } from 'react-icons/io';
+import { FaPlus, FaSearch, FaMapMarkerAlt, FaChevronDown, FaSyncAlt, FaTrash, FaTimes, FaMinus, FaTrashAlt } from 'react-icons/fa';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +8,7 @@ import NaverMap from '../../components/NaverMap/Navermap';
 import UserCategory from '../../components/UserCategory/UserCategory';
 import PlaceDetailModal from '../../components/PlaceDetailModal/PlaceDetailModal';
 import { useLocation } from '../../contexts/LocationContext';
+import { Loading } from '../../components/ui';
 
 /* ==================== axios 인스턴스 ==================== */
 // Use backend origin (no trailing /api) so that request paths like '/api/...'
@@ -49,12 +49,13 @@ api.interceptors.response.use(
     (err) => {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-      console.warn('[API ERROR]', status, msg);
       return Promise.reject(err);
     }
 );
 
 /* ==================== 백엔드 API ==================== */
+
+const HONGIK_CENTER = { lat: 37.5513, lng: 126.9246 };
 
 // 장소 검색
 const searchPlacesFromBackend = async (query) => {
@@ -74,7 +75,6 @@ const searchPlacesFromBackend = async (query) => {
     }
     return [];
   } catch (e) {
-    console.error('Backend Search API Error:', e);
     return [];
   }
 };
@@ -85,7 +85,6 @@ const getPlacesFromBackend = async () => {
     const { data } = await api.get('/api/places');
     return Array.isArray(data) ? data : [];
   } catch (e) {
-    console.error('Error fetching places from DB:', e);
     alert('저장된 장소를 불러오는 데 실패했습니다.');
     return [];
   }
@@ -97,7 +96,6 @@ const savePlaceToBackend = async (placeData) => {
     const { data } = await api.post('/api/places', placeData);
     return data;
   } catch (e) {
-    console.error('Error saving place to DB:', e);
     alert('장소 저장에 실패했습니다.');
     return null;
   }
@@ -109,7 +107,6 @@ const getAddressFromCoordinates = async (lat, lng) => {
     const { data } = await api.get('/api/places/geocode', { params: { lat, lng } });
     return data;
   } catch (e) {
-    console.error('Error getting address from coordinates:', e);
     return null;
   }
 };
@@ -244,7 +241,6 @@ const MapPage = () => {
         const cats = await getUserCategories();
         setUserCategories(cats || []);
       } catch (e) {
-        console.error('유저 카테고리 로드 실패:', e);
         setUserCategories([]);
       } finally {
         setLoadingCats(false);
@@ -273,18 +269,22 @@ const MapPage = () => {
     }
   };
 
-  // 검색 디바운스
+  // 검색 디바운스 (검색 시작 시 지도 중심을 홍대로 이동)
   useEffect(() => {
     const debounce = setTimeout(async () => {
       if (searchQuery.trim()) {
-        setIsSearching(true);
         try {
+          // 지도 컴포넌트 ref가 있다면, 홍익대 중심으로 이동(줌은 프로젝트 컨벤션에 맞게)
+          if (mapRef?.current?.moveToLocation) {
+            mapRef.current.moveToLocation(HONGIK_CENTER.lat, HONGIK_CENTER.lng, 15);
+          }
+          setIsSearching(true);
           const results = await searchPlacesFromBackend(searchQuery);
-          setSearchResults(results);
+          setSearchResults(results);     // 백엔드가 이미 홍대 근접 순으로 5개 정렬
           setShowSearchResults(true);
         } catch (e) {
-          console.error('Search error:', e);
           setSearchResults([]);
+          setShowSearchResults(false);
         } finally {
           setIsSearching(false);
         }
@@ -296,6 +296,7 @@ const MapPage = () => {
     }, 300);
     return () => clearTimeout(debounce);
   }, [searchQuery]);
+
 
   // 드롭다운 외부 클릭 닫기
   useEffect(() => {
@@ -364,7 +365,6 @@ const MapPage = () => {
   };
 
   const handleMapClick = useCallback((lat, lng) => {
-    console.log(`지도 클릭: 위도 ${lat}, 경도 ${lng}`);
   }, []);
 
   // 장소 유형 필터
@@ -382,7 +382,6 @@ const MapPage = () => {
       const list = await getPlacesOfUserCategory(categoryId);
       setSelectedCategoryPlaces(list);
     } catch (e) {
-      console.error('선택한 카테고리의 장소 조회 실패:', e);
       setSelectedCategoryPlaces([]);
       alert('카테고리에 담긴 장소를 불러오지 못했습니다.');
     } finally {
@@ -412,7 +411,6 @@ const MapPage = () => {
       const created = await createUserCategory(trimmed);
       setUserCategories(prev => [...prev, created]);
     } catch (e) {
-      console.error('카테고리 추가 실패:', e);
       alert(t('map.categoryAddFailed'));
     }
   };
@@ -423,7 +421,6 @@ const MapPage = () => {
       setUserCategories(prev => prev.filter(cat => cat.id !== categoryId));
       if (selectedUserCategoryId === categoryId) clearSelectedUserCategory();
     } catch (e) {
-      console.error('카테고리 삭제 실패:', e);
       alert('카테고리 삭제에 실패했습니다.');
     }
   };
@@ -436,7 +433,6 @@ const MapPage = () => {
       setUserCategories(prev => prev.map(cat => cat.id === categoryId ? updated : cat));
       if (selectedUserCategoryId === categoryId) setSelectedUserCategoryName(updated.name);
     } catch (e) {
-      console.error('카테고리 이름 변경 실패:', e);
       alert('카테고리 이름 변경에 실패했습니다.');
     }
   };
@@ -449,7 +445,6 @@ const MapPage = () => {
         await handleSelectUserCategory(categoryId, selectedUserCategoryName);
       }
     } catch (e) {
-      console.error('카테고리에 장소 담기 실패:', e);
       alert('카테고리에 장소를 담는 데 실패했습니다.');
     }
   };
@@ -460,7 +455,6 @@ const MapPage = () => {
       await removePlaceFromUserCategory(selectedUserCategoryId, placeId);
       setSelectedCategoryPlaces(prev => prev.filter(p => p.id !== placeId));
     } catch (e) {
-      console.error('카테고리에서 제거 실패:', e);
       alert('카테고리에서 장소 제거에 실패했습니다.');
     }
   };
@@ -488,9 +482,6 @@ const MapPage = () => {
           <SidebarHeader>
             <h2>{t('map.title')}</h2>
             <HeaderButtons>
-              <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
-                <FaSyncAlt /> {loadingDB ? t('map.loading') : t('map.refresh')}
-              </AddButton>
               <AddButton onClick={refreshFromDB} title="DB에서 새로고침">
                 <FaSyncAlt /> {loadingDB ? t('map.loading') : t('map.refresh')}
               </AddButton>
@@ -541,7 +532,9 @@ const MapPage = () => {
                 </SelectedCatHeader>
 
                 {loadingSelectedCat ? (
-                    <EmptyText>{t('map.loading')}</EmptyText>
+                    <EmptyText>
+                      <Loading type="hongbook" size="sm" subtext="장소를 불러오고 있어요" />
+                    </EmptyText>
                 ) : selectedCategoryPlaces.length === 0 ? (
                     <EmptyText>{t('map.noPlacesInCategory')}</EmptyText>
                 ) : (
@@ -565,7 +558,8 @@ const MapPage = () => {
                                 </div>
                               </PlaceMain>
                               <RemoveBtn title="카테고리에서 제거" onClick={() => handleRemovePlaceFromSelectedCategory(p.id)}>
-                                <IoMdClose />
+                                <FaTrashAlt />
+                                삭제
                               </RemoveBtn>
                             </PlaceItem>
                         );
@@ -617,7 +611,7 @@ const MapPage = () => {
               <SearchResultsTitle>
                 {isSearching ? '검색 중...' : `검색 결과 (${searchResults.length})`}
               </SearchResultsTitle>
-              <CloseSearchButton onClick={() => setShowSearchResults(false)}><IoMdClose /></CloseSearchButton>
+              <CloseSearchButton onClick={() => setShowSearchResults(false)}><FaTimes /></CloseSearchButton>
             </SearchResultsHeader>
             <SearchResultsList>
               {isSearching ? (
@@ -658,7 +652,7 @@ const MapPage = () => {
               <ModalContent>
                 <ModalHeader>
                   <h3>{t('map.addNewPlace')}</h3>
-                  <CloseButton onClick={() => setShowAddPlace(false)}><IoMdClose /></CloseButton>
+                  <CloseButton onClick={() => setShowAddPlace(false)}><FaTimes /></CloseButton>
                 </ModalHeader>
                 <ModalBody>
                   <Input
@@ -874,11 +868,36 @@ const PlaceMain = styled.div`
 `;
 
 const RemoveBtn = styled.button`
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 1px solid #e0e0e0; background: #fff; color: #666;
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #dc3545; 
+  background: #dc3545; 
+  color: #fff;
   cursor: pointer;
-  &:hover { background: #ffecec; color: #d00; border-color: #f5c2c7; }
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  &:hover { 
+    background: #c82333; 
+    border-color: #c82333;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
 `;
 
 const MapSearchInput = styled.input`

@@ -259,6 +259,7 @@ export default function WantedWrite() {
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // 카테고리 트리: 상태로 보관하지 않고 계산값으로 사용
 
   const navigate = useNavigate();
   const { startWriting, stopWriting, setUnsavedChanges } = useWriting();
@@ -277,7 +278,9 @@ export default function WantedWrite() {
 
   useEffect(() => {
     startWriting('wanted');
-    return () => { stopWriting(); };
+    return () => {
+      stopWriting(); 
+    };
   }, [startWriting, stopWriting]);
 
   useEffect(() => {
@@ -346,7 +349,6 @@ export default function WantedWrite() {
         // 수정 진입 시 입력 방식은 수동으로(선택 사항)
         setInputType('title');
       } catch (e) {
-        console.error(t('wantedWrite.error.loadDetail'), e);
         alert(t('wantedWrite.error.loadDetail'));
       }
     })();
@@ -393,7 +395,6 @@ export default function WantedWrite() {
       setSearchResults(results);
       if (results.length === 0) alert(t('wantedWrite.search.noResults'));
     } catch (err) {
-      console.error(t('wantedWrite.search.error'), err);
       alert(t('wantedWrite.search.error'));
       setSearchResults([]);
     } finally {
@@ -530,9 +531,8 @@ export default function WantedWrite() {
       setUnsavedChanges(false);
       setHasUnsavedChanges(false);
       alert(isEdit ? t('wantedWrite.success.update') : t('wantedWrite.success.create'));
-      navigate(isEdit ? '/mybookstore' : '/wanted');
+      navigate(isEdit ? `/wanted/${id}` : '/wanted', { replace: false });
     } catch (err) {
-      console.error(err);
       // 이미 필드 에러로 처리된 경우(alert 생략) → errors에 메시지가 들어감
       if (!Object.values(errors).some(Boolean)) {
         alert(isEdit ? t('wantedWrite.error.updateFailed') : t('wantedWrite.error.createFailed'));
@@ -770,11 +770,32 @@ export default function WantedWrite() {
             <BookSearchModal>
               <BookSearchContent>
                 <h3>📚 {t('wantedWrite.search.modalTitle')}</h3>
+                
+                {/* ISBN 입력 가이드 */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+                  border: '1px solid #bbdefb',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  marginBottom: '16px',
+                  fontSize: '13px',
+                  color: '#1976d2'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px' }}>💡</span>
+                    <span>{t('ISBNWithoutHyphen')}</span>
+                  </div>
+                </div>
+
                 <SearchInput
                     type="text"
                     placeholder={t('wantedWrite.search.inputPlaceholder')}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      // ISBN 입력 시 자동으로 하이픈 제거
+                      const value = e.target.value.replace(/-/g, '');
+                      setSearchQuery(value);
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && !searchLoading && handleBookSearch()}
                 />
                 <button

@@ -7,6 +7,7 @@ import QRCode from 'react-qr-code';
 import axios from 'axios';
 import { getMyReceivedPeerReviews } from '../../api/peerReviews';
 import { useTranslation } from 'react-i18next';
+import { Loading } from '../../components/ui';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -126,9 +127,10 @@ const BookCard = styled.div`
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
-  padding: 20px;
+  padding: 16px;
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden; /* 버튼이 카드 밖으로 나가지 않도록 */
 
   &:hover {
     transform: translateY(-2px);
@@ -202,22 +204,27 @@ const BookStatus = styled.span`
 
 const BookActions = styled.div`
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 15px;
+  justify-content: flex-start;
 `;
 
 const ActionButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 6px 10px;
   border: 1px solid #ddd;
   background: white;
   color: #666;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   transition: all 0.3s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  
   &:hover {
     background: #f8f9fa;
     border-color: #007bff;
@@ -226,6 +233,12 @@ const ActionButton = styled.button`
   &.delete:hover {
     border-color: #dc3545;
     color: #dc3545;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 3px;
   }
 `;
 
@@ -339,6 +352,7 @@ const CompactBookCard = styled.div`
   gap: 15px;
   transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
+  overflow: hidden; /* 버튼이 카드 밖으로 나가지 않도록 */
 
   &:hover {
     transform: translateY(-1px);
@@ -414,7 +428,9 @@ const CompactBookStatus = styled.span`
 
 const CompactBookActions = styled.div`
   display: flex;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-start;
 `;
 
 const EmptyState = styled.div`
@@ -616,7 +632,6 @@ const MyBookstore = () => {
       const response = await axios.get('/api/my/posts', { headers: getAuthHeader() });
       setMyPosts(response.data);
     } catch (error) {
-      console.error(t('myBookstore.fetchPostsError'), error);
       setError(prev => ({ ...prev, myPosts: t('myBookstore.fetchPostsError') })); // 에러 상태 설정
     } finally {
       setLoading(prev => ({ ...prev, myPosts: false }));
@@ -631,7 +646,6 @@ const MyBookstore = () => {
       const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
       setWishlist(response.data);
     } catch (error) {
-      console.error(t('myBookstore.fetchWishlistError'), error);
       setError(prev => ({ ...prev, wishlist: t('myBookstore.fetchWishlistError') })); // 에러 상태 설정
     } finally {
       setLoading(prev => ({ ...prev, wishlist: false }));
@@ -658,7 +672,6 @@ const MyBookstore = () => {
       setReviewTotalPages(typeof data.totalPages === 'number' ? data.totalPages : 0);
       setReviewLast(Boolean(data.last));
     } catch (e) {
-      console.error(t('myBookstore.fetchReviewsError'), e);
       setErrorReviews(t('myBookstore.fetchReviewsError'));
     } finally {
       setLoadingReviews(false);
@@ -710,7 +723,6 @@ const MyBookstore = () => {
         alert(t('myBookstore.deleteSuccess'));
         fetchMyPosts(); // 목록 새로고침
       } catch (error) {
-        console.error("게시글 삭제에 실패했습니다.", error);
         alert(t('myBookstore.deleteError'));
       }
     }
@@ -730,7 +742,6 @@ const MyBookstore = () => {
         alert("찜이 해제되었습니다.");
         fetchWishlist(); // 찜 목록 새로고침
       } catch (error) {
-        console.error("찜 해제에 실패했습니다.", error);
         alert("찜 해제 중 오류가 발생했습니다.");
       }
     }
@@ -742,13 +753,6 @@ const MyBookstore = () => {
 
   const handleEditWanted = (wantedId) => {
     navigate(`/wantedwrite/${wantedId}`);
-  };
-
-  const handleDeleteWanted = (wantedId) => {
-    if (window.confirm('이 구해요 글을 삭제하시겠습니까?')) {
-      // 실제로는 API 호출
-      console.log('구해요 글 삭제:', wantedId);
-    }
   };
 
   const filteredBooks = getFilteredBooks();
@@ -779,7 +783,6 @@ const MyBookstore = () => {
           .filter((v, i, arr) => arr.findIndex(x => x.buyerId === v.buyerId) === i);
         setBuyerCandidates(candidates);
       } catch (e) {
-        console.error('채팅방 목록 조회 실패', e);
         setBuyerCandidates([]);
         setBuyerError(e.response?.data?.message || '채팅방 정보를 불러오지 못했습니다. 구매자 ID를 직접 입력해 주세요.');
       } finally {
@@ -793,7 +796,6 @@ const MyBookstore = () => {
       alert(t('myBookstore.statusChangeSuccess'));
       fetchMyPosts();
     } catch (e) {
-      console.error('상태 변경 실패', e);
       alert(e.response?.data?.message || t('myBookstore.statusChangeError'));
     }
   };
@@ -817,7 +819,6 @@ const MyBookstore = () => {
       closeBuyerModal();
       fetchMyPosts();
     } catch (e) {
-      console.error('구매자 지정 실패', e);
       alert(e.response?.data?.message || t('myBookstore.buyerConfirmError'));
     } finally {
       setConfirmingBuyer(false);
@@ -826,7 +827,7 @@ const MyBookstore = () => {
 
   const handleSidebarMenu = (menu) => {
     switch(menu) {
-      case 'booksale':
+      case 'bookstore/add':
         navigate('/bookstore/add'); break;
       case 'wanted':
         navigate('/wanted'); break;
@@ -878,8 +879,7 @@ const MyBookstore = () => {
               {/* 로딩과 에러 상태를 더 명확하게 처리 */}
               {loading.myPosts ? (
                 <LoadingSpinner>
-                  <FaBook style={{ marginRight: '8px' }} />
-                  {t('myBookstore.loadingPosts')}
+                  <Loading type="bookstack" size="md" subtext={t('myBookstore.loadingBooks')} />
                 </LoadingSpinner>
               ) : error.myPosts ? (
                 <EmptyState>
@@ -1027,8 +1027,7 @@ const MyBookstore = () => {
             {/* 수정: 로딩과 에러 상태를 더 명확하게 처리 */}
             {loading.wishlist ? (
               <LoadingSpinner>
-                <FaHeart style={{ marginRight: '8px' }} />
-                {t('myBookstore.loadingWishlist')}
+                <Loading type="hongbook" size="md" subtext={t('myBookstore.loadingWishlist')} />
               </LoadingSpinner>
             ) : error.wishlist ? (
               <EmptyState>

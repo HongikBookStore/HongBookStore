@@ -29,7 +29,8 @@
     "no": "否",
     "won": "韩元",
     "view": "查看",
-    "preview": "预览"
+    "preview": "预览",
+    "move": "移动"
   },
   "myBookstore": {
     "title": "我的书店",
@@ -40,6 +41,12 @@
     "reviews": "交易评价",
     "rating": "评分",
     "all": "全部",
+    "buyer": "买家",
+    "cancel": "取消",
+    "confirm": "确认",
+    "error": "错误",
+    "loading": "加载中...",
+    "loadingBooks": "我正在加载我注册的书籍。",
     "forSale": "在售",
     "reserved": "已预订",
     "soldOut": "已售出",
@@ -57,17 +64,12 @@
     "fetchPostsError": "获取帖子失败",
     "fetchWishlistError": "获取收藏夹失败",
     "fetchReviewsError": "获取评价时发生错误",
-    "buyer": "买家",
     "select": "选择",
-    "confirm": "确认",
-    "cancel": "取消",
     "delete": "删除",
     "edit": "编辑",
     "register": "注册",
     "complete": "完成",
     "failed": "失败",
-    "error": "错误",
-    "loading": "加载中...",
     "deleteConfirm": "您确定要删除这本书吗？删除的数据无法恢复。",
     "deleteSuccess": "帖子已删除。",
     "deleteError": "删除帖子时发生错误。",
@@ -81,16 +83,9 @@
     "buyerSelectError": "请选择买家或直接输入。",
     "buyerConfirmSuccess": "已更改为已售出。",
     "buyerConfirmError": "指定买家时发生错误。",
-    "fetchPostsError": "加载我的帖子失败。",
-    "fetchWishlistError": "加载收藏夹失败。",
-    "fetchReviewsError": "加载评价时发生错误。",
-    "all": "全部",
     "loadingPosts": "正在加载列表...",
     "view": "查看",
-    "edit": "编辑",
     "unreserve": "取消预约",
-    "delete": "删除",
-    "wishlist": "收藏夹",
     "noWishlist": "收藏夹中没有书籍",
     "loadingWishlist": "正在加载收藏夹...",
     "removeFromWishlist": "从收藏夹移除",
@@ -299,11 +294,9 @@
     "average": "平均",
     "recentlyViewedPosts": "最近查看的帖子",
     "noRecentlyViewedPosts": "没有最近查看的帖子。",
-    "loadingReviews": "正在加载评价...",
-    "loading": "加载中...",
     "nicknameLengthError": "请输入2-25个字符的昵称。"
   },
-  "login": {
+  "loginNs": {
     "socialLoginFailed": "社交登录失败。请稍后重试。",
     "loginWithNaver": "使用Naver登录",
     "loginWithKakao": "使用Kakao登录",
@@ -448,7 +441,6 @@
     "evaluationItem": "评估项目",
     "weight": "权重",
     "discountByStatus": "状态别折扣率",
-    "description": "详细说明",
     "writingStatus": "书写状态",
     "tearStatus": "破损程度",
     "waterStatus": "水渍程度",
@@ -493,7 +485,7 @@
   "kakao": "KakaoTalk",
   "google": "Google",
   "registerSuccess": "注册成功！",
-  "login": "登录",
+  "loginButton": "登录",
   "loginSuccess": "登录成功！",
   "loginRequired": "请输入用户名和密码",
   "findId": "找回用户名",
@@ -530,7 +522,6 @@
   "mockingbird": "杀死一只知更鸟",
   "harperlee": "哈珀·李",
   "emailAddress": "电子邮箱地址",
-  "schoolVerification": "学校认证",
   "verified": "已认证",
   "notVerified": "未认证",
   "verifySchoolEmail": "验证学校邮箱",
@@ -545,7 +536,7 @@
   "deleteLocation": "删除位置",
   "changePassword": "修改密码",
   "changePasswordDesc": "修改您的账户密码",
-  "deleteAccount": "注销账户",
+  "deleteAccount": "删除账户",
   "deleteAccountDesc": "永久删除您的账户和所有数据",
   "enterSchoolEmail": "输入学校邮箱",
   "enterVerificationCode": "输入验证码",
@@ -691,7 +682,7 @@
     "chat": "交易聊天"
   },
   "categories": {
-    "major": "專業",
+    "Major": "專業",
     "liberal": "通識",
     "colleges": {
       "business": "經營大學",
@@ -753,6 +744,28 @@
       "natural": "自然系列",
       "physical": "藝體系列",
       "teaching": "教職"
+    },
+    "major": {
+      "경영대학": "经营大学",
+      "공과대학": "工科大学",
+      "법과대학": "法科大学",
+      "미술대학": "美术大学",
+      "디자인,예술경영학부": "设计艺术经营学部",
+      "공연예술학부": "公演艺术学部",
+      "경제학부": "经济学部",
+      "사범대학": "师范大学",
+      "문과대학": "文科大学",
+      "건축도시대학": "建筑都市大学"
+    },
+    "general": {
+      "ABEEK 교양": "ABEEK教养",
+      "인문계열": "人文系",
+      "영어계열": "英语系",
+      "사회계열": "社会系",
+      "제2외국어계열": "第二外语系",
+      "자연계열": "自然系",
+      "예체능계열": "艺体系",
+      "교직": "教职"
     }
   },
   "postDetail": {
@@ -783,15 +796,6 @@
       "fraud": "詐欺/假商品",
       "spam": "垃圾/廣告",
       "other": "其他"
-    },
-    "reportModal": {
-      "title": "檢舉",
-      "selectReason": "請選擇檢舉原因",
-      "otherReason": "請輸入其他原因",
-      "submit": "提交檢舉",
-      "cancel": "取消",
-      "success": "檢舉已提交",
-      "successMessage": "感謝您的檢舉，我們會審查並處理。"
     },
     "condition": {
       "excellent": "上",
@@ -849,7 +853,9 @@
       "save": "儲存"
     },
     "reportModal": {
+      "title": "檢舉",
       "selectReason": "請選擇檢舉原因",
+      "otherReason": "請輸入其他原因",
       "detailedReason": "詳細原因",
       "detailedReasonPlaceholder": "請輸入詳細的檢舉原因。",
       "submitted": "檢舉已受理。",
@@ -862,6 +868,8 @@
       },
       "cancel": "取消",
       "submit": "提交",
+      "success": "檢舉已提交",
+      "successMessage": "感謝您的檢舉，我們會審查並處理。",
       "close": "關閉"
     },
     "registrationDate": "註冊日期",
@@ -913,38 +921,8 @@
     "error": {
       "fetchFailed": "取得求購列表失敗",
       "loadFailed": "載入求購列表失敗"
-    }
-  },
-  "wantedWrite": {
-    "title": "撰寫求購貼文",
-    "back": "返回",
-    "basicInfo": "基本資訊",
-    "inputMethod": "輸入方式選擇",
-    "inputType": {
-      "manual": "手動輸入（標題/作者）",
-      "search": "以ISBN/標題搜尋"
     },
-    "titleLabel": "標題",
-    "titlePlaceholder": "請輸入您想要的書籍標題",
-    "authorLabel": "作者",
-    "authorPlaceholder": "請輸入作者",
-    "search": {
-      "enterQuery": "請輸入搜尋詞！🔍",
-      "noResults": "沒有搜尋結果！請嘗試其他關鍵字📚",
-      "error": "搜尋書籍時發生錯誤！請重試😅"
-    },
-    "validation": {
-      "titleOrContent": "請輸入標題或請求內容",
-      "selectCondition": "請選擇狀態",
-      "priceRange": "請輸入{{min}}~{{max}}韓元範圍內的期望價格",
-      "selectCategory": "請選擇類別"
-    },
-    "error": {
-      "loadDetail": "載入詳細資訊失敗",
-      "loginRequired": "需要登入（找不到userId）",
-      "updateFailed": "更新時發生錯誤。",
-      "createFailed": "建立時發生錯誤。"
-    }
+    "loading": "我正在寻找您要找的那本书。"
   },
   "wantedDetail": {
     "back": "返回",
@@ -1040,33 +1018,22 @@
       "buttonText": "查看地圖"
     }
   },
+  "hero": {
+    "bookstore": "書籍交易板",
+    "myBookstore": "我的書店",
+    "map": "弘益地圖"
+  },
   "wantedShort": "求購",
   "cookiePolicy": "Cookie政策",
   "accessibility": "無障礙",
-  "hongikUniversity": "弘益大學",
-  "profileEmail": "個人資料郵箱",
-  "schoolVerification": "學校郵箱驗證",
-  "verified": "已驗證",
-  "notVerified": "未驗證",
-  "verifySchoolEmail": "驗證學校郵箱",
-  "enterSchoolEmail": "輸入學校郵箱",
-  "enterVerificationCode": "輸入驗證碼",
-  "sendVerificationCode": "發送驗證碼",
-  "invalidVerificationCode": "無效的驗證碼",
-  "yourSchoolEmailVerified": "您的學校郵箱已驗證",
-  "resendCode": "重新發送驗證碼",
-  "resendCodeIn": "{{sec}}秒後重新發送",
-  "changePassword": "更改密碼",
-  "deleteAccount": "刪除帳戶",
-  "locationName": "位置名稱",
-  "address": "地址",
-  "addNewLocation": "添加新位置",
-  "cancel": "取消",
-  "defaultLocation": "默認位置",
-  "setDefault": "設為默認",
-  "deleteLocation": "刪除位置",
+  "hongikUniversity": "弘益大学",
+  "schoolVerification": "学校邮箱验证",
   "myLocation": "我的位置",
   "change": "修改",
+  "totalBooks": "總書數",
+  "completedTrades": "已完成的交易",
+  "averageRating": "平均評分",
+  "daysActive": "活動天數",
   "enterNewEmail": "輸入新郵箱",
   "noEmail": "無郵箱",
   "emailUpdated": "郵箱更新成功。",
@@ -1075,16 +1042,13 @@
   "changePasswordTitle": "更改密碼",
   "currentPassword": "當前密碼",
   "enterCurrentPassword": "請輸入當前密碼",
-  "newPassword": "新密碼",
   "enterNewPassword": "請輸入新密碼",
   "confirmNewPassword": "確認新密碼",
-  "confirmNewPassword": "請重新輸入新密碼",
   "passwordHint": "包含大小寫字母、數字和特殊字符的8-16位字符",
   "confirm": "確認",
   "currentPasswordRequired": "請輸入當前密碼。",
   "newPasswordRequired": "請輸入新密碼。",
   "passwordFormatError": "密碼必須包含大小寫字母、數字和特殊字符（8-16位）。",
-  "passwordMismatch": "新密碼不匹配。",
   "samePasswordError": "新密碼必須與當前密碼不同。",
   "passwordChangeSuccess": "密碼更改成功。",
   "currentPasswordIncorrect": "當前密碼不正確。",
@@ -1148,17 +1112,12 @@
     "inputMethod": "输入方式",
     "inputType": {
       "manual": "手动输入",
-      "search": "搜索输入"
+      "search": "以ISBN/搜索输入"
     },
     "titleLabel": "标题",
     "titlePlaceholder": "请输入标题",
     "authorLabel": "作者",
     "authorPlaceholder": "请输入作者",
-    "search": {
-      "enterQuery": "请输入搜索词",
-      "noResults": "没有搜索结果",
-      "error": "搜索时发生错误"
-    },
     "validation": {
       "titleRequired": "请输入标题",
       "authorRequired": "请输入作者",
@@ -1167,7 +1126,11 @@
       "conditionRequired": "请选择状态",
       "categoryRequired": "请选择分类",
       "contentRequired": "请输入请求内容",
-      "inappropriateContent": "检测到不当内容"
+      "inappropriateContent": "检测到不当内容",
+      "titleOrContent": "請輸入標題或請求內容",
+      "selectCondition": "請選擇狀態",
+      "priceRange": "請輸入{{min}}~{{max}}韓元範圍內的期望價格",
+      "selectCategory": "請選擇類別"
     },
     "error": {
       "loadDetail": "加载帖子失败",
@@ -1204,7 +1167,10 @@
       "inputPlaceholder": "通过ISBN或书名搜索",
       "author": "作者",
       "publisher": "出版社",
-      "noInfo": "无信息"
+      "noInfo": "无信息",
+      "enterQuery": "请输入搜索词",
+      "noResults": "没有搜索结果",
+      "error": "搜索时发生错误"
     },
     "price": {
       "label": "期望价格",
@@ -1223,30 +1189,6 @@
       "placeholder": "例）通识课程作业急需。\n最好是有下划线/笔记的书。"
     }
   },
-  "categories": {
-    "major": {
-      "경영대학": "经营大学",
-      "공과대학": "工科大学",
-      "법과대학": "法科大学",
-      "미술대학": "美术大学",
-      "디자인,예술경영학부": "设计艺术经营学部",
-      "공연예술학부": "公演艺术学部",
-      "경제학부": "经济学部",
-      "사범대학": "师范大学",
-      "문과대학": "文科大学",
-      "건축도시대학": "建筑都市大学"
-    },
-    "general": {
-      "ABEEK 교양": "ABEEK教养",
-      "인문계열": "人文系",
-      "영어계열": "英语系",
-      "사회계열": "社会系",
-      "제2외국어계열": "第二外语系",
-      "자연계열": "自然系",
-      "예체능계열": "艺体系",
-      "교직": "教职"
-    }
-  },
   "warningModal": {
     "unsavedChanges": {
       "title": "您有未保存的内容",
@@ -1256,5 +1198,73 @@
       "continueWriting": "继续编写",
       "exit": "退出"
     }
-  }
+  },
+  "상": "上",
+  "중": "中",
+  "하": "下",
+  "ISBNWithoutHyphen": "请仅输入 ISBN 数字，不输入连字符 (-)。",
+  "noDescription": "没有书面描述。",
+  "전공": "专攻",
+  "교양": "教养",
+  "경영대학": "经营大学",
+  "공과대학": "工科大学",
+  "법과대학": "法科大学",
+  "미술대학": "美术大学",
+  "디자인,예술경영학부": "设计艺术经营学部",
+  "공연예술학부": "公演艺术学部",
+  "경제학부": "经济学部",
+  "사범대학": "师范大学",
+  "문과대학": "文科大学",
+  "건축도시대학": "建筑都市大学",
+  "경영학부": "经营学部",
+  "전자전기공학부": "电子电气工学部",
+  "신소재공학전공": "新材料工学科",
+  "화학공학전공": "化学工学科",
+  "컴퓨터공학과": "计算机工学科",
+  "산업데이터공학과": "产业数据工学科",
+  "기계시스템디자인공학과": "机械系统设计工学科",
+  "건설환경공학과": "建设环境工学科",
+  "법학부": "法学部",
+  "동양학과": "东洋学科",
+  "회화과": "绘画科",
+  "판화과": "版画科",
+  "조소과": "雕刻科",
+  "시각디자인전공": "视觉设计专攻",
+  "산업디자인전공": "产业设计专攻",
+  "금속조형디자인과": "金属造型设计科",
+  "도예유리과": "陶瓷玻璃科",
+  "목조형가구학과": "木造型家具学科",
+  "섬유미술패션디자인과": "纤维美术时尚设计科",
+  "예술학과": "艺术学科",
+  "디자인경영전공": "设计经营专攻",
+  "예술경영전공": "艺术经营专攻",
+  "뮤지컬전공": "音乐剧专攻",
+  "실용음악전공": "实用音乐专攻",
+  "경제학전공": "经济学专攻",
+  "수학교육과": "数学教育科",
+  "국어교육과": "国语教育科",
+  "영어교육과": "英语教育科",
+  "역사교육과": "历史教育科",
+  "교육학과": "教育学科",
+  "영어영문학과": "英语英文学科",
+  "독어독문학과": "德语独文学科",
+  "불어불문학과": "法语佛文学科",
+  "국어국문학과": "国语国文学科",
+  "건축학전공": "建筑学专攻",
+  "실내건축학전공": "室内建筑学专攻",
+  "도시공학과": "都市工学科",
+  "ABEEK 교양": "ABEEK教养",
+  "인문계열": "人文系",
+  "영어계열": "英语系",
+  "사회계열": "社会系",
+  "제2외국어계열": "第二外语系",
+  "자연계열": "自然系",
+  "예체능계열": "艺体系",
+  "교직": "教职",
+  "used1": "折扣取决于用铅笔、钢笔等书写的程度。",
+  "used2": "根据书架、封面等的撕裂程度给予折扣。",
+  "used3": "根据水渍或痕迹的程度提供折扣",
+  "used4": "适用于所有旧书，而不仅仅是新书。",
+  "about": "大约",
+  "noOtherSell": "😅 卖家没有注册其他书籍。"
 }

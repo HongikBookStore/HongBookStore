@@ -143,7 +143,6 @@ export default function WantedComments({ wantedId }) {
             const json = await toJsonSafely(res);
             setList(normalizeApiData(json));
         } catch (e) {
-            console.error(e);
             setList([]);
         } finally {
             setLoading(false);
@@ -175,7 +174,6 @@ export default function WantedComments({ wantedId }) {
             setText('');
             await fetchList();
         } catch (e) {
-            console.error(e);
             alert(e.message || t('wantedComments.error.createFailed'));
         }
     }
@@ -204,7 +202,6 @@ export default function WantedComments({ wantedId }) {
             setReplyText('');
             await fetchList();
         } catch (e) {
-            console.error(e);
             alert(e.message || t('wantedComments.error.replyFailed'));
         }
     }

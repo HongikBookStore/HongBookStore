@@ -233,9 +233,9 @@ const ConditionValue = styled.div`
   font-weight: 600;
   color: ${props => {
     // 번역된 텍스트가 아닌 원본 enum 값으로 색깔 결정
-    if (props.condition === 'HIGH') return '#28a745';
-    if (props.condition === 'MEDIUM') return '#ffc107';
-    if (props.condition === 'LOW') return '#dc3545';
+    if (props.$condition === 'HIGH') return '#28a745';
+    if (props.$condition === 'MEDIUM') return '#ffc107';
+    if (props.$condition === 'LOW') return '#dc3545';
     return '#666';
   }};
 `;
@@ -512,7 +512,7 @@ const LikeButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  color: ${props => props.liked ? '#ff4757' : '#666'};
+  color: ${props => props.$liked ? '#ff4757' : '#666'};
   font-size: 1.2rem;
 
   &:hover {
@@ -794,7 +794,6 @@ const PostDetail = () => {
       setSelectedImageIndex(0);
     } catch (err) {
       setError(err);
-      console.error("게시글 정보를 불러오는 데 실패했습니다.", err);
     } finally {
       setLoading(false);
     }
@@ -808,7 +807,6 @@ const PostDetail = () => {
       const likedIds = new Set(response.data.map(p => p.postId ?? p.id));
       setLiked(likedIds.has(parseInt(id)));
     } catch (error) {
-      console.error("찜 목록을 불러오는 데 실패했습니다.", error);
     }
   }, [id]);
 
@@ -819,11 +817,10 @@ const PostDetail = () => {
       const response = await axios.get(`/api/posts/seller/${sellerId}`);
       setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id)));
     } catch (error) {
-      console.error("판매자의 다른 책들을 불러오는 데 실패했습니다.", error);
-      setSellerOtherBooks([
-        { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
-        { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
-      ]);
+      //setSellerOtherBooks([
+      //  { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
+      //  { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
+      //]);
     } finally {
       setLoadingOtherBooks(false);
     }
@@ -851,7 +848,6 @@ const PostDetail = () => {
         await axios.delete(`/api/posts/${id}/like`, { headers: getAuthHeader() });
       }
     } catch (error) {
-      console.error("찜 처리 실패:", error);
       setLiked(!newLikedState);
       alert("오류가 발생했습니다.");
     }
@@ -874,7 +870,6 @@ const PostDetail = () => {
       const chatRoom = response.data;
       navigate(`/chat/${chatRoom.id}`);
     } catch (err) {
-      console.error("채팅방 생성/입장 실패", err);
       const errorMessage = err.response?.data?.message || '채팅방을 열 수 없습니다. 잠시 후 다시 시도해주세요.';
       alert(errorMessage);
     }
@@ -930,7 +925,6 @@ const PostDetail = () => {
       alert('후기가 저장되었습니다.');
       setReviewOpen(false);
     } catch (e) {
-      console.error('후기 저장 실패', e);
       alert(e.response?.data?.message || t('postDetail.review.saveError'));
     } finally {
       setReviewSubmitting(false);
@@ -956,6 +950,14 @@ const PostDetail = () => {
       () => deriveTradeLocations(post || {}),
       [post]
   );
+
+  // 내가 쓴 글인지 여부
+  const isOwner = useMemo(() => {
+    const me = user?.id;
+    const seller = post?.sellerId ?? post?.userId; // 백엔드 응답 케이스 모두 대비
+    return !!me && !!seller && me === seller;
+  }, [user?.id, post?.sellerId, post?.userId]);
+
 
   // ✅ 신고 모달 열기
   const openReport = () => {
@@ -1062,12 +1064,16 @@ const PostDetail = () => {
                   {post.bookTitle}
                   {/* 👉 제목 오른쪽에 신고 + 좋아요 */}
                   <TitleActions>
-                    <ReportButton onClick={openReport} title={t('postDetail.report')}>
+                    {!isOwner && (
+                        <ReportButton onClick={openReport} title={t('postDetail.report')}>
                       <FaExclamationTriangle />
                       {t('postDetail.report')}
                     </ReportButton>
-                    <LikeButton liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
+                    )}
+                    
+                    <LikeButton $liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
                   </TitleActions>
+
                 </BookTitle>
                 <BookAuthor>{post.author}</BookAuthor>
               </div>
@@ -1103,7 +1109,7 @@ const PostDetail = () => {
                 <ConditionGrid>
                   <ConditionItem>
                     <ConditionLabel>{t('postDetail.bookCondition.noteCondition')}</ConditionLabel>
-                    <ConditionValue condition={post.writingCondition}>{conditionMap[post.writingCondition]}</ConditionValue>
+                    <ConditionValue $condition={post.writingCondition}>{conditionMap[post.writingCondition]}</ConditionValue>
                   </ConditionItem>
                   <ConditionItem>
                     <ConditionLabel>{t('postDetail.bookCondition.tearCondition')}</ConditionLabel>
@@ -1142,12 +1148,12 @@ const PostDetail = () => {
                 <InfoGrid>
                   <InfoItem>
                     <InfoLabel>{t('postDetail.category')}</InfoLabel>
-                    <InfoValue>{post.category || '컴퓨터공학'}</InfoValue>
+                    <InfoValue>{t(post.category)}</InfoValue>
                   </InfoItem>
 
                   <InfoItem>
                     <InfoLabel>{t('postDetail.tradeLocation')}</InfoLabel>
-                    <InfoValue>{post.tradeLocation || '교내'}</InfoValue>
+                    <InfoValue>{post.tradeLocation}</InfoValue>
                   </InfoItem>
 
                   {/* ✅ 교내 기준 위치(사람 친화 라벨) */}
@@ -1223,7 +1229,18 @@ const PostDetail = () => {
                         </SellerRating>
                     )}
                     <div>
-                      <button onClick={() => navigate(`/users/${post.sellerId}`)} style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}>{t('postDetail.seller.profile')}</button>
+                      <button
+                        onClick={() =>
+                            navigate(`/users/${post.sellerId}`, {
+                              state: {
+                                username: post.sellerNickname || post.sellerUsername || post.sellerName || ''
+                              }
+                            })
+                        }
+                        style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}
+                    >
+                      {t('postDetail.seller.profile')}
+                    </button>
                     </div>
                     {post.sellerSalesCount && (
                         <SalesCount>{t('postDetail.seller.salesCount', { count: post.sellerSalesCount })}</SalesCount>
@@ -1319,7 +1336,7 @@ const PostDetail = () => {
                     </OtherBooksGrid>
                 ) : (
                     <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                      😅 판매자가 등록한 다른 책이 없어요
+                      {t('noOtherSell')}
                     </div>
                 )}
               </ModalContent>

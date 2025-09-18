@@ -14,12 +14,10 @@ export function startNotificationStream(onEvent, onError) {
             const data = JSON.parse(e.data);
             onEvent && onEvent(data);
         } catch (err) {
-            console.error('Failed to parse SSE notification:', err);
         }
     });
 
     es.onerror = (err) => {
-        console.warn('SSE disconnected. Will retry in 3s.', err);
         try { es.close(); } catch {}
         onError && onError(err);
         setTimeout(() => startNotificationStream(onEvent, onError), 3000);

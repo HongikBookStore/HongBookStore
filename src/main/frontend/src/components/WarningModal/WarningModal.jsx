@@ -4,7 +4,7 @@ import { FaExclamationTriangle } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 
 const ModalOverlay = styled.div`
-  display: ${props => props.$isOpen ? 'flex' : 'none'};
+  display: ${props => props.isOpen ? 'flex' : 'none'};
   position: fixed;
   top: 0;
   left: 0;
@@ -135,7 +135,7 @@ const WarningModal = ({
   };
 
   return (
-    <ModalOverlay $isOpen={isOpen} onClick={onClose}>
+    <ModalOverlay isOpen={isOpen} onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <WarningIcon>
           <FaExclamationTriangle />

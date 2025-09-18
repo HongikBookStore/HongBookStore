@@ -8,9 +8,12 @@ import axios from 'axios';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/Modal';
+import Loading from '../../components/ui/Loading';
 // 지도 선택 기능 제거로 NaverMap import 불필요
 import { openDaumPostcode } from '../../utils/daumPostcode';
 import { AuthCtx } from '../../contexts/AuthContext';
+import AdminReportCard from './AdminReportCard.jsx';
+
 
 const MyPageContainer = styled.div`
   padding: 2rem 1rem 4rem;
@@ -33,9 +36,21 @@ const MyPageContainer = styled.div`
     gap: 3rem;
     display: grid;
     grid-template-columns: 0.8fr 1.2fr;
+    grid-template-columns: minmax(540px, 1fr) 1fr;
     grid-template-rows: auto;
     align-items: start;
   }
+`;
+// 왼쪽/오른쪽 칼럼 래퍼
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  @media (min-width: 1024px) { grid-column: 1 / 2; }
+`;
+
+const RightColumn = styled.div`
+  @media (min-width: 1024px) { grid-column: 2 / 3; }
 `;
 
 const ProfileCard = styled.div`
@@ -296,10 +311,10 @@ const TabButton = styled.button`
   padding: 1rem 2rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
+  color: ${props => props.$active ? 'var(--primary)' : 'var(--text-light)'};
   background: none;
   border: none;
-  border-bottom: 2px solid ${props => props.active ? 'var(--primary)' : 'transparent'};
+  border-bottom: 2px solid ${props => props.$active ? 'var(--primary)' : 'transparent'};
   cursor: pointer;
   transition: var(--transition);
 
@@ -317,6 +332,7 @@ const SettingsContainer = styled.div`
   
   @media (min-width: 1024px) {
     gap: 2.5rem;
+    grid-column: 2 / 3;   /* 오른쪽 칼럼 고정 */
   }
 `;
 
@@ -347,28 +363,31 @@ const SettingsSection = styled.div`
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    padding: 0.4rem 0.8rem;
-    border-radius: 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    background: var(--background);
-    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: var(--surface);
+    border: 2px solid var(--border);
     transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     
     &.verified {
-      color: var(--primary);
-      background: rgba(124, 58, 237, 0.1);
-      border-color: rgba(124, 58, 237, 0.2);
+      color: #ffffff;
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      border-color: #7c3aed;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
     }
     
     &.not-verified {
-      color: var(--accent);
-      background: rgba(249, 115, 22, 0.1);
-      border-color: rgba(249, 115, 22, 0.2);
+      color: #ffffff;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-color: #f97316;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
     }
     
     i {
-      font-size: 0.9rem;
+      font-size: 1rem;
     }
   }
   
@@ -655,7 +674,8 @@ const Input = styled.input`
   }
   
   &::placeholder {
-    color: var(--text-light);
+    color: #adb5bd;
+    opacity: 0.7;
   }
 `;
 
@@ -681,11 +701,18 @@ const IconButton = styled.button`
 `;
 
 const VerificationForm = styled.div`
-  background: var(--background);
-  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(124, 58, 237, 0.15) 100%);
+  border-radius: 1rem;
   padding: 1.5rem;
   margin-top: 1rem;
-  border: 1px solid var(--border);
+  border: none;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.15);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 6px 25px rgba(124, 58, 237, 0.2);
+    transform: translateY(-1px);
+  }
 `;
 
 // ---
@@ -1002,7 +1029,6 @@ const MyPage = () => {
         }
       }
     } catch (error) {
-      console.error(t('mypage.profileLoadFailed'), error);
       // 토큰 만료 등의 이유로 실패 시 로그인 페이지로 이동
       navigate('/login');
     } finally {
@@ -1055,7 +1081,6 @@ const MyPage = () => {
         const res = await axios.get(`/api/reviews/summary/users/${uid}`, { headers: getAuthHeader() });
         setRatingSummary(res.data);
       } catch (e) {
-        console.error(t('mypage.ratingSummaryFailed'), e);
         setRatingError(e.response?.data?.message || t('mypage.ratingLoadFailed'));
       } finally {
         setRatingLoading(false);
@@ -1084,7 +1109,6 @@ const MyPage = () => {
       setRoleTotal(typeof data.totalElements === 'number' ? data.totalElements : (Array.isArray(data.content) ? data.content.length : 0));
       setRoleLast(Boolean(data.last));
     } catch (e) {
-      console.error(t('mypage.reviewLoadFailed'), e);
       setRoleError(e.response?.data?.message || t('mypage.reviewListLoadFailed'));
       setRoleReviews([]);
     } finally {
@@ -1186,7 +1210,6 @@ const MyPage = () => {
           }
         }
       } catch (e) {
-        console.warn('Forward geocoding failed:', e?.response?.data?.message || e.message);
       }
     } catch (e) {
       // 사용자가 창을 닫은 경우 등 무시
@@ -1263,7 +1286,6 @@ const MyPage = () => {
         localStorage.setItem('user', JSON.stringify({ ...userObj, profileImage: newUrl, profileImageUrl: newUrl }));
       } catch (_) {}
     } catch (err) {
-      console.error(t('mypage.profileImageUploadFailed'), err);
       alert(err?.response?.data?.message || t('mypage.profileImageUploadError'));
     } finally {
       // 같은 파일 재선택 가능하도록 input 리셋
@@ -1296,7 +1318,9 @@ const MyPage = () => {
   };
 
   if (loading || !profile) {
-    return <MyPageContainer><h2>{t('common.loading')}</h2></MyPageContainer>;
+    return (
+      <Loading type="hongbook" size="xl" subtext="프로필을 불러오고 있어요" fullScreen />
+    );
   }
 
   // 프로필 링(원형) 표시를 위한 퍼센트(0~100) 계산: 0~5 ★ → ×20
@@ -1305,6 +1329,7 @@ const MyPage = () => {
 
   return (
     <MyPageContainer>
+      <LeftColumn>
       <ProfileCard>
         <ProfileImageBig style={{
           '--score-color': getScoreColor(overallPercent),
@@ -1455,6 +1480,9 @@ const MyPage = () => {
         </ProfileInfoBox>
       </ProfileCard>
 
+      <AdminReportCard />
+      </LeftColumn>
+
       {/* 오른쪽 열 - 설정 섹션들 */}
       <SettingsContainer>
         {/* 거래 후기 섹션 (판매자/구매자 탭) */}
@@ -1462,8 +1490,8 @@ const MyPage = () => {
           <h3><i className="fas fa-star" style={{color: 'var(--primary)'}}></i> {t('mypage.transactionReview')}</h3>
           <TabContainer>
             <TabList>
-              <TabButton active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>{t('mypage.sellerReview')}</TabButton>
-              <TabButton active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>{t('mypage.buyerReview')}</TabButton>
+              <TabButton $active={reviewTab === 'SELLER'} onClick={() => setReviewTab('SELLER')}>{t('mypage.sellerReview')}</TabButton>
+              <TabButton $active={reviewTab === 'BUYER'} onClick={() => setReviewTab('BUYER')}>{t('mypage.buyerReview')}</TabButton>
             </TabList>
           </TabContainer>
           {/* 요약 배지 */}
@@ -1563,33 +1591,6 @@ const MyPage = () => {
             </ModalBox>
           </ModalOverlay>
         )}
-        <SettingsSection>
-          <h3><i className="fas fa-history" style={{color: 'var(--primary)'}}></i> {t('mypage.recentlyViewedPosts')}</h3>
-          {recentLoading ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.loading')}</div>
-          ) : recentPosts.length === 0 ? (
-            <div style={{ padding: '0.5rem', color: 'var(--text-light)' }}>{t('mypage.noRecentlyViewedPosts')}</div>
-          ) : (
-            <RecentGrid>
-              {recentPosts.map(p => (
-                <RecentCard key={p.postId} onClick={() => openConfirm(p)}>
-                  <RecentThumb>
-                    {p.thumbnailUrl ? (
-                      <img src={p.thumbnailUrl} alt={p.postTitle} />
-                    ) : (
-                      <span>{p.postTitle}</span>
-                    )}
-                  </RecentThumb>
-                  <RecentTitle>{p.postTitle}</RecentTitle>
-                  <RecentMeta>
-                    <span>{(p.price ?? 0).toLocaleString()}{t('common.won')}</span>
-                    <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
-                  </RecentMeta>
-                </RecentCard>
-              ))}
-            </RecentGrid>
-          )}
-        </SettingsSection>
 
         {confirmPost && (
           <ModalOverlay onClick={closeConfirm}>
@@ -1626,7 +1627,7 @@ const MyPage = () => {
         </SettingsSection>
 
         <SettingsSection>
-          <h3>{t('mypage.studentVerification')}</h3>
+          <h3><i className="fas fa-graduation-cap" style={{color: 'var(--primary)'}}></i> {t('mypage.studentVerification')}</h3>
           <SettingsList>
             <SettingsItem>
               <span><i className="fas fa-university" style={{marginRight:8, color: '#6B7280'}}></i>{t('mypage.currentStudentVerification')}</span>
@@ -1651,6 +1652,11 @@ const MyPage = () => {
                 value={univEmail}
                 onChange={(e) => setUnivEmail(e.target.value)}
                 disabled={isSubmitting}
+                style={{
+                  background: '#f8f9fa',
+                  border: '2px solid #e9ecef',
+                  color: '#495057'
+                }}
               />
               <SmallButton onClick={handleSendVerification} disabled={isSubmitting}>
                 {isSubmitting ? '전송 중...' : '인증 메일 발송'}
@@ -1695,7 +1701,7 @@ const MyPage = () => {
                         readOnly
                       />
                       <SmallButton onClick={() => handlePostcodeSelect(true)}>
-                        우편번호로 찾기
+                        {t('mypage.useZipcodeSearch')}
                       </SmallButton>
                     </div>
                     {/* 검색/지도 선택 제거: 우편번호 전용 */}
@@ -1744,7 +1750,7 @@ const MyPage = () => {
                 />
                 <div style={{display:'flex', gap:8, alignItems:'flex-start'}}>
                   <SmallButton onClick={() => handlePostcodeSelect(false)}>
-                    우편번호로 찾기
+                    {t('mypage.useZipcodeSearch')}
                   </SmallButton>
                 </div>
                 <div className="button-group">

@@ -6,7 +6,7 @@ import com.hongik.books.domain.wanted.domain.Wanted;
 import com.hongik.books.domain.wanted.dto.*;
 import com.hongik.books.domain.wanted.repository.WantedRepository;
 import com.hongik.books.domain.wanted.repository.WantedSpecifications;
-import com.hongik.books.domain.comment.repository.WantedCommentRepository; // ✅ 추가
+import com.hongik.books.domain.comment.repository.WantedCommentRepository; // ✅ 유지
 import lombok.RequiredArgsConstructor;
 import com.hongik.books.moderation.ModerationPolicyProperties;
 import com.hongik.books.moderation.ModerationService;
@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.hongik.books.domain.wanted.support.DepartmentNormalizer; // ✅ 추가
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,7 @@ public class WantedService {
 
     private final WantedRepository wantedRepository;
     private final UserRepository userRepository;
-    private final WantedCommentRepository wantedCommentRepository; // ✅ 추가
+    private final WantedCommentRepository wantedCommentRepository; // ✅ 유지
     private final ModerationService moderationService;
     private final ModerationPolicyProperties moderationPolicy;
 
@@ -39,9 +40,12 @@ public class WantedService {
         };
         Pageable pageable = PageRequest.of(page, size, s);
 
+        // ✅ 검색 파라미터도 KO로 정규화하여 DB 필터가 정확히 동작
+        String deptKo = DepartmentNormalizer.toKoreanOrNull(department);
+
         Specification<Wanted> spec = Specification.allOf(
                 WantedSpecifications.categoryEquals(category),
-                WantedSpecifications.departmentEquals(department),
+                WantedSpecifications.departmentEquals(deptKo),
                 WantedSpecifications.keywordContains(keyword)
         );
 
@@ -70,6 +74,11 @@ public class WantedService {
         String safeTitle = deriveTitle(dto.getTitle(), dto.getContent());
         String safeAuthor = deriveAuthor(dto.getAuthor());
 
+        // ✅ 어떤 언어로 와도 학과명은 한국어로 저장
+        String deptKo = isMajorCategory(dto.getCategory())
+                ? emptyToNull(DepartmentNormalizer.toKoreanOrNull(dto.getDepartment()))
+                : null;
+
         Wanted wanted = Wanted.builder()
                 .requester(requester)
                 .title(safeTitle)
@@ -77,7 +86,7 @@ public class WantedService {
                 .desiredCondition(dto.getCondition())
                 .price(dto.getPrice())
                 .category(dto.getCategory())
-                .department("전공".equals(dto.getCategory()) ? emptyToNull(dto.getDepartment()) : null)
+                .department(deptKo)
                 .content(dto.getContent())
                 .build();
         if (contentModeration != null) {
@@ -111,13 +120,19 @@ public class WantedService {
 
         String safeTitle = deriveTitle(dto.getTitle(), dto.getContent());
         String safeAuthor = deriveAuthor(dto.getAuthor());
+
+        // ✅ 업데이트 시에도 KO 정규화
+        String deptKo = isMajorCategory(dto.getCategory())
+                ? emptyToNull(DepartmentNormalizer.toKoreanOrNull(dto.getDepartment()))
+                : null;
+
         w.update(
                 safeTitle,
                 safeAuthor,
                 dto.getCondition(),
                 dto.getPrice(),
                 dto.getCategory(),
-                "전공".equals(dto.getCategory()) ? emptyToNull(dto.getDepartment()) : null,
+                deptKo,
                 dto.getContent()
         );
         if (contentModeration != null) {
@@ -147,6 +162,19 @@ public class WantedService {
 
     private String deriveAuthor(String author) {
         return StringUtils.hasText(author) ? author.trim() : "미상";
+    }
+
+    /**
+     * 카테고리가 '전공'을 의미하는 다국어 표현인지 판정
+     * (프런트 언어가 바뀌어도 정상 동작하도록 보강)
+     */
+    private boolean isMajorCategory(String category) {
+        if (!StringUtils.hasText(category)) return false;
+        String c = category.trim();
+        return "전공".equals(c)
+                || "専攻".equals(c)
+                || "Major".equalsIgnoreCase(c)
+                || "专业".equals(c) || "主修".equals(c);
     }
 
     @Transactional

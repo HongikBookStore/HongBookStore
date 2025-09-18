@@ -158,7 +158,7 @@ export default function WantedDetail() {
     // ✅ 사이드바 메뉴 핸들러
     const handleSidebarMenu = (menu) => {
         switch (menu) {
-            case 'booksale': navigate('/bookstore/add'); break;
+            case 'bookstore/add': navigate('/bookstore/add'); break;
             case 'wanted': navigate('/wanted'); break;
             case 'mybookstore': navigate('/bookstore'); break;
             case 'chat': navigate('/chat'); break;
@@ -203,7 +203,6 @@ export default function WantedDetail() {
                     } catch { /* ignore */ }
                 }
             } catch (e) {
-                console.error(e);
                 if (alive) setData(null);
             } finally {
                 if (alive) setLoading(false);
@@ -251,7 +250,6 @@ export default function WantedDetail() {
             }
             throw new Error(message);
         } catch (err) {
-            console.error('❌ onDelete error:', err);
             const msg = String(err?.message || '');
             if (msg.includes('권한') || msg.includes('403')) {
                 alert('삭제 권한이 없습니다. 본인이 작성한 글만 삭제할 수 있습니다.');
@@ -340,7 +338,7 @@ export default function WantedDetail() {
     const categoryName = rawCategory.split('>')[0]?.trim() || rawCategory;
     const translatedCategory = translateCategory(categoryName, t);
     const displayCategory = data.department
-        ? `${translatedCategory} / ${data.department}`
+        ? `${translatedCategory} / ${t(data.department)}`
         : translatedCategory;
 
     return (
@@ -350,7 +348,7 @@ export default function WantedDetail() {
             <MainContent>
                 <Container>
                     <TopBar>
-                        <BackButton onClick={() => navigate(-1)}><FaArrowLeft /> {t('wantedDetail.back')}</BackButton>
+                        <BackButton onClick={() => navigate('/wanted')}><FaArrowLeft /> {t('wantedDetail.back')}</BackButton>
                         <Actions>
                             <Button onClick={() => navigate('/wanted')}>{t('wantedDetail.list')}</Button>
                             {mine ? (
@@ -376,7 +374,7 @@ export default function WantedDetail() {
 
                         <MetaRow>
                             <Chip><FaUser /> {displayAuthor}</Chip>
-                            <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {conditionKor}</ConditionChip>
+                            <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {t(conditionKor)}</ConditionChip>
                             <PriceChip><FaTag /> {t('wantedDetail.desiredPrice')}: {Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</PriceChip>
                         </MetaRow>
                         <SubMeta>
@@ -410,7 +408,7 @@ export default function WantedDetail() {
                                 {data.content ? (
                                     <BodyText>{data.content}</BodyText>
                                 ) : (
-                                    <Small>작성된 설명이 없습니다.</Small>
+                                    <Small>{t('noDescription')}</Small>
                                 )}
                             </Card>
 
@@ -425,7 +423,7 @@ export default function WantedDetail() {
                             <InfoGrid>
                                 <InfoItem><Label>{t('wantedDetail.bookTitle')}</Label><Value>{data.title || '-'}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.author')}</Label><Value>{data.author || '-'}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{conditionKor}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{t(conditionKor)}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.desiredPrice')}</Label><Value>{Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.category.label')}</Label><Value>{displayCategory}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayAuthor}</Value></InfoItem>
