@@ -25,8 +25,8 @@ FROM eclipse-temurin:21-jre-alpine AS run
 ENV TZ=Asia/Seoul
 WORKDIR /app
 
-# Create non-root user
-RUN useradd -ms /bin/bash spring
+# Create non-root user (Alpine busybox uses adduser/addgroup)
+RUN addgroup -S spring && adduser -S spring -G spring
 USER spring
 
 # Copy Spring Boot layers as separate Docker layers
