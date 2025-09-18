@@ -126,10 +126,17 @@ if [[ "${USE_SECRETS}" == "true" ]]; then
     exit 1
   fi
   echo "[secrets] Mapping secrets from ${SECRETS_FILE}"
-  while IFS= read -r NAME; do
-    [[ -z "${NAME}" || "${NAME}" =~ ^# ]] && continue
+  while IFS= read -r RAW; do
+    [[ -z "${RAW}" || "${RAW}" =~ ^# ]] && continue
+    NAME=${RAW%%=*}
+    SECRET_ID=${RAW#*=}
+    NAME=$(echo "${NAME}" | xargs)
+    SECRET_ID=$(echo "${SECRET_ID}" | xargs)
+    if [[ -z "${SECRET_ID}" || "${NAME}" == "${SECRET_ID}" ]]; then
+      SECRET_ID="${NAME}"
+    fi
     SECRET_KEYS["${NAME}"]=1
-    FLAGS+=(--set-secrets "${NAME}=projects/${PROJECT_ID}/secrets/${NAME}:latest")
+    FLAGS+=(--set-secrets "${NAME}=projects/${PROJECT_ID}/secrets/${SECRET_ID}:latest")
   done < "${SECRETS_FILE}"
 
   # Ensure required Artifact Analysis Pub/Sub topics exist
