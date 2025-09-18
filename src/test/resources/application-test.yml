@@ -40,7 +40,7 @@ datasource:
     port: 3306
 
 jwt:
-  secret: test-secret
+  secret: test-secret-test-secret-test-secret-test
   token-validity-in-seconds: 3600
   refresh-token-validity-in-seconds: 86400
 
@@ -82,4 +82,3 @@ email:
   brand:
     name: HongBookStore
     primary-color: "#2563eb"
-
