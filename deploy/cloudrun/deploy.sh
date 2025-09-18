@@ -64,7 +64,42 @@ TAG=$(git rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${SERVICE_NAME}:${TAG}"
 
 echo "[build] Submitting image: ${IMAGE_URI}"
-gcloud builds submit --project "${PROJECT_ID}" --tag "${IMAGE_URI}" .
+SUBMIT_OUTPUT=$(mktemp)
+if ! gcloud builds submit --project "${PROJECT_ID}" --tag "${IMAGE_URI}" . --async >"${SUBMIT_OUTPUT}" 2>&1; then
+  cat "${SUBMIT_OUTPUT}" >&2
+  rm -f "${SUBMIT_OUTPUT}"
+  echo "[error] Failed to submit Cloud Build." >&2
+  exit 1
+fi
+
+cat "${SUBMIT_OUTPUT}"
+BUILD_ID=$(sed -n 's/.*builds\/\([[:alnum:]-]\+\).*/\1/p' "${SUBMIT_OUTPUT}" | tail -n1)
+rm -f "${SUBMIT_OUTPUT}"
+
+if [[ -z "${BUILD_ID}" ]]; then
+  echo "[error] Could not determine build ID from submission output." >&2
+  exit 1
+fi
+
+echo "[build] Submitted Cloud Build ID: ${BUILD_ID}"
+
+while true; do
+  STATUS=$(gcloud builds describe "${BUILD_ID}" --project "${PROJECT_ID}" --format='value(status)')
+  echo "[build] Build status: ${STATUS}"
+  case "${STATUS}" in
+    SUCCESS)
+      break
+    ;;
+    QUEUED|WORKING)
+      sleep 10
+      ;;
+    *)
+      echo "[error] Cloud Build finished with status ${STATUS}." >&2
+      echo "[hint] Check build logs in Cloud Console: https://console.cloud.google.com/cloud-build/builds/${BUILD_ID}?project=${PROJECT_ID}" >&2
+      exit 1
+      ;;
+  esac
+done
 
 FLAGS=(
   --project "${PROJECT_ID}"
@@ -96,6 +131,13 @@ if [[ "${USE_SECRETS}" == "true" ]]; then
     SECRET_KEYS["${NAME}"]=1
     FLAGS+=(--set-secrets "${NAME}=projects/${PROJECT_ID}/secrets/${NAME}:latest")
   done < "${SECRETS_FILE}"
+
+  # Ensure required Artifact Analysis Pub/Sub topics exist
+  gcloud services enable containeranalysis.googleapis.com --project "${PROJECT_ID}" >/dev/null
+  for topic in container-analysis-notes-v1 container-analysis-occurrences-v1; do
+    gcloud pubsub topics create projects/${PROJECT_ID}/topics/${topic} \
+      --project "${PROJECT_ID}" >/dev/null 2>&1 || echo "[info] ${topic} topic already present"
+  done
 fi
 
 # Optionally add non-secret env vars from file (excluding secret keys)
