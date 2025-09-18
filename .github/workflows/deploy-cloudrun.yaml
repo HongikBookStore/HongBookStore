@@ -47,11 +47,12 @@ jobs:
         run: chmod +x deploy/cloudrun/deploy.sh
 
       - name: Create runtime env file
-        if: ${{ secrets.CLOUD_RUN_ENV_FILE != '' }}
+        env:
+          CLOUD_RUN_ENV_FILE: ${{ secrets.CLOUD_RUN_ENV_FILE }}
         run: |
-          cat <<'ENVVARS' > deploy/cloudrun/.env.ci
-          ${{ secrets.CLOUD_RUN_ENV_FILE }}
-          ENVVARS
+          if [[ -n "${CLOUD_RUN_ENV_FILE}" ]]; then
+            printf '%s' "${CLOUD_RUN_ENV_FILE}" > deploy/cloudrun/.env.ci
+          fi
 
       - name: Build image with Cloud Build and deploy to Cloud Run
         env:
