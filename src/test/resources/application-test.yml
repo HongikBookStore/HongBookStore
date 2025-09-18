@@ -1,0 +1,85 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:hongbook;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  mail:
+    host: localhost
+    port: 1025
+    username: test@example.com
+    password: test
+  cloud:
+    gcp:
+      project-id: test-project
+      storage:
+        bucket-name: test-bucket
+      credentials:
+        location:
+  servlet:
+    multipart:
+      enabled: false
+
+datasource:
+  mysql:
+    host: localhost
+    port: 3306
+
+jwt:
+  secret: test-secret
+  token-validity-in-seconds: 3600
+  refresh-token-validity-in-seconds: 86400
+
+kakao:
+  api:
+    book:
+      url: https://example.test/books
+      rest-api-key: test-key
+
+naver:
+  place:
+    api:
+      key:
+        id: test-id
+      secret: test-secret
+  api:
+    client-id: test-client-id
+    client-secret: test-client-secret
+
+weather:
+  kma:
+    base-url: https://example.test/weather
+    auth-key: test-key
+    path:
+      vilage: /vilage
+      midland-url: /midland
+
+moderation:
+  toxic-filter:
+    enabled: false
+    base-url: http://localhost
+
+app:
+  frontend-base-url: http://localhost:3000
+  cors:
+    allowed-origins: http://localhost:3000
+
+email:
+  brand:
+    name: HongBookStore
+    primary-color: "#2563eb"
+
