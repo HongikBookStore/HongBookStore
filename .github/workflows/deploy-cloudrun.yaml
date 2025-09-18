@@ -73,7 +73,7 @@ jobs:
           REPO=${REPO:-hongbookstore}
           SERVICE_NAME=${SERVICE_NAME:-hongbookstore}
 
-          DEPLOY_ARGS=(--allow-unauthenticated)
+          DEPLOY_ARGS=(--allow-unauthenticated --use-secrets)
           if [[ -f deploy/cloudrun/.env.ci ]]; then
             DEPLOY_ARGS+=(--env-file deploy/cloudrun/.env.ci)
           fi
