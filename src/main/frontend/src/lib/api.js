@@ -3,9 +3,7 @@ import axios from 'axios';
 // 1. axios 인스턴스 생성 및 기본 URL 설정
 // - 프로덕션(Vercel): '/api'로 서버리스 프록시를 타게 됩니다.
 // - 로컬 개발: 필요시 VITE_API_BASE를 'http://localhost:8080/api'로 지정하세요.
-const apiBase = (typeof import !== 'undefined' && typeof import.meta !== 'undefined')
-  ? (import.meta.env?.VITE_API_BASE ?? '/api')
-  : '/api';
+const apiBase = import.meta.env?.VITE_API_BASE ?? '/api';
 
 const api = axios.create({
   baseURL: apiBase,

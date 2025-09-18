@@ -18,7 +18,7 @@ spring:
           auth: true # SMTP 서버에 로그인할 때 인증을 사용할지를 결정
           starttls:
             enable: true # TLS를 사용할지를 결정
-      debug: true # 디버그 모드 활성화 (선택 사항)
+      debug: false # 운영 환경에서는 디버그 로그를 비활성화
 
   ### OAuth ###
   security:
@@ -88,12 +88,12 @@ spring:
   ### JPA ###
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     open-in-view: false
+    show-sql: false # 기본적으로 쿼리 로그는 비활성화
     properties:
       hibernate:
         format_sql: true # SQL 로그를 예쁘게 포맷팅
-      show-sql: true # 실행되는 SQL 쿼리를 로그로 보여줌
 
   ### GCP Cloud Platform ###
   cloud:
@@ -175,6 +175,7 @@ management:
 
 ### CORS (환경변수로 제어) ###
 app:
+  frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   cors:
     # 쉼표로 구분된 오리진 목록. 운영에서 Vercel/도메인으로 교체
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
@@ -227,6 +228,14 @@ spring:
   config:
     activate:
       on-profile: dev
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
 
 logging:
   level:

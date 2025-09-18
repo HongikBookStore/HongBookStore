@@ -13,7 +13,7 @@
    ```bash
     export PROJECT_ID=your-gcp-project
     export REGION=us-west1
-    export REPOSITORY=containers
+    export REPO=containers
     export SERVICE_ACCOUNT=cr-hongbook@${PROJECT_ID}.iam.gserviceaccount.com
    ```
 2. `.env`를 준비. CI 환경에서는 Secret Manager나 CI의 시크릿 저장소를 사용.

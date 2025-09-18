@@ -7,7 +7,7 @@ set -euo pipefail
 # - Optional Secret Manager integration (--use-secrets, --bootstrap-secrets)
 #
 # Usage:
-#   PROJECT_ID=your-project REGION=us-west1 REPOSITORY=containers \
+#   PROJECT_ID=your-project REGION=us-west1 REPO=containers \
 #   ./deploy/cloudrun/deploy.sh \
 #     [--allow-unauthenticated] \
 #     [--env-file path/.env] \
@@ -16,7 +16,7 @@ set -euo pipefail
 
 PROJECT_ID=${PROJECT_ID:-}
 REGION=${REGION:-us-west1}
-REPOSITORY=${REPOSITORY:-containers}
+REPO=${REPO:-containers}
 SERVICE_NAME=${SERVICE_NAME:-hongbookstore}
 ALLOW_UNAUTH=false
 ENV_FILE=""
@@ -27,7 +27,7 @@ SERVICE_ACCOUNT=${SERVICE_ACCOUNT:-}
 
 usage() {
   cat <<'USAGE'
-Usage: PROJECT_ID=... REGION=... REPOSITORY=... ./deploy/cloudrun/deploy.sh [flags]
+Usage: PROJECT_ID=... REGION=... REPO=... ./deploy/cloudrun/deploy.sh [flags]
 
 Flags:
   --allow-unauthenticated     Make the service publicly accessible
@@ -61,7 +61,7 @@ fi
 command -v gcloud >/dev/null || { echo "[error] gcloud not found"; exit 1; }
 
 TAG=$(git rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)
-IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}:${TAG}"
+IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${SERVICE_NAME}:${TAG}"
 
 echo "[build] Submitting image: ${IMAGE_URI}"
 gcloud builds submit --project "${PROJECT_ID}" --tag "${IMAGE_URI}" .
@@ -76,7 +76,7 @@ FLAGS=(
   --min-instances 0
   --max-instances 1
   --cpu 1
-  --memory 512Mi
+  --memory 2Gi
   --set-env-vars SPRING_PROFILES_ACTIVE=prod
 )
 

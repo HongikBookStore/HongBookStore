@@ -632,7 +632,7 @@ async function fetchPost(postId) {
 
 // WebSocket endpoint: derive from VITE_WS_BASE or VITE_API_BASE; fallback to dev localhost
 const resolveWsEndpoint = () => {
-  const env = (typeof import !== 'undefined' && typeof import.meta !== 'undefined') ? import.meta.env : {};
+  const env = import.meta.env || {};
   const wsBase = env?.VITE_WS_BASE;
   if (wsBase && typeof window !== 'undefined') {
     return `${wsBase.replace(/\/$/, '')}/ws-stomp/websocket`;
@@ -655,7 +655,7 @@ const resolveWsEndpoint = () => {
 
 const WS_ENDPOINT = resolveWsEndpoint();
 const resolveBackendOrigin = () => {
-  const env = (typeof import !== 'undefined' && typeof import.meta !== 'undefined') ? import.meta.env : {};
+  const env = import.meta.env || {};
   const backendOrigin = env?.VITE_BACKEND_ORIGIN;
   if (backendOrigin) return backendOrigin.replace(/\/$/, '');
   const apiBase = env?.VITE_API_BASE;

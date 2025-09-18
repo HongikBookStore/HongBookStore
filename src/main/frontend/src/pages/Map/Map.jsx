@@ -14,7 +14,7 @@ import { useLocation } from '../../contexts/LocationContext';
 // Use backend origin (no trailing /api) so that request paths like '/api/...'
 // remain stable across dev/prod.
 const API_BASE = (() => {
-  const env = (typeof import !== 'undefined' && typeof import.meta !== 'undefined') ? import.meta.env : {};
+  const env = import.meta.env || {};
   const backendOrigin = env?.VITE_BACKEND_ORIGIN;
   if (backendOrigin) return backendOrigin.replace(/\/$/, '');
   const apiBase = env?.VITE_API_BASE;
