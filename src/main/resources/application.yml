@@ -3,12 +3,10 @@ spring:
     name: HongBookStore
   config:
     import: optional:file:.env[.properties]
-  profiles:
-    active: prod
   jackson:
     time-zone: Asia/Seoul
 
-  ### JavaMailSender ###
+  ### Gmail SMTP ###
   mail:
     host: smtp.gmail.com
     port: 587
@@ -20,7 +18,7 @@ spring:
           auth: true # SMTP 서버에 로그인할 때 인증을 사용할지를 결정
           starttls:
             enable: true # TLS를 사용할지를 결정
-      debug: true # 디버그 모드 활성화 (선택 사항)
+      debug: false # 운영 환경에서는 디버그 로그를 비활성화
 
   ### OAuth ###
   security:
@@ -33,13 +31,14 @@ spring:
             scope: # 기본값 openid, profile, email => profile, email로 설정 변경
               - profile
               - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
 
           naver:
             client-id: ${NAVER_CLIENT_ID} # 발급 받은 Client ID
             client-secret: ${NAVER_CLIENT_SECRET} # 발급 받은 Client Secret
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            redirect-uri: "http://localhost:8080/login/oauth2/code/naver"
+            redirect-uri: "{baseUrl}/login/oauth2/code/naver"
             scope:
               - name
               - email
@@ -55,7 +54,7 @@ spring:
               - profile_nickname
               - profile_image
               - account_email
-            redirect-uri: "http://localhost:8080/login/oauth2/code/kakao"
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
             client-name: Kakao
 
         provider:
@@ -76,34 +75,36 @@ spring:
   ### MySQL DB ###
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://104.198.2.213:3306/hongBookstore?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DB}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
 
   ### Redis DB ###
   data:
     redis:
-      host: 104.198.2.213
-      port: 6379
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 
   ### JPA ###
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     open-in-view: false
+    show-sql: false # 기본적으로 쿼리 로그는 비활성화
     properties:
       hibernate:
         format_sql: true # SQL 로그를 예쁘게 포맷팅
-      show-sql: true # 실행되는 SQL 쿼리를 로그로 보여줌
 
-  ### GCP Cloud Storage ###
+  ### GCP Cloud Platform ###
   cloud:
     gcp:
-      project-id: ${GCP_PROJECT_ID}  # .env 파일의 GCP_PROJECT_ID 값을 사용합니다.
+      project-id: ${GCP_PROJECT_ID}  # .env 파일의 GCP_PROJECT_ID 값을 사용
       storage:
-        bucket-name: ${GCP_BUCKET_NAME} # .env 파일의 GCP_BUCKET_NAME 값을 사용합니다.
+        bucket-name: ${GCP_BUCKET_NAME} # .env 파일의 GCP_BUCKET_NAME 값을 사용
       credentials:
-        location: classpath:gcp-service-account-key.json # 키 파일은 그대로 resources 폴더에서 관리합니다.
+        # 운영(GCE/Cloud Run 등)에서는 ADC(Application Default Credentials)를 권장
+        # 비워두면 기본 자격증명을 사용하고, 필요 시 classpath: 또는 파일 경로로 지정
+        location: ${GCP_CREDENTIALS_LOCATION:}
   servlet:
     multipart:
       enabled: true
@@ -122,7 +123,7 @@ email:
 
 ### JWT ###
 jwt:
-  secret: ${JWT_SECRET_KEY} # JWT 토큰을 서명할 때 사용할 시크릿 키, base64 이용해 랜덤 생성함
+  secret: ${JWT_SECRET_KEY} # JWT 토큰을 서명할 때 사용할 시크릿 키, base64 이용해 랜덤 생성
   token-validity-in-seconds: 3600 # 토큰 유효 기간
   refresh-token-validity-in-seconds: 86400 # 리프레시 토큰 유효 기간
 
@@ -137,14 +138,6 @@ kakao:
 logging:
   level:
     root: info
-    org:
-        springframework:
-            security: debug
-    hibernate:
-    sql: debug
-    type:
-        descriptor:
-        sql: trace
 
 ### Swagger ###
 springdoc:
@@ -161,6 +154,31 @@ springdoc:
     doc-expansion: none # tag, operation 펼치는 방식
   paths-to-match:
     - /**
+
+### Forwarded headers (behind Load Balancer) ###
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  server:
+    port: ${MANAGEMENT_PORT:${PORT:8080}}
+
+### CORS (환경변수로 제어) ###
+app:
+  frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+  cors:
+    # 쉼표로 구분된 오리진 목록. 운영에서 Vercel/도메인으로 교체
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
 
 ### Naver Map ###
 naver:
@@ -204,3 +222,51 @@ moderation:
       ratingKeywords: BLOCK
     chat:
       message: BLOCK
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+logging:
+  level:
+    root: debug
+    org.springframework.security: debug
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql: trace
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: info
+    org.springframework.security: info
+    org.hibernate.SQL: info
+    org.hibernate.type.descriptor.sql: warn
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS}

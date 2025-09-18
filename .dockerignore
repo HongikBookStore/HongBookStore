@@ -1,0 +1,14 @@
+**/.gradle
+**/build
+**/.idea
+**/.vscode
+.git
+.gitignore
+Dockerfile
+src/main/frontend
+*.iml
+target
+
+# Prevent env files from being baked into images
+.env
+.env.*

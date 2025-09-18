@@ -70,10 +70,11 @@ function Register() {
   // 소셜 로그인 버튼 클릭 시, 백엔드의 인증 URL로 이동시키는 함수
   const handleSocialLogin = (provider) => {
     // 이 URL은 로그인 페이지의 함수와 동일해.
-    const API_BASE =
-      import.meta?.env?.VITE_API_BASE ??
-      (window.location.port === '5173' ? 'http://localhost:8080' : '');
-    window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
+    const env = import.meta.env || {};
+    const backendOrigin = env?.VITE_BACKEND_ORIGIN || (env?.VITE_API_BASE ? (() => { try { return new URL(env.VITE_API_BASE, window.location.origin).origin; } catch { return ''; } })() : '');
+    const devFallback = (typeof window !== 'undefined' && window.location.port === '5173') ? 'http://localhost:8080' : '';
+    const origin = backendOrigin || devFallback;
+    window.location.href = `${origin}/oauth2/authorization/${provider}`;
   };
 
   const [lang, setLang] = useState(i18n.language || 'ko');

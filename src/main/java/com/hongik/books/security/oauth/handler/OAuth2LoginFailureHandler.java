@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,9 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     @Override
     public void onAuthenticationFailure(HttpServletRequest request,
                                         HttpServletResponse response,
@@ -25,7 +29,11 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
 
         // 2. JSON 응답 대신, 프론트엔드의 로그인 페이지로 리다이렉트 시킵니다.
         //    에러 정보를 쿼리 파라미터로 전달하여 프론트에서 활용할 수 있도록 합니다.
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/login")
+        String baseUrl = frontendBaseUrl != null && frontendBaseUrl.endsWith("/")
+                ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1)
+                : frontendBaseUrl;
+        String targetUrl = UriComponentsBuilder.fromUriString(baseUrl)
+                .path("/login")
                 .queryParam("error", "social_login_failed") // 에러 코드나 메시지를 전달
                 .build().toUriString();
 
