@@ -77,21 +77,21 @@ public class SecurityConfig {
                         // '나의' 정보와 관련된 모든 API는 인증 필요
                         .requestMatchers("/api/my/**").authenticated()
                         // 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
-                        .requestMatchers("/api/posts/**").authenticated()
-                        .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").authenticated()
-                        .requestMatchers("/api/peer-reviews/my-received").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/peer-reviews").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
+                        .requestMatchers("/api/posts/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/peer-reviews/my-received").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/peer-reviews").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").hasAnyRole("STUDENT", "ADMIN")
                         // 판매자/구매자 후기 작성/내가 받은 후기는 인증 필요
                         // (통합으로 대체) 기존 seller/buyer-reviews 인증 경로 제거
 
-                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
-                        .requestMatchers("/api/user-categories/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/user-categories/**").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/wanted/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/wanted/**").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/wanted/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/wanted/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/wanted/**").hasAnyRole("STUDENT", "ADMIN")
 
-                        .requestMatchers(HttpMethod.POST,   "/api/reports/**").authenticated()
+                        .requestMatchers(HttpMethod.POST,   "/api/reports/**").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET,    "/api/reports/**").hasRole("ADMIN")
 
