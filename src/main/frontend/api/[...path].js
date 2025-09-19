@@ -1,3 +1,4 @@
+/* eslint-env node */
 // Vercel Serverless Function: Proxy /api/* to backend origin
 // Requirements (set in Vercel Project → Settings → Environment Variables):
 // - BACKEND_ORIGIN: e.g., http://<GCE_IP>:8080
@@ -54,9 +55,8 @@ export default async function handler(req, res) {
     } else {
       res.end();
     }
-  } catch (err) {
+  } catch (_err) {
     res.statusCode = 502;
     res.end('Bad gateway');
   }
 }
-
