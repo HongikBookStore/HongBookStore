@@ -1,12 +1,15 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/oauth2/:path*",
-      "destination": "/api/oauth2/:path*"
+      "src": "/oauth2/(.*)",
+      "dest": "/api/oauth2/$1"
     },
     {
-      "source": "/(?!api|oauth2)(.*)",
-      "destination": "/"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
     }
   ]
 }
