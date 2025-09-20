@@ -3,6 +3,10 @@
     {
       "source": "/oauth2/:path*",
       "destination": "/api/oauth2/:path*"
+    },
+    {
+      "source": "/(?!api|oauth2)(.*)",
+      "destination": "/"
     }
   ]
 }
