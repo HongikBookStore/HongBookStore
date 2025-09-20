@@ -3,7 +3,7 @@ package com.hongik.books.security.oauth.repository;
 import com.hongik.books.security.oauth.util.CookieUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRepository;
+import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  * Persists the OAuth2AuthorizationRequest in an HTTP-only cookie so the flow works without an HTTP session.
  */
 @Component
-public class HttpCookieOAuth2AuthorizationRequestRepository implements OAuth2AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
+public class HttpCookieOAuth2AuthorizationRequestRepository implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
     public static final String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
     public static final String REDIRECT_URI_PARAM_COOKIE_NAME = "redirect_uri";
     private static final int COOKIE_EXPIRE_SECONDS = 180;
@@ -42,11 +42,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements OAuth2Aut
         if (redirectUriAfterLogin != null && !redirectUriAfterLogin.isBlank()) {
             CookieUtils.addCookie(response, REDIRECT_URI_PARAM_COOKIE_NAME, redirectUriAfterLogin, COOKIE_EXPIRE_SECONDS);
         }
-    }
-
-    @Override
-    public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request) {
-        return loadAuthorizationRequest(request);
     }
 
     @Override
