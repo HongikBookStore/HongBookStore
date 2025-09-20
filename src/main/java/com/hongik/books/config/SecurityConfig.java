@@ -50,11 +50,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // --- 누구나 접근 가능한 API ---
                         .requestMatchers(
-                                "/api/places/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/ws-stomp/**",
-                                "/api/naver/**",
                                 "/actuator/health",
                                 "/api/directions/**",
                                 "/api/notifications/stream", // 👈 추가
@@ -78,7 +76,19 @@ public class SecurityConfig {
                         .requestMatchers("/api/my/**").authenticated()
                         // 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
                         .requestMatchers("/api/posts/**").hasAnyRole("STUDENT", "ADMIN")
-                        .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/naver/**").permitAll()
+                        .requestMatchers("/api/directions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/places/search",
+                                "/api/places/geocode",
+                                "/api/places/geocode/forward",
+                                "/api/places"            // 저장된 장소 목록 조회를 공개로 둘지 정책에 맞게 유지
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/places").hasAnyRole("STUDENT","ADMIN")
+                        .requestMatchers(HttpMethod.GET,"/api/places/*/reviews", "/api/places/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.POST,"/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT,"/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE,"/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers("/api/peer-reviews/my-received").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/peer-reviews").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/reviews/images").hasAnyRole("STUDENT", "ADMIN")

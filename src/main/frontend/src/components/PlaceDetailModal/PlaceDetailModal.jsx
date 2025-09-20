@@ -4,12 +4,11 @@ import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { AuthCtx } from '../../contexts/AuthContext.jsx';
 import {
-  FaStar, FaThumbsUp, FaThumbsDown, FaRoute, FaClock, FaMapMarkerAlt,
+  FaStar, FaThumbsUp, FaThumbsDown, FaClock, FaMapMarkerAlt,
   FaTimes, FaPlus, FaUpload, FaTrash, FaInfoCircle,
   FaChevronLeft, FaChevronRight, FaSearchPlus, FaSearchMinus
 } from 'react-icons/fa';
-import { displayMaskedName, isClickableUser } from '../../utils/nameMask';
-
+import { displayMaskedName } from '../../utils/nameMask';
 
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 const DIRECTIONS_ENDPOINT = '/api/directions/driving';
@@ -19,7 +18,7 @@ const SEARCH_ENDPOINT = '/api/places/search';
 const REVIEW_LIST   = (id) => `/api/places/${id}/reviews`;
 const REVIEW_REACT  = (reviewId) => `/api/places/reviews/${reviewId}/reactions`;
 const REVIEW_DELETE = (placeId, reviewId) => `/api/places/reviews/${reviewId}`;
-const REVIEW_UPLOAD = '/api/reviews/images'; // 리뷰 전용 업로드 엔드포인트
+const REVIEW_UPLOAD = '/api/reviews/images';
 
 /* ===================== 공통 토스트 ===================== */
 function showToast(message) {
@@ -39,7 +38,112 @@ function showToast(message) {
   }, 2400);
 }
 
-/* ===================== 유틸 ===================== */
+/* ===================== 이름/탈퇴 유틸 ===================== */
+// 키 이름 패턴
+const NAME_KEY_RE   = /(^(user)?name$)|(^username$)|(^nickname$)|displayname|nick|writername|authorname|membername|accountname|profile(name)?/i;
+const STATUS_KEY_RE = /(status|user_status|state)/i;
+const DEACTIVATED_STRINGS = ['DEACTIVATED', 'DELETED', 'WITHDRAWN', 'WITHDRAW'];
+
+// 중첩 객체/배열을 전부 훑어서, 특정 키 이름(정규식)에 매칭되는 "문자열 값"을 찾는다.
+function deepFindFirstStringByKey(root, keyRegex) {
+  const seen = new Set();
+  const stack = [root];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || typeof cur !== 'object' || seen.has(cur)) continue;
+    seen.add(cur);
+
+    for (const [k, v] of Object.entries(cur)) {
+      if (keyRegex.test(k) && typeof v === 'string' && v.trim()) return v.trim();
+      if (v && typeof v === 'object') stack.push(v);
+    }
+  }
+  return '';
+}
+
+// 중첩 객체/배열을 전부 훑어서, 특정 키 이름(정규식)에 매칭되는 "불리언/문자열 값"을 찾는다.
+function deepFindAnyByKey(root, keyRegex) {
+  const seen = new Set();
+  const stack = [root];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || typeof cur !== 'object' || seen.has(cur)) continue;
+    seen.add(cur);
+
+    for (const [k, v] of Object.entries(cur)) {
+      if (keyRegex.test(k)) return v;
+      if (v && typeof v === 'object') stack.push(v);
+    }
+  }
+  return undefined;
+}
+
+// 이름 추출(알려진 경로 + 딥서치)
+function getReviewerName(r) {
+  const cand =
+      r?.userName ?? r?.username ?? r?.nickname ?? r?.authorName ?? r?.displayName ??
+      r?.user?.userName ?? r?.user?.username ?? r?.user?.nickname ?? r?.user?.displayName ??
+      r?.writer?.name ?? r?.writer?.nickname ??
+      r?.author?.name ?? r?.author?.nickname ??
+      r?.memberName ?? r?.accountName ??
+      deepFindFirstStringByKey(r, NAME_KEY_RE) ?? '';
+
+  return (cand || '').trim();
+}
+
+// 아주 단순 로컬 마스킹 (첫 글자만 노출)
+function simpleMaskName(name) {
+  const n = (name || '').trim();
+  if (!n) return '';
+  const low = n.toLowerCase();
+  if (n === '사용자' || n === '익명' || low === 'user' || low === 'anonymous') return '';
+  const arr = [...n];
+  if (arr.length <= 2) return arr[0] + '＊';
+  return arr[0] + '＊'.repeat(arr.length - 1);
+}
+
+// 탈퇴 감지(딥서치 + 이름에 '탈퇴' 포함)
+function isReviewerDeactivated(r) {
+  const statusText = String(
+      r?.userStatus ?? r?.status ?? r?.user_status ??
+      r?.user?.status ?? r?.user?.userStatus ??
+      deepFindFirstStringByKey(r, STATUS_KEY_RE) ?? ''
+  ).toUpperCase();
+
+  const byStatus = DEACTIVATED_STRINGS.includes(statusText);
+  const byFlags  = !!(
+      r?.userDeactivated || r?.deactivated || r?.isDeactivated ||
+      r?.userDeleted || r?.deleted ||
+      r?.user?.deactivated || r?.user?.deleted ||
+      deepFindAnyByKey(r, /(deactivat|deleted|withdraw)/i)
+  );
+  const byTimes  = !!(
+      r?.userDeactivatedAt || r?.deactivatedAt || r?.deletedAt ||
+      r?.userDeletedAt || r?.user?.deactivatedAt || r?.user?.deletedAt
+  );
+  const byName   = /탈퇴/.test(getReviewerName(r));
+
+  return !!(byStatus || byFlags || byTimes || byName);
+}
+
+// 최종 표시 이름
+function maskReviewerName(rawName, deactivated, t) {
+  if (deactivated) return '탈퇴된 회원';
+  const base = (rawName ?? '').toString().trim();
+  if (!base) return (t('map.anonymous') || '익명');
+
+  // 서버 util 우선 시도
+  let masked = '';
+  try { masked = displayMaskedName(base, false) || ''; } catch (_) {}
+
+  // util이 비었거나 "익명"류면 로컬 마스킹
+  if (!masked || /^(사용자|user|익명|anonymous)$/i.test(masked)) {
+    masked = simpleMaskName(base);
+  }
+  return masked || (t('map.anonymous') || '익명');
+}
+
+/* ===================== 기타 유틸 ===================== */
 // 네이버 로컬검색 item에서 위경도 추출 (mapx/mapy는 1e7 스케일된 WGS84)
 function extractLatLngFromNaverItem(item) {
   const toNum = (v) => (v == null ? NaN : Number(v));
@@ -63,6 +167,7 @@ function extractLatLngFromNaverItem(item) {
   return null;
 }
 
+/* ===================== 컴포넌트 ===================== */
 const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCategory, userLocation }) => {
   const { t } = useTranslation();
   const { user } = useContext(AuthCtx);
@@ -108,7 +213,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [lbImages, setLbImages] = useState([]);
   const [lbIndex, setLbIndex] = useState(0);
 
-  // ✅ 리뷰 반응 상태 관리 (리뷰 ID별 사용자 반응 상태)
+  // ✅ 리뷰 반응 상태 관리
   const [userReactions, setUserReactions] = useState({});
 
   const openLightbox = (images, startIndex = 0) => {
@@ -132,7 +237,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const totalReviews  = (typeof reviewCount === 'number' ? reviewCount : reviews.length);
 
   /* ===================== API ===================== */
-  // 공통: 리뷰 목록 가져오기(중복 판별에도 사용)
   const fetchReviewsRaw = async () => {
     const res = await fetch(REVIEW_LIST(place.id), {
       headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
@@ -141,63 +245,50 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     return res.json();
   };
 
-  // 목록 → 화면 반영
   const fetchReviews = async () => {
     if (!place?.id) return;
     try {
       const data = await fetchReviewsRaw();
       setAvgRating(typeof data.averageRating === 'number' ? data.averageRating : null);
       setReviewCount(typeof data.reviewCount === 'number' ? data.reviewCount : 0);
-      const mapped = (data.reviews || []).map(r => ({
-        id: r.id,
-        userId: r.userId ?? r.user_id,
-        userName: r.userName ?? r.username,
-        reviewerDeactivated: Boolean(
-            r.userDeactivated ??
-            r.deactivated ??
-            r.userDeactivatedAt ??
-            (typeof r.user_status === 'string' && r.user_status.toUpperCase() === 'DEACTIVATED') ??
-            r.isDeactivated
-        ),
-        rating: r.rating,
-        content: r.content,
-        likes: r.likes,
-        dislikes: r.dislikes,
-        photos: (r.photos || []).map(p => p.url),
-        userReaction: r.userReaction || null // 사용자의 반응 상태 추가
-      }));
-      
-      // 기존 사용자 반응 상태와 병합
+
+      const mapped = (data.reviews || []).map(r => {
+        const deactivated = isReviewerDeactivated(r);
+        return {
+          id: r.id,
+          userId:
+              r.userId ?? r.user_id ??
+              r?.user?.id ?? r?.writer?.id ?? r?.author?.id ?? null,
+          userName: getReviewerName(r),
+          reviewerDeactivated: deactivated,
+          rating: r.rating,
+          content: r.content,
+          likes: r.likes,
+          dislikes: r.dislikes,
+          photos: (r.photos || []).map(p => p.url),
+          userReaction: r.userReaction || null
+        };
+      });
+
       setReviews(prev => {
-        const newReviews = mapped.map(newReview => {
-          const existingReview = prev.find(p => p.id === newReview.id);
-          return {
-            ...newReview,
-            // 기존에 사용자가 반응한 상태가 있다면 유지
-            userReaction: existingReview?.userReaction || newReview.userReaction
-          };
+        const newReviews = mapped.map(n => {
+          const ex = prev.find(p => p.id === n.id);
+          return { ...n, userReaction: ex?.userReaction || n.userReaction };
         });
         return newReviews;
       });
-      
-      // userReactions 상태도 초기화 (서버에서 가져온 데이터로)
+
       const newUserReactions = {};
-      mapped.forEach(review => {
-        if (review.userReaction) {
-          newUserReactions[review.id] = review.userReaction;
-        }
-      });
+      mapped.forEach(r => { if (r.userReaction) newUserReactions[r.id] = r.userReaction; });
       setUserReactions(newUserReactions);
-      
+
       setShowAllReviews(false);
-    } catch (e) {
-    }
+    } catch { /* no-op */ }
   };
 
-  // ❗️중요: 상태코드가 500이어도 "이미 작성" 문구/상태를 판별하는 보조 함수
+  // ❗️중복 판별
   const detectDuplicateOnError = async (res) => {
     try {
-      // 1) 응답 본문에서 직접 탐지
       const clone = res.clone();
       const ct = clone.headers.get('content-type') || '';
       let bodyText = '';
@@ -209,19 +300,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       }
       if (/이미\s*이\s*장소.*리뷰.*작성/i.test(bodyText)) return true;
 
-      // 2) 목록 재조회로 판별 (내 userId가 이미 존재하면 중복)
       if (!currentUserId) return false;
       const data = await fetchReviewsRaw().catch(() => null);
       if (!data) return false;
       const list = Array.isArray(data.reviews) ? data.reviews : [];
       const found = list.some(r => String(r.userId ?? r.user_id) === String(currentUserId));
       return found;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   };
 
-  // 사진 업로드(엔드포인트 없으면 무시)
+  // 사진 업로드(없으면 무시)
   async function uploadReviewPhotos(files) {
     if (!files || files.length === 0) return [];
     try {
@@ -244,19 +332,15 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
       const data = await res.json(); // { urls: [...] }
       return data.urls || [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }
 
-  // ✅ 리뷰 등록 (상태코드 의존 X : 본문/목록 기반으로 "이미 작성" 판별)
+  // ✅ 리뷰 등록
   const handleSubmitReview = async () => {
     if (!newReview.content.trim()) return showToast(t('map.enterReviewContent'));
-
     try {
       setReviewError('');
 
-      // 최종 방어: 파일 개수 3개 초과 시 중단
       if (newReviewFiles.length > 3) {
         showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
         return;
@@ -278,7 +362,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       });
 
       if (!res.ok) {
-        // ✅ 상태코드가 500이어도, 본문/목록으로 "이미 작성"인지 판별
         const isDup = await detectDuplicateOnError(res);
         if (isDup) {
           setReviewError(t('map.reviewAlreadyExists'));
@@ -286,7 +369,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           return;
         }
 
-        // 모더레이션/필드 에러(가능한 경우)
         try {
           const ct = res.headers.get('content-type') || '';
           if (ct.includes('application/json')) {
@@ -301,7 +383,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
               if (el && typeof el.focus === 'function') el.focus();
               return;
             }
-            // 사진 제한 메시지
             const msg = (json?.message || json?.error || json?.detail || '') + '';
             if (/최대\s*3개/i.test(msg)) {
               showToast('사진/GIF는 최대 3개까지만 업로드할 수 있습니다.');
@@ -314,25 +395,23 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
               return;
             }
           }
-        } catch {
-          // no-op
-        }
+        } catch { /* no-op */ }
+
         showToast(t('map.reviewRegistrationFailed'));
         return;
       }
 
-      // 성공 후 초기화
       setNewReview({ rating: 5, content: '', photos: [] });
       setNewReviewFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
       await fetchReviews();
       showToast('리뷰가 등록되었습니다.');
-    } catch (e) {
+    } catch {
       showToast(t('map.reviewRegistrationFailed'));
     }
   };
 
-  // ✅ 리뷰 삭제 (상태코드별 안내)
+  // ✅ 리뷰 삭제
   const handleDeleteReview = async (reviewId) => {
     if (!currentUserId) return showToast('로그인이 필요합니다.');
     if (!confirm(t('map.confirmDeleteReview'))) return;
@@ -352,16 +431,15 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       if (res.status === 403) return showToast(t('map.onlyOwnReviewCanDelete'));
       if (res.status === 404) return showToast(t('map.reviewNotFound'));
       if (res.status === 409) return showToast(t('map.cannotDeleteReview'));
-      // 프록시 미설정 등으로 404/NoResourceFound가 날아오는 경우도 있으니 안내
       if (res.status === 500) return showToast('서버 오류로 삭제에 실패했습니다.');
 
       showToast('리뷰 삭제에 실패했습니다.');
-    } catch (e) {
+    } catch {
       showToast('리뷰 삭제에 실패했습니다.');
     }
   };
 
-  /* ===================== 프론트 미리보기 + 파일 선택 제한(최대 3개) ===================== */
+  /* ===================== 프론트 미리보기 + 파일 제한(3개) ===================== */
   const handlePhotoUpload = (e) => {
     const picked = Array.from(e.target.files || []);
     if (picked.length === 0) return;
@@ -375,14 +453,13 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       return;
     }
 
-    const filesToAdd = picked.slice(0, remain); // ✅ 초과 컷오프
+    const filesToAdd = picked.slice(0, remain);
     const newPreviews = filesToAdd.map(f => URL.createObjectURL(f));
 
     setNewReviewFiles(prev => [...prev, ...filesToAdd]);
     setNewReview(p => ({ ...p, photos: [...p.photos, ...newPreviews] }));
 
     e.target.value = '';
-
     if (picked.length > remain) {
       showToast('최대 3개까지만 추가됩니다. 초과분은 제외했어요.');
     }
@@ -398,97 +475,52 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     try {
       const currentReaction = userReactions[reviewId] || reviews.find(r => r.id === reviewId)?.userReaction;
       const newReaction = currentReaction === 'LIKE' ? null : 'LIKE';
-      const currentReview = reviews.find(r => r.id === reviewId);
-      
-      // 즉시 UI 업데이트 (낙관적 업데이트)
+
       setUserReactions(prev => ({ ...prev, [reviewId]: newReaction }));
-      
-      // 좋아요/싫어요 수 즉시 업데이트
       setReviews(prev => prev.map(review => {
-        if (review.id === reviewId) {
-          let newLikes = review.likes || 0;
-          let newDislikes = review.dislikes || 0;
-          
-          if (currentReaction === 'LIKE') {
-            // 좋아요 취소
-            newLikes = Math.max(0, newLikes - 1);
-          } else if (currentReaction === 'DISLIKE') {
-            // 싫어요에서 좋아요로 변경
-            newDislikes = Math.max(0, newDislikes - 1);
-            newLikes = newLikes + 1;
-          } else {
-            // 좋아요 추가
-            newLikes = newLikes + 1;
-          }
-          
-          return {
-            ...review,
-            userReaction: newReaction,
-            likes: newLikes,
-            dislikes: newDislikes
-          };
-        }
-        return review;
+        if (review.id !== reviewId) return review;
+        let newLikes = review.likes || 0;
+        let newDislikes = review.dislikes || 0;
+        if (currentReaction === 'LIKE') newLikes = Math.max(0, newLikes - 1);
+        else if (currentReaction === 'DISLIKE') { newDislikes = Math.max(0, newDislikes - 1); newLikes += 1; }
+        else newLikes += 1;
+        return { ...review, userReaction: newReaction, likes: newLikes, dislikes: newDislikes };
       }));
-      
-      // 서버에 반응 저장
-      const response = await fetch(REVIEW_REACT(reviewId) + '?type=LIKE', {
+
+      await fetch(REVIEW_REACT(reviewId) + '?type=LIKE', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
       await fetchReviews();
-    } catch (e) { }
+    } catch { /* no-op */ }
   };
-  
+
   const handleDislikeReview = async (reviewId) => {
     try {
       const currentReaction = userReactions[reviewId] || reviews.find(r => r.id === reviewId)?.userReaction;
       const newReaction = currentReaction === 'DISLIKE' ? null : 'DISLIKE';
-      const currentReview = reviews.find(r => r.id === reviewId);
-      
-      // 즉시 UI 업데이트 (낙관적 업데이트)
+
       setUserReactions(prev => ({ ...prev, [reviewId]: newReaction }));
-      
-      // 좋아요/싫어요 수 즉시 업데이트
       setReviews(prev => prev.map(review => {
-        if (review.id === reviewId) {
-          let newLikes = review.likes || 0;
-          let newDislikes = review.dislikes || 0;
-          
-          if (currentReaction === 'DISLIKE') {
-            // 싫어요 취소
-            newDislikes = Math.max(0, newDislikes - 1);
-          } else if (currentReaction === 'LIKE') {
-            // 좋아요에서 싫어요로 변경
-            newLikes = Math.max(0, newLikes - 1);
-            newDislikes = newDislikes + 1;
-          } else {
-            // 싫어요 추가
-            newDislikes = newDislikes + 1;
-          }
-          
-          return {
-            ...review,
-            userReaction: newReaction,
-            likes: newLikes,
-            dislikes: newDislikes
-          };
-        }
-        return review;
+        if (review.id !== reviewId) return review;
+        let newLikes = review.likes || 0;
+        let newDislikes = review.dislikes || 0;
+        if (currentReaction === 'DISLIKE') newDislikes = Math.max(0, newDislikes - 1);
+        else if (currentReaction === 'LIKE') { newLikes = Math.max(0, newLikes - 1); newDislikes += 1; }
+        else newDislikes += 1;
+        return { ...review, userReaction: newReaction, likes: newLikes, dislikes: newDislikes };
       }));
-      
-      // 서버에 반응 저장
-      const response = await fetch(REVIEW_REACT(reviewId) + '?type=DISLIKE', {
+
+      await fetch(REVIEW_REACT(reviewId) + '?type=DISLIKE', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
       });
       await fetchReviews();
-    } catch (e) {}
+    } catch { /* no-op */ }
   };
 
   const getTypeName = useMemo(() => (type) =>
       ({ restaurant: t('map.restaurant'), cafe: t('map.cafe'), partner: t('map.partner'), convenience: t('map.convenience'), other: t('map.other') }[type] || t('map.other')), [t]);
-  const stripTags = (s) => (s || '').replace(/<[^>]+>/g, '');
 
   /* ===================== 네이버 지도 로더 ===================== */
   const loadNaverMapScript = () =>
@@ -548,8 +580,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
             mapInstanceRef.current.fitBounds(b);
           }
         }, 0);
-      } catch (e) {
-      }
+      } catch { /* no-op */ }
     };
     if (isOpen && activeTab === 'route') init();
   }, [isOpen, activeTab, place, userLocation]);
@@ -595,8 +626,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
           const bounds = new naver.maps.LatLngBounds();
           pathLatLngs.forEach(ll => bounds.extend(ll));
           map.fitBounds(bounds);
-        } catch (err) {
-        }
+        } catch { /* no-op */ }
       } else {
         map.setCenter(dest);
         map.setZoom(16);
@@ -619,7 +649,7 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
       const data = await res.json();
       const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
       setStartResults(items);
-    } catch (e) {
+    } catch {
       showToast('검색에 실패했습니다.');
     } finally {
       setSearching(false);
@@ -635,25 +665,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
     const title = (item.title || item.name || '').replace(/<[^>]+>/g, '');
     const addr  = (item.roadAddress || item.address || item.addr || '').replace(/<[^>]+>/g, '');
     setStartLabel(addr ? `${title} · ${addr}` : title);
-  };
-
-  const maskUserName = (rawName, deactivated = false) => {
-    const raw = (rawName ?? '').toString().trim();
-
-    // 1) 서버가 '탈퇴회원#123' 같은 값을 주거나, 상태 플래그가 true면 → 고정 문구
-    if (
-        deactivated ||
-        /탈퇴\s*(된|한)?\s*회원/i.test(raw) ||
-        /탈퇴회원/i.test(raw)
-    ) {
-      return '탈퇴된 회원';
-    }
-
-// 2) 공용 유틸로 마스킹 (예: 이**)
-    const masked = displayMaskedName(raw, false);
-// 유틸이 '탈퇴한 회원'로 돌려주는 경우도 강제 통일
-    if (masked === '탈퇴한 회원') return '탈퇴된 회원';
-    return masked || t('map.anonymous');
   };
 
   // ✅ 모달 열릴 때 리뷰 불러오기
@@ -794,7 +805,9 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                         <ReviewItem key={review.id || index}>
                           <ReviewHeader>
                             <ReviewerInfo>
-                              <ReviewerName>{maskUserName(review.userName, review.reviewerDeactivated)}</ReviewerName>
+                              <ReviewerName>
+                                {maskReviewerName(review.userName, review.reviewerDeactivated, t)}
+                              </ReviewerName>
                               <ReviewRating>
                                 {[...Array(5)].map((_, i) => (
                                     <Star key={i} $isFilled={i < review.rating}><FaStar /></Star>
@@ -803,17 +816,17 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
                             </ReviewerInfo>
 
                             <ReviewActions>
-                              <ActionButton 
-                                $isActive={(userReactions[review.id] || review.userReaction) === 'LIKE'}
-                                $type="like"
-                                onClick={() => handleLikeReview(review.id)}
+                              <ActionButton
+                                  $isActive={(userReactions[review.id] || review.userReaction) === 'LIKE'}
+                                  $type="like"
+                                  onClick={() => handleLikeReview(review.id)}
                               >
                                 <FaThumbsUp /> {review.likes || 0}
                               </ActionButton>
-                              <ActionButton 
-                                $isActive={(userReactions[review.id] || review.userReaction) === 'DISLIKE'}
-                                $type="dislike"
-                                onClick={() => handleDislikeReview(review.id)}
+                              <ActionButton
+                                  $isActive={(userReactions[review.id] || review.userReaction) === 'DISLIKE'}
+                                  $type="dislike"
+                                  onClick={() => handleDislikeReview(review.id)}
                               >
                                 <FaThumbsDown /> {review.dislikes || 0}
                               </ActionButton>
@@ -1059,33 +1072,11 @@ const PhotoPreviewContainer = styled.div` display: flex; gap: 12px; margin-top: 
 const PhotoPreview = styled.div` position: relative; flex-shrink: 0; `;
 const PhotoPreviewImage = styled.img` width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #f0f0f0; `;
 const RemovePhotoButton = styled.button`
-  position: absolute; 
-  top: 2px; 
-  right: 2px; 
-  background: rgba(0, 0, 0, 0.7); 
-  color: #fff; 
-  border: none; 
-  border-radius: 50%;
-  width: 24px; 
-  height: 24px; 
-  font-size: 16px; 
-  font-weight: bold;
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  transition: all 0.2s ease; 
-  z-index: 10;
-  line-height: 1;
-  
-  &:hover { 
-    background: rgba(220, 53, 69, 0.9); 
-    transform: scale(1.1);
-  }
-  
-  &:active {
-    transform: scale(0.9);
-  }
+  position: absolute; top: 2px; right: 2px; background: rgba(0, 0, 0, 0.7); color: #fff; border: none; border-radius: 50%;
+  width: 24px; height: 24px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease; z-index: 10; line-height: 1;
+  &:hover { background: rgba(220, 53, 69, 0.9); transform: scale(1.1); }
+  &:active { transform: scale(0.9); }
 `;
 
 const ReviewSubmitButton = styled.button`
@@ -1118,24 +1109,20 @@ const ReviewRating = styled.div` display: flex; gap: 2px; `;
 
 const ReviewActions = styled.div` display: flex; gap: 12px; `;
 const ActionButton = styled.button`
-  background: ${props => props.$isActive ? (props.$type === 'like' ? '#e8f5e8' : '#ffeaea') : 'none'}; 
-  border: 2px solid ${props => props.$isActive ? (props.$type === 'like' ? '#4caf50' : '#f44336') : '#e0e0e0'}; 
-  color: ${props => props.$isActive ? (props.$type === 'like' ? '#2e7d32' : '#c62828') : '#666'}; 
+  background: ${props => props.$isActive ? (props.$type === 'like' ? '#e8f5e8' : '#ffeaea') : 'none'};
+  border: 2px solid ${props => props.$isActive ? (props.$type === 'like' ? '#4caf50' : '#f44336') : '#e0e0e0'};
+  color: ${props => props.$isActive ? (props.$type === 'like' ? '#2e7d32' : '#c62828') : '#666'};
   cursor: pointer; font-size: 12px; font-weight: ${props => props.$isActive ? '600' : '400'};
   display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; transition: all .2s ease;
   transform: ${props => props.$isActive ? 'scale(1.05)' : 'scale(1)'};
   box-shadow: ${props => props.$isActive ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'};
-  
-  &:hover { 
-    color: ${props => props.$isActive ? (props.$type === 'like' ? '#1b5e20' : '#b71c1c') : '#333'}; 
-    border-color: ${props => props.$isActive ? (props.$type === 'like' ? '#388e3c' : '#e53935') : '#ccc'}; 
+  &:hover {
+    color: ${props => props.$isActive ? (props.$type === 'like' ? '#1b5e20' : '#b71c1c') : '#333'};
+    border-color: ${props => props.$isActive ? (props.$type === 'like' ? '#388e3c' : '#e53935') : '#ccc'};
     background: ${props => props.$isActive ? (props.$type === 'like' ? '#f1f8e9' : '#ffebee') : '#f8f9fa'};
     transform: scale(1.05);
   }
-  
-  svg {
-    color: ${props => props.$isActive ? (props.$type === 'like' ? '#4caf50' : '#f44336') : 'inherit'};
-  }
+  svg { color: ${props => props.$isActive ? (props.$type === 'like' ? '#4caf50' : '#f44336') : 'inherit'}; }
 `;
 const DeleteBtn = styled.button`
   background: none; border: 1px solid #f0f0f0; color: #c0392b; cursor: pointer; font-size: 12px;
@@ -1189,6 +1176,7 @@ const ResultAddr = styled.div` color: #666; font-size: 12px; margin-top: 2px; `;
 
 /* ===================== Lightbox ===================== */
 const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
+  const { t } = useTranslation();
   const [scale, setScale] = useState(1);
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
