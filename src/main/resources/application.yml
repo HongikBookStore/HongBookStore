@@ -175,10 +175,10 @@ management:
 
 ### CORS (환경변수로 제어) ###
 app:
-  frontend-base-url: ${FRONTEND_BASE_URL:https://hongbook-store.vercel.app}
+  frontend-base-url: ${FRONTEND_BASE_URL:https://hong-book-store.vercel.app}
   cors:
     # 쉼표로 구분된 오리진 목록. 운영에서 Vercel/도메인으로 교체
-    allowed-origins: ${ALLOWED_ORIGINS:https://hongbook-store.vercel.app,http://localhost:5173,http://localhost:5174,http://localhost:5175}
+    allowed-origins: ${ALLOWED_ORIGINS:https://hong-book-store.vercel.app,http://localhost:5173,http://localhost:5174,http://localhost:5175}
 
 ### Naver Map ###
 naver:

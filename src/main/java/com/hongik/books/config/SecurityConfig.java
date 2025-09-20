@@ -4,6 +4,7 @@ import com.hongik.books.auth.jwt.JwtAuthFilter;
 import com.hongik.books.security.oauth.CustomOAuth2UserService;
 import com.hongik.books.security.oauth.handler.OAuth2LoginFailureHandler;
 import com.hongik.books.security.oauth.handler.OAuth2LoginSuccessHandler;
+import com.hongik.books.security.oauth.repository.HttpCookieOAuth2AuthorizationRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -34,6 +35,7 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}")
     private String allowedOriginsCsv;
@@ -103,6 +105,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 // OAuth 로그인 설정
                 .oauth2Login(o -> o
+                        .authorizationEndpoint(auth -> auth
+                                .authorizationRequestRepository(authorizationRequestRepository))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
                         .userInfoEndpoint(u -> u
