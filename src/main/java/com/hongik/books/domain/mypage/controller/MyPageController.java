@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders; // ← 추가
 
 import java.io.IOException;
 import java.util.List;
@@ -33,6 +34,9 @@ public class MyPageController {
     private final UserService userService;
     private final SalePostService salePostService;
     private final PostLikeService postLikeService;
+
+    private final com.hongik.books.domain.user.service.AccountDeactivationService accountDeactivationService;
+    private final com.hongik.books.auth.service.AuthService authService;
 
     /**
      * 내 프로필 정보를 조회하는 API
@@ -97,4 +101,21 @@ public class MyPageController {
         String newImageUrl = userService.updateProfileImage(loginUser.id(), image);
         return ResponseEntity.ok(newImageUrl);
     }
+
+    @PostMapping("/deactivate")
+    public ResponseEntity<ApiResponse<Void>> deactivate(
+            @AuthenticationPrincipal LoginUserDTO loginUser,
+            @RequestBody(required = false) com.hongik.books.domain.user.dto.AccountDeactivateRequestDTO request,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        String reason = (request != null) ? request.getReason() : null;
+        accountDeactivationService.deactivate(loginUser.id(), reason);
+
+        // 현재 액세스 토큰 블랙리스트 등록(서버측 로그아웃)
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            try { authService.logout(authorizationHeader.substring(7)); } catch (Exception ignored) {}
+        }
+        return ResponseEntity.ok(new ApiResponse<>(true, "계정이 탈퇴 처리되었습니다.", null));
+    }
+
 }

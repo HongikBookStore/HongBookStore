@@ -35,6 +35,8 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    // 상단 필드 부분에 한 줄 추가
+    private final com.hongik.books.auth.filter.DeactivatedUserBlockFilter deactivatedUserBlockFilter;
     private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}")
@@ -55,11 +57,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // --- 누구나 접근 가능한 API ---
                         .requestMatchers(
-                                "/api/places/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/ws-stomp/**",
-                                "/api/naver/**",
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/api/directions/**",
@@ -83,21 +83,33 @@ public class SecurityConfig {
                         // '나의' 정보와 관련된 모든 API는 인증 필요
                         .requestMatchers("/api/my/**").authenticated()
                         // 게시글 생성, 수정, 삭제, 찜하기 등은 인증 필요
-                        .requestMatchers("/api/posts/**").authenticated()
-                        .requestMatchers("/api/places/*/reviews", "/api/places/reviews/**").authenticated()
-                        .requestMatchers("/api/peer-reviews/my-received").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/peer-reviews").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
+                        .requestMatchers("/api/posts/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/naver/**").permitAll()
+                        .requestMatchers("/api/directions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/places/search",
+                                "/api/places/geocode",
+                                "/api/places/geocode/forward",
+                                "/api/places"            // 저장된 장소 목록 조회를 공개로 둘지 정책에 맞게 유지
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/places").hasAnyRole("STUDENT","ADMIN")
+                        .requestMatchers(HttpMethod.GET,"/api/places/*/reviews", "/api/places/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.POST,"/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT,"/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE,"/api/places/*/reviews", "/api/places/reviews/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/peer-reviews/my-received").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/peer-reviews").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").hasAnyRole("STUDENT", "ADMIN")
                         // 판매자/구매자 후기 작성/내가 받은 후기는 인증 필요
                         // (통합으로 대체) 기존 seller/buyer-reviews 인증 경로 제거
 
-                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").authenticated()
-                        .requestMatchers("/api/user-categories/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/images").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers("/api/user-categories/**").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/wanted/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/wanted/**").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/wanted/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/wanted/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/wanted/**").hasAnyRole("STUDENT", "ADMIN")
 
-                        .requestMatchers(HttpMethod.POST,   "/api/reports/**").authenticated()
+                        .requestMatchers(HttpMethod.POST,   "/api/reports/**").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET,    "/api/reports/**").hasRole("ADMIN")
 
@@ -114,7 +126,8 @@ public class SecurityConfig {
                         .loginPage("/login") // 프론트엔드의 소셜 로그인 버튼이 있는 페이지
                 )
                 // JWT 인증 필터 추가
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(deactivatedUserBlockFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

@@ -1,57 +1,80 @@
 package com.hongik.books.domain.post.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.hongik.books.domain.post.domain.Condition;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-/**
- * [직접 등록] 판매 게시글 생성을 요청할 때 사용하는 DTO
- */
+import java.util.Arrays;
+
 @Getter
 @NoArgsConstructor
 public class SalePostCustomCreateRequestDTO {
     // Book 정보
-    @NotBlank
-    @Size(max = 200)
+    @NotBlank @Size(max = 200)
     private String bookTitle;
-    @Size(max = 200)
-    private String author;
-    @Size(max = 200)
-    private String publisher;
-    @PositiveOrZero
-    @Max(2_000_000_000)
+    @Size(max = 200) private String author;
+    @Size(max = 200) private String publisher;
+    @PositiveOrZero @Max(2_000_000_000)
     private int originalPrice;
 
     // SalePost 정보
-    @NotBlank
-    @Size(max = 100)
+    @NotBlank @Size(max = 100)
     private String postTitle;
-    @NotBlank
-    @Size(max = 5000)
+    @NotBlank @Size(max = 5000)
     private String postContent;
-    @PositiveOrZero
-    @Max(1_000_000_000)
+    @PositiveOrZero @Max(1_000_000_000)
     private int price;
-    @NotNull
-    private Condition writingCondition;
-    @NotNull
-    private Condition tearCondition;
-    @NotNull
-    private Condition waterCondition;
+    @NotNull private Condition writingCondition;
+    @NotNull private Condition tearCondition;
+    @NotNull private Condition waterCondition;
     private boolean negotiable;
 
-    // ✅ 추가: 교내/교외 기본 위치 코드
-    @NotBlank
-    private String oncampusPlaceCode;     // 예: "R", "A" ...
-    @NotBlank
-    private String offcampusStationCode;  // 예: "HONGDAE_2"
+    // 위치 코드
+    @NotBlank private String oncampusPlaceCode;
+    @NotBlank private String offcampusStationCode;
 
-    // ✅ 추가: 카테고리 선택(선택 입력)
-    @Size(max = 20)
-    private String mainCategory;     // 전공 | 교양
-    @Size(max = 50)
-    private String subCategory;      // 단과대학 등
-    @Size(max = 100)
-    private String detailCategory;   // 학과(최종)
+    // ---- 카테고리 입력(여러 이름 허용) ----
+    @Size(max = 20)  @JsonAlias({"main_category"})   @Setter private String mainCategory;
+    @Size(max = 50)  @JsonAlias({"sub_category"})    @Setter private String subCategory;
+    @Size(max = 100) @JsonAlias({"detail_category"}) @Setter private String detailCategory;
+
+    @JsonAlias({"category"}) @Setter private String category;
+    @JsonAlias({"categoryPath","category_path"}) @Setter private String categoryPath;
+
+    public String getMainCategoryOrDerived()  { normalizeIfNeeded(); return emptyToNull(mainCategory); }
+    public String getSubCategoryOrDerived()   { normalizeIfNeeded(); return emptyToNull(subCategory); }
+    public String getDetailCategoryOrDerived(){ normalizeIfNeeded(); return emptyToNull(detailCategory); }
+
+    private boolean normalized = false;
+    private void normalizeIfNeeded() {
+        if (normalized) return;
+        normalized = true;
+
+        if (!isBlank(categoryPath)) {
+            String[] parts = Arrays.stream(categoryPath.split(">"))
+                    .map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
+            if (parts.length >= 1 && isBlank(mainCategory))  mainCategory  = parts[0];
+            if (parts.length >= 2 && isBlank(subCategory))   subCategory   = parts[1];
+            if (parts.length >= 3 && isBlank(detailCategory)) detailCategory = parts[2];
+        }
+        if (isBlank(detailCategory) && !isBlank(category)) {
+            detailCategory = category.trim();
+        }
+        mainCategory   = emptyToNull(mainCategory);
+        subCategory    = emptyToNull(subCategory);
+        detailCategory = emptyToNull(detailCategory);
+    }
+
+    private static boolean isBlank(String s){ return s == null || s.trim().isEmpty(); }
+    private static String emptyToNull(String v){ return isBlank(v) ? null : v.trim(); }
+
+    @JsonSetter("categoryPath")
+    public void _setCategoryPath(String path){
+        this.categoryPath = path;
+        this.normalized = false;
+    }
 }

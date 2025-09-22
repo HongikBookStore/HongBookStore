@@ -39,6 +39,8 @@ import { LocationProvider } from './contexts/LocationContext';
 
 import RequireAuth from './components/RequireAuth/RequireAuth.jsx';
 
+import AccountDeactivate from './pages/AccountDeactivate/AccountDeactivate.jsx'; // ← 추가
+
 function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [onboardingCompleted, setOnboardingCompleted] = useState(false);
@@ -317,6 +319,17 @@ function App() {
 
                             {/* Fallback */}
                             <Route path="*" element={<Navigate to="/" replace />} />
+                            <Route
+                                path="/my/deactivate"
+                                element={
+                                    <RequireAuth>
+                                        <>
+                                            <Header />
+                                            <AccountDeactivate />
+                                        </>
+                                    </RequireAuth>
+                                }
+                            />
                         </Routes>
 
                         <FloatingChatBot />

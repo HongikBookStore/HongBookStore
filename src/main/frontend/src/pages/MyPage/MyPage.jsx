@@ -914,6 +914,15 @@ const getAuthHeader = () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+// 작성자 표시: 탈퇴회원# 패턴 또는 백엔드 플래그(authorDeactivated) 감지
+const getDisplayAuthor = (author, authorDeactivated) => {
+  const name = String(author ?? '');
+  if (authorDeactivated) return '탈퇴한 회원';
+  if (/^탈퇴회원#/i.test(name)) return '탈퇴한 회원';
+  return name || '사용자';
+};
+
+
 const MyPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -1558,7 +1567,9 @@ const MyPage = () => {
                   <RecentTitle>{p.postTitle}</RecentTitle>
                   <RecentMeta>
                     <span>{(p.price ?? 0).toLocaleString()}{t('common.won')}</span>
-                    <span style={{ fontSize: '0.75rem' }}>{p.author}</span>
+                    <span style={{ fontSize: '0.75rem' }}>
+                      {getDisplayAuthor(p.author, p.authorDeactivated)}
+                    </span>
                   </RecentMeta>
                 </RecentCard>
               ))}
@@ -1769,11 +1780,21 @@ const MyPage = () => {
         <SettingsSection>
           <SettingsList>
             <SettingsItem>
-              <span><i className="fas fa-user-slash" style={{marginRight:6}}></i>{t('deleteAccount')}</span>
-              <SmallButton className="danger">{t('deleteAccount')}</SmallButton>
+              <span>
+                <i className="fas fa-user-slash" style={{ marginRight: 6 }}></i>
+                {t('deleteAccount')}
+              </span>
+              {/* ✅ 여기 onClick 추가 */}
+              <SmallButton
+                  className="danger"
+                  onClick={() => navigate('/my/deactivate')}
+              >
+                {t('deleteAccount')}
+              </SmallButton>
             </SettingsItem>
           </SettingsList>
         </SettingsSection>
+
       </SettingsContainer>
 
       {/* 편집 취소 확인 모달 */}
