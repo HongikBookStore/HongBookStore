@@ -22,6 +22,8 @@ export default async function handler(req, res) {
   delete headers.host;
   delete headers.connection;
   delete headers['content-length'];
+  delete headers['if-none-match'];
+  delete headers['if-modified-since'];
   if (process.env.EDGE_SHARED_SECRET) {
     headers['x-edge-key'] = process.env.EDGE_SHARED_SECRET;
   }
@@ -45,8 +47,12 @@ export default async function handler(req, res) {
     upstream.headers.forEach((value, key) => {
       // Avoid setting hop-by-hop headers on the response
       if (['connection', 'transfer-encoding'].includes(key.toLowerCase())) return;
+      if (key.toLowerCase() === 'etag') return; // avoid client conditional revalidation causing empty bodies
       res.setHeader(key, value);
     });
+
+    // Prevent CDN/browser caching so stale ETags don't trigger 304 with empty body
+    res.setHeader('cache-control', 'no-store');
 
     // Stream body to client
     if (upstream.body) {
