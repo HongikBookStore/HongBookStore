@@ -216,10 +216,21 @@
     "recommended": "推荐",
     "routeGuidance": "路线指引",
     "sendReservationRequest": "发送预约请求",
-    "reportSubmittedTitle": "举报已提交",
+    "reportSubmittedTitle": "您的报告已发送。您想离开聊天室吗？",
     "bestDay": "最佳日期: {{date}}, 降水概率 {{percent}}%",
     "reservationFetchFailed": "获取预约失败",
-    "reservationSaveFailed": "保存预约失败"
+    "reservationSaveFailed": "保存预约失败",
+    "notSelectedYet": "沒有選擇位置。",
+    "selectLine": "选择路线",
+    "selectLineFirst": "请先选择路线。",
+    "recommendMidpointStation": "建议中点",
+    "selectStation": "站点选择",
+    "buyerLocationOffCampus": "买家校外地点",
+    "recommendedMidpointStation": "推荐中途站",
+    "useThisLocation": "确定会面地点",
+    "optimalPath": "最佳路径",
+    "recommendedMidpoint": "推荐的中间位置",
+    "shortestPath": "最短路径"
   },
   "mypage": {
     "nicknameChangeFailed": "更改昵称失败。",
@@ -1266,5 +1277,7 @@
   "used3": "根据水渍或痕迹的程度提供折扣",
   "used4": "适用于所有旧书，而不仅仅是新书。",
   "about": "大约",
-  "noOtherSell": "😅 卖家没有注册其他书籍。"
+  "noOtherSell": "😅 卖家没有注册其他书籍。",
+  "searchingBooks": "我在找一本书。",
+  "flipPage": "我正在翻页。"
 }

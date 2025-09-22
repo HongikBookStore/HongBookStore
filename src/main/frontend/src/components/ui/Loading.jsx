@@ -1,4 +1,5 @@
 import styled, { keyframes, css } from 'styled-components';
+import { useTranslation } from 'react-i18next';
 
 const spin = keyframes`
   from {
@@ -249,6 +250,7 @@ const Loading = ({
   className,
   subtext
 }) => {
+  const { t } = useTranslation();
   const sizeMap = {
     sm: '16px',
     md: '24px',
@@ -263,7 +265,7 @@ const Loading = ({
           <HongBookLoading>
             <BookIcon $size={sizeMap[size]}>📚</BookIcon>
             <HongBookText>
-              홍책방
+              {t('title')}
               <span className="dot">.</span>
               <span className="dot" style={{animationDelay: '0.2s'}}>.</span>
               <span className="dot" style={{animationDelay: '0.4s'}}>.</span>
@@ -280,7 +282,7 @@ const Loading = ({
               <Book $size={sizeMap[size]} $delay="0.2s" />
             </BookStack>
             <HongBookText>
-              책을 찾고 있어요
+              {t('searchingBooks')}
               <span className="dot">.</span>
               <span className="dot" style={{animationDelay: '0.2s'}}>.</span>
               <span className="dot" style={{animationDelay: '0.4s'}}>.</span>
@@ -293,7 +295,7 @@ const Loading = ({
           <HongBookLoading>
             <BookFlip $size={sizeMap[size]} />
             <HongBookText>
-              페이지를 넘기고 있어요
+              {t('flipPage')}
               <span className="dot">.</span>
               <span className="dot" style={{animationDelay: '0.2s'}}>.</span>
               <span className="dot" style={{animationDelay: '0.4s'}}>.</span>

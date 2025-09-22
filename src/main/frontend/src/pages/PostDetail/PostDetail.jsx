@@ -751,8 +751,9 @@ const PostDetail = () => {
 
   // 할인율에 따른 책 상태 반환 함수
   const getBookCondition = (discountRate) => {
-    if (discountRate <= 20) return { text: t('postDetail.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
-    if (discountRate <= 40) return { text: t('postDetail.bookCondition.good'), color: '#ffc107', bgColor: '#fff3cd' };
+    // 할인율이 낮을수록 상태가 좋음: ≤30 상, ≤50 중, 그 외 하
+    if (discountRate <= 30) return { text: t('postDetail.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
+    if (discountRate <= 50) return { text: t('postDetail.bookCondition.good'), color: '#ffc107', bgColor: '#fff3cd' };
     return { text: t('postDetail.bookCondition.fair'), color: '#dc3545', bgColor: '#f8d7da' };
   };
 
@@ -969,15 +970,32 @@ const PostDetail = () => {
   // ✅ 신고 제출
   const submitReport = async () => {
     try {
-      const reasonText = reportReason === t('postDetail.reportModal.options.other')
-          ? (reportEtcText || t('postDetail.reportModal.options.other'))
-          : reportReason;
+      // i18n 라벨을 백엔드 ENUM으로 매핑
+      const OTHER_LABEL = t('postDetail.reportModal.options.other');
+      const ABUSE_LABEL = t('postDetail.reportModal.options.abuse');
+      const FRAUD_LABEL = t('postDetail.reportModal.options.fraud');
+      const SPAM_LABEL  = t('postDetail.reportModal.options.spam');
+
+      const reasonEnum = (() => {
+        if (!reportReason) return null;
+        const val = reportReason.toString().toUpperCase();
+        if (reportReason === ABUSE_LABEL || val === 'ABUSE') return 'ABUSE';
+        if (reportReason === FRAUD_LABEL || val === 'FRAUD') return 'FRAUD';
+        if (reportReason === SPAM_LABEL  || val === 'SPAM')  return 'SPAM';
+        if (reportReason === OTHER_LABEL || val === 'OTHER' || val === 'OTHER_REASON' || val === 'OTHER_LABEL') return 'OTHER';
+        // 한국어 라벨 직접 비교(호환)
+        if (reportReason === '욕설/비방') return 'ABUSE';
+        if (reportReason === '사기/허위매물') return 'FRAUD';
+        if (reportReason === '스팸/광고') return 'SPAM';
+        if (reportReason === '기타' || val === 'OTHER') return 'OTHER';
+        return reportReason; // 이미 ENUM일 가능성
+      })();
 
       const payload = {
         type: 'SALE_POST',
-        targetId: String(id),
-        reason: (reportReason === t('postDetail.reportModal.options.other') ? 'OTHER' : reasonText),
-        ...(reportReason === t('postDetail.reportModal.options.other') ? { detail: reportEtcText.trim() } : {})
+        targetId: Number(id),
+        reason: reasonEnum,
+        ...(reasonEnum === 'OTHER' ? { detail: reportEtcText.trim() } : {})
       };
 
       await fetch('/api/reports', {
@@ -992,8 +1010,11 @@ const PostDetail = () => {
 
   const onReportSubmit = async (e) => {
     e.preventDefault();
+    // 필수값 검증
+    const OTHER_LABEL = t('postDetail.reportModal.options.other');
     if (!reportReason) return;
-    if (reportReason === t('postDetail.reportModal.options.other') && !reportEtcText.trim()) return;
+    if ((reportReason === OTHER_LABEL || reportReason === '기타' || reportReason.toString().toUpperCase() === 'OTHER')
+        && !reportEtcText.trim()) return;
     setShowReportModal(false);
     await submitReport();
     setShowReportDoneModal(true);
@@ -1098,9 +1119,9 @@ const PostDetail = () => {
                   {getBookCondition(safeDiscountRate).text}
                 </OverallConditionBadge>
                 <OverallConditionDescription>
-                  {safeDiscountRate <= 20 && t('postDetail.bookCondition.description.excellent', { rate: safeDiscountRate })}
-                  {safeDiscountRate > 20 && safeDiscountRate <= 40 && t('postDetail.bookCondition.description.good', { rate: safeDiscountRate })}
-                  {safeDiscountRate > 40 && t('postDetail.bookCondition.description.fair', { rate: safeDiscountRate })}
+                  {safeDiscountRate <= 30 && t('postDetail.bookCondition.description.excellent', { rate: safeDiscountRate })}
+                  {safeDiscountRate > 30 && safeDiscountRate <= 50 && t('postDetail.bookCondition.description.good', { rate: safeDiscountRate })}
+                  {safeDiscountRate > 50 && t('postDetail.bookCondition.description.fair', { rate: safeDiscountRate })}
                 </OverallConditionDescription>
               </OverallConditionSection>
 
@@ -1113,11 +1134,11 @@ const PostDetail = () => {
                   </ConditionItem>
                   <ConditionItem>
                     <ConditionLabel>{t('postDetail.bookCondition.tearCondition')}</ConditionLabel>
-                    <ConditionValue condition={post.tearCondition}>{conditionMap[post.tearCondition]}</ConditionValue>
+                    <ConditionValue $condition={post.tearCondition}>{conditionMap[post.tearCondition]}</ConditionValue>
                   </ConditionItem>
                   <ConditionItem>
                     <ConditionLabel>{t('postDetail.bookCondition.waterCondition')}</ConditionLabel>
-                    <ConditionValue condition={post.waterCondition}>{conditionMap[post.waterCondition]}</ConditionValue>
+                    <ConditionValue $condition={post.waterCondition}>{conditionMap[post.waterCondition]}</ConditionValue>
                   </ConditionItem>
                 </ConditionGrid>
               </ConditionSection>

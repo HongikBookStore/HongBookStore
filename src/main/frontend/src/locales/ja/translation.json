@@ -216,10 +216,21 @@
     "recommended": "おすすめ",
     "routeGuidance": "ルート案内",
     "sendReservationRequest": "予約リクエスト送信",
-    "reportSubmittedTitle": "報告が送信されました",
+    "reportSubmittedTitle": "報告が送信されました。チャットルームから出ますか？",
     "bestDay": "最も良い日: {{date}}, 降水確率 {{percent}}%",
     "reservationFetchFailed": "予約の取得に失敗しました",
-    "reservationSaveFailed": "予約の保存に失敗しました"
+    "reservationSaveFailed": "予約の保存に失敗しました",
+    "notSelectedYet": "選択した場所はありません。",
+    "selectLine": "路線の選択",
+    "selectLineFirst": "路線を先に選んでください。",
+    "recommendMidpointStation": "おすすめ中間点",
+    "selectStation": "駅の選択",
+    "buyerLocationOffCampus": "購入者の学校以外の場所",
+    "recommendedMidpointStation": "おすすめ中間駅",
+    "useThisLocation": "約束場所の決定",
+    "optimalPath": "最適ルート",
+    "recommendedMidpoint": "おすすめの中間場所",
+    "shortestPath": "最短ルート"
   },
   "mypage": {
     "nicknameChangeFailed": "ニックネームの変更に失敗しました。",
@@ -1269,5 +1280,7 @@
   "used3": "水に濡れた跡や汚れの程度に応じて割引",
   "used4": "新しい本以外のすべての中古本に基本的な適用",
   "about": "約",
-  "noOtherSell": "😅売り手が登録した他の本はありません。"
+  "noOtherSell": "😅売り手が登録した他の本はありません。",
+  "searchingBooks": "本を探しています。",
+  "flipPage": "ページをめくっています。"
 }

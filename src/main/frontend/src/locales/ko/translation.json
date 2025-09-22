@@ -1063,10 +1063,22 @@
     "recommended": "추천",
     "routeGuidance": "경로 안내",
     "sendReservationRequest": "예약 요청 전송",
-    "reportSubmittedTitle": "신고가 전송되었습니다",
+    "reportSubmittedTitle": "신고가 전송되었습니다. 채팅방에서 나가겠습니까?",
     "bestDay": "가장 좋은 날: {{date}}, 강수확률 {{percent}}%",
     "reservationFetchFailed": "예약 조회에 실패했습니다",
-    "reservationSaveFailed": "예약 저장에 실패했습니다"
+    "reservationSaveFailed": "예약 저장에 실패했습니다",
+    "notSelectedYet": "선택된 위치가 없습니다.",
+    "selectLine": "노선 선택",
+    "selectLineFirst": "노선을 먼저 고르세요.",
+    "recommendMidpointStation": "추천 중간 지점",
+    "selectStation": "역 선택",
+    "buyerLocationOffCampus": "구매자 교외 위치",
+    "recommendedMidpointStation": "추천 중간 역",
+    "useThisLocation": "약속 장소 결정",
+    "optimalPath": "최적 경로",
+    "recommendedMidpoint": "추천 중간 장소",
+    "shortestPath": "최단 경로",
+    "reportReasonPlaceholder": "사유를 입력해주세요."
   },
   "mypage": {
     "transactionRating": "거래 평점",
@@ -1137,7 +1149,9 @@
     "keywordsLabel": "키워드(쉼표 구분, 선택)",
     "back": "뒤로가기",
     "title": "거래 채팅",
-    "searchPlaceholder": "사용자명 또는 책 제목으로 검색"
+    "searchPlaceholder": "사용자명 또는 책 제목으로 검색",
+    "noRecentlyViewedPosts": "최근 본 게시글이 없습니다.",
+    "notVerified": "미인증"
   },
   "loginNs": {
     "socialLoginFailed": "소셜 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.",
@@ -1290,5 +1304,7 @@
   "used3": "물에 젖은 흔적이나 얼룩 정도에 따라 할인",
   "used4": "새책이 아닌 모든 중고책에 기본 적용",
   "about": "약",
-  "noOtherSell": "😅 판매자가 등록한 다른 책이 없어요."
+  "noOtherSell": "😅 판매자가 등록한 다른 책이 없어요.",
+  "searchingBooks": "책을 찾고 있어요.",
+  "flipPage": "페이지를 넘기고 있어요."
 } 

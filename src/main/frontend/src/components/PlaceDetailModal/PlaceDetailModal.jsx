@@ -1168,6 +1168,7 @@ const ResultAddr = styled.div` color: #666; font-size: 12px; margin-top: 2px; `;
 
 /* ===================== Lightbox ===================== */
 const Lightbox = ({ images, index, onClose, onPrev, onNext }) => {
+  const { t } = useTranslation();
   const [scale, setScale] = useState(1);
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });

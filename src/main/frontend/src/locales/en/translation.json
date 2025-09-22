@@ -211,10 +211,21 @@
     "recommended": "Recommended",
     "routeGuidance": "Route Guidance",
     "sendReservationRequest": "Send Reservation Request",
-    "reportSubmittedTitle": "Report Submitted",
+    "reportSubmittedTitle": "Your report has been sent. Would you like to leave the chatroom?",
     "bestDay": "Best day: {{date}}, precipitation {{percent}}%",
     "reservationFetchFailed": "Failed to fetch reservation",
-    "reservationSaveFailed": "Failed to save reservation"
+    "reservationSaveFailed": "Failed to save reservation",
+    "notSelectedYet": "There is no location selected.",
+    "selectLine": "Select route",
+    "selectLineFirst": "Please select a route first.",
+    "recommendMidpointStation": "Recommended midpoint",
+    "selectStation": "Station selection",
+    "buyerLocationOffCampus": "Buyer's off-campus location",
+    "recommendedMidpointStation": "Recommended intermediate stations",
+    "useThisLocation": "Decide on a meeting place",
+    "optimalPath": "Optimal path",
+    "recommendedMidpoint": "Recommended intermediate location",
+    "shortestPath": "shortest path"
   },
   "mypage": {
     "nicknameChangeFailed": "Failed to change nickname.",
@@ -1292,5 +1303,7 @@
   "used3": "Discounts based on the degree of water stains or marks",
   "used4": "Applies to all used books, not just new ones.",
   "about": "approximately",
-  "noOtherSell": "😅 There are no other books registered by the seller."
+  "noOtherSell": "😅 There are no other books registered by the seller.",
+  "searchingBooks": "I'm looking for a book.",
+  "flipPage": "I'm turning the page."
 } 

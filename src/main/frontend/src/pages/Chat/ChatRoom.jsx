@@ -1272,19 +1272,37 @@ const ChatRoom = () => {
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
+    const ABUSE_LABEL = t('chat.reportReasons.abuse');
+    const FRAUD_LABEL = t('chat.reportReasons.fraud');
+    const SPAM_LABEL  = t('chat.reportReasons.spam');
+    const OTHER_LABEL = t('chat.reportReasons.other');
+
     if (!reportReason) return;
-    if (reportReason === '기타' && !reportEtcText.trim()) return;
+    const isOtherSelected = (
+      reportReason === OTHER_LABEL ||
+      reportReason === '기타' ||
+      reportReason.toString().toUpperCase() === 'OTHER' ||
+      reportReason === 'other'
+    );
+    if (isOtherSelected && !reportEtcText.trim()) return;
     if (!otherUserId) { alert(t('chat.reportTargetMissing')); return; }
 
-    const reasonText = reportReason === '기타' ? reportEtcText.trim() : reportReason;
+    const reasonEnum = (() => {
+      const val = reportReason.toString().toUpperCase();
+      if (reportReason === ABUSE_LABEL || val === 'ABUSE' || reportReason === '욕설/비방') return 'ABUSE';
+      if (reportReason === FRAUD_LABEL || val === 'FRAUD' || reportReason === '사기/허위매물') return 'FRAUD';
+      if (reportReason === SPAM_LABEL  || val === 'SPAM'  || reportReason === '스팸/광고') return 'SPAM';
+      if (reportReason === OTHER_LABEL || val === 'OTHER' || reportReason === '기타' || reportReason === 'other') return 'OTHER';
+      return reportReason; // 이미 ENUM일 가능성
+    })();
 
     try {
       const payload = {
         type: 'CHAT_ROOM',                // 서버에서 채팅 신고로 구분
         targetId: Number(otherUserId),
         chatRoomId: Number(roomId),        // ✅ 현재 채팅방 ID
-        reason: (reportReason === '기타' ? 'OTHER' : reasonText),
-        ...(reportReason === '기타' ? { detail: reportEtcText.trim() } : {})
+        reason: reasonEnum,
+        ...(reasonEnum === 'OTHER' ? { detail: reportEtcText.trim() } : {})
       };
 
       const res = await fetch('/api/reports', {
@@ -1294,11 +1312,11 @@ const ChatRoom = () => {
       });
 
       if (!res.ok) {
-        const t = await res.text().catch(()=> '');
+        const responseText = await res.text().catch(()=> '');
         if (res.status === 409) {
           alert(t('chat.alreadyReported'));
         } else if (res.status === 400) {
-          alert(t || t('chat.invalidReport'));
+          alert(responseText || t('chat.invalidReport'));
         } else if (res.status === 401) {
           alert(t('chat.loginRequired'));
         } else if (res.status === 404) {
