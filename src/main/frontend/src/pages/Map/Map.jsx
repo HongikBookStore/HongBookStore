@@ -11,9 +11,18 @@ import { useLocation } from '../../contexts/LocationContext';
 import { Loading } from '../../components/ui';
 
 /* ==================== axios 인스턴스 ==================== */
-const API_BASE =
-    import.meta?.env?.VITE_API_BASE ??
-    (window.location.port === '5173' ? 'http://localhost:8080' : '');
+// Use backend origin (no trailing /api) so that request paths like '/api/...'
+// remain stable across dev/prod.
+const API_BASE = (() => {
+  const env = import.meta.env || {};
+  const backendOrigin = env?.VITE_BACKEND_ORIGIN;
+  if (backendOrigin) return backendOrigin.replace(/\/$/, '');
+  const apiBase = env?.VITE_API_BASE;
+  if (apiBase && typeof window !== 'undefined') {
+    try { return new URL(apiBase, window.location.origin).origin; } catch { /* ignore */ }
+  }
+  return (typeof window !== 'undefined' && window.location.port === '5173') ? 'http://localhost:8080' : '';
+})();
 
 const getToken = () => {
   return (

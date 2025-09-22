@@ -1,0 +1,91 @@
+name: Build and Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: 'us-west1'
+  SERVICE_NAME: 'hongbook-spring'
+  REPO: hongbook-spring
+  WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Make deploy script executable
+        run: chmod +x deploy/cloudrun/deploy.sh
+
+      - name: Create runtime env file
+        env:
+          CLOUD_RUN_ENV_FILE: ${{ secrets.CLOUD_RUN_ENV_FILE }}
+        run: |
+          if [[ -n "${CLOUD_RUN_ENV_FILE}" ]]; then
+            printf '%s' "${CLOUD_RUN_ENV_FILE}" > deploy/cloudrun/.env.ci
+          fi
+
+      - name: Build image with Cloud Build and deploy to Cloud Run
+        env:
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          REGION: ${{ env.REGION }}
+          REPO: ${{ env.REPO }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          SERVICE_ACCOUNT: ${{ secrets.GCP_RUNTIME_SERVICE_ACCOUNT }}
+        run: |
+          set -eo pipefail
+
+          if [[ -z "${PROJECT_ID}" ]]; then
+            echo "PROJECT_ID is not set. Configure repository variable GCP_PROJECT_ID." >&2
+            exit 1
+          fi
+
+          REGION=${REGION:-us-west1}
+          REPO=${REPO:-hongbookstore}
+          SERVICE_NAME=${SERVICE_NAME:-hongbookstore}
+
+          DEPLOY_ARGS=(--allow-unauthenticated)
+          if [[ -f deploy/cloudrun/.env.ci ]]; then
+            DEPLOY_ARGS+=(--env-file deploy/cloudrun/.env.ci)
+          fi
+
+          ./deploy/cloudrun/deploy.sh "${DEPLOY_ARGS[@]}"
+
+      - name: Upload deployment artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-run-logs
+          path: |
+            /tmp/cloud-run*
+            deploy/cloudrun/.env.ci
+          if-no-files-found: ignore

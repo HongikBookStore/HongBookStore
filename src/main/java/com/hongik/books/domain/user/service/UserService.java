@@ -31,6 +31,9 @@ public class UserService {
     @Value("${email.verification.expiration-hours:24}")
     private int verificationExpirationHours;
 
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     // 회원 정보 수정
     public ApiResponse<UserResponseDTO> updateUser(Long userId, UserRequestDTO userRequestDTO) {
         Optional<User> userOptional = userRepository.findById(userId);
@@ -114,7 +117,10 @@ public class UserService {
         user.startStudentVerification(univEmail, token, expiresAt);
 
         // 인증 메일 발송
-        String verificationUrl = "http://localhost:5173/verify-student?token=" + token; // ❗️ 프론트엔드 URL로 변경
+        String baseUrl = frontendBaseUrl != null && frontendBaseUrl.endsWith("/")
+                ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1)
+                : frontendBaseUrl;
+        String verificationUrl = String.format("%s/verify-student?token=%s", baseUrl, token);
         Locale locale = LocaleContextHolder.getLocale();
         mailService.sendStudentVerificationEmail(univEmail, user.getUsername(), verificationUrl, locale);
 

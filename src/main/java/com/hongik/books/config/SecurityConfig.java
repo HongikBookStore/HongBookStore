@@ -4,7 +4,9 @@ import com.hongik.books.auth.jwt.JwtAuthFilter;
 import com.hongik.books.security.oauth.CustomOAuth2UserService;
 import com.hongik.books.security.oauth.handler.OAuth2LoginFailureHandler;
 import com.hongik.books.security.oauth.handler.OAuth2LoginSuccessHandler;
+import com.hongik.books.security.oauth.repository.HttpCookieOAuth2AuthorizationRequestRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,6 +22,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -34,6 +37,10 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     // 상단 필드 부분에 한 줄 추가
     private final com.hongik.books.auth.filter.DeactivatedUserBlockFilter deactivatedUserBlockFilter;
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
+
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}")
+    private String allowedOriginsCsv;
 
     @Bean // 필터 체인 구성
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -54,6 +61,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/ws-stomp/**",
                                 "/actuator/health",
+                                "/actuator/health/**",
                                 "/api/directions/**",
                                 "/api/notifications/stream", // 👈 추가
                                 "/", "/login", "/oauth2/**", "/error"
@@ -109,6 +117,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 // OAuth 로그인 설정
                 .oauth2Login(o -> o
+                        .authorizationEndpoint(auth -> auth
+                                .authorizationRequestRepository(authorizationRequestRepository))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
                         .userInfoEndpoint(u -> u
@@ -125,7 +135,12 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "http://localhost:5175"));
+        List<String> origins = Arrays.stream(allowedOriginsCsv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
+        // 패턴 지원(Wildcard 도메인 포함). Credentials 사용 시 AllowedOrigins가 '*'이면 안 되므로 패턴 사용.
+        cfg.setAllowedOriginPatterns(origins);
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
