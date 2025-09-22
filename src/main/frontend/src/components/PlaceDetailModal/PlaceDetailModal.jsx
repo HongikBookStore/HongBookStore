@@ -213,9 +213,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   const [lbImages, setLbImages] = useState([]);
   const [lbIndex, setLbIndex] = useState(0);
 
-  // ✅ 리뷰 반응 상태 관리
-  const [userReactions, setUserReactions] = useState({});
-
   const openLightbox = (images, startIndex = 0) => {
     if (!images || images.length === 0) return;
     setLbImages(images);
@@ -280,7 +277,6 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
       const newUserReactions = {};
       mapped.forEach(r => { if (r.userReaction) newUserReactions[r.id] = r.userReaction; });
-      setUserReactions(newUserReactions);
 
       setShowAllReviews(false);
     } catch { /* no-op */ }
@@ -473,50 +469,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
   /* ===================== 좋아요/싫어요 ===================== */
   const handleLikeReview = async (reviewId) => {
     try {
-      const currentReaction = userReactions[reviewId] || reviews.find(r => r.id === reviewId)?.userReaction;
-      const newReaction = currentReaction === 'LIKE' ? null : 'LIKE';
-
-      setUserReactions(prev => ({ ...prev, [reviewId]: newReaction }));
-      setReviews(prev => prev.map(review => {
-        if (review.id !== reviewId) return review;
-        let newLikes = review.likes || 0;
-        let newDislikes = review.dislikes || 0;
-        if (currentReaction === 'LIKE') newLikes = Math.max(0, newLikes - 1);
-        else if (currentReaction === 'DISLIKE') { newDislikes = Math.max(0, newDislikes - 1); newLikes += 1; }
-        else newLikes += 1;
-        return { ...review, userReaction: newReaction, likes: newLikes, dislikes: newDislikes };
-      }));
-
-      await fetch(REVIEW_REACT(reviewId) + '?type=LIKE', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
-      });
+      await fetch(`${REVIEW_REACT(reviewId)}?type=LIKE`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       await fetchReviews();
-    } catch { /* no-op */ }
+    } catch {}
   };
 
   const handleDislikeReview = async (reviewId) => {
     try {
-      const currentReaction = userReactions[reviewId] || reviews.find(r => r.id === reviewId)?.userReaction;
-      const newReaction = currentReaction === 'DISLIKE' ? null : 'DISLIKE';
-
-      setUserReactions(prev => ({ ...prev, [reviewId]: newReaction }));
-      setReviews(prev => prev.map(review => {
-        if (review.id !== reviewId) return review;
-        let newLikes = review.likes || 0;
-        let newDislikes = review.dislikes || 0;
-        if (currentReaction === 'DISLIKE') newDislikes = Math.max(0, newDislikes - 1);
-        else if (currentReaction === 'LIKE') { newLikes = Math.max(0, newLikes - 1); newDislikes += 1; }
-        else newDislikes += 1;
-        return { ...review, userReaction: newReaction, likes: newLikes, dislikes: newDislikes };
-      }));
-
-      await fetch(REVIEW_REACT(reviewId) + '?type=DISLIKE', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` }
-      });
+      await fetch(`${REVIEW_REACT(reviewId)}?type=DISLIKE`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       await fetchReviews();
-    } catch { /* no-op */ }
+    } catch {}
   };
 
   const getTypeName = useMemo(() => (type) =>
@@ -817,16 +779,16 @@ const PlaceDetailModal = ({ place, isOpen, onClose, userCategories, onAddToCateg
 
                             <ReviewActions>
                               <ActionButton
-                                  $isActive={(userReactions[review.id] || review.userReaction) === 'LIKE'}
-                                  $type="like"
-                                  onClick={() => handleLikeReview(review.id)}
+                                $isActive={review.userReaction === 'LIKE'}
+                                $type="like"
+                                onClick={() => handleLikeReview(review.id)}
                               >
                                 <FaThumbsUp /> {review.likes || 0}
                               </ActionButton>
                               <ActionButton
-                                  $isActive={(userReactions[review.id] || review.userReaction) === 'DISLIKE'}
-                                  $type="dislike"
-                                  onClick={() => handleDislikeReview(review.id)}
+                                $isActive={review.userReaction === 'DISLIKE'}
+                                $type="dislike"
+                                onClick={() => handleDislikeReview(review.id)}
                               >
                                 <FaThumbsDown /> {review.dislikes || 0}
                               </ActionButton>
