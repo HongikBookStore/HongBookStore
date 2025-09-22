@@ -440,6 +440,39 @@ const NotificationTime = styled.div` font-size: 0.8rem; color: var(--text-light)
 const NotificationEmpty = styled.div` padding: var(--space-6) var(--space-4); text-align: center; color: var(--text-light); font-size: 0.9rem; `;
 const UnreadDot = styled.div` width: 8px; height: 8px; background: var(--primary); border-radius: var(--radius-full); flex-shrink: 0; margin-top: var(--space-1); `;
 
+// ====== ✅ 사용자별 localStorage 저장/복원 유틸 ======
+const storageKeyForUser = (user) => {
+  const id = user?.id ?? user?.userId ?? user?.seq ?? null; // 프로젝트의 사용자 키에 맞춰 자동 대응
+  return id ? `notif:${id}` : null;
+};
+
+const loadSaved = (user) => {
+  try {
+    const key = storageKeyForUser(user);
+    if (!key) return [];
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveSaved = (user, list) => {
+  try {
+    const key = storageKeyForUser(user);
+    if (!key) return;
+    localStorage.setItem(key, JSON.stringify(list ?? []));
+  } catch {}
+};
+
+const clearSaved = (user) => {
+  try {
+    const key = storageKeyForUser(user);
+    if (!key) return;
+    localStorage.removeItem(key);
+  } catch {}
+};
+
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -555,6 +588,21 @@ const Header = () => {
 
   const currentUser = getUserInfo();
 
+  // ====== ✅ 로그인 시: 저장된 알림 복원
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) return;
+    const saved = loadSaved(currentUser);
+    if (Array.isArray(saved) && saved.length) {
+      setNotifications(saved);
+    }
+  }, [isLoggedIn, currentUser?.id]);
+
+  // ====== ✅ 알림 변경 시: 사용자별 자동 저장
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) return;
+    saveSaved(currentUser, notifications);
+  }, [notifications, isLoggedIn, currentUser?.id]);
+
   const toggleNotifications = () => setShowNotifications(!showNotifications);
 
   const markAsRead = (notificationId) => {
@@ -582,6 +630,12 @@ const Header = () => {
     return () => { document.removeEventListener('mousedown', handleClickOutside); };
   }, [showNotifications]);
 
+  // ====== ✅ 전체 삭제 (localStorage 동기화)
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    if (currentUser) clearSaved(currentUser);
+  };
+
   // 시간 표시 포맷터
   const formatTime = (iso) => {
     try {
@@ -592,27 +646,49 @@ const Header = () => {
     }
   };
 
-  // SSE 구독
+  // ====== ✅ SSE 구독 (중복 방지 포함)
   useEffect(() => {
     if (!isLoggedIn) return;
     const es = startNotificationStream(
         (evt) => {
           if (!evt || evt.type === 'PING') return;
+
           const mappedType = evt.type === 'CHAT' ? 'chat' : 'system';
           const text = evt.title
               ? `${evt.title}${evt.message ? ' · ' + evt.message : ''}`
               : (evt.message || '새 알림');
+
+          // 안정적인 ID (백엔드에서 id 주면 최우선 사용)
+          const stableId = evt.id || `${evt.type}-${evt.createdAt || ''}-${evt.link || ''}`;
+
           const item = {
-            id: evt.id || Date.now(),
+            id: stableId,
             type: mappedType,
             text,
-            time: formatTime(evt.createdAt),
+            time: (() => {
+              try {
+                const d = evt.createdAt ? new Date(evt.createdAt) : new Date();
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              } catch {
+                return '방금 전';
+              }
+            })(),
             unread: true,
             link: evt.link || null
           };
-          setNotifications(prev => [item, ...prev].slice(0, 50));
+
+          setNotifications((prev) => {
+            const idx = prev.findIndex((n) => n.id === item.id);
+            if (idx >= 0) {
+              // 이미 있으면 맨 위로 갱신
+              const next = [...prev];
+              next.splice(idx, 1);
+              return [item, ...next].slice(0, 50);
+            }
+            return [item, ...prev].slice(0, 50);
+          });
         },
-        () => {}
+        () => {} // 오류/재연결은 내부에서 처리
     );
     return () => { try { es && es.close(); } catch {} };
   }, [isLoggedIn]);
@@ -679,7 +755,7 @@ const Header = () => {
                             <NotificationHeader>
                               <NotificationTitle>{t('notifications')}</NotificationTitle>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <ClearAllButton onClick={() => setNotifications([])}>
+                                <ClearAllButton onClick={clearAllNotifications}>
                                   {t('clearAll')}
                                 </ClearAllButton>
                               </div>
