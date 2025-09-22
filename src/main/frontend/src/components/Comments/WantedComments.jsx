@@ -1,7 +1,9 @@
+// src/components/Comments/WantedComments.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { FaReply, FaTrash, FaUser, FaClock } from 'react-icons/fa';
+import { displayMaskedName } from '../../utils/nameMask';
 
 const Box = styled.div`
     margin-top: 18px;
@@ -75,6 +77,7 @@ const ReplyBox = styled.div`
     margin-top: 10px; margin-left: 26px;
 `;
 
+/* ----------------------- helpers ----------------------- */
 function authHeaders() {
     const token = localStorage.getItem('accessToken');
     const uid = localStorage.getItem('userId');
@@ -118,19 +121,89 @@ function buildTree(list) {
     return roots;
 }
 
+/* 작성자(배우) 객체의 탈퇴 여부만 본다. 댓글 자체의 status/deleted는 사용하지 않음 */
+function isDeactivatedFromComment(c) {
+    const U = v => (v ?? '').toString().toUpperCase();
+
+    // 백엔드별 작성자 객체 후보들
+    const actors = [
+        c?.user, c?.author, c?.writer, c?.reviewer, c?.commenter,
+    ];
+
+    for (const a of actors) {
+        if (!a || typeof a !== 'object') continue;
+
+        const s = U(a.status || a.accountStatus || a.userStatus || a.authorStatus);
+        if (['DEACTIVATED', 'WITHDRAWN', 'WITHDRAW', 'DELETED'].includes(s)) return true;
+
+        if (
+            a.deactivated || a.isDeactivated || a.withdrawn || a.isWithdrawn ||
+            a.isDeleted || a.deletedUser || a.userDeleted || a.deleted
+        ) return true;
+
+        if (a.deactivatedAt || a.withdrawnAt || a.deletedAt) return true;
+    }
+
+    // top-level 이지만 '사용자 상태'를 의미하는 필드만 허용
+    const topStatus = U(c?.userStatus || c?.authorStatus);
+    if (['DEACTIVATED', 'WITHDRAWN', 'WITHDRAW', 'DELETED'].includes(topStatus)) return true;
+    if (c?.userDeactivated || c?.authorDeactivated) return true;
+    if (c?.userDeletedAt || c?.authorDeletedAt) return true;
+
+    return false;
+}
+
+function looksAnonymousName(name, t) {
+    const n = (name ?? '').toString().trim();
+    if (!n) return false;
+    const anonKo = (t?.('common.anonymous') || '익명').toString();
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const reKo = /^익명\s*\d*$/i;
+    const reI18n = new RegExp(`^${esc(anonKo)}\\s*\\d*$`, 'i');
+    const reEn = /^anonymous\s*\d*$/i;
+    return reKo.test(n) || reI18n.test(n) || reEn.test(n);
+}
+
+/* 표시용 이름: 탈퇴자는 "탈퇴된 회원" 고정, 익명 패턴은 원형 유지, 나머지는 마스킹 */
+function nameForComment(c, t) {
+    if (isDeactivatedFromComment(c)) return '탈퇴된 회원';
+
+    // 가능한 이름 키들을 넓게 커버
+    const raw =
+        c?.authorNickname ??
+        c?.nickname ??
+        c?.username ??
+        c?.authorName ??
+        c?.userName ??
+        c?.displayName ??
+        c?.user?.nickname ??
+        c?.author?.nickname ??
+        c?.user?.name ??
+        c?.author?.name ??
+        '';
+
+    const name = (raw || '').toString().trim();
+    if (!name) return t('common.anonymous') || '익명';
+
+    if (looksAnonymousName(name, t)) return name; // 익명/익명1 그대로
+    const masked = displayMaskedName(name, false);
+    return masked || (t('common.anonymous') || '익명');
+}
+
+/* ----------------------- component ----------------------- */
 export default function WantedComments({ wantedId }) {
     const { t } = useTranslation();
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [text, setText] = useState('');
     const [textError, setTextError] = useState('');
-    const [replyFor, setReplyFor] = useState(null); // commentId
+    const [replyFor, setReplyFor] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replyError, setReplyError] = useState('');
     const myId = (() => {
         const v = localStorage.getItem('userId');
         if (!v) return null;
-        try { return Number(v); } catch (_) { return null; }
+        try { return Number(v); } catch { return null; }
     })();
 
     const tree = useMemo(() => buildTree(list), [list]);
@@ -142,7 +215,7 @@ export default function WantedComments({ wantedId }) {
             if (!res.ok) throw new Error(`목록 실패 (${res.status})`);
             const json = await toJsonSafely(res);
             setList(normalizeApiData(json));
-        } catch (e) {
+        } catch {
             setList([]);
         } finally {
             setLoading(false);
@@ -227,18 +300,21 @@ export default function WantedComments({ wantedId }) {
     const renderItem = (c) => {
         const created = c.createdAt ? new Date(c.createdAt) : null;
         const mine = myId != null && Number(c.userId) === Number(myId);
+        const displayName = nameForComment(c, t);
+
         return (
             <Item key={c.id}>
                 <Meta>
-                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                        <FaUser/>{c.authorNickname || t('common.anonymous')}
-                    </span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+            <FaUser/>{displayName}
+          </span>
                     {created && (
                         <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                            <FaClock/>{created.toLocaleString('ko-KR')}
-                        </span>
+              <FaClock/>{created.toLocaleString('ko-KR')}
+            </span>
                     )}
                 </Meta>
+
                 {c.contentToxic && (
                     <div style={{
                         marginBottom: 6,
@@ -254,9 +330,11 @@ export default function WantedComments({ wantedId }) {
                         경고
                     </div>
                 )}
+
                 <Content $deleted={c.deleted}>
                     {c.deleted ? t('wantedComments.deletedComment') : c.content}
                 </Content>
+
                 <Actions>
                     <Button onClick={() => { setReplyFor(c.id); setReplyText(''); }}>
                         <FaReply/> {t('wantedComments.reply')}
@@ -287,7 +365,6 @@ export default function WantedComments({ wantedId }) {
                     </ReplyBox>
                 )}
 
-                {/* children */}
                 {c.children && c.children.length > 0 && (
                     <RepliesList>
                         {c.children.map(ch => renderItem(ch))}
@@ -301,7 +378,6 @@ export default function WantedComments({ wantedId }) {
         <Box>
             <Title>{t('wantedComments.title')}</Title>
 
-            {/* 원댓글 입력기 */}
             <EditorRow>
                 <Textarea
                     value={text}
@@ -317,7 +393,6 @@ export default function WantedComments({ wantedId }) {
                 </div>
             </EditorRow>
 
-            {/* 목록 */}
             {loading ? (
                 <div style={{color:'#6b7280'}}>{t('wantedComments.loading')}</div>
             ) : (

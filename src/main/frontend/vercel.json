@@ -1,0 +1,15 @@
+{
+  "routes": [
+    {
+      "src": "/oauth2/(.*)",
+      "dest": "/api/oauth2/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ]
+}

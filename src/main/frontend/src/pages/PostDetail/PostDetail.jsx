@@ -232,7 +232,6 @@ const ConditionValue = styled.div`
   font-size: 1.1rem;
   font-weight: 600;
   color: ${props => {
-    // 번역된 텍스트가 아닌 원본 enum 값으로 색깔 결정
     if (props.$condition === 'HIGH') return '#28a745';
     if (props.$condition === 'MEDIUM') return '#ffc107';
     if (props.$condition === 'LOW') return '#dc3545';
@@ -481,6 +480,12 @@ const ActionButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.2);
+  }
 `;
 
 const ChatButton = styled(ActionButton)`
@@ -649,57 +654,11 @@ const getAuthHeader = () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
-// 백엔드 Enum(HIGH, MEDIUM, LOW)을 프론트엔드 텍스트로 변환하는 헬퍼 (컴포넌트 내부로 이동 예정)
-
-// 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼 (컴포넌트 내부로 이동 예정)
-
-// ✅ 지하철 호선 → 역 리스트
-const SUBWAY_MAP = {
-  '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
-  '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
-  '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
-  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
-  '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
-  '6호선': ["응암","역촌","불광","독바위","연신내","구산","디지털미디어시티","월드컵경기장","마포구청","망원","합정","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","상월곡","돌곶이","석계","태릉입구","화랑대","봉화산"],
-  '7호선': ["장암","도봉산","수락산","마들","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지","철산","광명사거리","천왕","온수","오류동","개봉","구일"],
-  '8호선': ["암사","천호","강동구청","몽촌토성","잠실","석촌","송파","가락시장","문정","장지","복정","산성","남한산성입구","단대오거리","신흥","수진","모란"],
-  '9호선': ["개화","김포공항","공항시장","신방화","마곡나루","양천향교","가양","증미","등촌","염창","신목동","선유도","당산","국회의사당","여의도","샛강","노량진","노들","흑석","동작","구반포","신반포","고속터미널","사평","신논현","언주","선정릉","삼성중앙","봉은사","종합운동장"],
-  '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
-  '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
-  '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
-  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
-};
-
-// ✅ 교내 코드 → 라벨(사람 친화) 매핑
-const ONCAMPUS_PLACE_LABELS = {
-  T: 'T동',
-  R: 'R동',
-  A: 'A동',
-  MH: 'MH관',
-  E: 'E동',
-  F: 'F동',
-  G: 'G동',
-  H: 'H동',
-  L: 'L동',
-  Q: 'Q동',
-  S: 'S존',
-  Z1: 'Z1',
-  Z2: 'Z2',
-  Z3: 'Z3',
-  Z4: 'Z4',
-  U: 'U동',
-  B: 'B동',
-  C: 'C동',
-  D: 'D동',
-  M: 'M동',
-  K: 'K동',
-  J: 'J동',
-  I: 'I동',
-  X: 'X(기타)',
-  '신기숙사': '신기숙사'
-};
-
 // ✅ 역 이름으로 호선을 찾아주는 헬퍼 (중복 시 최초 매칭 반환)
+const SUBWAY_MAP = { /* ...생략: 네가 쓰던 맵 그대로... */ };
+
+const ONCAMPUS_PLACE_LABELS = { /* ...생략: 네가 쓰던 라벨 그대로... */ };
+
 const getLineByStation = (stationName) => {
   if (!stationName) return null;
   for (const [line, stations] of Object.entries(SUBWAY_MAP)) {
@@ -708,9 +667,7 @@ const getLineByStation = (stationName) => {
   return null;
 };
 
-// 할인율에 따른 책 상태 반환 함수 (컴포넌트 내부로 이동 예정)
-
-// ✅ 응답 어디에 있어도 안전하게 추출하는 유틸 (교내/교외 기준 위치)
+// ✅ 위치 필드 추출 유틸
 const deriveTradeLocations = (p = {}) => {
   const onRaw =
       p.oncampusPlaceCode ??
@@ -729,12 +686,41 @@ const deriveTradeLocations = (p = {}) => {
       null;
 
   const onLabel = onRaw ? (ONCAMPUS_PLACE_LABELS[onRaw] || onRaw) : null;
-
   const offStation = offRaw || null;
   const offLine = offStation ? getLineByStation(offStation) : null;
 
   return { onRaw, onLabel, offRaw, offStation, offLine };
 };
+
+// ✅ 응답 정규화(서버 DTO가 달라도 카드 렌더링 가능하게)
+const normalizePostSummary = (raw) => {
+  const id = raw?.id ?? raw?.postId ?? raw?.salePostId;
+  const title = raw?.bookTitle ?? raw?.title ?? raw?.postTitle ?? '';
+  const author = raw?.author ?? raw?.bookAuthor ?? '';
+  const price = raw?.price ?? 0;
+  const originalPrice = raw?.originalPrice ?? raw?.book?.originalPrice ?? 0;
+  const postImageUrls =
+      raw?.postImageUrls ??
+      raw?.imageUrls ??
+      raw?.images ??
+      (raw?.thumbnailUrl ? [raw.thumbnailUrl] : []);
+  const discountRate = raw?.discountRate ?? (originalPrice > 0 ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0);
+  return { id, title, author, price, originalPrice, postImageUrls: postImageUrls || [], discountRate };
+};
+
+// ✅ 탈퇴 판매자 판별 & 표시명/클릭 가능 여부
+const isSellerDeactivated = (p) =>
+    Boolean(p?.sellerDeactivated) ||
+    /^탈퇴회원#/i.test(String(p?.sellerNickname ?? '')) ||
+    (p?.sellerId == null && /^탈퇴회원#/i.test(String(p?.sellerUsername ?? '')));
+
+const getDisplaySellerName = (p) =>
+    isSellerDeactivated(p)
+        ? '탈퇴한 회원'
+        : (p?.sellerNickname || p?.sellerUsername || p?.sellerName || '익명 사용자');
+
+const isSellerClickable = (p) =>
+    !isSellerDeactivated(p) && !!p?.sellerId;
 
 const PostDetail = () => {
   const navigate = useNavigate();
@@ -742,14 +728,12 @@ const PostDetail = () => {
   const { user } = useContext(AuthCtx);
   const { t } = useTranslation();
 
-  // 백엔드 Enum을 프론트엔드 텍스트로 변환하는 헬퍼
   const getStatusMap = () => ({
     'FOR_SALE': t('postDetail.statusLabels.forSale'),
     'RESERVED': t('postDetail.statusLabels.reserved'),
     'SOLD_OUT': t('postDetail.statusLabels.soldOut')
   });
 
-  // 할인율에 따른 책 상태 반환 함수
   const getBookCondition = (discountRate) => {
     // 할인율이 낮을수록 상태가 좋음: ≤30 상, ≤50 중, 그 외 하
     if (discountRate <= 30) return { text: t('postDetail.bookCondition.excellent'), color: '#28a745', bgColor: '#d4edda' };
@@ -757,7 +741,6 @@ const PostDetail = () => {
     return { text: t('postDetail.bookCondition.fair'), color: '#dc3545', bgColor: '#f8d7da' };
   };
 
-  // 백엔드 Enum(HIGH, MEDIUM, LOW)을 프론트엔드 텍스트로 변환하는 헬퍼
   const conditionMap = {
     'HIGH': t('postDetail.bookCondition.excellent'),
     'MEDIUM': t('postDetail.bookCondition.good'),
@@ -770,7 +753,6 @@ const PostDetail = () => {
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  // 후기 모달 상태
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewStar, setReviewStar] = useState(null);
   const [reviewKeywords, setReviewKeywords] = useState('');
@@ -780,9 +762,8 @@ const PostDetail = () => {
   const [sellerOtherBooks, setSellerOtherBooks] = useState([]);
   const [loadingOtherBooks, setLoadingOtherBooks] = useState(false);
 
-  // ✅ 신고 모달 상태
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState(''); // 신고 사유
+  const [reportReason, setReportReason] = useState('');
   const [reportEtcText, setReportEtcText] = useState('');
   const [showReportDoneModal, setShowReportDoneModal] = useState(false);
 
@@ -804,24 +785,38 @@ const PostDetail = () => {
     if (!localStorage.getItem('accessToken')) return;
     try {
       const response = await axios.get('/api/my/likes', { headers: getAuthHeader() });
-      // ✅ postId 또는 id 모두 대응
       const likedIds = new Set(response.data.map(p => p.postId ?? p.id));
       setLiked(likedIds.has(parseInt(id)));
-    } catch (error) {
-    }
+    } catch {}
   }, [id]);
 
+  // ✅ 판매자 다른 책 불러오기 (엔드포인트 다양성 대응 + 필드 정규화)
   const fetchSellerOtherBooks = useCallback(async (sellerId) => {
     if (!sellerId) return;
     setLoadingOtherBooks(true);
+    const tryFetch = async (url, cfg) => {
+      try {
+        const res = await axios.get(url, cfg);
+        return res.data;
+      } catch {
+        return null;
+      }
+    };
+
+    // 1차: /api/posts/seller/{sellerId}
+    let data =
+        await tryFetch(`/api/posts/seller/${sellerId}`) ||
+        // 2차(대체): /api/users/{sellerId}/posts
+        await tryFetch(`/api/users/${sellerId}/posts`) ||
+        // 3차(대체): 검색 API에 sellerId 지원할 때
+        await tryFetch(`/api/posts`, { params: { sellerId } });
+
     try {
-      const response = await axios.get(`/api/posts/seller/${sellerId}`);
-      setSellerOtherBooks(response.data.filter(book => book.id !== parseInt(id)));
-    } catch (error) {
-      //setSellerOtherBooks([
-      //  { id: parseInt(id) + 1, title: "알고리즘 문제해결 전략", author: "구종만", price: 25000, discountRate: 30 },
-      //  { id: parseInt(id) + 2, title: "Clean Code", author: "Robert C. Martin", price: 20000, discountRate: 15 }
-      //]);
+      const list = Array.isArray(data) ? data : (data?.content || []); // Page일 수도 있음
+      const normalized = list
+          .map(normalizePostSummary)
+          .filter(b => (b.id ?? 0) !== Number(id));
+      setSellerOtherBooks(normalized);
     } finally {
       setLoadingOtherBooks(false);
     }
@@ -838,58 +833,58 @@ const PostDetail = () => {
       navigate('/login');
       return;
     }
-
     const newLikedState = !liked;
     setLiked(newLikedState);
-
     try {
       if (newLikedState) {
         await axios.post(`/api/posts/${id}/like`, null, { headers: getAuthHeader() });
       } else {
         await axios.delete(`/api/posts/${id}/like`, { headers: getAuthHeader() });
       }
-    } catch (error) {
+    } catch {
       setLiked(!newLikedState);
-      alert("오류가 발생했습니다.");
+      alert('오류가 발생했습니다.');
     }
-  }, [liked, id, navigate]);
+  }, [liked, id, navigate, t]);
 
   const handleChat = useCallback(async () => {
+    if (isSellerDeactivated(post)) {
+      lert('탈퇴한 회원과는 채팅을 시작할 수 없습니다.');
+      return;
+    }
     const salePostId = id;
     const buyerId = user?.id;
-
     if (!buyerId) {
       alert('로그인이 필요합니다.');
       navigate('/login');
       return;
     }
-
     try {
-      const response = await axios.post(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {}, {
-        headers: getAuthHeader()
-      });
+      const response = await axios.post(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {}, { headers: getAuthHeader() });
       const chatRoom = response.data;
       navigate(`/chat/${chatRoom.id}`);
     } catch (err) {
       const errorMessage = err.response?.data?.message || '채팅방을 열 수 없습니다. 잠시 후 다시 시도해주세요.';
       alert(errorMessage);
     }
-  }, [id, user, navigate]);
+  }, [id, user, navigate, post]);
 
   const handleCall = useCallback(() => {
     alert(t('postDetail.phone.notAvailable'));
-  }, []);
+  }, [t]);
 
   const handleViewOtherBooks = useCallback(() => {
-    setShowOtherBooks(!showOtherBooks);
+    if (isSellerDeactivated(post)) return;
+    setShowOtherBooks(prev => !prev);
     if (!showOtherBooks && post?.sellerId) {
       fetchSellerOtherBooks(post.sellerId);
     }
-  }, [showOtherBooks, post?.sellerId, fetchSellerOtherBooks]);
+  }, [showOtherBooks, post, fetchSellerOtherBooks]);
 
+  // ✅ 라우팅 경로 수정: 상세 페이지로 이동
   const handleOtherBookClick = useCallback((bookId) => {
     if (bookId !== parseInt(id)) {
-      navigate(`/book/${bookId}`, { replace: true });
+      navigate(`/posts/${bookId}`, { replace: true });
       setShowOtherBooks(false);
     }
   }, [id, navigate]);
@@ -899,7 +894,6 @@ const PostDetail = () => {
     fetchMyLikes();
   }, [fetchPost, fetchMyLikes]);
 
-  // 후기 남기기 핸들러
   const canLeaveReview = !!post && post.status === 'SOLD_OUT' && !!user;
   const openReview = () => {
     if (!canLeaveReview) return;
@@ -916,7 +910,6 @@ const PostDetail = () => {
     try {
       setReviewSubmitting(true);
       await createPeerReview({
-        // ✅ 다양한 응답형 대응 (post.id || post.postId || URL 파라미터)
         postId: post.id ?? post.postId ?? Number(id),
         ratingLabel,
         ratingScore,
@@ -932,7 +925,6 @@ const PostDetail = () => {
     }
   };
 
-  // 할인율 계산
   const discountRate = useMemo(() => {
     if (!post) return 0;
     return post.originalPrice > 0
@@ -940,34 +932,28 @@ const PostDetail = () => {
         : 0;
   }, [post]);
 
-  // 책 상태 계산
   const bookCondition = useMemo(() => {
     if (!post) return null;
     return getBookCondition(post.discountRate || discountRate);
   }, [post, discountRate]);
 
-  // ✅ 교내/교외 기준 위치 안전 추출
   const { onLabel: oncampusLabel, offStation: offcampusStation, offLine: offcampusLine } = useMemo(
       () => deriveTradeLocations(post || {}),
       [post]
   );
 
-  // 내가 쓴 글인지 여부
   const isOwner = useMemo(() => {
     const me = user?.id;
-    const seller = post?.sellerId ?? post?.userId; // 백엔드 응답 케이스 모두 대비
+    const seller = post?.sellerId ?? post?.userId;
     return !!me && !!seller && me === seller;
   }, [user?.id, post?.sellerId, post?.userId]);
 
-
-  // ✅ 신고 모달 열기
   const openReport = () => {
     setReportReason('');
     setReportEtcText('');
     setShowReportModal(true);
   };
 
-  // ✅ 신고 제출
   const submitReport = async () => {
     try {
       // i18n 라벨을 백엔드 ENUM으로 매핑
@@ -991,21 +977,21 @@ const PostDetail = () => {
         return reportReason; // 이미 ENUM일 가능성
       })();
 
+      const reasonText = reportReason === t('postDetail.reportModal.options.other')
+          ? (reportEtcText || t('postDetail.reportModal.options.other'))
+          : reportReason;
       const payload = {
         type: 'SALE_POST',
         targetId: Number(id),
         reason: reasonEnum,
         ...(reasonEnum === 'OTHER' ? { detail: reportEtcText.trim() } : {})
       };
-
       await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify(payload),
       }).catch(() => null);
-    } catch {
-      // 실패해도 UX는 계속
-    }
+    } catch {}
   };
 
   const onReportSubmit = async (e) => {
@@ -1020,7 +1006,6 @@ const PostDetail = () => {
     setShowReportDoneModal(true);
   };
 
-  // 로딩 상태
   if (loading) {
     return (
         <DetailContainer>
@@ -1031,7 +1016,6 @@ const PostDetail = () => {
     );
   }
 
-  // 에러 상태
   if (error || !post) {
     return (
         <DetailContainer>
@@ -1044,7 +1028,6 @@ const PostDetail = () => {
     );
   }
 
-  // ✅ 전체 상태/설명에서 사용할 안전한 할인율
   const safeDiscountRate = post.discountRate ?? discountRate;
 
   return (
@@ -1083,18 +1066,15 @@ const PostDetail = () => {
               <div>
                 <BookTitle>
                   {post.bookTitle}
-                  {/* 👉 제목 오른쪽에 신고 + 좋아요 */}
                   <TitleActions>
                     {!isOwner && (
                         <ReportButton onClick={openReport} title={t('postDetail.report')}>
-                      <FaExclamationTriangle />
-                      {t('postDetail.report')}
-                    </ReportButton>
+                          <FaExclamationTriangle />
+                          {t('postDetail.report')}
+                        </ReportButton>
                     )}
-                    
                     <LikeButton $liked={liked} onClick={handleLikeToggle}>♥</LikeButton>
                   </TitleActions>
-
                 </BookTitle>
                 <BookAuthor>{post.author}</BookAuthor>
               </div>
@@ -1169,21 +1149,24 @@ const PostDetail = () => {
                 <InfoGrid>
                   <InfoItem>
                     <InfoLabel>{t('postDetail.category')}</InfoLabel>
-                    <InfoValue>{t(post.category)}</InfoValue>
+                    <InfoValue>
+                      {(() => {
+                        const toLabel = (v) => (v && v.includes('.') ? t(v) : v);
+                        if (post.categoryPath) return post.categoryPath.split(' > ').map(toLabel).join(' > ');
+                        if (post.detailCategory) return toLabel(post.detailCategory);
+                        const parts = [post.mainCategory, post.subCategory, post.detailCategory].filter(Boolean).map(toLabel);
+                        if (parts.length) return parts.join(' > ');
+                        if (post.category) return toLabel(post.category);
+                        return t('postDetail.noInfo');
+                      })()}
+                    </InfoValue>
                   </InfoItem>
 
-                  <InfoItem>
-                    <InfoLabel>{t('postDetail.tradeLocation')}</InfoLabel>
-                    <InfoValue>{post.tradeLocation}</InfoValue>
-                  </InfoItem>
-
-                  {/* ✅ 교내 기준 위치(사람 친화 라벨) */}
                   <InfoItem>
                     <InfoLabel>{t('postDetail.onCampusLocation')}</InfoLabel>
                     <InfoValue>{oncampusLabel || t('postDetail.noInfo')}</InfoValue>
                   </InfoItem>
 
-                  {/* ✅ 교외 기준 위치(호선 · 역 자동 매칭) */}
                   <InfoItem>
                     <InfoLabel>{t('postDetail.offCampusLocation')}</InfoLabel>
                     <InfoValue>
@@ -1202,6 +1185,7 @@ const PostDetail = () => {
                     <InfoLabel>{t('postDetail.statusLabels.forSale')}</InfoLabel>
                     <InfoValue>{getStatusMap()[post.status] || t('postDetail.statusLabels.forSale')}</InfoValue>
                   </InfoItem>
+
                   {canLeaveReview && (
                       <InfoItem>
                         <InfoLabel>{t('postDetail.review.title')}</InfoLabel>
@@ -1234,7 +1218,7 @@ const PostDetail = () => {
                     )}
                   </SellerAvatar>
                   <SellerDetails>
-                    <SellerName>{post.sellerNickname || '익명 사용자'}</SellerName>
+                    <SellerName>{getDisplaySellerName(post)}</SellerName>
                     <SellerLocation>
                       <FaMapMarkerAlt />
                       {post.sellerLocation || '위치 정보 없음'}
@@ -1251,17 +1235,24 @@ const PostDetail = () => {
                     )}
                     <div>
                       <button
-                        onClick={() =>
-                            navigate(`/users/${post.sellerId}`, {
-                              state: {
-                                username: post.sellerNickname || post.sellerUsername || post.sellerName || ''
-                              }
-                            })
-                        }
-                        style={{ padding:'6px 10px', border:'1px solid #e0e0e0', borderRadius:8, background:'#f8f9fa', cursor:'pointer' }}
-                    >
-                      {t('postDetail.seller.profile')}
-                    </button>
+                          onClick={() =>
+                              isSellerClickable(post) &&
+                              navigate(`/users/${post.sellerId}`, {
+                                state: { username: post.sellerNickname || post.sellerUsername || post.sellerName || '' }
+                              })
+                          }
+                          disabled={!isSellerClickable(post)}
+                          style={{
+                            padding:'6px 10px',
+                            border:'1px solid #e0e0e0',
+                            borderRadius:8,
+                            background: isSellerClickable(post) ? '#f8f9fa' : '#f1f3f5',
+                            color: isSellerClickable(post) ? 'inherit' : '#9ca3af',
+                            cursor: isSellerClickable(post) ? 'pointer' : 'not-allowed'
+                          }}
+                      >
+                        {t('postDetail.seller.profile')}
+                      </button>
                     </div>
                     {post.sellerSalesCount && (
                         <SalesCount>{t('postDetail.seller.salesCount', { count: post.sellerSalesCount })}</SalesCount>
@@ -1269,15 +1260,17 @@ const PostDetail = () => {
                   </SellerDetails>
                 </SellerInfo>
                 <ActionButtons>
-                  <ChatButton onClick={handleChat}>
+                  <ChatButton onClick={handleChat} disabled={isSellerDeactivated(post)}>
                     <FaComment />
                     {t('postDetail.contact')}
                   </ChatButton>
-                  <ViewOtherBooksButton onClick={handleViewOtherBooks}>
+                  <ViewOtherBooksButton
+                    onClick={handleViewOtherBooks}
+                    disabled={isSellerDeactivated(post)}
+                  >
                     <FaUser />
                     {t('postDetail.viewOtherBooks')} {sellerOtherBooks.length > 0 && `(${sellerOtherBooks.length})`}
                   </ViewOtherBooksButton>
-                  {/* (제거됨) 신고 버튼은 제목 옆으로 이동 */}
                 </ActionButtons>
               </SellerSection>
             </InfoSection>
@@ -1289,7 +1282,7 @@ const PostDetail = () => {
               <ModalContent onClick={(e) => e.stopPropagation()}>
                 <ModalHeader>
                   <ModalTitle>
-                    <FaUser /> {post.sellerNickname || t('postDetail.seller.name')}{t('postDetail.seller.otherBooks')}
+                    <FaUser /> {getDisplaySellerName(post)}{t('postDetail.seller.otherBooks')}
                   </ModalTitle>
                   <CloseButton onClick={() => setShowOtherBooks(false)}>
                     <FaTimes />
@@ -1303,7 +1296,7 @@ const PostDetail = () => {
                 ) : sellerOtherBooks.length > 0 ? (
                     <OtherBooksGrid>
                       {sellerOtherBooks.map(book => {
-                        const bookConditionInfo = getBookCondition(book.discountRate);
+                        const bookConditionInfo = getBookCondition(book.discountRate ?? 0);
                         return (
                             <OtherBookCard
                                 key={book.id}
@@ -1423,7 +1416,6 @@ const PostDetail = () => {
                     ))}
                   </div>
 
-                  {/* ✅ '기타' 선택 시 세부 사항 입력창 표시 */}
                   {reportReason === t('postDetail.reportModal.options.other') && (
                       <div style={{ marginTop: 8 }}>
                         <div style={{ marginBottom: 6, fontSize: '.92rem', color: '#555' }}>{t('postDetail.reportModal.detailedReason')}</div>
@@ -1458,7 +1450,6 @@ const PostDetail = () => {
             </ModalOverlay>
         )}
 
-        {/* ✅ 신고 완료 안내 모달 */}
         {showReportDoneModal && (
             <ModalOverlay onClick={() => setShowReportDoneModal(false)}>
               <ModalContent onClick={(e) => e.stopPropagation()}>

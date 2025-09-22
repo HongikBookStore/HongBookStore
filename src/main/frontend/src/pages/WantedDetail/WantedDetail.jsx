@@ -8,6 +8,7 @@ import SidebarMenu, { MainContent } from '../../components/SidebarMenu/SidebarMe
 import WarningModal from '../../components/WarningModal/WarningModal';
 import WantedComments from '../../components/Comments/WantedComments';
 import { useWriting } from '../../contexts/WritingContext';
+import { displayMaskedName } from '../../utils/nameMask';
 
 /* ----------------------------- styled components ----------------------------- */
 const PageWrapper = styled.div`
@@ -116,7 +117,7 @@ function getAuthHeader() {
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// ✅ 상태 문자열을 UI 친화적으로 정규화 (상/중/하)
+// 상태 문자열을 UI 친화적으로 정규화 (상/중/하)
 function normalizeCondition(v, t) {
     const val = (v ?? '').toString().trim();
     const up = val.toUpperCase();
@@ -126,17 +127,55 @@ function normalizeCondition(v, t) {
     return val || t('wantedDetail.condition.unspecified');
 }
 
-// ✅ 카테고리 문자열을 번역
+// 카테고리 문자열 번역
 function translateCategory(category, t) {
     if (!category) return '-';
-    
-    // 교양/전공 번역 (백엔드에서 오는 원본 한국어 값)
     if (category === '교양') return t('wantedDetail.category.general');
     if (category === '전공') return t('wantedDetail.category.major');
-    
-    // 기타 카테고리들도 필요하면 추가
     return category;
 }
+
+// 탈퇴 여부를 다양한 백엔드 표현에서 폭넓게 감지
+function isDeactivatedFromDetail(d) {
+    const status = (d?.requesterStatus ?? d?.userStatus ?? d?.status ?? '')
+        .toString()
+        .toUpperCase();
+    if (['DEACTIVATED', 'DELETED', 'WITHDRAWN', 'WITHDRAW'].includes(status)) return true;
+
+    if (
+        d?.requesterDeactivated || d?.authorDeactivated || d?.userDeactivated ||
+        d?.deactivated || d?.deleted || d?.isDeleted || d?.isDeactivated
+    ) return true;
+
+    if (d?.requesterDeactivatedAt || d?.requesterDeletedAt || d?.deletedAt) return true;
+
+    const raw = (d?.requesterNickname ?? d?.requesterName ?? d?.authorName ?? d?.nickname ?? '').toString();
+    if (/탈퇴/.test(raw)) return true; // '탈퇴회원#123' 같은 문자열
+    return false;
+}
+
+// 익명 패턴(익명, 익명123, anonymous 3 ...)은 그대로 유지
+function looksAnonymousName(name, t) {
+    const n = (name ?? '').toString().trim();
+    if (!n) return false;
+    const anonKo = (t?.('common.anonymous') || '익명').toString();
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const reKoNumbered = /^익명\s*\d*$/i;
+    const reI18nNumbered = new RegExp(`^${esc(anonKo)}\\s*\\d*$`, 'i');
+    const reEn = /^anonymous\s*\d*$/i;
+    return reKoNumbered.test(n) || reI18nNumbered.test(n) || reEn.test(n);
+}
+
+// 최종 표시 이름: 탈퇴자는 '탈퇴된 회원' 고정, 익명N은 그대로, 나머지는 마스킹
+function nameForDisplay(rawName, deactivated, t) {
+    if (deactivated) return '탈퇴된 회원';
+    const n = (rawName ?? '').toString().trim();
+    if (!n) return t('common.anonymous') || '익명';
+    if (looksAnonymousName(n, t)) return n;          // 익명1/익명2 유지
+    const masked = displayMaskedName(n, false);      // 일반 닉네임/실명은 마스킹
+    return masked || (t('common.anonymous') || '익명');
+}
+
 
 export default function WantedDetail() {
     const { t } = useTranslation();
@@ -149,13 +188,13 @@ export default function WantedDetail() {
     const [loading, setLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-    // ✅ 신고 모달 상태 (ChatRoom의 신고 모달 디자인 이식 + '기타' 세부 사유)
+    // 신고 모달 상태
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportReason, setReportReason] = useState('');
     const [reportEtcText, setReportEtcText] = useState('');
     const [showReportExitModal, setShowReportExitModal] = useState(false);
 
-    // ✅ 사이드바 메뉴 핸들러
+    // 사이드바 메뉴
     const handleSidebarMenu = (menu) => {
         switch (menu) {
             case 'bookstore/add': navigate('/bookstore/add'); break;
@@ -167,10 +206,7 @@ export default function WantedDetail() {
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 break;
             }
-            case 'detail': {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                break;
-            }
+            case 'detail': window.scrollTo({ top: 0, behavior: 'smooth' }); break;
             default: break;
         }
     };
@@ -211,22 +247,21 @@ export default function WantedDetail() {
         return () => { alive = false; };
     }, [id]);
 
-    // 본문 표시용 작성자
-    const displayAuthor = data?.requesterNickname || data?.requesterName || '익명 사용자';
+    // 작성자 표시 이름 (탈퇴자면 "탈퇴된 회원")
+    const displayAuthor = nameForDisplay(
+        data?.requesterNickname ?? data?.requesterName ?? data?.authorName ?? data?.nickname ?? '',
+        isDeactivatedFromDetail(data),
+        t
+    );
 
-    /* ------------------------------ 삭제 핸들러 ------------------------------ */
-    const openDelete = () => {
-        setShowDeleteModal(true);
-    };
+    /* ------------------------------ 삭제 ------------------------------ */
+    const openDelete = () => setShowDeleteModal(true);
 
     const onDelete = async () => {
         stopWriting();
         setUnsavedChanges(false);
         try {
-            const headers = {
-                ...getAuthHeader(),
-            };
-            // 일부 백엔드가 X-User-Id를 요구할 수 있으므로 보조 헤더 추가
+            const headers = { ...getAuthHeader() };
             let userId = localStorage.getItem('userId');
             if (!userId) {
                 try { userId = JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch {}
@@ -245,8 +280,8 @@ export default function WantedDetail() {
                 const d = await res.json().catch(() => null);
                 if (d?.message) message = d.message;
             } else {
-                const t = await res.text().catch(() => '');
-                if (t) message = t;
+                const ttxt = await res.text().catch(() => '');
+                if (ttxt) message = ttxt;
             }
             throw new Error(message);
         } catch (err) {
@@ -262,20 +297,16 @@ export default function WantedDetail() {
         }
     };
 
-    /* ------------------------------ 신고 핸들러 ------------------------------ */
+    /* ------------------------------ 신고 ------------------------------ */
     const openReport = () => {
         setReportReason('');
         setReportEtcText('');
         setShowReportModal(true);
     };
 
-    // 실제 신고 API 시도 (없어도 동작하며 실패해도 UX 유지)
     const submitReport = async () => {
         try {
-            const reasonText = reportReason === '기타'
-                ? (reportEtcText || '기타')
-                : reportReason;
-
+            const reasonText = reportReason === '기타' ? (reportEtcText || '기타') : reportReason;
             const payload = {
                 type: 'WANTED',
                 targetId: String(id),
@@ -287,7 +318,7 @@ export default function WantedDetail() {
                 headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
                 body: JSON.stringify(payload),
             }).catch(() => null);
-        } catch { /* 무시: 실패해도 다음 단계 진행 */ }
+        } catch { /* ignore */ }
     };
 
     const handleReportSubmit = async (e) => {
@@ -330,7 +361,7 @@ export default function WantedDetail() {
         );
     }
 
-    // ✅ 상태/카테고리/날짜/조회수 등 표시용 파생값
+    // 파생값
     const conditionKor = normalizeCondition(data.condition, t);
     const createdAt = data.createdAt ? new Date(data.createdAt) : null;
     const views = (typeof data.views !== 'undefined' ? Number(data.views) : (typeof data.viewCount !== 'undefined' ? Number(data.viewCount) : null));
@@ -343,7 +374,6 @@ export default function WantedDetail() {
 
     return (
         <PageWrapper>
-            {/* ✅ 목록 페이지와 동일한 onMenuClick을 연결 */}
             <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
             <MainContent>
                 <Container>
@@ -356,7 +386,7 @@ export default function WantedDetail() {
                                     <Button $variant="primary" onClick={() => navigate(`/wanted/write/${id}`)}>{t('wantedDetail.edit')}</Button>
                                     <Button $variant="danger" onClick={openDelete}>{t('wantedDetail.delete')}</Button>
                                 </>
-                            ) : null /* 신고 버튼은 제목 옆으로 이동 */}
+                            ) : null}
                         </Actions>
                     </TopBar>
 
@@ -386,9 +416,9 @@ export default function WantedDetail() {
 
                     {/* 본문 / 요약 / 댓글 */}
                     <Layout>
-                            <div>
-                                <Card>
-                                    <SectionTitle><FaBook /> {t('wantedDetail.requestContent')}</SectionTitle>
+                        <div>
+                            <Card>
+                                <SectionTitle><FaBook /> {t('wantedDetail.requestContent')}</SectionTitle>
                                 {data.contentToxic && (
                                     <div style={{
                                         marginBottom: 10,
@@ -448,7 +478,7 @@ export default function WantedDetail() {
                 data-warning-modal-open="true"
             />
 
-            {/* ✅ 신고 모달 (방금 넣은 디자인 + '기타' 세부 사유 입력) */}
+            {/* 신고 모달 */}
             {showReportModal && (
                 <ModalOverlay>
                     <ModalBox as="form" onSubmit={handleReportSubmit}>
@@ -490,7 +520,6 @@ export default function WantedDetail() {
                             {t('wantedDetail.reportModal.reasons.other')}
                         </ReportRadio>
 
-                        {/* ✅ '기타' 선택 시 세부 사유 입력 */}
                         {reportReason === t('common.other') && (
                             <div>
                                 <div style={{ marginBottom: 6, fontSize: '.92rem', color: '#555' }}>{t('wantedDetail.reportModal.detailReason')}</div>
@@ -510,7 +539,7 @@ export default function WantedDetail() {
                 </ModalOverlay>
             )}
 
-            {/* ✅ 신고 후 나가기 확인 모달 */}
+            {/* 신고 후 나가기 확인 모달 */}
             {showReportExitModal && (
                 <ModalOverlay>
                     <ModalBox>

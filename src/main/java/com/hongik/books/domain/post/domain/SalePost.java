@@ -84,16 +84,13 @@ public class SalePost {
     private boolean contentToxic = false;
 
     private String contentToxicLevel;   // "확실한 비속어", "애매한 비속어", "비속어 아님"
-
     private Double contentToxicMalicious;
-
     private Double contentToxicClean;
-
     private String contentToxicReason;  // disabled | blank | unavailable | error | null
 
     // 조회수
     @Column(nullable = false)
-    @ColumnDefault("0") // DB 기본값을 0으로 설정
+    @ColumnDefault("0")
     private int views = 0;
 
     // 해당 게시글을 찜한 수 (정렬용 가상 컬럼)
@@ -109,13 +106,21 @@ public class SalePost {
     private BigDecimal longitude;
 
     // ✅ 추가: 교내/교외 기본 위치 코드
-    // 교내 동/건물 코드 (예: "R", "A", "T"...)
     @Column(length = 64, nullable = false)
     private String oncampusPlaceCode;
 
-    // 교외 지하철역 코드 (노선 포함, 예: "HONGDAE_2")
     @Column(length = 64, nullable = false)
     private String offcampusStationCode;
+
+    // ✅ 추가: 카테고리(엔티티에 실제로 보관)
+    @Column(name = "main_category", length = 20)
+    private String mainCategory;
+
+    @Column(name = "sub_category", length = 50)
+    private String subCategory;
+
+    @Column(name = "detail_category", length = 100)
+    private String detailCategory;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -128,8 +133,10 @@ public class SalePost {
     public SalePost(User seller, Book book, String postTitle, String postContent,
                     Integer price, SaleStatus status, String locationName,
                     BigDecimal latitude, BigDecimal longitude,
-                    Condition writingCondition, Condition tearCondition, Condition waterCondition, boolean negotiable,
-                    String oncampusPlaceCode, String offcampusStationCode) {
+                    Condition writingCondition, Condition tearCondition, Condition waterCondition,
+                    boolean negotiable,
+                    String oncampusPlaceCode, String offcampusStationCode,
+                    String mainCategory, String subCategory, String detailCategory) {
         this.seller = seller;
         this.book = book;
         this.postTitle = postTitle;
@@ -145,17 +152,15 @@ public class SalePost {
         this.negotiable = negotiable;
         this.oncampusPlaceCode = oncampusPlaceCode;
         this.offcampusStationCode = offcampusStationCode;
+        this.mainCategory = trimToNull(mainCategory);
+        this.subCategory = trimToNull(subCategory);
+        this.detailCategory = trimToNull(detailCategory);
     }
 
     public enum SaleStatus {
         FOR_SALE, RESERVED, SOLD_OUT
     }
 
-    /**
-     * 게시글 정보를 수정하는 메서드
-     * 엔티티의 비즈니스 로직을 내부에 캡슐화하여 객체지향적인 설계
-     * @param request 수정할 정보가 담긴 DTO
-     */
     public void update(SalePostUpdateRequestDTO request) {
         this.postTitle = request.getPostTitle();
         this.postContent = request.getPostContent();
@@ -164,7 +169,6 @@ public class SalePost {
         this.tearCondition = request.getTearCondition();
         this.waterCondition = request.getWaterCondition();
         this.negotiable = request.isNegotiable();
-        // 위치 코드는 "작성 시 필수" 요구라 수정 DTO에는 반영 안 함(필요 시 별도 DTO로 추가)
         validateInvariants();
     }
 
@@ -176,47 +180,28 @@ public class SalePost {
         this.contentToxicReason = reason;
     }
 
-    public void increaseViewCount() {
-        this.views++;
-    }
+    public void increaseViewCount() { this.views++; }
 
-    // 연관관계 편의 메서드: 게시글에 이미지를 추가할 때 사용
-    public void addPostImage(PostImage postImage) {
-        this.postImages.add(postImage);
-    }
+    public void addPostImage(PostImage postImage) { this.postImages.add(postImage); }
 
-    /**
-     * 게시글의 상태를 변경하는 메서드
-     * 서비스 레이어에서 직접 status 필드를 변경하는 대신, 이 메서드를 통해 상태 변경을 요청
-     * @param newStatus 새로운 판매 상태
-     */
-    public void changeStatus(SaleStatus newStatus) {
-        this.status = newStatus;
-    }
+    public void changeStatus(SaleStatus newStatus) { this.status = newStatus; }
 
-    public void setBuyer(User buyer) {
-        this.buyer = buyer;
-    }
+    public void setBuyer(User buyer) { this.buyer = buyer; }
 
     // --- Invariants ---
     private static final int PRICE_MIN = 0;
     private static final int PRICE_MAX = 1_000_000_000;
 
-    @PrePersist
-    @PreUpdate
-    private void onPersistOrUpdate() {
-        validateInvariants();
-    }
+    @PrePersist @PreUpdate
+    private void onPersistOrUpdate() { validateInvariants(); }
 
     private void validateInvariants() {
-        if (this.price == null) {
-            throw new IllegalArgumentException("가격은 필수입니다.");
-        }
-        if (this.price < PRICE_MIN) {
-            throw new IllegalArgumentException("가격은 0원 이상이어야 합니다.");
-        }
-        if (this.price > PRICE_MAX) {
-            throw new IllegalArgumentException("가격이 너무 큽니다. 최대 1,000,000,000원까지 입력 가능합니다.");
-        }
+        if (this.price == null) throw new IllegalArgumentException("가격은 필수입니다.");
+        if (this.price < PRICE_MIN) throw new IllegalArgumentException("가격은 0원 이상이어야 합니다.");
+        if (this.price > PRICE_MAX) throw new IllegalArgumentException("가격이 너무 큽니다. 최대 1,000,000,000원까지 입력 가능합니다.");
+    }
+
+    private static String trimToNull(String v){
+        return (v == null || v.trim().isEmpty()) ? null : v.trim();
     }
 }

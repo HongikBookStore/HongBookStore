@@ -27,4 +27,9 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from ReviewPhoto rp where rp.review.id = :reviewId")
     void deleteByReviewId(@Param("reviewId") Long reviewId);
+
+    // ⭐ 탈퇴 사용자 표시명 마스킹
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update PlaceReview r set r.userName = :masked where r.userId = :userId")
+    int maskUserNamesByUserId(@Param("userId") Long userId, @Param("masked") String masked);
 }

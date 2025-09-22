@@ -7,7 +7,9 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Getter
 public class SalePostDetailResponseDTO {
@@ -25,30 +27,37 @@ public class SalePostDetailResponseDTO {
     private final boolean negotiable;
     private final int views;
 
-    // Moderation info for content
+    // Moderation info
     private final boolean contentToxic;
     private final String contentToxicLevel;
     private final Double contentToxicMalicious;
     private final Double contentToxicClean;
     private final String contentToxicReason;
 
-    // ✅ 위치 정보 (교내/교외)
-    private final String oncampusPlaceCode;     // 예: "T", "R", "A" ...
-    private final String offcampusStationCode;  // 예: "홍대입구"
+    // ✅ 위치
+    private final String oncampusPlaceCode;
+    private final String offcampusStationCode;
 
-    // Book 정보
+    // ✅ 카테고리
+    private final String mainCategory;
+    private final String subCategory;
+    private final String detailCategory;
+    /** 프론트 편의: "전공 > 공과대학 > 컴퓨터공학과" */
+    private final String categoryPath;
+
+    // Book
     private final Long bookId;
     private final String bookTitle;
     private final String author;
     private final String publisher;
     private final Integer originalPrice;
 
-    // User 정보 (판매자)
+    // User
     private final Long sellerId;
     private final String sellerNickname;
     private final String sellerProfileImageUrl;
 
-    // PostImage 정보
+    // Images
     private final List<String> postImageUrls;
 
     public static SalePostDetailResponseDTO fromEntity(SalePost salePost) {
@@ -56,7 +65,7 @@ public class SalePostDetailResponseDTO {
     }
 
     private SalePostDetailResponseDTO(SalePost salePost) {
-        // SalePost 정보
+        // SalePost
         this.postId = salePost.getId();
         this.postTitle = salePost.getPostTitle();
         this.postContent = salePost.getPostContent();
@@ -69,18 +78,26 @@ public class SalePostDetailResponseDTO {
         this.negotiable = salePost.isNegotiable();
         this.views = salePost.getViews();
 
-        // Moderation info
+        // Moderation
         this.contentToxic = salePost.isContentToxic();
         this.contentToxicLevel = salePost.getContentToxicLevel();
         this.contentToxicMalicious = salePost.getContentToxicMalicious();
         this.contentToxicClean = salePost.getContentToxicClean();
         this.contentToxicReason = salePost.getContentToxicReason();
 
-        // ✅ 위치 정보 매핑 (엔티티의 필드/게터 이름에 맞춰주세요)
-        this.oncampusPlaceCode = salePost.getOncampusPlaceCode();      // 예: 컬럼 oncampus_place_code
-        this.offcampusStationCode = salePost.getOffcampusStationCode(); // 예: 컬럼 offcampus_station_code
+        // 위치
+        this.oncampusPlaceCode = salePost.getOncampusPlaceCode();
+        this.offcampusStationCode = salePost.getOffcampusStationCode();
 
-        // Book 정보
+        // ✅ 카테고리
+        this.mainCategory   = salePost.getMainCategory();
+        this.subCategory    = salePost.getSubCategory();
+        this.detailCategory = salePost.getDetailCategory();
+        this.categoryPath = Stream.of(mainCategory, subCategory, detailCategory)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining(" > "));
+
+        // Book
         this.bookId = salePost.getBook().getId();
         this.bookTitle = salePost.getBook().getTitle();
         this.author = salePost.getBook().getAuthor();

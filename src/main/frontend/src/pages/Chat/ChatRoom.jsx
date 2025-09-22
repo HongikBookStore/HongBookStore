@@ -647,8 +647,43 @@ async function fetchPost(postId) {
 
 /* ----------------------------- component start ------------------------------ */
 
-const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
-const SSE_ENDPOINT = (token) => `/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
+// WebSocket endpoint: derive from VITE_WS_BASE or VITE_API_BASE; fallback to dev localhost
+const resolveWsEndpoint = () => {
+  const env = import.meta.env || {};
+  const wsBase = env?.VITE_WS_BASE;
+  if (wsBase && typeof window !== 'undefined') {
+    return `${wsBase.replace(/\/$/, '')}/ws-stomp/websocket`;
+  }
+  const apiBase = env?.VITE_API_BASE;
+  if (apiBase && typeof window !== 'undefined') {
+    try {
+      const u = new URL(apiBase, window.location.origin);
+      const origin = u.origin.replace(/^http/i, 'ws');
+      return `${origin}/ws-stomp/websocket`;
+    } catch { /* ignore */ }
+  }
+  // Dev fallback (Vite proxy handles ws://localhost:8080)
+  if (typeof window !== 'undefined' && window.location.port === '5173') {
+    return 'ws://localhost:8080/ws-stomp/websocket';
+  }
+  // Production requires VITE_WS_BASE or VITE_API_BASE
+  return '/ws-stomp/websocket';
+};
+
+const WS_ENDPOINT = resolveWsEndpoint();
+const resolveBackendOrigin = () => {
+  const env = import.meta.env || {};
+  const backendOrigin = env?.VITE_BACKEND_ORIGIN;
+  if (backendOrigin) return backendOrigin.replace(/\/$/, '');
+  const apiBase = env?.VITE_API_BASE;
+  if (apiBase && typeof window !== 'undefined') {
+    try { return new URL(apiBase, window.location.origin).origin; } catch { /* ignore */ }
+  }
+  if (typeof window !== 'undefined' && window.location.port === '5173') return 'http://localhost:8080';
+  return '';
+};
+const BACKEND_ORIGIN = resolveBackendOrigin();
+const SSE_ENDPOINT = (token) => `${BACKEND_ORIGIN}/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
 
 const ChatRoom = () => {
   const { t } = useTranslation();
