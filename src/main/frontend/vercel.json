@@ -1,16 +1,9 @@
 {
-    "routes": [
+  "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/oauth2/(.*)", "dest": "/api/oauth2/$1" },
     { "handle": "filesystem" },
+    { "src": "/oauth/callback", "dest": "/index.html", "headers": { "cache-control": "no-store" } },
     { "src": "/.*", "dest": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/oauth/callback",
-      "headers": [
-        { "key": "cache-control", "value": "no-store" }
-      ]
-    }
   ]
 }
