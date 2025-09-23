@@ -1,15 +1,16 @@
 {
-  "routes": [
+    "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/oauth2/(.*)", "dest": "/api/oauth2/$1" },
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ],
+  "headers": [
     {
-      "src": "/oauth2/(.*)",
-      "dest": "/api/oauth2/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/.*",
-      "dest": "/index.html"
+      "source": "/oauth/callback",
+      "headers": [
+        { "key": "cache-control", "value": "no-store" }
+      ]
     }
   ]
 }
