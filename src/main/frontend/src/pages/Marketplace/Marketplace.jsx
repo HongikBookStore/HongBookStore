@@ -719,6 +719,41 @@ const getCategories = (t) => ({
   }
 });
 
+// Handle both Spring Page<T> and array responses so the UI always receives a safe list.
+const normalizePostListResponse = (payload, pageSize) => {
+  if (payload && typeof payload === 'object') {
+    const directContent = Array.isArray(payload.content) ? payload.content : null;
+    const wrappedContent = Array.isArray(payload?.data?.content) ? payload.data.content : null;
+    const fallbackArray = Array.isArray(payload.data) ? payload.data : null;
+
+    const items = (directContent || wrappedContent || fallbackArray || []).filter(Boolean);
+
+    if (directContent || wrappedContent || fallbackArray) {
+      const source = directContent ? payload : payload?.data ?? {};
+      if (typeof source.last === 'boolean') {
+        return { items, isLast: source.last };
+      }
+      if (typeof source.number === 'number' && typeof source.totalPages === 'number' && source.totalPages > 0) {
+        return { items, isLast: source.number + 1 >= source.totalPages };
+      }
+      if (typeof source.totalElements === 'number' && typeof source.size === 'number' && source.size > 0) {
+        const fetched = (source.number ?? 0) * source.size + items.length;
+        return { items, isLast: fetched >= source.totalElements };
+      }
+      if (pageSize) {
+        return { items, isLast: items.length < pageSize };
+      }
+      return { items, isLast: true };
+    }
+  }
+
+  const arrayPayload = Array.isArray(payload) ? payload.filter(Boolean) : [];
+  if (pageSize) {
+    return { items: arrayPayload, isLast: arrayPayload.length < pageSize };
+  }
+  return { items: arrayPayload, isLast: true };
+};
+
 const SectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -942,7 +977,7 @@ const Marketplace = () => {
   // API 호출 로직
   const fetchPosts = useCallback(async (params, pageToFetch = 0) => {
     setIsLoading(true);
-     if (pageToFetch === 0) { // 새 검색일 경우 에러 상태 초기화
+    if (pageToFetch === 0) {
       setError('');
     }
     try {
@@ -956,17 +991,27 @@ const Marketplace = () => {
       if (params.minPrice) activeParams.minPrice = params.minPrice;
       if (params.maxPrice) activeParams.maxPrice = params.maxPrice;
 
-      const response = await axios.get('/api/posts', { 
+      const { data } = await axios.get('/api/posts', {
         params: activeParams,
         timeout: 10000
       });
 
-      // 첫 페이지인지 추가 페이지인지에 따라 다르게 처리
-      setPosts(prev => pageToFetch === 0 ? response.data.content : [...prev, ...response.data.content]);
-      setHasMore(!response.data.last); // 마지막 페이지인지 확인
-      setPage(pageToFetch + 1); // 다음에 로드할 페이지 번호 설정
+      const { items, isLast } = normalizePostListResponse(data, activeParams.size);
+      const safeItems = Array.isArray(items) ? items : [];
+      const expectedPageSize = typeof activeParams.size === 'number' ? activeParams.size : (safeItems.length || 0);
+      const hasMoreFallback = expectedPageSize > 0 ? safeItems.length >= expectedPageSize : false;
+      const shouldContinue = typeof isLast === 'boolean' ? !isLast : hasMoreFallback;
+
+      setPosts(prev => pageToFetch === 0 ? safeItems : [...prev, ...safeItems]);
+      setHasMore(shouldContinue);
+      setPage(pageToFetch + 1);
 
     } catch (error) {
+      if (pageToFetch === 0) {
+        setPosts([]);
+      }
+      setHasMore(false);
+
       if (error.code === 'ECONNABORTED') {
         setError('요청 시간이 초과되었어요. 네트워크 상태를 확인해주세요 📡');
       } else if (error.response?.status === 404) {
