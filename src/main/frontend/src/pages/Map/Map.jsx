@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaSearch, FaMapMarkerAlt, FaChevronDown, FaSyncAlt, FaTrash, FaTimes, FaMinus, FaTrashAlt } from 'react-icons/fa';
-import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 
 import NaverMap from '../../components/NaverMap/Navermap';
@@ -9,50 +8,11 @@ import UserCategory from '../../components/UserCategory/UserCategory';
 import PlaceDetailModal from '../../components/PlaceDetailModal/PlaceDetailModal';
 import { useLocation } from '../../contexts/LocationContext';
 import { Loading } from '../../components/ui';
+import api from '../../lib/api';
 
-/* ==================== axios 인스턴스 ==================== */
-// Use backend origin (no trailing /api) so that request paths like '/api/...'
-// remain stable across dev/prod.
-const API_BASE = (() => {
-  const env = import.meta.env || {};
-  const backendOrigin = env?.VITE_BACKEND_ORIGIN;
-  if (backendOrigin) return backendOrigin.replace(/\/$/, '');
-  const apiBase = env?.VITE_API_BASE;
-  if (apiBase && typeof window !== 'undefined') {
-    try { return new URL(apiBase, window.location.origin).origin; } catch { /* ignore */ }
-  }
-  return (typeof window !== 'undefined' && window.location.port === '5173') ? 'http://localhost:8080' : '';
-})();
 
-const getToken = () => {
-  return (
-      localStorage.getItem('accessToken') ||
-      localStorage.getItem('ACCESS_TOKEN') ||
-      sessionStorage.getItem('accessToken') ||
-      ''
-  );
-};
-
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-});
-
-api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-api.interceptors.response.use(
-    (res) => res,
-    (err) => {
-      const status = err?.response?.status;
-      const msg = err?.response?.data?.message || err?.message || '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-      return Promise.reject(err);
-    }
-);
-
+// 공용 axios 인스턴스(`src/lib/api.js`)를 그대로 사용 
+// 모든 요청은 '/api'를 자동 프록시 경유하므로 로컬과 배포 환경 모두 동일하게 동작
 /* ==================== 백엔드 API ==================== */
 
 const HONGIK_CENTER = { lat: 37.5513, lng: 126.9246 };
@@ -61,7 +21,7 @@ const HONGIK_CENTER = { lat: 37.5513, lng: 126.9246 };
 const searchPlacesFromBackend = async (query) => {
   if (!query.trim()) return [];
   try {
-    const { data } = await api.get('/api/places/search', { params: { query } });
+    const data = await api.get('/places/search', { params: { query } });
     const res = typeof data === 'string' ? JSON.parse(data) : data;
     if (res && Array.isArray(res.items)) {
       return res.items.map(item => ({
@@ -82,7 +42,7 @@ const searchPlacesFromBackend = async (query) => {
 // 저장된 장소 전체
 const getPlacesFromBackend = async () => {
   try {
-    const { data } = await api.get('/api/places');
+    const data = await api.get('/places');
     return Array.isArray(data) ? data : [];
   } catch (e) {
     alert('저장된 장소를 불러오는 데 실패했습니다.');
@@ -93,7 +53,7 @@ const getPlacesFromBackend = async () => {
 // 장소 저장
 const savePlaceToBackend = async (placeData) => {
   try {
-    const { data } = await api.post('/api/places', placeData);
+    const data = await api.post('/places', placeData);
     return data;
   } catch (e) {
     alert('장소 저장에 실패했습니다.');
@@ -104,7 +64,7 @@ const savePlaceToBackend = async (placeData) => {
 // 좌표 -> 주소 (미사용 보류)
 const getAddressFromCoordinates = async (lat, lng) => {
   try {
-    const { data } = await api.get('/api/places/geocode', { params: { lat, lng } });
+    const data = await api.get('/places/geocode', { params: { lat, lng } });
     return data;
   } catch (e) {
     return null;
@@ -113,52 +73,52 @@ const getAddressFromCoordinates = async (lat, lng) => {
 
 // 사용자 카테고리
 const getUserCategories = async () => {
-  const { data } = await api.get('/api/user-categories');
+  const data = await api.get('/user-categories');
   return Array.isArray(data) ? data : [];
 };
 
 // 카테고리 생성 (서버는 JSON {name} 기대)
 const createUserCategory = async (name) => {
-  const { data } = await api.post('/api/user-categories', { name });
+  const data = await api.post('/user-categories', { name });
   return data;
 };
 
 const renameUserCategory = async (id, name) => {
-  const { data } = await api.patch(`/api/user-categories/${id}`, { name });
+  const data = await api.patch(`/user-categories/${id}`, { name });
   return data;
 };
 
 const deleteUserCategory = async (id) => {
-  await api.delete(`/api/user-categories/${id}`);
+  await api.delete(`/user-categories/${id}`);
 };
 
 const addPlaceIntoUserCategory = async (categoryId, placeId) => {
   try {
-    await api.post(`/api/user-categories/${categoryId}/places/${placeId}`);
+    await api.post(`/user-categories/${categoryId}/places/${placeId}`);
   } catch {
-    await api.post(`/api/user-categories/${categoryId}/places`, { placeId });
+    await api.post(`/user-categories/${categoryId}/places`, { placeId });
   }
 };
 
 const removePlaceFromUserCategory = async (categoryId, placeId) => {
   try {
-    await api.delete(`/api/user-categories/${categoryId}/places/${placeId}`);
+    await api.delete(`/user-categories/${categoryId}/places/${placeId}`);
   } catch {
-    await api.delete(`/api/user-categories/${categoryId}/places`, { data: { placeId } });
+    await api.delete(`/user-categories/${categoryId}/places`, { data: { placeId } });
   }
 };
 
 // 카테고리에 속한 장소 목록 불러오기 (여러 스펙 대응)
 const getPlacesOfUserCategory = async (categoryId) => {
   const tryList = [
-    () => api.get(`/api/user-categories/${categoryId}/places`),
-    () => api.get(`/api/user-categories/${categoryId}`),             // { id, name, places: [...] } 가능성
-    () => api.get(`/api/user-categories/${categoryId}/place-list`),
+    () => api.get(`/user-categories/${categoryId}/places`),
+    () => api.get(`/user-categories/${categoryId}`),             // { id, name, places: [...] } 가능성
+    () => api.get(`/user-categories/${categoryId}/place-list`),
   ];
   let lastErr;
   for (const fn of tryList) {
     try {
-      const { data } = await fn();
+      const data = await fn();
       // 응답 정규화
       const arr = Array.isArray(data) ? data
           : Array.isArray(data?.places) ? data.places

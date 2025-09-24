@@ -5,8 +5,13 @@
       "destination": "https://hongbook-spring-534256318130.us-west1.run.app/api/:path*"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/:path*",
+      "destination": "/index.html",
+      "missing": [
+        {
+          "type": "file"
+        }
+      ]
     }
   ]
 }

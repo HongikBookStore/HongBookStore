@@ -218,7 +218,13 @@ function Login() {
       return;
     }
 
-    if (backendOrigin && backendOrigin === currentOrigin) {
+    if (backendOrigin && backendOrigin !== currentOrigin) {
+      // Production(frontend)과 백엔드 오리진이 다르면 백엔드 도메인으로 바로 이동해야 쿠키가 올바르게 저장됨
+      window.location.href = `${backendOrigin}/oauth2/authorization/${provider}`;
+      return;
+    }
+
+    if (backendOrigin) {
       window.location.href = `/oauth2/authorization/${provider}`;
       return;
     }

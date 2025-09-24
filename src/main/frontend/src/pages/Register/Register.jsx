@@ -96,7 +96,13 @@ function Register() {
       return;
     }
 
-    if (backendOrigin && backendOrigin === currentOrigin) {
+    if (backendOrigin && backendOrigin !== currentOrigin) {
+      // 프로덕션에서 프론트와 백엔드 도메인이 다르면 백엔드로 직접 보내 쿠키 스코프 문제를 방지
+      window.location.href = `${backendOrigin}/oauth2/authorization/${provider}`;
+      return;
+    }
+
+    if (backendOrigin) {
       window.location.href = `/oauth2/authorization/${provider}`;
       return;
     }
