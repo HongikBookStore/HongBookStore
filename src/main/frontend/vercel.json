@@ -1,9 +1,12 @@
 {
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/oauth2/(.*)", "dest": "/api/oauth2/$1" },
-    { "handle": "filesystem" },
-    { "src": "/oauth/callback", "dest": "/index.html", "headers": { "cache-control": "no-store" } },
-    { "src": "/.*", "dest": "/index.html" }
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://hongbook-spring-534256318130.us-west1.run.app/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

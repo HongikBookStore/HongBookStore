@@ -8,7 +8,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/src/main/frontend"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       patch-updates:
         patterns:
@@ -29,7 +29,7 @@ updates:
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       patch-updates:
         patterns:

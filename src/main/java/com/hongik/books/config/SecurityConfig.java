@@ -39,7 +39,7 @@ public class SecurityConfig {
     private final com.hongik.books.auth.filter.DeactivatedUserBlockFilter deactivatedUserBlockFilter;
     private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173")
     private String allowedOriginsCsv;
 
     @Bean // 필터 체인 구성
