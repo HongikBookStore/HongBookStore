@@ -194,13 +194,14 @@ function Login() {
     if (typeof window === 'undefined') return;
 
     const env = import.meta.env || {};
-    const relativePath = `/oauth2/authorization/${provider}`;
     const isLocalDev = window.location.port === '5173';
+    const currentOrigin = `${window.location.protocol}//${window.location.host}`;
+    const backendOrigin = env?.VITE_BACKEND_ORIGIN
+      ? env.VITE_BACKEND_ORIGIN.replace(/\/$/, '')
+      : '';
 
-    const resolveBackendOrigin = () => {
-      if (env?.VITE_BACKEND_ORIGIN) {
-        return env.VITE_BACKEND_ORIGIN.replace(/\/$/, '');
-      }
+    const devFallbackOrigin = (() => {
+      if (backendOrigin) return backendOrigin;
       if (env?.VITE_API_BASE) {
         try {
           return new URL(env.VITE_API_BASE, window.location.origin).origin;
@@ -209,22 +210,20 @@ function Login() {
         }
       }
       return '';
-    };
+    })();
 
     if (isLocalDev) {
-      const backendOrigin = resolveBackendOrigin() || 'http://localhost:8080';
-      window.location.href = `${backendOrigin}${relativePath}`;
+      const origin = devFallbackOrigin || 'http://localhost:8080';
+      window.location.href = `${origin}/oauth2/authorization/${provider}`;
       return;
     }
 
-    const backendOrigin = resolveBackendOrigin();
-    const currentOrigin = `${window.location.protocol}//${window.location.host}`;
     if (backendOrigin && backendOrigin === currentOrigin) {
-      window.location.href = `${backendOrigin}${relativePath}`;
+      window.location.href = `/oauth2/authorization/${provider}`;
       return;
     }
 
-    window.location.href = relativePath;
+    window.location.href = `/api/oauth2/authorization/${provider}`;
   };
 
   // 언어 변경 핸들러
