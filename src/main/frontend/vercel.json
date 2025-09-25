@@ -1,19 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/:match*",
-      "destination": "https://hongbook-spring-534256318130.us-west1.run.app/api/:match*"
-    }
-  ],
-  "headers": [
+      "source": "/api/:path*",
+      "destination": "https://hongbook-spring-534256318130.us-west1.run.app/api/:path*"
+    },
     {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
