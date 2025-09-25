@@ -1260,7 +1260,11 @@ const PostDetail = () => {
                   </SellerDetails>
                 </SellerInfo>
                 <ActionButtons>
-                  <ChatButton onClick={handleChat} disabled={isSellerDeactivated(post)}>
+                  <ChatButton
+                      onClick={handleChat}
+                      disabled={isSellerDeactivated(post) || isOwner}
+                      title={isOwner ? t?.('postDetail.cannotChatOwnPost') || '내가 작성한 게시글에는 채팅을 시작할 수 없습니다.' : undefined}
+                  >
                     <FaComment />
                     {t('postDetail.contact')}
                   </ChatButton>

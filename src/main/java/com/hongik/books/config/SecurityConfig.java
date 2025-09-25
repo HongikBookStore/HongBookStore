@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // HTTP 요청에 대한 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // --- 누구나 접근 가능한 API ---
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -135,14 +136,19 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOriginsCsv.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .toList();
-        // 패턴 지원(Wildcard 도메인 포함). Credentials 사용 시 AllowedOrigins가 '*'이면 안 되므로 패턴 사용.
-        cfg.setAllowedOriginPatterns(origins);
+
+        // 로컬/프리뷰/배포 전부 커버
+        cfg.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://hong-book-store.vercel.app",
+                "https://*.vercel.app"
+        ));
+
+        // 메서드/헤더 전부 허용 (+ preflight)
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
-        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setAllowedHeaders(List.of("*")); // Authorization, X-USER-ID 포함
+        cfg.setExposedHeaders(List.of("Authorization","Location","Link"));
         cfg.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
