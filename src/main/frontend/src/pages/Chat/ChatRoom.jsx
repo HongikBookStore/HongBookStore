@@ -650,27 +650,48 @@ async function fetchPost(postId) {
 // WebSocket endpoint: derive from VITE_WS_BASE or VITE_API_BASE; fallback to dev localhost
 const resolveWsEndpoint = () => {
   const env = import.meta.env || {};
-  const wsBase = env?.VITE_WS_BASE;
-  if (wsBase && typeof window !== 'undefined') {
-    return `${wsBase.replace(/\/$/, '')}/ws-stomp/websocket`;
-  }
-  const apiBase = env?.VITE_API_BASE;
-  if (apiBase && typeof window !== 'undefined') {
+  const { VITE_WS_BASE, VITE_API_BASE } = env;
+
+  // base로부터 wss 엔드포인트를 생성 (이미 /ws-stomp 붙어있어도 중복 제거)
+  const buildFromBase = (base) => {
+    if (!base || typeof window === 'undefined') return null;
     try {
-      const u = new URL(apiBase, window.location.origin);
-      const origin = u.origin.replace(/^http/i, 'ws');
-      return `${origin}/ws-stomp/websocket`;
-    } catch { /* ignore */ }
-  }
-  // Dev fallback (Vite proxy handles ws://localhost:8080)
+      const u = new URL(base, window.location.origin);
+
+      // 스킴 정규화: http -> ws, https -> wss
+      const proto = u.protocol === 'https:' ? 'wss:' :
+          u.protocol === 'http:'  ? 'ws:'  : u.protocol;
+
+      // 경로 정리: 이미 /ws-stomp 또는 /websocket이 들어있으면 제거
+      const cleanedPath = u.pathname
+          .replace(/\/(ws-stomp(\/websocket)?|websocket)\/?$/i, '')
+          .replace(/\/+$/, '');
+
+      return `${proto}//${u.host}${cleanedPath}/ws-stomp/websocket`;
+    } catch {
+      return null;
+    }
+  };
+
+  // 1) 명시된 WS 베이스가 있으면 최우선
+  const fromWs = buildFromBase(VITE_WS_BASE);
+  if (fromWs) return fromWs;
+
+  // 2) API 베이스(https://.../api)에서 호스트를 따와 wss로 전환
+  const fromApi = buildFromBase(VITE_API_BASE);
+  if (fromApi) return fromApi;
+
+  // 3) 로컬 개발환경
   if (typeof window !== 'undefined' && window.location.port === '5173') {
     return 'ws://localhost:8080/ws-stomp/websocket';
   }
-  // Production requires VITE_WS_BASE or VITE_API_BASE
+
+  // 4) 상대경로 (브라우저가 https면 wss로 사용)
   return '/ws-stomp/websocket';
 };
 
 const WS_ENDPOINT = resolveWsEndpoint();
+
 const resolveBackendOrigin = () => {
   const env = import.meta.env || {};
   const backendOrigin = env?.VITE_BACKEND_ORIGIN;
