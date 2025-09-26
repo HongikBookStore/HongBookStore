@@ -664,7 +664,6 @@ const resolveWsEndpoint = () => {
 };
 
 const WS_ENDPOINT = resolveWsEndpoint();
-console.log('[WS_ENDPOINT]', WS_ENDPOINT);
 
 // ✅ WS 호스트를 전역에 심어 SSE가 재사용하도록
 try { window.__HBS_BACKEND_HOST__ = new URL(WS_ENDPOINT).host; } catch {}
@@ -1162,7 +1161,6 @@ const ChatRoom = () => {
           setPostStatus('reserved');
         }
       } catch (e) {
-        console.error('게시글 상태 reserved 설정 실패:', e);
       }
 
       setMessages(prev => ([
@@ -1170,8 +1168,6 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.', sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      console.error(e);
-      alert('예약 수락에 실패했습니다.');
     }
   };
 
@@ -1233,7 +1229,6 @@ const ChatRoom = () => {
         await patchPostStatus(salePostId, 'sold_out', buyerId);
         setPostStatus('sold_out');
       } catch (e) {
-        console.error('게시글 상태 sold_out 설정 실패:', e);
         alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다. (구매자 ID 필요)');
       }
 
@@ -1242,7 +1237,6 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      console.error(e);
       alert('거래 완료 처리에 실패했습니다.');
     }
   };

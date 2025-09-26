@@ -43,9 +43,8 @@ function resolveBackendOrigin() {
         }
     }
 
-    // 배포(Vercel) 오리진으로는 절대 붙지 않게 차단 (백엔드 후보를 못 찾은 경우에만)
+    // 백엔드 후보를 못 찾은 경우(배포 오리진으로 붙지 않도록 null)
     if (typeof window !== 'undefined' && /\.vercel\.app$/i.test(window.location.hostname)) {
-        console.error('[SSE] No backend origin. Set VITE_API_BASE or VITE_BACKEND_ORIGIN to your Cloud Run host.');
         return null;
     }
 
@@ -63,7 +62,6 @@ function buildStreamUrl(token) {
 export function startNotificationStream(onEvent, onError) {
     // 브라우저 환경 가드
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
-        console.warn('[SSE] EventSource unavailable (non-browser env).');
         return null;
     }
 
@@ -81,22 +79,11 @@ export function startNotificationStream(onEvent, onError) {
     if (!url) return null;
 
     try {
-        // 디버그 로그
-        try {
-            const originOnly = url.replace(/\/api\/notifications\/stream.*$/, '');
-            console.log('[SSE] origin:', originOnly, 'url:', url);
-        } catch {}
-
         _es = new EventSource(url, { withCredentials: false });
     } catch (err) {
-        console.error('[SSE] create failed:', err);
         onError?.(err);
         return null;
     }
-
-    _es.addEventListener('open', () => {
-        try { console.log('[SSE] opened'); } catch {}
-    });
 
     // 서버가 "notification" 타입 이벤트를 보낼 때
     const handleNotification = (e) => {
@@ -112,7 +99,6 @@ export function startNotificationStream(onEvent, onError) {
     };
 
     _es.onerror = (err) => {
-        console.warn('[SSE] error -> reconnect in 3s', err);
         try { _es.close(); } catch {}
         _es = null;
 
