@@ -692,7 +692,7 @@ const resolveWsEndpoint = () => {
 };
 
 const WS_ENDPOINT = resolveWsEndpoint();
-console.log('[WS_ENDPOINT]', WS_ENDPOINT); // ← 배포 후 콘솔에서 반드시 확인!
+console.log('[WS_ENDPOINT]', WS_ENDPOINT); // ← 배포 후 콘솔에서 반드시 확인
 
 const resolveBackendOrigin = () => {
   const env = import.meta.env || {};
