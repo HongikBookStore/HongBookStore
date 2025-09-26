@@ -652,22 +652,15 @@ const resolveWsEndpoint = () => {
   const env = import.meta.env || {};
   const { VITE_WS_BASE, VITE_API_BASE } = env;
 
+  // ✅ base에 뭐가 들어와도 host만 추출해서 ws/wss + "/ws-stomp/websocket"로 고정
   const makeWsUrlFromBase = (base) => {
     if (!base || typeof window === 'undefined') return null;
     try {
-      const u = new URL(base, window.location.origin);
-
-      // 항상 WebSocket 스킴으로 강제: 페이지가 https면 wss, 아니면 ws
+      const u = new URL(base, window.location.origin);   // http/https/ws/wss/경로 상관없이 파싱
       const pageHttps = window.location.protocol === 'https:';
-      u.protocol = pageHttps ? 'wss:' : 'ws:';
-
-      // 경로 정리: 이미 /ws-stomp 혹은 /websocket이 끝에 붙어 있으면 제거
-      u.pathname = u.pathname
-          .replace(/\/(ws-stomp(\/websocket)?|websocket)\/?$/i, '')
-          .replace(/\/+$/, '');
-
-      // SockJS가 붙이는 실웹소켓 엔드포인트 규칙에 맞게 suffix 부착
-      return `${u.origin}${u.pathname}/ws-stomp/websocket`;
+      const proto = pageHttps ? 'wss' : 'ws';
+      const host = u.host;                               // 🔴 path는 버리고 host만 사용
+      return `${proto}://${host}/ws-stomp/websocket`;    // 항상 한 개 슬래시
     } catch {
       return null;
     }
@@ -677,7 +670,7 @@ const resolveWsEndpoint = () => {
   const fromWsBase = makeWsUrlFromBase(VITE_WS_BASE);
   if (fromWsBase) return fromWsBase;
 
-  // 2) API_BASE에서 생성 (API_BASE가 http여도 wss로 올려줌)
+  // 2) API_BASE에서 생성
   const fromApi = makeWsUrlFromBase(VITE_API_BASE);
   if (fromApi) return fromApi;
 
@@ -686,13 +679,14 @@ const resolveWsEndpoint = () => {
     return 'ws://localhost:8080/ws-stomp/websocket';
   }
 
-  // 4) 마지막 안전한 상대경로(브라우저가 https면 wss로 붙음)
+  // 4) 마지막 안전한 상대경로로
   const pageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
   return (pageHttps ? 'wss://' : 'ws://') + window.location.host + '/ws-stomp/websocket';
 };
 
 const WS_ENDPOINT = resolveWsEndpoint();
-console.log('[WS_ENDPOINT]', WS_ENDPOINT); //
+console.log('[WS_ENDPOINT]', WS_ENDPOINT);
+
 
 const resolveBackendOrigin = () => {
   const env = import.meta.env || {};
