@@ -679,7 +679,7 @@ const resolveWsEndpoint = () => {
     return 'ws://localhost:8080/ws-stomp/websocket';
   }
 
-  // 4) 마지막 안전한 상대경로
+  // 4) 마지막 안전한 상대경로로
   const pageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
   return (pageHttps ? 'wss://' : 'ws://') + window.location.host + '/ws-stomp/websocket';
 };
