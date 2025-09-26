@@ -245,11 +245,11 @@ const MessageStatus = styled.div`
 
 const StatusIcon = styled.span`
   color: ${props => {
-  if (props.$status === 'sending') return '#ffa726';
-  if (props.$status === 'read') return '#2196f3';
-  if (props.$status === 'failed') return '#f44336';
-  return '#9e9e9e';
-}};
+    if (props.$status === 'sending') return '#ffa726';
+    if (props.$status === 'read') return '#2196f3';
+    if (props.$status === 'failed') return '#f44336';
+    return '#9e9e9e';
+  }};
   font-size: 0.8rem;
 `;
 
@@ -361,7 +361,7 @@ const RetryModalButton = styled.button`
 const ReserveModalBox = styled(ModalBox)`
   min-width: 320px; max-width: 90vw; max-height: 80vh;
   overflow-y: auto; padding: 20px 16px 16px 16px;
-  
+
   /* 스크롤바 스타일링 */
   &::-webkit-scrollbar {
     width: 6px;
@@ -485,7 +485,7 @@ const SUBWAY_MAP = {
   '1호선': ["소요산","동두천","보산","지행","덕정","양주","녹양","가능","의정부","회룡","망월사","도봉산","도봉","방학","창동","녹천","월계","광운대","석계","신이문","외대앞","회기","청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로","가산디지털단지","독산","금천구청","광명","석수","관악","안양","명학","금정","군포","당정","의왕","성균관대","화서","수원","세류","병점","세마","오산대","오산","진위","송탄","서정리","지제","평택","성환","직산","두정","천안","봉명","쌍용","아산","배방","온양온천","신창"],
   '2호선': ["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로","시청"],
   '3호선': ["대화","주엽","정발산","마두","백석","대곡","원흥","삼송","지축","구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"],
-  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도"],
+  '4호선': ["당고개","상계","노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","종로3가","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","남태령","선바위","경마공원","대공원","과천","정부과천청사","인덕원","평촌","범계","금정","산본","수리산","대야미","반월","상록수","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"],
   '5호선': ["방화","개화산","김포공항","송정","마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","여의도","신길","영등포시장","당산","합정","망원","마포구청","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동","강일","미사","하남풍산","하남시청","하남검단산"],
   '6호선': ["응암","역촌","불광","독립문","연신내","구산","디지털미디어시티","월드컵경기장","마포구청","망원","합정","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","상월곡","돌곶이","석계","태릉입구","화랑대","봉화산"],
   '7호선': ["장암","도봉산","수락산","마들","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지","철산","광명사거리","천왕","온수","오류동","개봉","구일"],
@@ -686,21 +686,50 @@ const resolveWsEndpoint = () => {
 
 const WS_ENDPOINT = resolveWsEndpoint();
 console.log('[WS_ENDPOINT]', WS_ENDPOINT);
-
+// ✅ WS 호스트를 전역에 심어 SSE가 재사용하도록
+try { window.__HBS_BACKEND_HOST__ = new URL(WS_ENDPOINT).host; } catch {}
 
 const resolveBackendOrigin = () => {
   const env = import.meta.env || {};
-  const backendOrigin = env?.VITE_BACKEND_ORIGIN;
-  if (backendOrigin) return backendOrigin.replace(/\/$/, '');
-  const apiBase = env?.VITE_API_BASE;
-  if (apiBase && typeof window !== 'undefined') {
-    try { return new URL(apiBase, window.location.origin).origin; } catch { /* ignore */ }
+
+  const hostFromWs =
+      (typeof window !== 'undefined' && window.__HBS_BACKEND_HOST__)
+          ? ((window.location.protocol === 'https:' ? 'https:' : 'http:') + '//' + window.__HBS_BACKEND_HOST__)
+          : null;
+
+  // 우선순위: VITE_BACKEND_ORIGIN > VITE_API_BASE > VITE_WS_BASE(스킴 전환) > 전역 WS 호스트 > (로컬) localhost
+  const candidates = [
+    env.VITE_BACKEND_ORIGIN,
+    env.VITE_API_BASE,
+    env.VITE_WS_BASE,
+    hostFromWs,
+    (typeof window !== 'undefined' && window.location.port === '5173') ? 'http://localhost:8080' : null,
+  ].filter(Boolean);
+
+  for (const raw of candidates) {
+    try {
+      const u = new URL(raw, typeof window !== 'undefined' ? window.location.origin : 'https://example.com');
+      if (u.protocol === 'ws:' || u.protocol === 'wss:') {
+        u.protocol = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'https:' : 'http:';
+      }
+      return `${u.protocol}//${u.host}`; // host만 사용
+    } catch {}
   }
-  if (typeof window !== 'undefined' && window.location.port === '5173') return 'http://localhost:8080';
-  return '';
+
+  // 배포(Vercel)에서 못 찾으면 SSE 열지 않음
+  if (typeof window !== 'undefined' && /\.vercel\.app$/i.test(window.location.hostname)) {
+    console.error('[SSE] No backend origin. Set VITE_API_BASE to your Cloud Run host.');
+    return null;
+  }
+  return (typeof window !== 'undefined') ? window.location.origin : null;
 };
+
 const BACKEND_ORIGIN = resolveBackendOrigin();
-const SSE_ENDPOINT = (token) => `${BACKEND_ORIGIN}/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
+console.log('[BACKEND_ORIGIN]', BACKEND_ORIGIN);
+const SSE_ENDPOINT = (token) =>
+    BACKEND_ORIGIN
+        ? `${BACKEND_ORIGIN}/api/notifications/stream?token=${encodeURIComponent(token || '')}`
+        : null;
 
 const ChatRoom = () => {
   const { t } = useTranslation();
@@ -770,7 +799,6 @@ const ChatRoom = () => {
       { id: `res-banner-${Date.now()}`, type: 'system', message: text, sentAt: new Date().toISOString(), meta: { reservationBanner: true, key } }
     ]));
   };
-
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -1009,7 +1037,11 @@ const ChatRoom = () => {
     const token = localStorage.getItem('accessToken') || '';
     if (!token) return;
 
-    const es = new EventSource(SSE_ENDPOINT(token));
+    const url = SSE_ENDPOINT(token);
+    if (!url) { console.warn('[SSE] skipped: missing BACKEND_ORIGIN'); return; }
+    console.log('[SSE] connecting:', url);
+
+    const es = new EventSource(url, { withCredentials: false });
     sseRef.current = es;
 
     const handleNotify = (evt) => {
@@ -1073,7 +1105,7 @@ const ChatRoom = () => {
     es.onmessage = handleNotify;
 
     es.onerror = () => {
-      // auto-retry by browser
+      // 브라우저가 자동 재연결
     };
 
     return () => {
@@ -1189,10 +1221,6 @@ const ChatRoom = () => {
       setReserveConfirmed(true);
       setShowReserveModal(false);
 
-      const when = res.reservedAt
-          ? new Date(res.reservedAt.toString().replace(' ', 'T')).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
-          : '';
-
       setMessages(prev => ([
         ...prev,
         { id: Date.now(), type: 'system', message: buildReservationText({ reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate), placeLabel: selectedPlace }, 'REQUESTED'), sentAt: new Date().toISOString() }
@@ -1286,14 +1314,12 @@ const ChatRoom = () => {
     if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
 
     try {
-      // 1) 예약 완료 처리 (백엔드 예약 상태: COMPLETED)
       await apiCompleteReservation(roomId, reservationId);
 
       setIsPending(false);
       setIsReserved(false);
       setIsCompleted(true);
 
-      // 2) 게시글 상태 SOLD_OUT + buyerId 필수 전달
       try {
         if (!salePostId) throw new Error('salePostId 없음');
         if (!buyerId) throw new Error('buyerId 없음(거래 상대 사용자 ID)');
@@ -1331,10 +1357,10 @@ const ChatRoom = () => {
 
     if (!reportReason) return;
     const isOtherSelected = (
-      reportReason === OTHER_LABEL ||
-      reportReason === '기타' ||
-      reportReason.toString().toUpperCase() === 'OTHER' ||
-      reportReason === 'other'
+        reportReason === OTHER_LABEL ||
+        reportReason === '기타' ||
+        reportReason.toString().toUpperCase() === 'OTHER' ||
+        reportReason === 'other'
     );
     if (isOtherSelected && !reportEtcText.trim()) return;
     if (!otherUserId) { alert(t('chat.reportTargetMissing')); return; }
@@ -1350,9 +1376,9 @@ const ChatRoom = () => {
 
     try {
       const payload = {
-        type: 'CHAT_ROOM',                // 서버에서 채팅 신고로 구분
+        type: 'CHAT_ROOM',
         targetId: Number(otherUserId),
-        chatRoomId: Number(roomId),        // ✅ 현재 채팅방 ID
+        chatRoomId: Number(roomId),
         reason: reasonEnum,
         ...(reasonEnum === 'OTHER' ? { detail: reportEtcText.trim() } : {})
       };
@@ -1380,7 +1406,6 @@ const ChatRoom = () => {
         return;
       }
 
-      // 성공
       setShowReportModal(false);
       setShowReportExitModal(true);
     } catch (err) {
