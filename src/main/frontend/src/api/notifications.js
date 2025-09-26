@@ -1,70 +1,107 @@
-// src/api/notifications.js
-// SSE 스트림을 Cloud Run에 "직결" + base 정규화(https 고정, host만 사용, 예외 폴백)
+let _es = null;          // 단일 SSE 연결
+let _retryTimer = null;  // 재연결 타이머
 
 export function startNotificationStream(onEvent, onError) {
+    // 이미 열려있으면 그대로 반환 (중복 연결 방지)
+    if (_es) return _es;
+
     const token =
         localStorage.getItem('accessToken') ||
         localStorage.getItem('jwt') ||
-        localStorage.getItem('token');
+        localStorage.getItem('token') || '';
 
-    // 1) 원시 base를 읽고
-    const rawBase = (import.meta.env && import.meta.env.VITE_API_BASE) || window.location.origin;
+    const env = (import.meta && import.meta.env) ? import.meta.env : {};
+    const isLocal =
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.port === '5173');
+    const isVercel =
+        typeof window !== 'undefined' &&
+        /\.vercel\.app$/i.test(window.location.hostname);
 
-    // 2) 안전하게 http(s) + host만 남기기
-    let httpOrigin;
-    try {
-        const u = new URL(rawBase, window.location.origin); // rawBase가 상대/빈값이어도 보정
-        // ws/wss로 들어오면 http/https로 강제 전환 (페이지 스킴에 맞춤)
-        if (u.protocol === 'ws:' || u.protocol === 'wss:') {
-            u.protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-        }
-        // path/쿼리는 버리고 "origin"만 사용
-        httpOrigin = `${u.protocol}//${u.host}`;
-    } catch {
-        // 그래도 실패하면 현재 오리진으로 폴백
-        httpOrigin = window.location.origin;
+    // 후보: API_BASE > BACKEND_ORIGIN > WS_BASE(스킴 전환) > (로컬일 때만) 현재 오리진
+    const candidates = [
+        env.VITE_API_BASE,
+        env.VITE_BACKEND_ORIGIN,
+        env.VITE_WS_BASE,
+        isLocal ? window.location.origin : null, // 배포에서는 vercel 오리진 금지
+    ].filter(Boolean);
+
+    // 후보들 중 첫 번째 유효 호스트를 http(s) origin으로 변환
+    let httpOrigin = null;
+    for (const raw of candidates) {
+        try {
+            const u = new URL(raw, typeof window !== 'undefined' ? window.location.origin : 'https://example.com');
+            // ws/wss로 들어오면 http/https로 전환(페이지 스킴 기준)
+            if (u.protocol === 'ws:' || u.protocol === 'wss:') {
+                u.protocol = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'https:' : 'http:';
+            }
+            httpOrigin = `${u.protocol}//${u.host}`; // host만 사용
+            break;
+        } catch { /* 다음 후보 시도 */ }
     }
 
-    // 3) 최종 SSE URL
+    // 배포에서 vercel 오리진으로 떨어지지 않도록 차단
+    if (!httpOrigin) {
+        if (isLocal) {
+            httpOrigin = 'http://localhost:8080';
+        } else {
+            if (isVercel) {
+                console.error('[SSE] No backend origin. Set VITE_API_BASE to your Cloud Run host.');
+                return null;
+            }
+            httpOrigin = window.location.origin;
+        }
+    }
+
     const streamUrl =
-        `${httpOrigin}/api/notifications/stream` +
+        `${httpOrigin.replace(/\/+$/, '')}/api/notifications/stream` +
         (token ? `?token=${encodeURIComponent(token)}` : '');
 
-    // 4) EventSource 생성 (예외가 앱 전체를 죽이지 않도록 try/catch)
-    let es;
+    // 디버깅 출력
     try {
-        es = new EventSource(streamUrl, { withCredentials: false });
+        // eslint-disable-next-line no-console
+        console.log('[SSE] origin:', httpOrigin, 'url:', streamUrl);
+    } catch {}
+
+    // 연결 생성
+    try {
+        _es = new EventSource(streamUrl, { withCredentials: false });
     } catch (err) {
         console.error('[SSE] create failed:', err);
         onError?.(err);
         return null;
     }
 
-    // 서버가 "notification" 이벤트 타입을 쏘는 경우
-    es.addEventListener('notification', (e) => {
-        try {
-            onEvent?.(JSON.parse(e.data));
-        } catch {
-            onEvent?.(e.data);
-        }
+    // 정상 오픈 시 로그
+    _es.addEventListener('open', () => {
+        // eslint-disable-next-line no-console
+        console.log('[SSE] opened');
     });
 
-    // 기본 message도 케이스에 따라 처리
-    es.onmessage = (e) => {
-        try {
-            const data = JSON.parse(e.data);
-            onEvent?.(data);
-        } catch {
-            onEvent?.(e.data);
-        }
+    // 서버가 event: notification 으로 보낼 때
+    _es.addEventListener('notification', (e) => {
+        try { onEvent?.(JSON.parse(e.data)); }
+        catch { onEvent?.(e.data); }
+    });
+
+    // 기본 message도 수신
+    _es.onmessage = (e) => {
+        try { onEvent?.(JSON.parse(e.data)); }
+        catch { onEvent?.(e.data); }
     };
 
-    es.onerror = (err) => {
+    // 오류 시 재연결(3s), 중복 타이머 방지
+    _es.onerror = (err) => {
         console.warn('[SSE] error -> reconnect in 3s', err);
-        try { es.close(); } catch {}
+        try { _es.close(); } catch {}
+        _es = null;
+        if (_retryTimer) clearTimeout(_retryTimer);
+        _retryTimer = setTimeout(() => {
+            _retryTimer = null;
+            startNotificationStream(onEvent, onError);
+        }, 3000);
         onError?.(err);
-        setTimeout(() => startNotificationStream(onEvent, onError), 3000);
     };
 
-    return es;
+    return _es;
 }
