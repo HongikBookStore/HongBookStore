@@ -672,7 +672,7 @@ const MyBookstore = () => {
       setReviewTotalPages(typeof data.totalPages === 'number' ? data.totalPages : 0);
       setReviewLast(Boolean(data.last));
     } catch (e) {
-      setErrorReviews(t('myBookstore.fetchReviewsError'));
+      setErrorReviews('myBookstore.fetchReviewsError');
     } finally {
       setLoadingReviews(false);
     }
@@ -974,10 +974,10 @@ const MyBookstore = () => {
             <ReviewSection>
               {loadingReviews ? (
                 <LoadingSpinner>{t('myBookstore.loadingReviews')}</LoadingSpinner>
-              ) : errorReviews ? (
+              ) : t(errorReviews) ? (
                 <EmptyState>
                   <EmptyIcon>😥</EmptyIcon>
-                  <h3>{errorReviews}</h3>
+                  <h3>{t(errorReviews)}</h3>
                 </EmptyState>
               ) : myReviews.length === 0 ? (
                 <EmptyState>
