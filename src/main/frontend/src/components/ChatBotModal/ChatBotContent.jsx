@@ -355,10 +355,6 @@ const ChatBotContent = ({ onClose, messages, setMessages, onReset }) => {
     {
       label: t("chatbot.questions.mapFeature"),
       answer: t("chatbot.answers.mapFeature")
-    },
-    {
-      label: t("chatbot.questions.locationMismatch"),
-      answer: t("chatbot.answers.locationMismatch")
     }
   ];
 
