@@ -4,9 +4,6 @@ import '../../i18n.js';
 import styled from 'styled-components';
 import { useSearchParams } from 'react-router-dom';
 import Header from '../../components/Header/Header.jsx';
-import naverLogo from '../../assets/naver.png';
-import kakaoLogo from '../../assets/kakao.png';
-import googleLogo from '../../assets/google.png';
 
 const LoginContainer = styled.div`
   padding: 8rem 2rem 4rem;
@@ -254,15 +251,17 @@ function Login() {
         {errorMsg && <ErrorMessage>{errorMsg}</ErrorMessage>}
         
         <SocialButtonContainer>
-          <SocialButton aria-label={t('loginNs.loginWithNaver')} onClick={() => handleSocialLogin('naver')}>
-            <img src={naverLogo} alt="Naver" ></img>
-          </SocialButton>
-          <SocialButton aria-label={t('loginNs.loginWithKakao')} onClick={() => handleSocialLogin('kakao')}>
-            <img src={kakaoLogo} alt="Kakao" ></img>
-          </SocialButton>
-          <SocialButton aria-label={t('loginNs.loginWithGoogle')} onClick={() => handleSocialLogin('google')}>
-            <img src={googleLogo} alt="Google" ></img>
-          </SocialButton>
+        <SocialButton aria-label={t('loginNs.loginWithNaver')} onClick={() => handleSocialLogin('naver')}>
+          <img src="/images/naver.png" alt="Naver" />
+        </SocialButton>
+          
+        <SocialButton aria-label={t('loginNs.loginWithKakao')} onClick={() => handleSocialLogin('kakao')}>
+          <img src="/images/kakao.png" alt="Kakao" />
+        </SocialButton>
+          
+        <SocialButton aria-label={t('loginNs.loginWithGoogle')} onClick={() => handleSocialLogin('google')}>
+          <img src="/images/google.png" alt="Google" />
+        </SocialButton>
         </SocialButtonContainer>
       </LoginContainer>
     </>
