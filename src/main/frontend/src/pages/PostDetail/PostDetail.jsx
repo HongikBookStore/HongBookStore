@@ -849,7 +849,7 @@ const PostDetail = () => {
 
   const handleChat = useCallback(async () => {
     if (isSellerDeactivated(post)) {
-      lert('탈퇴한 회원과는 채팅을 시작할 수 없습니다.');
+      alert('탈퇴한 회원과는 채팅을 시작할 수 없습니다.');
       return;
     }
     const salePostId = id;
@@ -858,6 +858,10 @@ const PostDetail = () => {
       alert('로그인이 필요합니다.');
       navigate('/login');
       return;
+    }
+    if (!user?.studentVerified) {
+        alert('학생 인증이 필요한 기능입니다.');
+        return;
     }
     try {
       const response = await axios.post(`/api/chat/rooms?salePostId=${salePostId}&buyerId=${buyerId}`, {}, { headers: getAuthHeader() });
@@ -1258,8 +1262,14 @@ const PostDetail = () => {
                 <ActionButtons>
                   <ChatButton
                       onClick={handleChat}
-                      disabled={isSellerDeactivated(post) || isOwner}
-                      title={isOwner ? t?.('postDetail.cannotChatOwnPost') || '내가 작성한 게시글에는 채팅을 시작할 수 없습니다.' : undefined}
+                      disabled={isSellerDeactivated(post) || isOwner || !user?.studentVerified}
+                      title={
+                        isOwner
+                            ? t?.('postDetail.cannotChatOwnPost') || '내가 작성한 게시글에는 채팅을 시작할 수 없습니다.'
+                            : !user?.studentVerified
+                            ? '학생 인증이 필요한 기능입니다.'
+                            : undefined
+                      }
                   >
                     <FaComment />
                     {t('postDetail.contact')}
