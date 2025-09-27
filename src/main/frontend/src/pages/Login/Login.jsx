@@ -65,6 +65,10 @@ const SocialButton = styled.button`
     width: 32px;
     height: 32px;
     object-fit: contain;
+
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
   
   &:hover {

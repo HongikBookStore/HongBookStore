@@ -1150,15 +1150,11 @@ const PostDetail = () => {
                   <InfoItem>
                     <InfoLabel>{t('postDetail.category')}</InfoLabel>
                     <InfoValue>
-                      {(() => {
-                        const toLabel = (v) => (v && v.includes('.') ? t(v) : v);
-                        if (post.categoryPath) return post.categoryPath.split(' > ').map(toLabel).join(' > ');
-                        if (post.detailCategory) return toLabel(post.detailCategory);
-                        const parts = [post.mainCategory, post.subCategory, post.detailCategory].filter(Boolean).map(toLabel);
-                        if (parts.length) return parts.join(' > ');
-                        if (post.category) return toLabel(post.category);
-                        return t('postDetail.noInfo');
-                      })()}
+                      {
+                        post.categoryPath 
+                        ? post.categoryPath.split(' > ').map(part => t(part)).join(' > ')
+                        : t('postDetail.noInfo')
+                      }
                     </InfoValue>
                   </InfoItem>
 
