@@ -3,14 +3,12 @@ import styled from 'styled-components';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useLocation } from '../../contexts/LocationContext'; // TODO: 위치 관리 기능 구현
 import axios from 'axios';
 import { getUserPeerReviews, getUserPeerSummary } from '../../api/peerReviews';
 import { useNavigate as useRouterNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/Modal';
 import Loading from '../../components/ui/Loading';
 // 지도 선택 기능 제거로 NaverMap import 불필요
-import { openDaumPostcode } from '../../utils/daumPostcode';
 import { AuthCtx } from '../../contexts/AuthContext';
 import AdminReportCard from './AdminReportCard.jsx';
 
@@ -581,80 +579,6 @@ const Button = styled.button`
   }
 `;
 
-const LocationSection = styled(SettingsSection)`
-  .location-list {
-    margin-bottom: 2rem;
-  }
-
-  .location-item {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1.5rem;
-    background: var(--background);
-    border-radius: 1rem;
-    border: 1px solid var(--border);
-    margin-bottom: 1rem;
-    transition: all 0.2s ease;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-    
-    &:hover {
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transform: translateY(-1px);
-    }
-
-    .location-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-
-      .location-name {
-        font-weight: 600;
-        color: var(--text);
-        font-size: 1.125rem;
-      }
-
-      .location-address {
-        font-size: 0.875rem;
-        color: var(--text-light);
-      }
-    }
-
-    .location-actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-  }
-
-  .add-location {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .add-location-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .button-group {
-    display: flex;
-    gap: 1rem;
-    
-    @media (max-width: 480px) {
-      flex-direction: column;
-    }
-  }
-`;
-
 const Input = styled.input`
   width: 100%;
   padding: 0.875rem 1rem;
@@ -938,18 +862,11 @@ const MyPage = () => {
   const [verificationMessage, setVerificationMessage] = useState({ type: '', text: '' }); 
   const [isSubmitting, setIsSubmitting] = useState(false); // API 호출 중복 방지
 
-  const { locations, setDefaultLocation, addLocation, deleteLocation, updateLocation } = useLocation();
-
 
   const [profileImage, setProfileImage] = useState(null);
   const [isDefaultImage, setIsDefaultImage] = useState(true);
-  const [newLocation, setNewLocation] = useState({ name: '', address: '' });
-  const [showAddForm, setShowAddForm] = useState(false);
   // 우편번호 전용으로 단순화: 주소 검색 관련 상태 제거
 
-  const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState({ name: '', address: '', lat: null, lng: null });
-  const [showEditCancelConfirm, setShowEditCancelConfirm] = useState(false);
 
   // 지도 선택 제거
 
@@ -1691,92 +1608,6 @@ const MyPage = () => {
           )}
         </SettingsSection>
 
-        <LocationSection>
-          <h3>{t('myLocation', '나의 위치')}</h3>
-          <div className="location-list">
-            {locations.map(location => (
-              <div key={location.id} className="location-item">
-                {editingId === location.id ? (
-                  <div style={{display:'flex', flexDirection:'column', gap:8, width:'100%'}}>
-                    <div style={{display:'flex', gap:8}}>
-                      <Input
-                        type="text"
-                        placeholder={t('locationName')}
-                        value={editDraft.name}
-                        onChange={(e)=> setEditDraft(d => ({...d, name: e.target.value}))}
-                      />
-                      <Input
-                        type="text"
-                        placeholder={`${t('address')} (${t('mypage.useZipcodeSearch')})`}
-                        value={editDraft.address}
-                        readOnly
-                      />
-                      <SmallButton onClick={() => handlePostcodeSelect(true)}>
-                        {t('mypage.useZipcodeSearch')}
-                      </SmallButton>
-                    </div>
-                    {/* 검색/지도 선택 제거: 우편번호 전용 */}
-                    <div style={{display:'flex', gap:8}}>
-                      <SmallButton onClick={saveEdit}>{t('save', '저장')}</SmallButton>
-                      <SmallButton onClick={requestCancelEdit}>{t('cancel')}</SmallButton>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="location-info">
-                      <span className="location-name">{location.name}</span>
-                      <span className="location-address">{location.address}</span>
-                    </div>
-                    <div className="location-actions">
-                      <IconButton onClick={() => handleSetDefault(location.id)} title={location.isDefault ? t('defaultLocation') : t('setDefault')}>
-                        <i className={`fas fa-star`} style={{ color: location.isDefault ? 'var(--primary)' : 'inherit' }}></i>
-                      </IconButton>
-                      <IconButton onClick={() => beginEdit(location)} title={t('mypage.edit')}>
-                        <i className="fas fa-pen"></i>
-                      </IconButton>
-                      <IconButton onClick={() => handleDeleteLocation(location.id)} className="danger" title={t('deleteLocation')}>
-                        <i className="fas fa-trash"></i>
-                      </IconButton>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="add-location">
-            {showAddForm ? (
-              <div className="add-location-form">
-                <Input
-                  type="text"
-                  placeholder={t('locationName')}
-                  value={newLocation.name}
-                  onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                />
-                <Input
-                  type="text"
-                  placeholder={`${t('address')} (${t('mypage.useZipcodeSearch')})`}
-                  value={newLocation.address}
-                  readOnly
-                />
-                <div style={{display:'flex', gap:8, alignItems:'flex-start'}}>
-                  <SmallButton onClick={() => handlePostcodeSelect(false)}>
-                    {t('mypage.useZipcodeSearch')}
-                  </SmallButton>
-                </div>
-                <div className="button-group">
-                  <Button onClick={handleAddLocation}>{t('addNewLocation')}</Button>
-                  <Button onClick={() => setShowAddForm(false)}>{t('cancel')}</Button>
-                </div>
-              </div>
-            ) : (
-              <Button onClick={() => setShowAddForm(true)}>
-                <i className="fas fa-plus"></i> {t('addNewLocation')}
-              </Button>
-            )}
-          </div>
-        </LocationSection>
-
         <SettingsSection>
           <SettingsList>
             <SettingsItem>
@@ -1796,17 +1627,6 @@ const MyPage = () => {
         </SettingsSection>
 
       </SettingsContainer>
-
-      {/* 편집 취소 확인 모달 */}
-      <Modal isOpen={showEditCancelConfirm} onClose={() => setShowEditCancelConfirm(false)} title={t('confirm')}>
-        <div style={{display:'flex', flexDirection:'column', gap:12}}>
-          <div>변경 사항이 저장되지 않습니다. 취소하시겠습니까?</div>
-          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
-            <button onClick={() => setShowEditCancelConfirm(false)} className="btn-secondary">{t('cancel')}</button>
-            <button onClick={() => { setShowEditCancelConfirm(false); cancelEditNow(); }} className="btn-primary">{t('confirm')}</button>
-          </div>
-        </div>
-      </Modal>
 
       {/* 지도 선택 기능 제거됨 */}
     </MyPageContainer>
