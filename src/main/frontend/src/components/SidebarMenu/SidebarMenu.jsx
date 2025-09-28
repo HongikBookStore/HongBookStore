@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import { AuthCtx } from '../../contexts/AuthContext';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(20px); }
@@ -75,6 +76,13 @@ const SubMenuButton = styled.button`
     transform: translateY(0);
   }
 
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.2);
+  }
+
   @media (max-width: 768px) {
     min-width: auto;
     width: 100%;
@@ -83,9 +91,10 @@ const SubMenuButton = styled.button`
 
 const SidebarMenu = ({ active, onMenuClick }) => {
   const { t } = useTranslation();
+  const { user } = useContext(AuthCtx);
   
   const menus = [
-    { key: 'bookstore/add', label: t('sidebar.sellBook') },
+    { key: 'bookstore/add', label: t('sidebar.sellBook'), disabled: !user?.studentVerified, title: !user?.studentVerified ? t('noPermission') : undefined },
     { key: 'wanted', label: t('sidebar.wantedBoard') },
     { key: 'mybookstore', label: t('sidebar.myBookstore') },
     { key: 'chat', label: t('sidebar.chat') },
@@ -99,6 +108,8 @@ const SidebarMenu = ({ active, onMenuClick }) => {
             key={menu.key}
             $active={active === menu.key}
             onClick={() => onMenuClick(menu.key)}
+            disabled={menu.disabled}
+            title={menu.title}
           >
             {menu.label}
           </SubMenuButton>
