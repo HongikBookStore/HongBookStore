@@ -77,50 +77,15 @@ const ReplyBox = styled.div`
     margin-top: 10px; margin-left: 26px;
 `;
 
-/** ---- Robust current-user inference (JWT → user object → legacy localStorage) ---- */
-function parseJwt(token) {
-    try {
-        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-        return JSON.parse(decodeURIComponent(escape(atob(padded))));
-    } catch { return null; }
-}
-function toNum(v){ if (v==null) return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
-function getCurrentUserLocal() {
-    const token = localStorage.getItem('accessToken') || '';
-    let id = null, nickname = null;
-
-    // 1) JWT payload 우선
-    if (token) {
-        const p = parseJwt(token);
-        if (p) {
-            id = toNum(p.id ?? p.userId ?? p.uid ?? p.sub ?? null);
-            nickname = (p.nickname ?? p.name ?? p.preferred_username ?? null);
-        }
-    }
-    // 2) 저장된 user 객체 보조
-    if (id == null || !nickname) {
-        try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
-            if (id == null) id = toNum(u?.id);
-            if (!nickname) nickname = u?.nickname ?? u?.name ?? null;
-        } catch {}
-    }
-    // 3) 레거시 키 보조
-    if (id == null) id = toNum(localStorage.getItem('userId'));
-    if (!nickname) nickname = localStorage.getItem('nickname') || '익명';
-
-    return { id, nickname };
-}
-
 /* ----------------------- helpers ----------------------- */
 function authHeaders() {
     const token = localStorage.getItem('accessToken');
-    const me = getCurrentUserLocal();
+    const uid = localStorage.getItem('userId');
+    const nick = localStorage.getItem('nickname');
     return {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(me.id != null ? { 'X-USER-ID': String(me.id) } : {}),
-        ...(me.nickname ? { 'X-USER-NICKNAME': me.nickname } : {}),
+        ...(uid ? { 'X-USER-ID': uid } : {}),
+        ...(nick ? { 'X-USER-NICKNAME': nick } : {}),
         'Content-Type': 'application/json',
     };
 }
@@ -235,7 +200,11 @@ export default function WantedComments({ wantedId }) {
     const [replyFor, setReplyFor] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replyError, setReplyError] = useState('');
-    const myId = getCurrentUserLocal().id;
+    const myId = (() => {
+        const v = localStorage.getItem('userId');
+        if (!v) return null;
+        try { return Number(v); } catch { return null; }
+    })();
 
     const tree = useMemo(() => buildTree(list), [list]);
 
