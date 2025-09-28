@@ -1,5 +1,5 @@
 // src/pages/WantedDetail/WantedDetail.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaBook, FaTag, FaUser, FaClock, FaEye, FaExclamationTriangle } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import WarningModal from '../../components/WarningModal/WarningModal';
 import WantedComments from '../../components/Comments/WantedComments';
 import { useWriting } from '../../contexts/WritingContext';
 import { displayMaskedName } from '../../utils/nameMask';
+import { AuthCtx } from '../../contexts/AuthContext';
 
 /* ----------------------------- styled components ----------------------------- */
 const PageWrapper = styled.div`
@@ -176,12 +177,12 @@ function nameForDisplay(rawName, deactivated, t) {
     return masked || (t('common.anonymous') || '익명');
 }
 
-
 export default function WantedDetail() {
     const { t } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
     const { setUnsavedChanges, stopWriting } = useWriting();
+    const { user } = useContext(AuthCtx);
 
     const [data, setData] = useState(null);
     const [mine, setMine] = useState(false);
@@ -232,9 +233,9 @@ export default function WantedDetail() {
 
                 if (alive) {
                     setData(detail || null);
-                    // 내 글 여부
+                    // 내 글 여부 (AuthCtx 기준으로 통일)
                     try {
-                        const myId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+                        const myId = user?.id;
                         setMine(myId != null && String(myId) === String(detail?.requesterId));
                     } catch { /* ignore */ }
                 }
@@ -245,6 +246,8 @@ export default function WantedDetail() {
             }
         })();
         return () => { alive = false; };
+        // user는 로그인 변경 시 전체 페이지가 다시 마운트되는 전제라 의존성 생략
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     // 작성자 표시 이름 (탈퇴자면 "탈퇴된 회원")
@@ -262,12 +265,7 @@ export default function WantedDetail() {
         setUnsavedChanges(false);
         try {
             const headers = { ...getAuthHeader() };
-            let userId = localStorage.getItem('userId');
-            if (!userId) {
-                try { userId = JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch {}
-            }
-            if (userId) headers['X-User-Id'] = String(userId);
-
+            // ❌ 임의 헤더 주입 금지 (X-User-Id 제거)
             const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
             if (res.status === 204) {
                 setShowDeleteModal(false);
@@ -367,10 +365,7 @@ export default function WantedDetail() {
     const views = (typeof data.views !== 'undefined' ? Number(data.views) : (typeof data.viewCount !== 'undefined' ? Number(data.viewCount) : null));
     const rawCategory = (data.category || '').trim();
     const categoryName = rawCategory.split('>')[0]?.trim() || rawCategory;
-    const translatedCategory = translateCategory(categoryName, t);
-    const displayCategory = data.department
-        ? `${translatedCategory} / ${t(data.department)}`
-        : translatedCategory;
+    const displayCategory = translateCategory(categoryName, t);
 
     return (
         <PageWrapper>
@@ -384,7 +379,7 @@ export default function WantedDetail() {
                             {mine ? (
                                 <>
                                     <Button $variant="primary" onClick={() => navigate(`/wanted/write/${id}`)}>{t('wantedDetail.edit')}</Button>
-                                    <Button $variant="danger" onClick={openDelete}>{t('wantedDetail.delete')}</Button>
+                                    <Button $variant="danger" onClick={onDelete}>{t('wantedDetail.delete')}</Button>
                                 </>
                             ) : null}
                         </Actions>
@@ -403,7 +398,11 @@ export default function WantedDetail() {
                         </TitleRow>
 
                         <MetaRow>
-                            <Chip><FaUser /> {displayAuthor}</Chip>
+                            <Chip><FaUser /> {nameForDisplay(
+                                data?.requesterNickname ?? data?.requesterName ?? data?.authorName ?? data?.nickname ?? '',
+                                isDeactivatedFromDetail(data),
+                                t
+                            )}</Chip>
                             <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {t(conditionKor)}</ConditionChip>
                             <PriceChip><FaTag /> {t('wantedDetail.desiredPrice')}: {Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</PriceChip>
                         </MetaRow>
@@ -456,7 +455,7 @@ export default function WantedDetail() {
                                 <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{t(conditionKor)}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.desiredPrice')}</Label><Value>{Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.category.label')}</Label><Value>{displayCategory}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayAuthor}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayMaskedName(data?.requesterNickname || data?.requesterName || data?.requesterUsername || '-')}</Value></InfoItem>
                             </InfoGrid>
                         </Card>
                     </Layout>
