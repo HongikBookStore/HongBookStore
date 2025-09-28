@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
@@ -27,7 +28,7 @@ const HeroSection = styled.section`
 const OnboardingSection = styled.div`
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   padding: var(--space-16) 0;
   position: relative;
@@ -43,25 +44,82 @@ const OnboardingContainer = styled.div`
   padding: 0 2rem;
   position: relative;
   z-index: 3;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 2rem;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 `;
 
-const ButtonContainer = styled.div`
+const CarouselContainer = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f3f4f6;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+`;
+
+const slideIn = keyframes`
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: scale(1); }
+`;
+
+const Slide = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ${slideIn} 600ms ease-out;
+`;
+
+const SlideImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: bottom center;
+`;
+
+const Bullets = styled.div`
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+`;
+
+const Bullet = styled.button`
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: none;
+  background: ${props => (props.$active ? '#2563eb' : 'rgba(255,255,255,0.7)')};
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
+  cursor: pointer;
+  transition: background 200ms ease;
+`;
+
+const SidePanel = styled.aside`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  width: 100%;
-  max-width: 600px;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 
-  @media (max-width: 768px) {
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+  @media (max-width: 960px) {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
   }
 `;
 
@@ -74,6 +132,8 @@ const Title = styled.h1`
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   letter-spacing: -0.01em;
   line-height: 1.2;
+  text-align: left;
+  padding-left: 1rem;
 
   @media (max-width: 768px) {
     font-size: clamp(2rem, 4vw, 2.5rem);
@@ -90,6 +150,8 @@ const Description = styled.p`
   animation: ${fadeIn} 1s ease-out 0.5s backwards;
   color: #2d3748;
   font-weight: 500;
+  text-align: left;
+  padding-left: 1rem;
 
   @media (max-width: 768px) {
     font-size: clamp(1rem, 2.5vw, 1.2rem);
@@ -119,7 +181,7 @@ const MenuButton = styled.button`
   overflow: hidden;
   letter-spacing: 0.3px;
   width: 100%;
-  max-width: 300px;
+  max-width: 100%;
 
   &::before {
     content: '';
@@ -158,6 +220,7 @@ const MenuButton = styled.button`
 const Hero = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [current, setCurrent] = useState(0);
 
   const menuItems = [
     {
@@ -174,6 +237,21 @@ const Hero = () => {
     }
   ];
 
+  const slides = useMemo(() => (
+    [
+      { src: '/images/onboarding-marketplace.png', alt: t('hero.bookstore') },
+      { src: '/images/onboarding-mybookstore.png', alt: t('hero.myBookstore') },
+      { src: '/images/onboarding-map.png', alt: t('hero.map') }
+    ]
+  ), [t]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrent(prev => (prev + 1) % slides.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
   const handleMenuClick = (path) => {
     navigate(path);
   };
@@ -182,12 +260,28 @@ const Hero = () => {
     <HeroSection>
       <OnboardingSection>
         <OnboardingContainer>
-          <Title>{t('title')}</Title>
-          <Description>{t('heroDescription')}</Description>
-          
-          <ButtonContainer>
+          <div>
+            <Title>{t('title')}</Title>
+            <Description>{t('heroDescription')}</Description>
+            <CarouselContainer>
+              {slides.map((slide, idx) => (
+                idx === current ? (
+                  <Slide key={slide.src}>
+                    <SlideImage src={slide.src} alt={slide.alt} />
+                  </Slide>
+                ) : null
+              ))}
+              <Bullets>
+                {slides.map((_, idx) => (
+                  <Bullet key={idx} $active={idx === current} onClick={() => setCurrent(idx)} aria-label={`slide-${idx + 1}`} />
+                ))}
+              </Bullets>
+            </CarouselContainer>
+          </div>
+
+          <SidePanel>
             {menuItems.map((item, index) => (
-              <MenuButton 
+              <MenuButton
                 key={index}
                 onClick={() => handleMenuClick(item.path)}
                 style={{ animationDelay: `${0.7 + index * 0.1}s` }}
@@ -196,7 +290,7 @@ const Hero = () => {
                 <span>→</span>
               </MenuButton>
             ))}
-          </ButtonContainer>
+          </SidePanel>
         </OnboardingContainer>
       </OnboardingSection>
     </HeroSection>
