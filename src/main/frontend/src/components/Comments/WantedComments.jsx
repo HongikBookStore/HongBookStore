@@ -1,4 +1,3 @@
-// src/components/Comments/WantedComments.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
@@ -75,22 +74,38 @@ const ReplyBox = styled.div`
 `;
 
 /* ----------------------------- helpers ----------------------------- */
-// 토큰 정규화
+// 토큰 정규화 (Authorization 헤더 ASCII 보장)
 function normalizeBearer(raw) {
     if (!raw) return '';
     let t = String(raw).trim();
-    if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1); // JSON 저장 흔적 제거
+    if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1);
     if (t.toLowerCase().startsWith('bearer ')) t = t.slice(7);
     return t;
 }
 
-function getXsrfTokenFromCookie() {
-    const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-    return m ? m[1] : null;
+// === CSRF(XSRF) helpers: 교차오리진은 쿠키를 못 읽으므로 /api/csrf 호출로 토큰 확보 ===
+let __xsrfCache = null;
+async function ensureXsrfToken() {
+    if (__xsrfCache) return __xsrfCache;
+    try {
+        const r = await fetch('/api/csrf', { method: 'GET', credentials: 'include' });
+        if (r.ok) {
+            // 본문(JSON) 우선
+            try {
+                const j = await r.json();
+                const tok = j?.token || j?.csrf || j?._csrf || null;
+                if (tok) { __xsrfCache = tok; return tok; }
+            } catch { /* ignore body parse */ }
+            // 헤더 보조
+            const h = r.headers.get('X-CSRF-TOKEN') || r.headers.get('X-XSRF-TOKEN');
+            if (h) { __xsrfCache = h; return h; }
+        }
+    } catch { /* ignore */ }
+    return null; // 백엔드에서 CSRF off인 경우도 고려
 }
-function xsrfHeader() {
-    const v = getXsrfTokenFromCookie();
-    return v ? { 'X-XSRF-TOKEN': v } : {};
+async function xsrfHeaderAsync() {
+    const t = await ensureXsrfToken();
+    return t ? { 'X-XSRF-TOKEN': t } : {};
 }
 
 // GET: 최소 헤더 + 쿠키 포함(세션 로그인 지원)
@@ -98,24 +113,26 @@ function publicInit() {
     return { headers: { Accept: 'application/json' }, credentials: 'include' };
 }
 
-// POST/DELETE: ASCII 헤더 + 쿠키 포함
-function authInit(bodyObj) {
+// POST/DELETE: ASCII 헤더 + 쿠키 포함 + XSRF 헤더 (비동기)
+async function authInit(bodyObj) {
     const tokenRaw = localStorage.getItem('accessToken') || '';
     const token = normalizeBearer(tokenRaw);
     const uidRaw = localStorage.getItem('userId') || '';
     const uid = /^\d+$/.test(uidRaw) ? uidRaw : '';
 
+    const xsrf = await xsrfHeaderAsync();
+
     const headers = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(uid ? { 'X-USER-ID': uid } : {}), // 대문자, ASCII만
-        ...xsrfHeader(),
+        ...(uid ? { 'X-USER-ID': uid } : {}), // 필요시
+        ...xsrf,
     };
 
     const init = {
         method: bodyObj ? 'POST' : 'DELETE',
         headers,
-        credentials: 'include', // ✅ 세션 쿠키 동봉
+        credentials: 'include',
     };
     if (bodyObj) init.body = JSON.stringify(bodyObj);
     return init;
@@ -246,7 +263,8 @@ export default function WantedComments({ wantedId }) {
     async function fetchList() {
         setLoading(true);
         try {
-            // ✅ GET도 쿠키 포함(세션 로그인이면 목록에 권한 플래그 내려올 수 있음)
+            // (선택) 최초 진입 시 CSRF 토큰 프라임
+            await ensureXsrfToken().catch(() => {});
             const res = await fetch(`/api/wanted/${wantedId}/comments`, publicInit());
             if (!res.ok) throw new Error(`목록 실패 (${res.status})`);
             const json = await toJsonSafely(res);
@@ -266,7 +284,7 @@ export default function WantedComments({ wantedId }) {
         if (!body.content) return;
         try {
             setTextError('');
-            const res = await fetch(`/api/wanted/${wantedId}/comments`, authInit(body));
+            const res = await fetch(`/api/wanted/${wantedId}/comments`, await authInit(body));
             const json = await toJsonSafely(res);
             if (!res.ok) {
                 if (res.status === 400 && json?.success === false && json?.data?.field) {
@@ -289,7 +307,7 @@ export default function WantedComments({ wantedId }) {
         if (!body.content) return;
         try {
             setReplyError('');
-            const res = await fetch(`/api/wanted/${wantedId}/comments/${parentId}/replies`, authInit(body));
+            const res = await fetch(`/api/wanted/${wantedId}/comments/${parentId}/replies`, await authInit(body));
             const json = await toJsonSafely(res);
             if (!res.ok) {
                 if (res.status === 400 && json?.success === false && json?.data?.field) {
@@ -311,7 +329,7 @@ export default function WantedComments({ wantedId }) {
     async function remove(commentId) {
         if (!window.confirm(t('wantedComments.confirmDelete'))) return;
         try {
-            const res = await fetch(`/api/wanted/${wantedId}/comments/${commentId}`, authInit());
+            const res = await fetch(`/api/wanted/${wantedId}/comments/${commentId}`, await authInit());
             if (!res.ok && res.status !== 204) {
                 const json = await toJsonSafely(res);
                 throw new Error(json?.message || t('wantedComments.error.deleteFailed', { status: res.status }));
@@ -333,13 +351,13 @@ export default function WantedComments({ wantedId }) {
         return (
             <Item key={key}>
                 <Meta>
-          <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-            <FaUser/>{displayName}
-          </span>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                        <FaUser/>{displayName}
+                    </span>
                     {created && (
                         <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <FaClock/>{created.toLocaleString('ko-KR')}
-            </span>
+                            <FaClock/>{created.toLocaleString('ko-KR')}
+                        </span>
                     )}
                 </Meta>
 

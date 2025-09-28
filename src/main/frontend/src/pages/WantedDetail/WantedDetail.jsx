@@ -1,4 +1,3 @@
-// src/pages/WantedDetail/WantedDetail.jsx
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaBook, FaTag, FaUser, FaClock, FaEye, FaExclamationTriangle } from 'react-icons/fa';
@@ -150,13 +149,27 @@ function getAuthHeader() {
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function getXsrfTokenFromCookie() {
-    const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-    return m ? m[1] : null;
+// === CSRF(XSRF) helpers: 교차오리진은 /api/csrf 호출로 토큰 확보 ===
+let __xsrfCache = null;
+async function ensureXsrfToken() {
+    if (__xsrfCache) return __xsrfCache;
+    try {
+        const r = await fetch('/api/csrf', { method: 'GET', credentials: 'include' });
+        if (r.ok) {
+            try {
+                const j = await r.json();
+                const tok = j?.token || j?.csrf || j?._csrf || null;
+                if (tok) { __xsrfCache = tok; return tok; }
+            } catch {}
+            const h = r.headers.get('X-CSRF-TOKEN') || r.headers.get('X-XSRF-TOKEN');
+            if (h) { __xsrfCache = h; return h; }
+        }
+    } catch {}
+    return null;
 }
-function xsrfHeader() {
-    const v = getXsrfTokenFromCookie();
-    return v ? { 'X-XSRF-TOKEN': v } : {};
+async function xsrfHeaderAsync() {
+    const t = await ensureXsrfToken();
+    return t ? { 'X-XSRF-TOKEN': t } : {};
 }
 
 // 상태 문자열을 UI 친화적으로 정규화 (상/중/하)
@@ -192,11 +205,11 @@ function isDeactivatedFromDetail(d) {
     if (d?.requesterDeactivatedAt || d?.requesterDeletedAt || d?.deletedAt) return true;
 
     const raw = (d?.requesterNickname ?? d?.requesterName ?? d?.authorName ?? d?.nickname ?? '').toString();
-    if (/탈퇴/.test(raw)) return true; // '탈퇴회원#123' 같은 문자열
+    if (/탈퇴/.test(raw)) return true;
     return false;
 }
 
-// 익명 패턴(익명, 익명123, anonymous 3 ...)은 그대로 유지
+// 익명 패턴 유지
 function looksAnonymousName(name, t) {
     const n = (name ?? '').toString().trim();
     if (!n) return false;
@@ -208,13 +221,13 @@ function looksAnonymousName(name, t) {
     return reKoNumbered.test(n) || reI18nNumbered.test(n) || reEn.test(n);
 }
 
-// 최종 표시 이름: 탈퇴자는 '탈퇴된 회원' 고정, 익명N은 그대로, 나머지는 마스킹
+// 최종 표시 이름
 function nameForDisplay(rawName, deactivated, t) {
     if (deactivated) return '탈퇴된 회원';
     const n = (rawName ?? '').toString().trim();
     if (!n) return t('common.anonymous') || '익명';
-    if (looksAnonymousName(n, t)) return n;          // 익명1/익명2 유지
-    const masked = displayMaskedName(n, false);      // 일반 닉네임/실명은 마스킹
+    if (looksAnonymousName(n, t)) return n;
+    const masked = displayMaskedName(n, false);
     return masked || (t('common.anonymous') || '익명');
 }
 
@@ -258,6 +271,8 @@ export default function WantedDetail() {
         (async () => {
             setLoading(true);
             try {
+                // (선택) 로그인 직후에도 CSRF 토큰 프라임
+                await ensureXsrfToken().catch(() => {});
                 const res = await fetch(`/api/wanted/${id}`);
                 const ct = res.headers.get('content-type') || '';
                 if (!res.ok) {
@@ -288,7 +303,6 @@ export default function WantedDetail() {
         return () => { alive = false; };
     }, [id]);
 
-    // 작성자 표시 이름 (탈퇴자면 "탈퇴된 회원")
     const displayAuthor = nameForDisplay(
         data?.requesterNickname ?? data?.requesterName ?? data?.authorName ?? data?.nickname ?? '',
         isDeactivatedFromDetail(data),
@@ -306,7 +320,7 @@ export default function WantedDetail() {
         try {
             const headers = {
                 ...getAuthHeader(),
-                ...xsrfHeader(),
+                ...(await xsrfHeaderAsync()), // XSRF 헤더
             };
             // 일부 백엔드가 X-User-Id를 요구할 수 있으므로 보조 헤더 추가
             let userId = localStorage.getItem('userId');
@@ -315,7 +329,7 @@ export default function WantedDetail() {
             }
             if (userId) headers['X-User-Id'] = String(userId);
 
-            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers, credentials: 'include',  });
+            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers, credentials: 'include' });
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
@@ -327,8 +341,8 @@ export default function WantedDetail() {
                 const d = await res.json().catch(() => null);
                 if (d?.message) message = d.message;
             } else {
-                const t = await res.text().catch(() => '');
-                if (t) message = t;
+                const ttxt = await res.text().catch(() => '');
+                if (ttxt) message = ttxt;
             }
             throw new Error(message);
         } catch (err) {
@@ -362,7 +376,8 @@ export default function WantedDetail() {
             };
             await fetch('/api/reports', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader(), ...(await xsrfHeaderAsync()) },
+                credentials: 'include',
                 body: JSON.stringify(payload),
             }).catch(() => null);
         } catch { /* ignore */ }
