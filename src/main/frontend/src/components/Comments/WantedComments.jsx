@@ -74,62 +74,50 @@ const ReplyBox = styled.div`
     margin-top: 10px; margin-left: 26px;
 `;
 
-/* ----------------------------- auth & fetch helpers ----------------------------- */
+/* ----------------------------- helpers ----------------------------- */
+// 토큰 정규화
 function normalizeBearer(raw) {
     if (!raw) return '';
     let t = String(raw).trim();
-    if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1);
+    if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1); // JSON 저장 흔적 제거
     if (t.toLowerCase().startsWith('bearer ')) t = t.slice(7);
     return t;
 }
+
+// GET: 최소 헤더 + 쿠키 포함(세션 로그인 지원)
 function publicInit() {
     return { headers: { Accept: 'application/json' }, credentials: 'include' };
 }
+
+// POST/DELETE: ASCII 헤더 + 쿠키 포함
 function authInit(bodyObj) {
-    const token = normalizeBearer(localStorage.getItem('accessToken') || '');
+    const tokenRaw = localStorage.getItem('accessToken') || '';
+    const token = normalizeBearer(tokenRaw);
+    const uidRaw = localStorage.getItem('userId') || '';
+    const uid = /^\d+$/.test(uidRaw) ? uidRaw : '';
+
     const headers = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(uid ? { 'X-USER-ID': uid } : {}), // 대문자, ASCII만
     };
+
     const init = {
         method: bodyObj ? 'POST' : 'DELETE',
         headers,
-        credentials: 'include', // 세션 쿠키 포함
+        credentials: 'include', // ✅ 세션 쿠키 동봉
     };
     if (bodyObj) init.body = JSON.stringify(bodyObj);
     return init;
 }
 
-/** JWT에서 내 id 우선 확보(없으면 localStorage.user.id) */
-function parseJwt(token) {
-    try {
-        const b = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const p = JSON.parse(decodeURIComponent(escape(atob(b + '='.repeat((4 - b.length % 4) % 4)))));
-        return p || null;
-    } catch { return null; }
-}
-function getMyId() {
-    const token = normalizeBearer(localStorage.getItem('accessToken') || '');
-    if (token) {
-        const p = parseJwt(token);
-        const cand = p?.id ?? p?.userId ?? p?.uid ?? p?.sub;
-        const n = Number(cand);
-        if (Number.isFinite(n)) return n;
-    }
-    try {
-        const u = JSON.parse(localStorage.getItem('user') || '{}');
-        const n = Number(u?.id);
-        if (Number.isFinite(n)) return n;
-    } catch {}
-    return null;
-}
-
-/* ----------------------------- data helpers ----------------------------- */
 function toJsonSafely(res) {
     const ct = res.headers.get('content-type') || '';
     if (ct.includes('application/json')) return res.json();
     return Promise.resolve(null);
 }
+
+// 다양한 응답 모양 방어
 function normalizeApiData(json) {
     if (!json) return [];
     if (Array.isArray(json)) return json;
@@ -138,6 +126,7 @@ function normalizeApiData(json) {
     if (json.data && Array.isArray(json.data.comments)) return json.data.comments;
     return [];
 }
+
 function buildTree(list) {
     const byId = new Map();
     list.forEach(c => {
@@ -160,33 +149,31 @@ function buildTree(list) {
     return roots;
 }
 
-/** 작성자 ID는 ‘작성자 전용 필드’에서만! userId / user?.id 금지 */
+/** 작성자 id를 '엄격한' 후보에서만 추출 */
 function extractAuthorIdStrict(c) {
-    const flat = [
-        c.authorId, c.writerId, c.commenterId, c.createdById, c.ownerId, c.commentUserId, c.createdBy
+    const candidates = [
+        c.userId, c.authorId, c.writerId, c.commenterId, c.createdById, c.ownerId, c.commentUserId, c.createdBy
     ];
-    for (const v of flat) {
-        if (v == null) continue;
-        const n = Number(v);
-        if (Number.isFinite(n)) return n;
-    }
-    const nested = [c.author?.id, c.writer?.id, c.commenter?.id, c.createdBy?.id, c.owner?.id];
-    for (const v of nested) {
+    for (const v of candidates) {
         if (v == null) continue;
         const n = Number(v);
         if (Number.isFinite(n)) return n;
     }
     return null;
 }
+
+/** 서버가 명시 boolean을 주면 우선 사용 */
 function computeMine(c, myId) {
+    if (c.isMine === true || c.mine === true) return true;
+    if (c.canDelete === true && c.role !== 'ADMIN') return true;
     const aid = extractAuthorIdStrict(c);
     return myId != null && aid != null && Number(aid) === Number(myId);
 }
 
-/* 작성자 탈퇴 여부(표시용) */
+/* 작성자(배우) 객체의 탈퇴 여부만 본다. */
 function isDeactivatedFromComment(c) {
     const U = v => (v ?? '').toString().toUpperCase();
-    const actors = [c?.author, c?.writer, c?.commenter]; // user는 제외
+    const actors = [c?.author, c?.writer, c?.commenter]; // user는 제외(모호)
     for (const a of actors) {
         if (!a || typeof a !== 'object') continue;
         const s = U(a.status || a.accountStatus || a.userStatus || a.authorStatus);
@@ -195,8 +182,13 @@ function isDeactivatedFromComment(c) {
             a.isDeleted || a.deletedUser || a.userDeleted || a.deleted) return true;
         if (a.deactivatedAt || a.withdrawnAt || a.deletedAt) return true;
     }
+    const top = U(c?.authorStatus);
+    if (['DEACTIVATED','WITHDRAWN','WITHDRAW','DELETED'].includes(top)) return true;
+    if (c?.authorDeactivated) return true;
+    if (c?.authorDeletedAt) return true;
     return false;
 }
+
 function looksAnonymousName(name, t) {
     const n = (name ?? '').toString().trim();
     if (!n) return false;
@@ -207,6 +199,8 @@ function looksAnonymousName(name, t) {
     const reEn = /^anonymous\s*\d*$/i;
     return reKo.test(n) || reI18n.test(n) || reEn.test(n);
 }
+
+/* 표시용 이름 */
 function nameForComment(c, t) {
     if (isDeactivatedFromComment(c)) return '탈퇴된 회원';
     const raw =
@@ -231,13 +225,18 @@ export default function WantedComments({ wantedId }) {
     const [replyText, setReplyText] = useState('');
     const [replyError, setReplyError] = useState('');
 
-    const myId = getMyId();
+    const myId = (() => {
+        const v = localStorage.getItem('userId');
+        if (!/^\d+$/.test(v || '')) return null;
+        return Number(v);
+    })();
 
     const tree = useMemo(() => buildTree(list), [list]);
 
     async function fetchList() {
         setLoading(true);
         try {
+            // ✅ GET도 쿠키 포함(세션 로그인이면 목록에 권한 플래그 내려올 수 있음)
             const res = await fetch(`/api/wanted/${wantedId}/comments`, publicInit());
             if (!res.ok) throw new Error(`목록 실패 (${res.status})`);
             const json = await toJsonSafely(res);
@@ -318,6 +317,7 @@ export default function WantedComments({ wantedId }) {
         const created = c.createdAt ? new Date(c.createdAt) : null;
         const mine = computeMine(c, myId);
         const displayName = nameForComment(c, t);
+
         const key = c.id ?? c.commentId ?? c.cid;
 
         return (
