@@ -295,10 +295,14 @@ export default function WantedDetail() {
         try {
             const headers = { ...getAuthHeader() };
             let userId = localStorage.getItem('userId');
-            if (!/^\d+$/.test(userId || '')) userId = '';   // 숫자만
-            if (userId) headers['X-User-Id'] = String(userId); // ✅ 헤더 키 통일 (대소문자 포함)
+            if (!/^\d+$/.test(userId || '')) userId = '';
+            if (userId) headers['X-USER-ID'] = String(userId);
 
-            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
+            const res = await fetch(`/api/wanted/${id}`, {
+                method: 'DELETE',
+                headers,
+                credentials: 'include',   // ✅ 세션 쿠키 동봉
+            });
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
