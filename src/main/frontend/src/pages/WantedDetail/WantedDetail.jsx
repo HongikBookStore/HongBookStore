@@ -1,5 +1,5 @@
 // src/pages/WantedDetail/WantedDetail.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaBook, FaTag, FaUser, FaClock, FaEye, FaExclamationTriangle } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
@@ -9,17 +9,28 @@ import WarningModal from '../../components/WarningModal/WarningModal';
 import WantedComments from '../../components/Comments/WantedComments';
 import { useWriting } from '../../contexts/WritingContext';
 import { displayMaskedName } from '../../utils/nameMask';
+import { AuthCtx } from '../../contexts/AuthContext';
 
 /* ----------------------------- styled components ----------------------------- */
 const PageWrapper = styled.div`
     display: flex; flex-direction: row; align-items: flex-start; width: 100%;
 `;
-const Container = styled.div` padding: 28px; box-sizing: border-box; `;
-
-const TopBar = styled.div`
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px;
+const ChatListContainer = styled.div`
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 `;
 const BackButton = styled.button`
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; font-weight: 700; cursor: pointer;
+    &:hover{ transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+`;
+const ReportButton = styled.button`
     display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
     background: #f3f4f6; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
 `;
@@ -29,13 +40,13 @@ const Button = styled.button`
     padding: 10px 14px; border-radius: 10px;
     border: 1px solid ${p => (p.$variant === 'danger' ? '#dc3545' : p.$variant === 'ghost' ? '#e5e7eb' : '#e5e7eb')};
     background: ${p =>
-            p.$variant === 'primary' ? '#0d6efd'
-                    : p.$variant === 'danger' ? '#fff5f5'
-                            : '#fff'};
+    p.$variant === 'primary' ? '#0d6efd'
+        : p.$variant === 'danger' ? '#fff5f5'
+            : '#fff'};
     color: ${p =>
-            p.$variant === 'primary' ? '#fff'
-                    : p.$variant === 'danger' ? '#dc3545'
-                            : '#111'};
+    p.$variant === 'primary' ? '#fff'
+        : p.$variant === 'danger' ? '#dc3545'
+            : '#111'};
     font-weight: 700; cursor: pointer; transition: .15s ease;
     &:hover{ transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
     &:disabled{ opacity: .6; cursor: not-allowed; transform:none; box-shadow:none; }
@@ -50,13 +61,11 @@ const ReportTitleButton = styled.button`
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 12px;
     background: #fff5f5;
-    color: #dc2626;
-    border: 2px solid #fecaca;
-    border-radius: 10px;
-    font-weight: 800;
+    border: 1px solid #ffcdd2;
+    border-radius: 8px;
+    color: #c62828;
+    font-weight: 700;
     cursor: pointer;
-    transition: .15s ease;
-    white-space: nowrap;
     &:hover{ background:#dc2626; color:#fff; border-color:#dc2626; transform: translateY(-1px); }
 `;
 
@@ -67,8 +76,8 @@ const Chip = styled.span`
 `;
 const PriceChip = styled(Chip)` background: #eef5ff; border-color: #d7e7ff; color: #0d6efd; `;
 const ConditionChip = styled(Chip)`
-    background: ${({$condition}) => $condition === 'HIGH' ? '#eaf7ee' : $condition === 'MEDIUM' ? '#fff6e5' : $condition === 'LOW' ? '#fdeaea' : '#f8fafc'};
-    border-color: ${({$condition}) => $condition === 'HIGH' ? '#cfeedd' : $condition === 'MEDIUM' ? '#ffe7bf' : $condition === 'LOW' ? '#f7c7c7' : '#e5e7eb'};
+    background: ${({$condition}) => $condition === 'HIGH' ? '#eaf7ea' : $condition === 'MEDIUM' ? '#fff6e5' : $condition === 'LOW' ? '#fdeaea' : '#f8fafc'};
+    border-color: ${({$condition}) => $condition === 'HIGH' ? '#cfe9cf' : $condition === 'MEDIUM' ? '#ffe7bf' : $condition === 'LOW' ? '#f7c7c7' : '#e5e7eb'};
     color: ${({$condition}) => $condition === 'HIGH' ? '#2e7d32' : $condition === 'MEDIUM' ? '#b26a00' : $condition === 'LOW' ? '#c62828' : '#374151'};
 `;
 const SubMeta = styled.div` display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; color: #6b7280; font-size: .92rem; `;
@@ -78,38 +87,13 @@ const Layout = styled.div`
     @media (max-width: 980px){ grid-template-columns: 1fr; }
 `;
 const Card = styled.div` background: #fff; border: 1px solid #e9ecef; border-radius: 14px; padding: 22px; `;
-const SectionTitle = styled.h3` margin: 0 0 12px 0; font-size: 1.15rem; color: #333; display:flex; align-items:center; gap:8px; `;
+const SectionTitle = styled.h3` margin: 0 0 12px 0; font-size: 1.05rem; color: #333; display:flex; align-items:center; gap:8px; `;
 const BodyText = styled.div` color: #374151; line-height: 1.7; white-space: pre-wrap; `;
 const InfoGrid = styled.div` display: grid; grid-template-columns: 1fr 1fr; gap: 12px; @media (max-width: 600px){ grid-template-columns: 1fr; } `;
 const InfoItem = styled.div` border: 1px solid #eef2f6; border-radius: 10px; padding: 14px; background: #fafcff; `;
 const Label = styled.div` color: #6b7280; font-size: .9rem; margin-bottom: 6px; `;
 const Value = styled.div` color: #222; font-weight: 700; `;
 const Small = styled.div` font-size: .86rem; color: #6b7280; `;
-
-/* ----------------------------- 신고 모달 스타일 ----------------------------- */
-const ModalOverlay = styled.div`
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000;
-`;
-const ModalBox = styled.div`
-    background: #fff; border-radius: 12px; padding: 32px 24px 24px 24px; min-width: 320px; max-width: 560px; width: 92vw;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px;
-`;
-const ModalTitle = styled.div` font-size: 1.1rem; font-weight: 600; `;
-const ModalActions = styled.div` display: flex; gap: 10px; justify-content: flex-end; `;
-const ModalButton = styled.button`
-    padding: 8px 16px; border-radius: 8px; border: none; background: #007bff; color: #fff; font-weight: 600; cursor: pointer;
-    &:hover { background: #0056b3; }
-    &[data-variant='cancel'] { background: #ccc; color: #333; &:hover { background: #bbb; } }
-`;
-const ReportRadio = styled.label`
-    display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; font-size: 0.95rem;
-    &:hover { color: #007bff; }
-`;
-const RadioInput = styled.input` margin: 0; cursor: pointer; `;
-const ModalTextarea = styled.textarea`
-    width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 1rem; resize: vertical;
-`;
 
 /* ---------------------------------- helpers ---------------------------------- */
 function getAuthHeader() {
@@ -137,45 +121,12 @@ function translateCategory(category, t) {
 
 // 탈퇴 여부를 다양한 백엔드 표현에서 폭넓게 감지
 function isDeactivatedFromDetail(d) {
-    const status = (d?.requesterStatus ?? d?.userStatus ?? d?.status ?? '')
-        .toString()
-        .toUpperCase();
-    if (['DEACTIVATED', 'DELETED', 'WITHDRAWN', 'WITHDRAW'].includes(status)) return true;
-
-    if (
-        d?.requesterDeactivated || d?.authorDeactivated || d?.userDeactivated ||
-        d?.deactivated || d?.deleted || d?.isDeleted || d?.isDeactivated
-    ) return true;
-
-    if (d?.requesterDeactivatedAt || d?.requesterDeletedAt || d?.deletedAt) return true;
-
-    const raw = (d?.requesterNickname ?? d?.requesterName ?? d?.authorName ?? d?.nickname ?? '').toString();
-    if (/탈퇴/.test(raw)) return true; // '탈퇴회원#123' 같은 문자열
+    const status = (d?.requesterStatus ?? d?.userStatus ?? d?.status ?? '').toString().trim().toUpperCase();
+    if (['DEACTIVATED','WITHDRAWN','WITHDRAW','DELETED'].includes(status)) return true;
+    if (d?.requesterDeactivated || d?.userDeactivated) return true;
+    if (d?.requesterDeletedAt || d?.userDeletedAt) return true;
     return false;
 }
-
-// 익명 패턴(익명, 익명123, anonymous 3 ...)은 그대로 유지
-function looksAnonymousName(name, t) {
-    const n = (name ?? '').toString().trim();
-    if (!n) return false;
-    const anonKo = (t?.('common.anonymous') || '익명').toString();
-    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const reKoNumbered = /^익명\s*\d*$/i;
-    const reI18nNumbered = new RegExp(`^${esc(anonKo)}\\s*\\d*$`, 'i');
-    const reEn = /^anonymous\s*\d*$/i;
-    return reKoNumbered.test(n) || reI18nNumbered.test(n) || reEn.test(n);
-}
-
-// 최종 표시 이름: 탈퇴자는 '탈퇴된 회원' 고정, 익명N은 그대로, 나머지는 마스킹
-function nameForDisplay(rawName, deactivated, t) {
-    if (deactivated) return '탈퇴된 회원';
-    const n = (rawName ?? '').toString().trim();
-    if (!n) return t('common.anonymous') || '익명';
-    if (looksAnonymousName(n, t)) return n;          // 익명1/익명2 유지
-    const masked = displayMaskedName(n, false);      // 일반 닉네임/실명은 마스킹
-    return masked || (t('common.anonymous') || '익명');
-}
-
 
 export default function WantedDetail() {
     const { t } = useTranslation();
@@ -185,6 +136,7 @@ export default function WantedDetail() {
 
     const [data, setData] = useState(null);
     const [mine, setMine] = useState(false);
+    const { user } = useContext(AuthCtx);
     const [loading, setLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -192,20 +144,14 @@ export default function WantedDetail() {
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportReason, setReportReason] = useState('');
     const [reportEtcText, setReportEtcText] = useState('');
-    const [showReportExitModal, setShowReportExitModal] = useState(false);
+    const [reportExit, setShowReportExitModal] = useState(false);
 
-    // 사이드바 메뉴
     const handleSidebarMenu = (menu) => {
         switch (menu) {
-            case 'bookstore/add': navigate('/bookstore/add'); break;
             case 'wanted': navigate('/wanted'); break;
-            case 'mybookstore': navigate('/bookstore'); break;
-            case 'chat': navigate('/chat'); break;
-            case 'comments': {
-                const el = document.querySelector('[data-section="comments"]');
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                break;
-            }
+            case 'list': navigate('/wanted'); break;
+            case 'home': navigate('/'); break;
+            case 'my': navigate('/mypage'); break;
             case 'detail': window.scrollTo({ top: 0, behavior: 'smooth' }); break;
             default: break;
         }
@@ -232,9 +178,9 @@ export default function WantedDetail() {
 
                 if (alive) {
                     setData(detail || null);
-                    // 내 글 여부
+                    // 내 글 여부 (AuthCtx 기준)
                     try {
-                        const myId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+                        const myId = user?.id;
                         setMine(myId != null && String(myId) === String(detail?.requesterId));
                     } catch { /* ignore */ }
                 }
@@ -245,71 +191,38 @@ export default function WantedDetail() {
             }
         })();
         return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
-    // 작성자 표시 이름 (탈퇴자면 "탈퇴된 회원")
-    const displayAuthor = nameForDisplay(
-        data?.requesterNickname ?? data?.requesterName ?? data?.authorName ?? data?.nickname ?? '',
-        isDeactivatedFromDetail(data),
-        t
-    );
-
-    /* ------------------------------ 삭제 ------------------------------ */
-    const openDelete = () => setShowDeleteModal(true);
-
-    const onDelete = async () => {
+    // 삭제
+    const handleDelete = async () => {
+        if (!window.confirm(t('wantedDetail.confirmDelete'))) return;
         stopWriting();
         setUnsavedChanges(false);
         try {
             const headers = { ...getAuthHeader() };
-            let userId = localStorage.getItem('userId');
-            if (!userId) {
-                try { userId = JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch {}
-            }
-            if (userId) headers['X-User-Id'] = String(userId);
-
+            // Authorization 기반으로만 삭제 권한 판정 (임의 헤더 금지)
             const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
                 return;
             }
-            let message = `삭제 실패 (${res.status})`;
             const ct = res.headers.get('content-type') || '';
-            if (ct.includes('application/json')) {
-                const d = await res.json().catch(() => null);
-                if (d?.message) message = d.message;
-            } else {
-                const ttxt = await res.text().catch(() => '');
-                if (ttxt) message = ttxt;
-            }
-            throw new Error(message);
-        } catch (err) {
-            const msg = String(err?.message || '');
-            if (msg.includes('권한') || msg.includes('403')) {
-                alert('삭제 권한이 없습니다. 본인이 작성한 글만 삭제할 수 있습니다.');
-            } else if (msg.includes('401')) {
-                alert('로그인이 필요합니다. 다시 로그인해 주세요.');
-                navigate('/login');
-            } else {
-                alert(msg || '삭제 중 오류가 발생했습니다.');
-            }
+            const msg = ct.includes('application/json') ? (await res.json())?.message : await res.text();
+            throw new Error(msg || t('wantedDetail.deleteFailed'));
+        } catch (e) {
+            alert(e.message || t('wantedDetail.deleteFailed'));
         }
     };
 
-    /* ------------------------------ 신고 ------------------------------ */
-    const openReport = () => {
-        setReportReason('');
-        setReportEtcText('');
-        setShowReportModal(true);
-    };
-
+    /* 신고 생성 */
     const submitReport = async () => {
         try {
-            const reasonText = reportReason === '기타' ? (reportEtcText || '기타') : reportReason;
+            const reasonText = reportReason || '';
             const payload = {
-                type: 'WANTED',
-                targetId: String(id),
+                targetType: 'WANTED',
+                targetId: Number(id),
                 reason: (reportReason === '기타' ? 'OTHER' : reasonText),
                 ...(reportReason === '기타' ? { detail: reportEtcText.trim() } : {})
             };
@@ -341,7 +254,7 @@ export default function WantedDetail() {
             <PageWrapper>
                 <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
                 <MainContent>
-                    <Container><Card>불러오는 중…</Card></Container>
+                    <div style={{ padding: 24 }}>Loading...</div>
                 </MainContent>
             </PageWrapper>
         );
@@ -352,66 +265,47 @@ export default function WantedDetail() {
             <PageWrapper>
                 <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
                 <MainContent>
-                    <Container>
-                        <Card>해당 글을 찾을 수 없습니다.</Card>
-                        <div style={{ marginTop: 12 }}><Button onClick={() => navigate('/wanted')}>목록으로</Button></div>
-                    </Container>
+                    <div style={{ padding: 24, color:'#c62828' }}>{t('wantedDetail.loadFailed')}</div>
                 </MainContent>
             </PageWrapper>
         );
     }
 
-    // 파생값
-    const conditionKor = normalizeCondition(data.condition, t);
-    const createdAt = data.createdAt ? new Date(data.createdAt) : null;
-    const views = (typeof data.views !== 'undefined' ? Number(data.views) : (typeof data.viewCount !== 'undefined' ? Number(data.viewCount) : null));
-    const rawCategory = (data.category || '').trim();
-    const categoryName = rawCategory.split('>')[0]?.trim() || rawCategory;
-    const translatedCategory = translateCategory(categoryName, t);
-    const displayCategory = data.department
-        ? `${translatedCategory} / ${t(data.department)}`
-        : translatedCategory;
+    const ownerMasked = displayMaskedName(data?.requesterNickname || data?.requesterName || data?.requesterUsername || '-');
+    const isRequesterDeactivated = isDeactivatedFromDetail(data);
 
     return (
         <PageWrapper>
             <SidebarMenu active="wanted" onMenuClick={handleSidebarMenu} />
             <MainContent>
-                <Container>
-                    <TopBar>
-                        <BackButton onClick={() => navigate('/wanted')}><FaArrowLeft /> {t('wantedDetail.back')}</BackButton>
-                        <Actions>
-                            <Button onClick={() => navigate('/wanted')}>{t('wantedDetail.list')}</Button>
-                            {mine ? (
-                                <>
-                                    <Button $variant="primary" onClick={() => navigate(`/wanted/write/${id}`)}>{t('wantedDetail.edit')}</Button>
-                                    <Button $variant="danger" onClick={openDelete}>{t('wantedDetail.delete')}</Button>
-                                </>
-                            ) : null}
-                        </Actions>
-                    </TopBar>
-
-                    {/* 헤더 */}
+                <ChatListContainer>
                     <HeaderCard>
                         <TitleRow>
-                            <Title>{data.title}</Title>
-                            {!mine && (
-                                <ReportTitleButton title={t('wantedDetail.report')} onClick={openReport}>
-                                    <FaExclamationTriangle />
-                                    {t('wantedDetail.report')}
-                                </ReportTitleButton>
-                            )}
+                            <div style={{display:'flex',gap:8}}>
+                                <BackButton onClick={() => navigate('/wanted')}><FaArrowLeft /> {t('common.back')}</BackButton>
+                                <ReportTitleButton onClick={() => setShowReportModal(true)}><FaExclamationTriangle/> {t('wantedDetail.report')}</ReportTitleButton>
+                            </div>
                         </TitleRow>
 
+                        <Title>{data.title}</Title>
+
                         <MetaRow>
-                            <Chip><FaUser /> {displayAuthor}</Chip>
-                            <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {t(conditionKor)}</ConditionChip>
-                            <PriceChip><FaTag /> {t('wantedDetail.desiredPrice')}: {Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</PriceChip>
+                            <Chip><FaUser/> {ownerMasked}</Chip>
+                            <Chip><FaTag/> {translateCategory(data?.category, t)}</Chip>
+                            <Chip><FaEye/> {t('wantedDetail.views', { cnt: data?.viewCount ?? 0 })}</Chip>
+                            <Chip><FaClock/> {data?.createdAt ? new Date(data.createdAt).toLocaleString() : ''}</Chip>
                         </MetaRow>
-                        <SubMeta>
-                            {displayCategory && <span><FaBook /> {displayCategory}</span>}
-                            {createdAt && <span><FaClock /> {t('wantedDetail.createdDate')}: {createdAt.toLocaleString('ko-KR')}</span>}
-                            {views !== null && <span><FaEye /> {t('wantedDetail.viewCount')}: {views.toLocaleString()}</span>}
-                        </SubMeta>
+
+                        <div style={{marginTop:10}}>
+                            <Actions>
+                                {mine && (
+                                    <Button $variant="danger" onClick={() => setShowDeleteModal(true)}>{t('common.delete')}</Button>
+                                )}
+                                {!mine && (
+                                    <ReportButton onClick={() => setShowReportModal(true)}>{t('wantedDetail.report')}</ReportButton>
+                                )}
+                            </Actions>
+                        </div>
                     </HeaderCard>
 
                     {/* 본문 / 요약 / 댓글 */}
@@ -427,129 +321,87 @@ export default function WantedDetail() {
                                         background: '#fff3cd',
                                         border: '1px solid #ffeeba',
                                         color: '#856404',
-                                        fontSize: '0.92rem'
+                                        fontSize: '.9rem',
+                                        fontWeight: 700
                                     }}>
-                                        ⚠️ 부적절한 표현이 감지되었습니다
-                                        {data.contentToxicLevel && (
-                                            <> ({data.contentToxicLevel}{typeof data.contentToxicMalicious === 'number' ? `, ${Math.round(data.contentToxicMalicious*100)}%` : ''})</>
-                                        )}
+                                        {t('wantedDetail.toxicWarn')}
                                     </div>
                                 )}
-                                {data.content ? (
-                                    <BodyText>{data.content}</BodyText>
-                                ) : (
-                                    <Small>{t('noDescription')}</Small>
-                                )}
+                                <BodyText>{data.content}</BodyText>
                             </Card>
 
-                            {/* 댓글 섹션 */}
-                            <div data-section="comments">
-                                <WantedComments wantedId={id} />
-                            </div>
+                            <Card>
+                                <SectionTitle><FaBook /> {t('wantedDetail.comments')}</SectionTitle>
+                                <WantedComments wantedId={Number(id)} />
+                            </Card>
                         </div>
 
-                        <Card>
-                            <SectionTitle><FaTag /> {t('wantedDetail.requestSummary')}</SectionTitle>
-                            <InfoGrid>
-                                <InfoItem><Label>{t('wantedDetail.bookTitle')}</Label><Value>{data.title || '-'}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.author')}</Label><Value>{data.author || '-'}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{t(conditionKor)}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.desiredPrice')}</Label><Value>{Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.category.label')}</Label><Value>{displayCategory}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayAuthor}</Value></InfoItem>
-                            </InfoGrid>
-                        </Card>
+                        <div>
+                            <Card>
+                                <SectionTitle>{t('wantedDetail.requesterInfo')}</SectionTitle>
+                                <InfoGrid>
+                                    <InfoItem>
+                                        <Label>{t('wantedDetail.requester')}</Label>
+                                        <Value>{ownerMasked}</Value>
+                                        {isRequesterDeactivated && <Small>{t('wantedDetail.deactivated')}</Small>}
+                                    </InfoItem>
+                                    <InfoItem>
+                                        <Label>{t('wantedDetail.condition')}</Label>
+                                        <Value>{normalizeCondition(data?.desiredCondition, t)}</Value>
+                                    </InfoItem>
+                                </InfoGrid>
+                            </Card>
+                        </div>
                     </Layout>
-                </Container>
+                </ChatListContainer>
             </MainContent>
 
-            {/* 삭제 모달 */}
-            <WarningModal
-                isOpen={showDeleteModal}
-                onClose={() => setShowDeleteModal(false)}
-                onConfirm={onDelete}
-                onCancel={() => setShowDeleteModal(false)}
-                type="wanted"
-                title={t('wantedDetail.deleteModal.title')}
-                message={t('wantedDetail.deleteModal.description')}
-                confirmText={t('wantedDetail.deleteModal.confirm')}
-                cancelText={t('wantedDetail.deleteModal.cancel')}
-                showSaveDraft={false}
-                data-warning-modal-open="true"
-            />
+            {/* 삭제 확인 모달 */}
+            {showDeleteModal && (
+                <WarningModal
+                    title={t('wantedDetail.confirmDeleteTitle')}
+                    description={t('wantedDetail.confirmDeleteDesc')}
+                    confirmText={t('common.delete')}
+                    cancelText={t('common.cancel')}
+                    onConfirm={handleDelete}
+                    onCancel={() => setShowDeleteModal(false)}
+                />
+            )}
 
             {/* 신고 모달 */}
             {showReportModal && (
-                <ModalOverlay>
-                    <ModalBox as="form" onSubmit={handleReportSubmit}>
-                        <ModalTitle>{t('wantedDetail.reportModal.title')}</ModalTitle>
-
-                        <ReportRadio>
-                            <RadioInput
-                                type="radio" name="report" value={t('wantedDetail.reportModal.reasons.abuse')}
-                                checked={reportReason === t('wantedDetail.reportModal.reasons.abuse')}
-                                onChange={e => setReportReason(e.target.value)}
-                            />
-                            {t('wantedDetail.reportModal.reasons.abuse')}
-                        </ReportRadio>
-
-                        <ReportRadio>
-                            <RadioInput
-                                type="radio" name="report" value={t('wantedDetail.reportModal.reasons.fraud')}
-                                checked={reportReason === t('wantedDetail.reportModal.reasons.fraud')}
-                                onChange={e => setReportReason(e.target.value)}
-                            />
-                            {t('wantedDetail.reportModal.reasons.fraud')}
-                        </ReportRadio>
-
-                        <ReportRadio>
-                            <RadioInput
-                                type="radio" name="report" value={t('wantedDetail.reportModal.reasons.spam')}
-                                checked={reportReason === t('wantedDetail.reportModal.reasons.spam')}
-                                onChange={e => setReportReason(e.target.value)}
-                            />
-                            {t('wantedDetail.reportModal.reasons.spam')}
-                        </ReportRadio>
-
-                        <ReportRadio>
-                            <RadioInput
-                                type="radio" name="report" value={t('common.other')}
-                                checked={reportReason === t('common.other')}
-                                onChange={e => setReportReason(e.target.value)}
-                            />
-                            {t('wantedDetail.reportModal.reasons.other')}
-                        </ReportRadio>
-
-                        {reportReason === t('common.other') && (
-                            <div>
-                                <div style={{ marginBottom: 6, fontSize: '.92rem', color: '#555' }}>{t('wantedDetail.reportModal.detailReason')}</div>
-                                <ModalTextarea
-                                    value={reportEtcText}
-                                    onChange={e => setReportEtcText(e.target.value)}
-                                    placeholder={t('wantedDetail.reportModal.detailPlaceholder')}
-                                />
+                <WarningModal
+                    title={t('wantedDetail.reportTitle')}
+                    description={
+                        <form onSubmit={handleReportSubmit} style={{display:'flex',flexDirection:'column',gap:10}}>
+                            <label><input type="radio" name="rr" value="스팸" onChange={(e)=>setReportReason(e.target.value)} /> 스팸/광고</label>
+                            <label><input type="radio" name="rr" value="욕설" onChange={(e)=>setReportReason(e.target.value)} /> 욕설/혐오 표현</label>
+                            <label><input type="radio" name="rr" value="불법" onChange={(e)=>setReportReason(e.target.value)} /> 불법/권리침해</label>
+                            <label><input type="radio" name="rr" value="기타" onChange={(e)=>setReportReason(e.target.value)} /> 기타</label>
+                            {reportReason === '기타' && (
+                                <textarea value={reportEtcText} onChange={(e)=>setReportEtcText(e.target.value)} placeholder="신고 사유를 입력하세요" style={{width:'100%',minHeight:80}}/>
+                            )}
+                            <div style={{display:'flex',gap:8,marginTop:8}}>
+                                <button type="submit" className="btn-primary">{t('common.submit')}</button>
+                                <button type="button" onClick={()=>setShowReportModal(false)} className="btn">{t('common.cancel')}</button>
                             </div>
-                        )}
-
-                        <ModalActions>
-                            <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>{t('wantedDetail.reportModal.cancel')}</ModalButton>
-                            <ModalButton type="submit" disabled={!reportReason || (reportReason === t('common.other') && !reportEtcText.trim())}>{t('wantedDetail.reportModal.submit')}</ModalButton>
-                        </ModalActions>
-                    </ModalBox>
-                </ModalOverlay>
+                        </form>
+                    }
+                    confirmText={t('common.submit')}
+                    cancelText={t('common.cancel')}
+                    onConfirm={handleReportSubmit}
+                    onCancel={() => setShowReportModal(false)}
+                />
             )}
 
-            {/* 신고 후 나가기 확인 모달 */}
-            {showReportExitModal && (
-                <ModalOverlay>
-                    <ModalBox>
-                        <ModalTitle>{t('wantedDetail.reportModal.submitted')}<br/>{t('wantedDetail.reportModal.goToList')}</ModalTitle>
-                        <ModalActions>
-                            <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>{t('wantedDetail.reportModal.no')}</ModalButton>
-                            <ModalButton onClick={handleReportExit}>{t('wantedDetail.reportModal.yes')}</ModalButton>
-                        </ModalActions>
-                    </ModalBox>
-                </ModalOverlay>
+            {/* 신고 완료 안내 */}
+            {reportExit && (
+                <WarningModal
+                    title={t('wantedDetail.reportDoneTitle')}
+                    description={t('wantedDetail.reportDoneDesc')}
+                    confirmText={t('common.ok')}
+                    onConfirm={handleReportExit}
+                />
             )}
         </PageWrapper>
     );
