@@ -75,16 +75,16 @@ const ReplyBox = styled.div`
 `;
 
 /* ----------------------------- helpers ----------------------------- */
-// GET 전용: 헤더 없이(또는 단순 Accept) → preflight 방지
+// GET: 커스텀 헤더 없이(또는 Accept만) → preflight 방지
 function publicHeaders() {
     return { Accept: 'application/json' };
 }
 
-// 인증/작성/삭제 전용: ASCII만, 닉네임 헤더 금지
+// 인증/작성/삭제: ASCII만, 닉네임 헤더 금지
 function authHeaders() {
     const token = localStorage.getItem('accessToken') || '';
     const uidRaw = localStorage.getItem('userId') || '';
-    const uid = /^\d+$/.test(uidRaw) ? uidRaw : ''; // 숫자만 허용(ASCII 보장)
+    const uid = /^\d+$/.test(uidRaw) ? uidRaw : '';
     return {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(uid ? { 'X-User-Id': uid } : {}),
@@ -98,15 +98,13 @@ function toJsonSafely(res) {
     return Promise.resolve(null);
 }
 
-// 다양한 백엔드 응답 모양 방어적으로 처리
+// 다양한 응답 모양 방어
 function normalizeApiData(json) {
     if (!json) return [];
     if (Array.isArray(json)) return json;
     if (Array.isArray(json.data)) return json.data;
     if (Array.isArray(json.comments)) return json.comments;
-    if (Array.isArray(json.content)) return json.content;
     if (json.data && Array.isArray(json.data.comments)) return json.data.comments;
-    if (json.data && Array.isArray(json.data.content)) return json.data.content;
     return [];
 }
 
@@ -132,10 +130,31 @@ function buildTree(list) {
     return roots;
 }
 
+/** 작성자 id를 '엄격한' 후보에서만 추출 (user?.id 같은 모호한 필드는 금지) */
+function extractAuthorIdStrict(c) {
+    const candidates = [
+        c.userId, c.authorId, c.writerId, c.commenterId, c.createdById, c.ownerId, c.commentUserId, c.createdBy
+    ];
+    for (const v of candidates) {
+        if (v == null) continue;
+        const n = Number(v);
+        if (Number.isFinite(n)) return n;
+    }
+    return null;
+}
+
+/** 서버가 명시 boolean을 주면 우선 사용 */
+function computeMine(c, myId) {
+    if (c.isMine === true || c.mine === true) return true;
+    if (c.canDelete === true && c.role !== 'ADMIN') return true; // 서버가 권한을 내려주는 경우
+    const aid = extractAuthorIdStrict(c);
+    return myId != null && aid != null && Number(aid) === Number(myId);
+}
+
 /* 작성자(배우) 객체의 탈퇴 여부만 본다. 댓글 자체의 status/deleted는 사용하지 않음 */
 function isDeactivatedFromComment(c) {
     const U = v => (v ?? '').toString().toUpperCase();
-    const actors = [c?.user, c?.author, c?.writer, c?.reviewer, c?.commenter];
+    const actors = [c?.author, c?.writer, c?.commenter]; // ❗️user는 제외 (모호)
     for (const a of actors) {
         if (!a || typeof a !== 'object') continue;
         const s = U(a.status || a.accountStatus || a.userStatus || a.authorStatus);
@@ -144,10 +163,10 @@ function isDeactivatedFromComment(c) {
             a.isDeleted || a.deletedUser || a.userDeleted || a.deleted) return true;
         if (a.deactivatedAt || a.withdrawnAt || a.deletedAt) return true;
     }
-    const top = U(c?.userStatus || c?.authorStatus);
+    const top = U(c?.authorStatus);
     if (['DEACTIVATED','WITHDRAWN','WITHDRAW','DELETED'].includes(top)) return true;
-    if (c?.userDeactivated || c?.authorDeactivated) return true;
-    if (c?.userDeletedAt || c?.authorDeletedAt) return true;
+    if (c?.authorDeactivated) return true;
+    if (c?.authorDeletedAt) return true;
     return false;
 }
 
@@ -162,24 +181,18 @@ function looksAnonymousName(name, t) {
     return reKo.test(n) || reI18n.test(n) || reEn.test(n);
 }
 
-/* 표시용 이름: 탈퇴자는 고정, 익명 패턴 유지, 나머지는 마스킹 */
+/* 표시용 이름 */
 function nameForComment(c, t) {
     if (isDeactivatedFromComment(c)) return '탈퇴된 회원';
     const raw =
         c?.authorNickname ?? c?.nickname ?? c?.username ??
         c?.authorName ?? c?.userName ?? c?.displayName ??
-        c?.user?.nickname ?? c?.author?.nickname ??
-        c?.user?.name ?? c?.author?.name ?? '';
+        c?.author?.nickname ?? c?.author?.name ?? '';
     const name = (raw || '').toString().trim();
     if (!name) return t('common.anonymous') || '익명';
     if (looksAnonymousName(name, t)) return name;
     const masked = displayMaskedName(name, false);
     return masked || (t('common.anonymous') || '익명');
-}
-
-// 다양한 백엔드 필드에 대응해 userId 뽑기
-function pickAuthorId(c) {
-    return c.userId ?? c.authorId ?? c.writerId ?? c.user?.id ?? c.author?.id ?? null;
 }
 
 /* ----------------------------- component ----------------------------- */
@@ -204,7 +217,6 @@ export default function WantedComments({ wantedId }) {
     async function fetchList() {
         setLoading(true);
         try {
-            // ✅ GET은 헤더 없이
             const res = await fetch(`/api/wanted/${wantedId}/comments`, { headers: publicHeaders() });
             if (!res.ok) throw new Error(`목록 실패 (${res.status})`);
             const json = await toJsonSafely(res);
@@ -294,12 +306,11 @@ export default function WantedComments({ wantedId }) {
 
     const renderItem = (c) => {
         const created = c.createdAt ? new Date(c.createdAt) : null;
-        const authorId = pickAuthorId(c);
-        const mine = myId != null && authorId != null && Number(authorId) === Number(myId);
+        const mine = computeMine(c, myId); // ✅ 잘못된 필드(user?.id) 배제
         const displayName = nameForComment(c, t);
 
         return (
-            <Item key={c.id}>
+            <Item key={c.id ?? c.commentId ?? c.cid}>
                 <Meta>
           <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
             <FaUser/>{displayName}
@@ -332,17 +343,17 @@ export default function WantedComments({ wantedId }) {
                 </Content>
 
                 <Actions>
-                    <Button onClick={() => { setReplyFor(c.id); setReplyText(''); }}>
+                    <Button onClick={() => { setReplyFor(c.id ?? c.commentId ?? c.cid); setReplyText(''); }}>
                         <FaReply/> {t('wantedComments.reply')}
                     </Button>
                     {mine && (
-                        <Button $variant="danger" onClick={() => remove(c.id)}>
+                        <Button $variant="danger" onClick={() => remove(c.id ?? c.commentId ?? c.cid)}>
                             <FaTrash/> {t('wantedComments.delete')}
                         </Button>
                     )}
                 </Actions>
 
-                {replyFor === c.id && (
+                {replyFor === (c.id ?? c.commentId ?? c.cid) && (
                     <ReplyBox>
                         <EditorRow>
                             <Textarea
@@ -354,7 +365,7 @@ export default function WantedComments({ wantedId }) {
                                 <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{replyError}</div>
                             )}
                             <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                                <Button $variant="primary" onClick={() => submitReply(c.id)}>{t('wantedComments.submit')}</Button>
+                                <Button $variant="primary" onClick={() => submitReply(c.id ?? c.commentId ?? c.cid)}>{t('wantedComments.submit')}</Button>
                                 <Button onClick={() => { setReplyFor(null); setReplyText(''); }}>{t('wantedComments.cancel')}</Button>
                             </div>
                         </EditorRow>
