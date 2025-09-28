@@ -111,6 +111,39 @@ const ModalTextarea = styled.textarea`
     width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 1rem; resize: vertical;
 `;
 
+/** ---- Robust current-user inference (JWT → user object → legacy localStorage) ---- */
+function parseJwt(token) {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+        return JSON.parse(decodeURIComponent(escape(atob(padded))));
+    } catch { return null; }
+}
+function toNum(v){ if (v==null) return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
+function getCurrentUserLocal() {
+    const token = localStorage.getItem('accessToken') || '';
+    let id = null, nickname = null;
+
+    if (token) {
+        const p = parseJwt(token);
+        if (p) {
+            id = toNum(p.id ?? p.userId ?? p.uid ?? p.sub ?? null);
+            nickname = (p.nickname ?? p.name ?? p.preferred_username ?? null);
+        }
+    }
+    if (id == null || !nickname) {
+        try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            if (id == null) id = toNum(u?.id);
+            if (!nickname) nickname = u?.nickname ?? u?.name ?? null;
+        } catch {}
+    }
+    if (id == null) id = toNum(localStorage.getItem('userId'));
+    if (!nickname) nickname = localStorage.getItem('nickname') || '익명';
+
+    return { id, nickname };
+}
+
 /* ---------------------------------- helpers ---------------------------------- */
 function getAuthHeader() {
     const token = localStorage.getItem('accessToken') || '';
@@ -176,7 +209,6 @@ function nameForDisplay(rawName, deactivated, t) {
     return masked || (t('common.anonymous') || '익명');
 }
 
-
 export default function WantedDetail() {
     const { t } = useTranslation();
     const { id } = useParams();
@@ -232,9 +264,9 @@ export default function WantedDetail() {
 
                 if (alive) {
                     setData(detail || null);
-                    // 내 글 여부
+                    // 내 글 여부 (JWT 파싱 기반)
                     try {
-                        const myId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+                        const myId = getCurrentUserLocal().id;
                         setMine(myId != null && String(myId) === String(detail?.requesterId));
                     } catch { /* ignore */ }
                 }
@@ -263,10 +295,8 @@ export default function WantedDetail() {
         try {
             const headers = { ...getAuthHeader() };
             let userId = localStorage.getItem('userId');
-            if (!userId) {
-                try { userId = JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch {}
-            }
-            if (userId) headers['X-User-Id'] = String(userId);
+            if (!/^\d+$/.test(userId || '')) userId = '';   // 숫자만
+            if (userId) headers['X-User-Id'] = String(userId); // ✅ 헤더 키 통일 (대소문자 포함)
 
             const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
             if (res.status === 204) {
@@ -384,7 +414,7 @@ export default function WantedDetail() {
                             {mine ? (
                                 <>
                                     <Button $variant="primary" onClick={() => navigate(`/wanted/write/${id}`)}>{t('wantedDetail.edit')}</Button>
-                                    <Button $variant="danger" onClick={openDelete}>{t('wantedDetail.delete')}</Button>
+                                    <Button $variant="danger" onClick={onDelete}>{t('wantedDetail.delete')}</Button>
                                 </>
                             ) : null}
                         </Actions>
@@ -403,7 +433,11 @@ export default function WantedDetail() {
                         </TitleRow>
 
                         <MetaRow>
-                            <Chip><FaUser /> {displayAuthor}</Chip>
+                            <Chip><FaUser /> {nameForDisplay(
+                                data?.requesterNickname ?? data?.requesterName ?? data?.authorName ?? data?.nickname ?? '',
+                                isDeactivatedFromDetail(data),
+                                t
+                            )}</Chip>
                             <ConditionChip $condition={data.condition}><FaTag /> {t('wantedDetail.status')}: {t(conditionKor)}</ConditionChip>
                             <PriceChip><FaTag /> {t('wantedDetail.desiredPrice')}: {Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</PriceChip>
                         </MetaRow>
@@ -456,7 +490,7 @@ export default function WantedDetail() {
                                 <InfoItem><Label>{t('wantedDetail.status')}</Label><Value>{t(conditionKor)}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.desiredPrice')}</Label><Value>{Number(data.price || 0).toLocaleString()}{t('wanted.currency')}</Value></InfoItem>
                                 <InfoItem><Label>{t('wantedDetail.category.label')}</Label><Value>{displayCategory}</Value></InfoItem>
-                                <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayAuthor}</Value></InfoItem>
+                                <InfoItem><Label>{t('wantedDetail.creator')}</Label><Value>{displayMaskedName(data?.requesterNickname || data?.requesterName || data?.requesterUsername || '-')}</Value></InfoItem>
                             </InfoGrid>
                         </Card>
                     </Layout>

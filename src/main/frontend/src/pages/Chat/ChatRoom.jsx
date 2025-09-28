@@ -246,11 +246,11 @@ const MessageStatus = styled.div`
 
 const StatusIcon = styled.span`
   color: ${props => {
-  if (props.$status === 'sending') return '#ffa726';
-  if (props.$status === 'read') return '#2196f3';
-  if (props.$status === 'failed') return '#f44336';
-  return '#9e9e9e';
-}};
+    if (props.$status === 'sending') return '#ffa726';
+    if (props.$status === 'read') return '#2196f3';
+    if (props.$status === 'failed') return '#f44336';
+    return '#9e9e9e';
+  }};
   font-size: 0.8rem;
 `;
 
@@ -856,9 +856,7 @@ const ChatRoom = () => {
         if (room.salePostId) {
           const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
           if (postRes.ok) {
-            const post = await respo
-                .json()
-                .catch(() => null) || await postRes.json(); // 안전
+            const post = await postRes.json(); // 안전
             const statusLocal = toLocalStatus((post && post.status) || null);
             setPostStatus(statusLocal);
             setSellerDefault({
@@ -1571,8 +1569,195 @@ const ChatRoom = () => {
               </ModalOverlay>
           )}
 
-          {/* 스마트 예약 모달 (UI 그대로) */}
-          {/* ... (예약 관련 JSX — 질문에 주신 그대로 유지) ... */}
+          {/* 스마트 예약 모달 */}
+          {showReserveModal && (
+              <ModalOverlay onClick={()=>setShowReserveModal(false)}>
+                <ReserveModalBox onClick={(e)=>e.stopPropagation()}>
+                  <ModalTitle>{t('chat.smartReserveTitle')}</ModalTitle>
+
+                  {/* 거래 방식 선택 */}
+                  <div style={{fontWeight:700, margin:'6px 0'}}>{t('chat.tradeType')}</div>
+                  <div style={{display:'flex', gap:8, margin:'6px 0 12px'}}>
+                    <button
+                        type="button"
+                        onClick={()=>setMeetType('on')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='on'?'#0b63d1':'#e5e7eb'), background:meetType==='on'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='on'?'#0b63d1':'#334155'}}
+                    ><FaUniversity/> {t('chat.onCampus')}</button>
+                    <button
+                        type="button"
+                        onClick={()=>setMeetType('off')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='off'?'#0b63d1':'#e5e7eb'), background:meetType==='off'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='off'?'#0b63d1':'#334155'}}
+                    ><FaSubway/> {t('chat.offCampus')}</button>
+                  </div>
+
+                  {/* 판매자 설정 위치 */}
+                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
+                    <div style={{fontWeight:800, marginBottom:6}}>{t('chat.sellerLocation')}</div>
+                    {meetType==='on' ? (
+                        sellerDefault.oncampusPlaceCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaUniversity/>{ONCAMPUS_LABELS[sellerDefault.oncampusPlaceCode] || sellerDefault.oncampusPlaceCode}
+                      </span>
+                            : <span style={{color:'#64748b'}}>{t('chat.noSellerLocationOnCampus')}</span>
+                    ) : (
+                        sellerDefault.offcampusStationCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaSubway/>{`${getLineByStation(sellerDefault.offcampusStationCode) || ''} · ${sellerDefault.offcampusStationCode}`}
+                      </span>
+                            : <span style={{color:'#64748b'}}>{t('chat.noSellerLocationOffCampus')}</span>
+                    )}
+                  </div>
+
+                  {/* 교내 / 교외 입력 + 중간지점 추천 */}
+                  {meetType === 'on' ? (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>{t('chat.buyerLocationOnCampus')}</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
+                          <select
+                              value={buyerCampusCode}
+                              onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
+                              style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:200, fontWeight:700}}
+                          >
+                            <option value="">{t('chat.selectBuilding')}</option>
+                            {CAMPUS_OPTIONS.map(code => (
+                                <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>
+                            ))}
+                          </select>
+
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.oncampusPlaceCode) return alert(t('chat.noSellerLocationOnCampus'));
+                                if(!buyerCampusCode) return alert(t('chat.selectBuyerLocationOnCampus'));
+                                const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
+                                if(!r) return alert(t('chat.noPathFound'));
+                                setCampusSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
+                            <FaTrophy/> {t('chat.recommendMidpoint')}
+                          </button>
+                        </div>
+
+                        {campusSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                {t('chat.recommendedMidpoint')}: {campusSuggest.midLabel}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                {t('chat.shortestPath')}: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
+                              </div>
+                              <button type="button" onClick={()=>setSelectedPlace(`${t('chat.onCampus')} · ${campusSuggest.midLabel}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> {t('chat.useThisLocation')}
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  ) : (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>{t('chat.buyerLocationOffCampus')}</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
+                          <select value={buyerLine} onChange={e=>{ setBuyerLine(e.target.value); setBuyerStation(''); setOffSuggest(null); }}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:160, fontWeight:700}}>
+                            <option value="">{t('chat.selectLine')}</option>
+                            {Object.keys(SUBWAY_MAP).map(line => <option key={line} value={line}>{line}</option>)}
+                          </select>
+                          <select value={buyerStation} onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }} disabled={!buyerLine}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
+                            <option value="">{buyerLine ? t('chat.selectStation') : t('chat.selectLineFirst')}</option>
+                            {(buyerLine ? getUniqueStations(buyerLine) : []).map(st => <option key={st} value={st}>{st}</option>)}
+                          </select>
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.offcampusStationCode) return alert(t('chat.noSellerLocationOffCampus'));
+                                if(!buyerStation) return alert(t('chat.selectBuyerStation'));
+                                const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
+                                if(!r) return alert(t('chat.noPathFound'));
+                                setOffSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
+                            <FaTrophy/> {t('chat.recommendMidpointStation')}
+                          </button>
+                        </div>
+
+                        {offSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                {t('chat.recommendedMidpointStation')}: {getLineByStation(offSuggest.midStation) ? `${getLineByStation(offSuggest.midStation)} · ` : ''}{offSuggest.midStation}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                {t('chat.optimalPath')}: {offSuggest.path.join(' → ')}
+                              </div>
+                              <button type="button" onClick={()=>setSelectedPlace(`${t('chat.offCampus')} · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> {t('chat.useThisLocation')}
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  )}
+
+                  {/* 선택된 장소 */}
+                  <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
+                    <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> {t('chat.selectedLocation')}</div>
+                    <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || t('chat.notSelectedYet')}</div>
+                  </div>
+
+                  {/* 추천 날짜 */}
+                  <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>{t('chat.recommendedDate')}</div>
+                  {weatherLoading && <div style={{color:'#555'}}>{t('chat.loadingWeather')}</div>}
+                  {!weatherLoading && (
+                      <DateList>
+                        {dateOptions.map(opt => {
+                          const h = Math.max(0, Math.min(100, opt.pop));
+                          return (
+                              <DateItem key={opt.iso} selected={selectedDate?.iso===opt.iso} onClick={()=>setSelectedDate(opt)}>
+                                <MiniBarWrap><MiniBar style={{height: `${h}%`}}/></MiniBarWrap>
+                                <div style={{display:'flex', flexDirection:'column', gap:4}}>
+                                  <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                    <span style={{fontWeight:700}}>{opt.date}</span>
+                                    {opt.best && <span style={{fontSize:11, color:'#fff', background:'#16a34a', padding:'2px 6px', borderRadius:999}}>{t('chat.recommended')}</span>}
+                                  </div>
+                                  <div style={{fontSize:13, color:'#374151'}}>
+                                    {opt.am!=null && opt.pm!=null
+                                        ? <>{t('chat.am')} {opt.am}% / {t('chat.pm')} {opt.pm}% ({t('chat.avg')} {opt.pop}%)</>
+                                        : <>{t('chat.precipitation')} {opt.pop}%</>}
+                                  </div>
+                                </div>
+                              </DateItem>
+                          );
+                        })}
+                      </DateList>
+                  )}
+                  {weeklyWeather?.recommendation && (
+                      <div style={{marginTop:'6px', fontWeight:600, color:'#111827'}}>{weeklyWeather.recommendation}</div>
+                  )}
+
+                  <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
+                    <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> {t('chat.routeGuidance')}</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> {t('chat.sendReservationRequest')}</ModalButton>
+                    <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>{t('common.cancel')}</ModalButton>
+                  </div>
+
+                  {showRoute && (
+                      <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
+                        <b>{t('chat.estimatedRoute')}</b><br/>
+                        {t('chat.apiIntegration')}<br/>
+                        <span style={{fontSize:'0.95em'}}>{t('chat.myLocation')} → {selectedPlace || t('chat.noLocationSelected')} ({t('chat.estimatedTime')})</span>
+                      </div>
+                  )}
+
+                  {reserveConfirmed && (
+                      <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
+                        {t('chat.reservationRequestSent')}
+                      </div>
+                  )}
+                </ReserveModalBox>
+              </ModalOverlay>
+          )}
 
           <ChatMessages>
             {messages.length > 0 ? (
