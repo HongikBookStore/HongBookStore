@@ -150,6 +150,15 @@ function getAuthHeader() {
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function getXsrfTokenFromCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+    return m ? m[1] : null;
+}
+function xsrfHeader() {
+    const v = getXsrfTokenFromCookie();
+    return v ? { 'X-XSRF-TOKEN': v } : {};
+}
+
 // 상태 문자열을 UI 친화적으로 정규화 (상/중/하)
 function normalizeCondition(v, t) {
     const val = (v ?? '').toString().trim();
@@ -287,18 +296,26 @@ export default function WantedDetail() {
     );
 
     /* ------------------------------ 삭제 ------------------------------ */
-    const openDelete = () => setShowDeleteModal(true);
+    const openDelete = () => {
+        setShowDeleteModal(true);
+    };
 
     const onDelete = async () => {
         stopWriting();
         setUnsavedChanges(false);
         try {
-            const headers = { ...getAuthHeader() };
+            const headers = {
+                ...getAuthHeader(),
+                ...xsrfHeader(),
+            };
+            // 일부 백엔드가 X-User-Id를 요구할 수 있으므로 보조 헤더 추가
             let userId = localStorage.getItem('userId');
-            if (!/^\d+$/.test(userId || '')) userId = '';   // 숫자만
-            if (userId) headers['X-User-Id'] = String(userId); // ✅ 헤더 키 통일 (대소문자 포함)
+            if (!userId) {
+                try { userId = JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch {}
+            }
+            if (userId) headers['X-User-Id'] = String(userId);
 
-            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
+            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers, credentials: 'include',  });
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
@@ -310,8 +327,8 @@ export default function WantedDetail() {
                 const d = await res.json().catch(() => null);
                 if (d?.message) message = d.message;
             } else {
-                const ttxt = await res.text().catch(() => '');
-                if (ttxt) message = ttxt;
+                const t = await res.text().catch(() => '');
+                if (t) message = t;
             }
             throw new Error(message);
         } catch (err) {

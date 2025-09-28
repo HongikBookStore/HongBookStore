@@ -75,21 +75,50 @@ const ReplyBox = styled.div`
 `;
 
 /* ----------------------------- helpers ----------------------------- */
-// GET: 커스텀 헤더 없이(또는 Accept만) → preflight 방지
-function publicHeaders() {
-    return { Accept: 'application/json' };
+// 토큰 정규화
+function normalizeBearer(raw) {
+    if (!raw) return '';
+    let t = String(raw).trim();
+    if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1); // JSON 저장 흔적 제거
+    if (t.toLowerCase().startsWith('bearer ')) t = t.slice(7);
+    return t;
 }
 
-// 인증/작성/삭제: ASCII만, 닉네임 헤더 금지
-function authHeaders() {
-    const token = localStorage.getItem('accessToken') || '';
+function getXsrfTokenFromCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+    return m ? m[1] : null;
+}
+function xsrfHeader() {
+    const v = getXsrfTokenFromCookie();
+    return v ? { 'X-XSRF-TOKEN': v } : {};
+}
+
+// GET: 최소 헤더 + 쿠키 포함(세션 로그인 지원)
+function publicInit() {
+    return { headers: { Accept: 'application/json' }, credentials: 'include' };
+}
+
+// POST/DELETE: ASCII 헤더 + 쿠키 포함
+function authInit(bodyObj) {
+    const tokenRaw = localStorage.getItem('accessToken') || '';
+    const token = normalizeBearer(tokenRaw);
     const uidRaw = localStorage.getItem('userId') || '';
     const uid = /^\d+$/.test(uidRaw) ? uidRaw : '';
-    return {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(uid ? { 'X-User-Id': uid } : {}),
+
+    const headers = {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(uid ? { 'X-USER-ID': uid } : {}), // 대문자, ASCII만
+        ...xsrfHeader(),
     };
+
+    const init = {
+        method: bodyObj ? 'POST' : 'DELETE',
+        headers,
+        credentials: 'include', // ✅ 세션 쿠키 동봉
+    };
+    if (bodyObj) init.body = JSON.stringify(bodyObj);
+    return init;
 }
 
 function toJsonSafely(res) {
@@ -130,7 +159,7 @@ function buildTree(list) {
     return roots;
 }
 
-/** 작성자 id를 '엄격한' 후보에서만 추출 (user?.id 같은 모호한 필드는 금지) */
+/** 작성자 id를 '엄격한' 후보에서만 추출 */
 function extractAuthorIdStrict(c) {
     const candidates = [
         c.userId, c.authorId, c.writerId, c.commenterId, c.createdById, c.ownerId, c.commentUserId, c.createdBy
@@ -146,15 +175,15 @@ function extractAuthorIdStrict(c) {
 /** 서버가 명시 boolean을 주면 우선 사용 */
 function computeMine(c, myId) {
     if (c.isMine === true || c.mine === true) return true;
-    if (c.canDelete === true && c.role !== 'ADMIN') return true; // 서버가 권한을 내려주는 경우
+    if (c.canDelete === true && c.role !== 'ADMIN') return true;
     const aid = extractAuthorIdStrict(c);
     return myId != null && aid != null && Number(aid) === Number(myId);
 }
 
-/* 작성자(배우) 객체의 탈퇴 여부만 본다. 댓글 자체의 status/deleted는 사용하지 않음 */
+/* 작성자(배우) 객체의 탈퇴 여부만 본다. */
 function isDeactivatedFromComment(c) {
     const U = v => (v ?? '').toString().toUpperCase();
-    const actors = [c?.author, c?.writer, c?.commenter]; // ❗️user는 제외 (모호)
+    const actors = [c?.author, c?.writer, c?.commenter]; // user는 제외(모호)
     for (const a of actors) {
         if (!a || typeof a !== 'object') continue;
         const s = U(a.status || a.accountStatus || a.userStatus || a.authorStatus);
@@ -217,7 +246,8 @@ export default function WantedComments({ wantedId }) {
     async function fetchList() {
         setLoading(true);
         try {
-            const res = await fetch(`/api/wanted/${wantedId}/comments`, { headers: publicHeaders() });
+            // ✅ GET도 쿠키 포함(세션 로그인이면 목록에 권한 플래그 내려올 수 있음)
+            const res = await fetch(`/api/wanted/${wantedId}/comments`, publicInit());
             if (!res.ok) throw new Error(`목록 실패 (${res.status})`);
             const json = await toJsonSafely(res);
             setList(normalizeApiData(json));
@@ -236,11 +266,7 @@ export default function WantedComments({ wantedId }) {
         if (!body.content) return;
         try {
             setTextError('');
-            const res = await fetch(`/api/wanted/${wantedId}/comments`, {
-                method: 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify(body),
-            });
+            const res = await fetch(`/api/wanted/${wantedId}/comments`, authInit(body));
             const json = await toJsonSafely(res);
             if (!res.ok) {
                 if (res.status === 400 && json?.success === false && json?.data?.field) {
@@ -263,11 +289,7 @@ export default function WantedComments({ wantedId }) {
         if (!body.content) return;
         try {
             setReplyError('');
-            const res = await fetch(`/api/wanted/${wantedId}/comments/${parentId}/replies`, {
-                method: 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify(body),
-            });
+            const res = await fetch(`/api/wanted/${wantedId}/comments/${parentId}/replies`, authInit(body));
             const json = await toJsonSafely(res);
             if (!res.ok) {
                 if (res.status === 400 && json?.success === false && json?.data?.field) {
@@ -289,10 +311,7 @@ export default function WantedComments({ wantedId }) {
     async function remove(commentId) {
         if (!window.confirm(t('wantedComments.confirmDelete'))) return;
         try {
-            const res = await fetch(`/api/wanted/${wantedId}/comments/${commentId}`, {
-                method: 'DELETE',
-                headers: authHeaders(),
-            });
+            const res = await fetch(`/api/wanted/${wantedId}/comments/${commentId}`, authInit());
             if (!res.ok && res.status !== 204) {
                 const json = await toJsonSafely(res);
                 throw new Error(json?.message || t('wantedComments.error.deleteFailed', { status: res.status }));
@@ -306,11 +325,13 @@ export default function WantedComments({ wantedId }) {
 
     const renderItem = (c) => {
         const created = c.createdAt ? new Date(c.createdAt) : null;
-        const mine = computeMine(c, myId); // ✅ 잘못된 필드(user?.id) 배제
+        const mine = computeMine(c, myId);
         const displayName = nameForComment(c, t);
 
+        const key = c.id ?? c.commentId ?? c.cid;
+
         return (
-            <Item key={c.id ?? c.commentId ?? c.cid}>
+            <Item key={key}>
                 <Meta>
           <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
             <FaUser/>{displayName}
@@ -343,17 +364,17 @@ export default function WantedComments({ wantedId }) {
                 </Content>
 
                 <Actions>
-                    <Button onClick={() => { setReplyFor(c.id ?? c.commentId ?? c.cid); setReplyText(''); }}>
+                    <Button onClick={() => { setReplyFor(key); setReplyText(''); }}>
                         <FaReply/> {t('wantedComments.reply')}
                     </Button>
                     {mine && (
-                        <Button $variant="danger" onClick={() => remove(c.id ?? c.commentId ?? c.cid)}>
+                        <Button $variant="danger" onClick={() => remove(key)}>
                             <FaTrash/> {t('wantedComments.delete')}
                         </Button>
                     )}
                 </Actions>
 
-                {replyFor === (c.id ?? c.commentId ?? c.cid) && (
+                {replyFor === key && (
                     <ReplyBox>
                         <EditorRow>
                             <Textarea
@@ -365,7 +386,7 @@ export default function WantedComments({ wantedId }) {
                                 <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{replyError}</div>
                             )}
                             <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                                <Button $variant="primary" onClick={() => submitReply(c.id ?? c.commentId ?? c.cid)}>{t('wantedComments.submit')}</Button>
+                                <Button $variant="primary" onClick={() => submitReply(key)}>{t('wantedComments.submit')}</Button>
                                 <Button onClick={() => { setReplyFor(null); setReplyText(''); }}>{t('wantedComments.cancel')}</Button>
                             </div>
                         </EditorRow>
