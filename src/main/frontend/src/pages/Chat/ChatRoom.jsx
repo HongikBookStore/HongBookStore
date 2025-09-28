@@ -246,11 +246,11 @@ const MessageStatus = styled.div`
 
 const StatusIcon = styled.span`
   color: ${props => {
-  if (props.$status === 'sending') return '#ffa726';
-  if (props.$status === 'read') return '#2196f3';
-  if (props.$status === 'failed') return '#f44336';
-  return '#9e9e9e';
-}};
+    if (props.$status === 'sending') return '#ffa726';
+    if (props.$status === 'read') return '#2196f3';
+    if (props.$status === 'failed') return '#f44336';
+    return '#9e9e9e';
+  }};
   font-size: 0.8rem;
 `;
 
@@ -856,9 +856,7 @@ const ChatRoom = () => {
         if (room.salePostId) {
           const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
           if (postRes.ok) {
-            const post = await respo
-                .json()
-                .catch(() => null) || await postRes.json(); // 안전
+            const post = await postRes.json(); // 안전
             const statusLocal = toLocalStatus((post && post.status) || null);
             setPostStatus(statusLocal);
             setSellerDefault({
