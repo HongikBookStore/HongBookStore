@@ -30,7 +30,8 @@
     "won": "ウォン",
     "view": "表示",
     "preview": "プレビュー",
-    "move": "進む"
+    "move": "進む",
+    "saving": "保存中..."
   },
   "myBookstore": {
     "title": "私の書店",
@@ -154,7 +155,10 @@
       "reservationCancelledWithReason": "予約がキャンセルされました: {{reason}}",
       "transactionCompleted": "取引が完了しました",
       "declinedBySeller": "売り手によって拒否されました",
-      "reservationDeclined": "予約が拒否されました"
+      "reservationDeclined": "予約が拒否されました",
+      "reservationApproved": "予約が承認されました。",
+      "reservationAcceptedBySeller": "販売者が予約を承諾しました。予約が確定しました。",
+      "reservationInfo": "予約案内"
     },
     "quickAction": {
       "price": "価格相談",
@@ -230,7 +234,15 @@
     "useThisLocation": "約束場所の決定",
     "optimalPath": "最適ルート",
     "recommendedMidpoint": "おすすめの中間場所",
-    "shortestPath": "最短ルート"
+    "shortestPath": "最短ルート",
+    "selectBuyerLocationOnCampus": "買い手の校内位置を決めてください。",
+    "writeReview": "レビュー作成",
+    "ratingLabel": "評価(1~5)",
+    "keywordsLabel": "キーワード(カンマ区切り、任意)",
+    "transactionCompleteFailed": "取引の完了に失敗しました",
+    "postStatusUpdateFailed": "投稿ステータスの更新に失敗しました",
+    "postFetchFailed": "投稿の取得に失敗しました",
+    "completeTransactionButPostUpdateFailed": "取引は完了しましたが、投稿ステータスの更新に失敗しました。（購入者IDが必要です）"
   },
   "mypage": {
     "nicknameChangeFailed": "ニックネームの変更に失敗しました。",

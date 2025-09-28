@@ -30,7 +30,8 @@
     "won": "韩元",
     "view": "查看",
     "preview": "预览",
-    "move": "移动"
+    "move": "移动",
+    "saving": "保存中..."
   },
   "myBookstore": {
     "title": "我的书店",
@@ -154,7 +155,10 @@
       "reservationCancelledWithReason": "预订已取消: {{reason}}",
       "transactionCompleted": "交易已完成",
       "declinedBySeller": "被卖家拒绝",
-      "reservationDeclined": "预订被拒绝"
+      "reservationDeclined": "预订被拒绝",
+      "reservationApproved": "预订已批准。",
+      "reservationAcceptedBySeller": "卖家已接受预订。预订已确认。",
+      "reservationInfo": "预订信息"
     },
     "quickAction": {
       "price": "价格协商",
@@ -230,7 +234,15 @@
     "useThisLocation": "确定会面地点",
     "optimalPath": "最佳路径",
     "recommendedMidpoint": "推荐的中间位置",
-    "shortestPath": "最短路径"
+    "shortestPath": "最短路径",
+    "selectBuyerLocationOnCampus": "请指定买家的校园位置。",
+    "writeReview": "写评价",
+    "ratingLabel": "評価(1~5)",
+    "keywordsLabel": "关键词(逗号分隔，可选)",
+    "transactionCompleteFailed": "完成交易失败",
+    "postStatusUpdateFailed": "更新帖子状态失败",
+    "postFetchFailed": "获取帖子失败",
+    "completeTransactionButPostUpdateFailed": "交易已完成，但更新帖子状态失败。（需要买家ID）"
   },
   "mypage": {
     "nicknameChangeFailed": "更改昵称失败。",

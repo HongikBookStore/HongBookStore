@@ -538,54 +538,54 @@ function recommendOffCampus(aStation, bStation){
 }
 
 /* ----------------------------- 예약 API ------------------------------ */
-async function apiGetReservation(roomId) {
+async function apiGetReservation(roomId, t) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (res.status === 204) return null;
-  if (!res.ok) throw new Error('예약 조회 실패');
+  if (!res.ok) throw new Error(t('chat.reservationFetchFailed'));
   return res.json();
 }
-async function apiUpsertReservation(roomId, payload) {
+async function apiUpsertReservation(roomId, payload, t) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('예약 저장 실패');
+  if (!res.ok) throw new Error(t('chat.reservationSaveFailed'));
   return res.json();
 }
-async function apiAcceptReservation(roomId, reservationId) {
+async function apiAcceptReservation(roomId, reservationId, t) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/accept`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` }
   });
   if (!res.ok) {
-    const t = await res.text().catch(()=> '');
-    throw new Error(t || '예약 수락 실패');
+    const errorText = await res.text().catch(()=> '');
+    throw new Error(errorText || t('chat.reservationAcceptFailed'));
   }
   return res.json();
 }
-async function apiCancelReservation(roomId, reservationId, reason) {
+async function apiCancelReservation(roomId, reservationId, reason, t) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/cancel`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ reason })
   });
-  if (!res.ok) throw new Error('예약 취소 실패');
+  if (!res.ok) throw new Error(t('chat.reservationCancelFailed'));
   return res.json();
 }
-async function apiCompleteReservation(roomId, reservationId) {
+async function apiCompleteReservation(roomId, reservationId, t) {
   const token = localStorage.getItem('accessToken') || '';
   const res = await fetch(`/api/chat/rooms/${roomId}/reservation/${reservationId}/complete`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` }
   });
-  if (!res.ok) throw new Error('거래 완료 처리 실패');
+  if (!res.ok) throw new Error(t('chat.transactionCompleteFailed'));
   return res.json();
 }
 
@@ -605,7 +605,7 @@ const getAuthHeader = () => {
 const toServerEnum = (s) => String(s || '').toUpperCase().replace(/-/g, '_');
 const toLocalStatus = (s) => String(s || '').toLowerCase();
 
-async function patchPostStatus(postId, status, buyerId) {
+async function patchPostStatus(postId, status, buyerId, t) {
   if (!postId || !status) return;
   const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
   const statusEnum = toServerEnum(status);
@@ -616,16 +616,16 @@ async function patchPostStatus(postId, status, buyerId) {
     body: JSON.stringify(body)
   });
   if (!res.ok) {
-    const t = await res.text().catch(()=> '');
-    throw new Error(t || '게시글 상태 변경 실패');
+    const errorText = await res.text().catch(()=> '');
+    throw new Error(errorText || t('chat.postStatusUpdateFailed'));
   }
   return res.json().catch(()=> ({}));
 }
 
-async function fetchPost(postId) {
+async function fetchPost(postId, t) {
   if (!postId) return null;
   const res = await fetch(`/api/posts/${postId}`, { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('게시글 조회 실패');
+  if (!res.ok) throw new Error(t('chat.postFetchFailed'));
   return res.json();
 }
 
@@ -712,9 +712,9 @@ const ChatRoom = () => {
         info?.placeLabel || info?.placeName || info?.place ||
         info?.locationName || info?.location || info?.address || '';
     const base =
-        s === 'CONFIRMED' ? '예약이 승인되었습니다' :
-            s === 'REQUESTED' ? '예약 요청이 전송되었습니다' :
-                '예약 안내';
+        s === 'CONFIRMED' ? t('chat.systemMessage.reservationApproved') :
+            s === 'REQUESTED' ? t('chat.systemMessage.reservationRequested') :
+                t('chat.systemMessage.reservationInfo');
     const dateLabel = rawDate ? formatDateLabel(rawDate) : null;
     return [base, dateLabel, place].filter(Boolean).join(' · ');
   }
@@ -895,7 +895,7 @@ const ChatRoom = () => {
     if (!roomId) return;
     (async () => {
       try {
-        const r = await apiGetReservation(roomId);
+        const r = await apiGetReservation(roomId, t);
         if (!r) {
           setReservationId(null);
           setIsPending(false);
@@ -1096,7 +1096,7 @@ const ChatRoom = () => {
   const handleReserve = async () => {
     if (!salePostId) { setShowReserveModal(true); return; }
     try {
-      const latest = await fetchPost(salePostId);
+      const latest = await fetchPost(salePostId, t);
       const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
       setPostStatus(st || null);
       if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
@@ -1109,7 +1109,7 @@ const ChatRoom = () => {
     if (!selectedPlace || !selectedDate) { alert(t('chat.selectPlaceAndDate')); return; }
     try {
       if (salePostId) {
-        const latest = await fetchPost(salePostId);
+        const latest = await fetchPost(salePostId, t);
         const st = latest?.status ? toLocalStatus(latest.status) : toLocalStatus(postStatus);
         if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
         if (st === 'sold_out') { alert(t('chat.alreadySold')); return; }
@@ -1125,7 +1125,7 @@ const ChatRoom = () => {
               ? { ...base, oncampusPlaceCode: campusSuggest?.midCode || sellerDefault.oncampusPlaceCode || null, offcampusStationCode: null }
               : { ...base, oncampusPlaceCode: null, offcampusStationCode: offSuggest?.midStation || sellerDefault.offcampusStationCode || null };
 
-      const res = await apiUpsertReservation(roomId, payload);
+      const res = await apiUpsertReservation(roomId, payload, t);
 
       setReservationId(res.id);
       const stNow = String(res.status || '').toUpperCase();
@@ -1147,7 +1147,7 @@ const ChatRoom = () => {
   const handleAcceptReservation = async () => {
     if (!reservationId) return;
     try {
-      await apiAcceptReservation(roomId, reservationId);
+      await apiAcceptReservation(roomId, reservationId, t);
 
       setIsPending(false);
       setIsReserved(true);
@@ -1155,7 +1155,7 @@ const ChatRoom = () => {
 
       try {
         if (salePostId && buyerId) {
-          await patchPostStatus(salePostId, 'reserved', buyerId);
+          await patchPostStatus(salePostId, 'reserved', buyerId, t);
           setPostStatus('reserved');
         }
       } catch (e) {
@@ -1163,7 +1163,7 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationAcceptedBySeller'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
     }
@@ -1172,7 +1172,7 @@ const ChatRoom = () => {
   const handleDeclineReservation = async () => {
     if (!reservationId) return;
     try {
-      await apiCancelReservation(roomId, reservationId, t('chat.systemMessage.declinedBySeller'));
+      await apiCancelReservation(roomId, reservationId, t('chat.systemMessage.declinedBySeller'), t);
       setIsPending(false);
       setIsReserved(false);
       setMessages(prev => ([
@@ -1180,7 +1180,7 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationDeclined'), cancel: true, sentAt: new Date().toISOString() }
       ]));
       try {
-        if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
+        if (salePostId) { await patchPostStatus(salePostId, 'for_sale', null, t); setPostStatus('for_sale'); }
       } catch {}
     } catch {
       alert(t('chat.reservationDeclineFailed'));
@@ -1192,7 +1192,7 @@ const ChatRoom = () => {
   const handleCancelConfirm = async () => {
     try {
       if (!reservationId) { setShowCancelModal(false); return; }
-      await apiCancelReservation(roomId, reservationId, cancelReason || '');
+      await apiCancelReservation(roomId, reservationId, cancelReason || '', t);
       setIsPending(false);
       setIsReserved(false);
       setShowCancelModal(false);
@@ -1202,7 +1202,7 @@ const ChatRoom = () => {
       ]));
       setCancelReason('');
       try {
-        if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
+        if (salePostId) { await patchPostStatus(salePostId, 'for_sale', null, t); setPostStatus('for_sale'); }
       } catch {}
     } catch {
       alert(t('chat.reservationCancelFailed'));
@@ -1211,11 +1211,11 @@ const ChatRoom = () => {
 
   const handleComplete = async () => {
     if (!reservationId) return;
-    if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
-    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
+    if (!isSeller) { alert(t('chat.sellerOnly')); return; }
+    if (isCompleted) { alert(t('chat.alreadyCompleted')); return; }
 
     try {
-      await apiCompleteReservation(roomId, reservationId);
+      await apiCompleteReservation(roomId, reservationId, t);
 
       setIsPending(false);
       setIsReserved(false);
@@ -1224,18 +1224,18 @@ const ChatRoom = () => {
       try {
         if (!salePostId) throw new Error('salePostId 없음');
         if (!buyerId) throw new Error('buyerId 없음(거래 상대 사용자 ID)');
-        await patchPostStatus(salePostId, 'sold_out', buyerId);
+        await patchPostStatus(salePostId, 'sold_out', buyerId, t);
         setPostStatus('sold_out');
       } catch (e) {
-        alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다. (구매자 ID 필요)');
+        alert(t('chat.completeTransactionButPostUpdateFailed'));
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.transactionCompleted'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      alert('거래 완료 처리에 실패했습니다.');
+      alert(t('chat.transactionCompleteFailed'));
     }
   };
 

@@ -31,7 +31,8 @@
     "won": "원",
     "view": "보기",
     "preview": "미리보기",
-    "move": "이동"
+    "move": "이동",
+    "saving": "저장 중..."
   },
   "postWrite": {
     "title": "판매글 등록",
@@ -1002,7 +1003,10 @@
       "reservationCancelledWithReason": "예약이 취소되었습니다: {{reason}}",
       "transactionCompleted": "거래가 완료되었습니다",
       "declinedBySeller": "판매자에 의해 거절되었습니다",
-      "reservationDeclined": "예약이 거절되었습니다"
+      "reservationDeclined": "예약이 거절되었습니다",
+      "reservationApproved": "예약이 승인되었습니다",
+      "reservationAcceptedBySeller": "판매자가 예약을 수락했습니다. 예약이 확정되었습니다.",
+      "reservationInfo": "예약 안내"
     },
     "quickAction": {
       "price": "가격협상",
@@ -1079,7 +1083,15 @@
     "optimalPath": "최적 경로",
     "recommendedMidpoint": "추천 중간 장소",
     "shortestPath": "최단 경로",
-    "reportReasonPlaceholder": "사유를 입력해주세요."
+    "reportReasonPlaceholder": "사유를 입력해주세요.",
+    "selectBuyerLocationOnCampus": "구매자 교내 위치를 정해주세요.",
+    "writeReview": "리뷰 작성",
+    "ratingLabel": "평가(1~5)",
+    "keywordsLabel": "키워드(쉼표 구분, 선택)",
+    "transactionCompleteFailed": "거래 완료 처리 실패",
+    "postStatusUpdateFailed": "게시글 상태 변경 실패",
+    "postFetchFailed": "게시글 조회 실패",
+    "completeTransactionButPostUpdateFailed": "거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다. (구매자 ID 필요)"
   },
   "mypage": {
     "transactionRating": "거래 평점",

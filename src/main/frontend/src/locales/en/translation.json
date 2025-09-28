@@ -30,7 +30,8 @@
     "won": "Won",
     "view": "View",
     "preview": "Preview",
-    "move": "Move"
+    "move": "Move",
+    "saving": "Saving..."
   },
   "myBookstore": {
     "title": "My Bookstore",
@@ -149,7 +150,10 @@
       "reservationCancelledWithReason": "Reservation cancelled: {{reason}}",
       "transactionCompleted": "Transaction completed",
       "declinedBySeller": "Declined by seller",
-      "reservationDeclined": "Reservation declined"
+      "reservationDeclined": "Reservation declined",
+      "reservationApproved": "Reservation has been approved.",
+      "reservationAcceptedBySeller": "The seller has accepted the reservation. The reservation is confirmed.",
+      "reservationInfo": "Reservation Information"
     },
     "quickAction": {
       "price": "Price Negotiation",
@@ -225,7 +229,15 @@
     "useThisLocation": "Decide on a meeting place",
     "optimalPath": "Optimal path",
     "recommendedMidpoint": "Recommended intermediate location",
-    "shortestPath": "shortest path"
+    "shortestPath": "shortest path",
+    "selectBuyerLocationOnCampus": "Please specify the buyer's on-campus location.",
+    "writeReview": "Write Review",
+    "ratingLabel": "Rating (1~5)",
+    "keywordsLabel": "Keywords (comma separated, optional)",
+    "transactionCompleteFailed": "Failed to complete transaction",
+    "postStatusUpdateFailed": "Failed to update post status",
+    "postFetchFailed": "Failed to fetch post",
+    "completeTransactionButPostUpdateFailed": "Transaction is complete, but failed to update the post status. (Buyer ID required)"
   },
   "mypage": {
     "nicknameChangeFailed": "Failed to change nickname.",
