@@ -1,3 +1,4 @@
+// src/pages/ChatRoom/ChatRoom.jsx
 import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import styled from 'styled-components';
 import {
@@ -9,7 +10,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Stomp from 'stompjs';
 import { AuthCtx } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { startNotificationStream, stopNotificationStream } from '../../api/notifications';
 
 /* ----------------------------- styled components ----------------------------- */
 const ChatContainer = styled.div`
@@ -150,7 +150,7 @@ const ChatMenuButton = styled.button`
     color: #bbb;
     background: #f5f5f5;
     border-color: #eee;
-    cursor: 'not-allowed';
+    cursor: not-allowed;
   }
   @media (max-width: 768px) {
     min-width: 100px; font-size: 0.9rem; padding: 0.6rem 0.8rem; margin-left: 5px;
@@ -246,11 +246,11 @@ const MessageStatus = styled.div`
 
 const StatusIcon = styled.span`
   color: ${props => {
-  if (props.$status === 'sending') return '#ffa726';
-  if (props.$status === 'read') return '#2196f3';
-  if (props.$status === 'failed') return '#f44336';
-  return '#9e9e9e';
-}};
+    if (props.$status === 'sending') return '#ffa726';
+    if (props.$status === 'read') return '#2196f3';
+    if (props.$status === 'failed') return '#f44336';
+    return '#9e9e9e';
+  }};
   font-size: 0.8rem;
 `;
 
@@ -483,7 +483,7 @@ const SUBWAY_MAP = {
   '경의중앙선': ["문산","파주","금촌","금릉","운정","야당","탄현","일산","풍산","백마","곡산","대곡","능곡","행신","강매","화전","수색","디지털미디어시티","가좌","신촌(경의중앙선)","서울역","용산","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기","중랑","상봉","망우","양원","구리","도농","덕소","도심","팔당","운길산","양수","신원","국수","아신","오빈","양평","원덕","용문","지평"],
   '공항철도': ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항","계양","검암","청라국제도시","영종","운서","공항화물청사","인천공항1터미널","인천공항2터미널"],
   '신분당선': ["강남","양재","양재시민의숲","청계산입구","판교","정자","미금","동천","수지구청","성복","상현","광교중앙","광교"],
-  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
+  '수인분당선': ["인천","신포","숭의","인하대","송도","연수","원인재","남동인더스파크","호구포","인천논현","소래포구","월곶","달월","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","안산","신길온천","정왕","오이도","정왕","신길온천","안산","한대앞","중앙","고잔","초지","금정","범계","평촌","인덕원","정부과천청사","과천","대공원","경마공원","선바위","남태령","수원","매교","수원시청","매탄권선","망포","영통","청명","상갈","기흥","신갈","구성","보정","죽전","오리","미금","정자","수내","서현","이매","야탑","모란"]
 };
 const getLineByStation = (station) => {
   if (!station) return null;
@@ -597,14 +597,18 @@ function normalizeDateTime(input) {
   return input;
 }
 
+// 공통 헤더
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken') || '';
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// ✅ 서버 ENUM으로 변환(대문자 + 언더스코어)
 const toServerEnum = (s) => String(s || '').toUpperCase().replace(/-/g, '_');
+// ✅ 서버 ENUM → 화면 비교용 소문자
 const toLocalStatus = (s) => String(s || '').toLowerCase();
 
+// sale_post 상태 변경
 async function patchPostStatus(postId, status, buyerId) {
   if (!postId || !status) return;
   const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
@@ -622,6 +626,7 @@ async function patchPostStatus(postId, status, buyerId) {
   return res.json().catch(()=> ({}));
 }
 
+// 최신 게시글 조회
 async function fetchPost(postId) {
   if (!postId) return null;
   const res = await fetch(`/api/posts/${postId}`, { headers: getAuthHeader() });
@@ -631,42 +636,8 @@ async function fetchPost(postId) {
 
 /* ----------------------------- component start ------------------------------ */
 
-// WebSocket endpoint: derive from VITE_WS_BASE or VITE_API_BASE; fallback to dev localhost
-const resolveWsEndpoint = () => {
-  const env = import.meta.env || {};
-  const { VITE_WS_BASE, VITE_API_BASE } = env;
-
-  const makeWsUrlFromBase = (base) => {
-    if (!base || typeof window === 'undefined') return null;
-    try {
-      const u = new URL(base, window.location.origin);
-      const pageHttps = window.location.protocol === 'https:';
-      const proto = pageHttps ? 'wss' : 'ws';
-      const host = u.host;
-      return `${proto}://${host}/ws-stomp/websocket`;
-    } catch {
-      return null;
-    }
-  };
-
-  const fromWsBase = makeWsUrlFromBase(VITE_WS_BASE);
-  if (fromWsBase) return fromWsBase;
-
-  const fromApi = makeWsUrlFromBase(VITE_API_BASE);
-  if (fromApi) return fromApi;
-
-  if (typeof window !== 'undefined' && window.location.port === '5173') {
-    return 'ws://localhost:8080/ws-stomp/websocket';
-  }
-
-  const pageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  return (pageHttps ? 'wss://' : 'ws://') + window.location.host + '/ws-stomp/websocket';
-};
-
-const WS_ENDPOINT = resolveWsEndpoint();
-
-// ✅ WS 호스트를 전역에 심어 SSE가 재사용하도록
-try { window.__HBS_BACKEND_HOST__ = new URL(WS_ENDPOINT).host; } catch {}
+const WS_ENDPOINT = 'ws://localhost:8080/ws-stomp/websocket';
+const SSE_ENDPOINT = (token) => `/api/notifications/stream?token=${encodeURIComponent(token || '')}`;
 
 const ChatRoom = () => {
   const { t } = useTranslation();
@@ -677,20 +648,23 @@ const ChatRoom = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
 
+  // chatId → 유효한 숫자 roomId로 변환
   const roomId = useMemo(() => {
     const n = Number(chatId);
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [chatId]);
 
-  const [isPending, setIsPending] = useState(false);
-  const [isReserved, setIsReserved] = useState(false);
+  const [isPending, setIsPending] = useState(false);    // REQUESTED
+  const [isReserved, setIsReserved] = useState(false);  // CONFIRMED
   const [reservationId, setReservationId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
 
+  // === Reservation system banner state (avoid duplicate injections) ===
   const reservationBannerKeyRef = useRef('');
 
+// 날짜 문자열을 간단히 표기 (시간 제거)
   function formatDateLabel(dateStr) {
     if (!dateStr) return '';
     const s = String(dateStr).trim();
@@ -703,6 +677,7 @@ const ChatRoom = () => {
     return s;
   }
 
+// 예약 안내문 생성 (시간 없이 날짜+장소만)
   function buildReservationText(info, status) {
     const s = String(status || info?.status || '').toUpperCase();
     const rawDate =
@@ -719,6 +694,7 @@ const ChatRoom = () => {
     return [base, dateLabel, place].filter(Boolean).join(' · ');
   }
 
+// 시스템 메시지로 1회 주입
   const injectReservationBanner = (info) => {
     if (!info) return;
     const key = [info.id, info.status, info.reservedAt || info.date || info.when, info.placeLabel || info.placeName || info.location || info.address].join('|');
@@ -734,7 +710,7 @@ const ChatRoom = () => {
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
-  const [reportEtcText, setReportEtcText] = useState('');
+  const [reportEtcText, setReportEtcText] = useState(''); // ✅ 기타 상세 입력
   const [showReportExitModal, setShowReportExitModal] = useState(false);
 
   const [hovered, setHovered] = useState('');
@@ -743,6 +719,7 @@ const ChatRoom = () => {
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
 
+  // 스마트 예약 관련
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -754,11 +731,13 @@ const ChatRoom = () => {
   const [senderId, setSenderId] = useState(null);
   const [salePostId, setSalePostId] = useState(null);
 
+  // 참여자/게시글 상태
   const [postStatus, setPostStatus] = useState(null);
   const [buyerId, setBuyerId] = useState(null);
   const [sellerId, setSellerId] = useState(null);
 
   const stompClient = useRef(null);
+  const sseRef = useRef(null);
   const { user } = useContext(AuthCtx);
   const currentUserId = user?.id;
 
@@ -771,20 +750,24 @@ const ChatRoom = () => {
       [currentUserId, sellerId]
   );
 
+  // ✅ 상대 사용자 ID(신고 대상)
   const otherUserId = useMemo(() => {
     if (receiverId) return receiverId;
     if (!buyerId || !sellerId || !currentUserId) return null;
     return currentUserId === sellerId ? buyerId : sellerId;
   }, [receiverId, buyerId, sellerId, currentUserId]);
 
+  // 날씨
   const [weeklyWeather, setWeeklyWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
+  // 판매자 기본 위치
   const [sellerDefault, setSellerDefault] = useState({
     oncampusPlaceCode: null,
     offcampusStationCode: null
   });
 
+  // 교내/교외 추천
   const [meetType, setMeetType] = useState('on'); // 'on' | 'off'
   const [buyerCampusCode, setBuyerCampusCode] = useState('');
   const [campusSuggest, setCampusSuggest] = useState(null);
@@ -853,19 +836,17 @@ const ChatRoom = () => {
         setBuyerId(room.buyerId);
         setSellerId(room.sellerId);
 
+        // 판매자 기본 위치 + 게시글 상태
         if (room.salePostId) {
           const postRes = await fetch(`/api/posts/${room.salePostId}`, { headers: { Authorization: `Bearer ${token}` }});
           if (postRes.ok) {
-            const post = await respo
-                .json()
-                .catch(() => null) || await postRes.json(); // 안전
-            const statusLocal = toLocalStatus((post && post.status) || null);
-            setPostStatus(statusLocal);
+            const post = await postRes.json();
+            setPostStatus(toLocalStatus(post.status || null));
             setSellerDefault({
-              oncampusPlaceCode: post?.oncampusPlaceCode || null,
-              offcampusStationCode: post?.offcampusStationCode || null
+              oncampusPlaceCode: post.oncampusPlaceCode || null,
+              offcampusStationCode: post.offcampusStationCode || null
             });
-            setMeetType(post?.oncampusPlaceCode ? 'on' : (post?.offcampusStationCode ? 'off' : 'on'));
+            setMeetType(post.oncampusPlaceCode ? 'on' : (post.offcampusStationCode ? 'off' : 'on'));
           }
         }
       } catch (err) {
@@ -873,7 +854,7 @@ const ChatRoom = () => {
       }
     }
     loadRoomInfo();
-  }, [roomId, t]);
+  }, [roomId]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -890,7 +871,7 @@ const ChatRoom = () => {
       }
     };
     loadPreviousMessages();
-  }, [roomId, t]);
+  }, [roomId]);
 
   /* ------------------------------ 예약 상태 로드 ------------------------------ */
   useEffect(() => {
@@ -922,7 +903,7 @@ const ChatRoom = () => {
         }
 
         injectReservationBanner(r);
-      } catch {
+      } catch (e) {
         // ignore
       }
     })();
@@ -951,7 +932,7 @@ const ChatRoom = () => {
           setHasProfanity(true);
           setProfanityWarning(msg + extra);
           setTimeout(() => { setHasProfanity(false); setProfanityWarning(''); }, 6000);
-        } catch { /* ignore */ }
+        } catch (e) { /* ignore */ }
       });
       stompClient.current = stomp;
     });
@@ -959,18 +940,20 @@ const ChatRoom = () => {
     return () => {
       try { stomp.disconnect(() => { stompClient.current = null; }); } catch { stompClient.current = null; }
     };
-  }, [roomId, t]);
+  }, [roomId]);
 
   /* ----------------------------- ✅ SSE 구독 ----------------------------- */
   useEffect(() => {
     const token = localStorage.getItem('accessToken') || '';
     if (!token) return;
 
+    const es = new EventSource(SSE_ENDPOINT(token));
+    sseRef.current = es;
+
     const handleNotify = (evt) => {
       try {
-        const data = (typeof evt === 'string') ? JSON.parse(evt) : evt; // notifications.js에서 e.data 파싱됨
+        const data = JSON.parse(evt.data);
         if (!data) return;
-
         const sameRoom = roomId && Number(data.roomId) === Number(roomId);
         if (!sameRoom) return;
 
@@ -983,7 +966,7 @@ const ChatRoom = () => {
           setIsCompleted(false);
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: buildReservationText(data, 'REQUESTED'), sentAt: new Date().toISOString(), meta: { reservationBanner: true } }
+            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationRequested'), sentAt: new Date().toISOString() }
           ]));
         }
 
@@ -994,7 +977,7 @@ const ChatRoom = () => {
           setPostStatus('reserved');
           setMessages(prev => ([
             ...prev,
-            { id: Date.now(), type: 'system', message: buildReservationText(data, 'CONFIRMED'), sentAt: new Date().toISOString(), meta: { reservationBanner: true } }
+            { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
           ]));
         }
 
@@ -1019,19 +1002,26 @@ const ChatRoom = () => {
             { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
           ]));
         }
-      } catch {
+      } catch (e) {
         // ignore
       }
     };
 
-    const handleError = () => { /* no-op, 자동 재연결 */ };
+    es.addEventListener('notification', handleNotify);
+    es.onmessage = handleNotify;
 
-    const es = startNotificationStream(handleNotify, handleError);
+    es.onerror = () => {
+      // auto-retry by browser
+    };
 
     return () => {
-      stopNotificationStream();
+      try {
+        es.removeEventListener('notification', handleNotify);
+        es.close();
+      } catch {}
+      sseRef.current = null;
     };
-  }, [roomId, t]);
+  }, [roomId]);
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
@@ -1056,9 +1046,7 @@ const ChatRoom = () => {
     setNewMessage('');
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleRetryClick = (messageId) => { setRetryMessageId(messageId); setShowRetryModal(true); };
   const handleRetryConfirm = async () => { if (retryMessageId) { setShowRetryModal(false);  setRetryMessageId(null);} };
@@ -1103,10 +1091,13 @@ const ChatRoom = () => {
       setPostStatus(st || null);
       if (st === 'reserved') { alert(t('chat.alreadyReserved')); return; }
       if (st === 'sold_out') { alert(t('chat.alreadySold')); return; }
-    } catch { /* ignore */ }
+    } catch (e) {
+      // ignore
+    }
     setShowReserveModal(true);
   };
 
+  // 예약 요청(구매자)
   const handleReserveConfirm = async () => {
     if (!selectedPlace || !selectedDate) { alert(t('chat.selectPlaceAndDate')); return; }
     try {
@@ -1120,7 +1111,7 @@ const ChatRoom = () => {
       const base = {
         meetType,
         placeLabel: selectedPlace,
-        reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate)
+        reservedAt: normalizeDateTime(selectedDate.iso)
       };
       const payload =
           meetType === 'on'
@@ -1139,13 +1130,14 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: buildReservationText({ reservedAt: (selectedDate?.iso || selectedDate?.date || selectedDate), placeLabel: selectedPlace }, 'REQUESTED'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.reservationRequestSent'), sentAt: new Date().toISOString() }
       ]));
-    } catch {
+    } catch (e) {
       alert(t('chat.reservationFailed'));
     }
   };
 
+  // 판매자: 예약 수락
   const handleAcceptReservation = async () => {
     if (!reservationId) return;
     try {
@@ -1156,21 +1148,25 @@ const ChatRoom = () => {
       setIsCompleted(false);
 
       try {
-        if (salePostId && buyerId) {
-          await patchPostStatus(salePostId, 'reserved', buyerId);
+        const buyerForPatch = buyerId || currentUserId;
+        if (salePostId) {
+          await patchPostStatus(salePostId, 'reserved', buyerForPatch || undefined);
           setPostStatus('reserved');
         }
       } catch (e) {
+        // ignore
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '판매자가 예약을 수락했습니다. 예약이 확정되었습니다.', sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationConfirmed'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
+      alert(t('chat.reservationAcceptFailed'));
     }
   };
 
+  // 판매자: 예약 거절(=취소)
   const handleDeclineReservation = async () => {
     if (!reservationId) return;
     try {
@@ -1181,10 +1177,11 @@ const ChatRoom = () => {
         ...prev,
         { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationDeclined'), cancel: true, sentAt: new Date().toISOString() }
       ]));
+      // 게시글 상태 복구
       try {
         if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
       } catch {}
-    } catch {
+    } catch (e) {
       alert(t('chat.reservationDeclineFailed'));
     }
   };
@@ -1203,44 +1200,41 @@ const ChatRoom = () => {
         { id: Date.now(), type: 'system', message: t('chat.systemMessage.reservationCancelledWithReason', { reason: cancelReason }), cancel: true, sentAt: new Date().toISOString() }
       ]));
       setCancelReason('');
+      // 게시글 상태를 되돌림
       try {
         if (salePostId) { await patchPostStatus(salePostId, 'for_sale'); setPostStatus('for_sale'); }
       } catch {}
-    } catch {
+    } catch (e) {
       alert(t('chat.reservationCancelFailed'));
     }
   };
 
   const handleComplete = async () => {
     if (!reservationId) return;
-    if (!isSeller) { alert('판매자만 거래 완료 처리할 수 있습니다.'); return; }
-    if (isCompleted) { alert('이미 거래 완료 처리되었습니다. 완료 취소는 지원하지 않습니다.'); return; }
-
+    if (!isSeller) { alert(t('chat.sellerOnly')); return; }
+    if (isCompleted) { alert(t('chat.alreadyCompleted')); return; }
     try {
       await apiCompleteReservation(roomId, reservationId);
-
       setIsPending(false);
       setIsReserved(false);
       setIsCompleted(true);
 
       try {
-        if (!salePostId) throw new Error('salePostId 없음');
-        if (!buyerId) throw new Error('buyerId 없음(거래 상대 사용자 ID)');
-        await patchPostStatus(salePostId, 'sold_out', buyerId);
-        setPostStatus('sold_out');
+        if (salePostId) { await patchPostStatus(salePostId, 'sold_out'); setPostStatus('sold_out'); }
       } catch (e) {
-        alert('거래 완료는 처리됐지만, 게시글 상태 업데이트에 실패했습니다. (구매자 ID 필요)');
+        alert(t('chat.completeTransactionFailed'));
       }
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: '거래가 완료되었습니다.', sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
-      alert('거래 완료 처리에 실패했습니다.');
+      alert(t('chat.completeTransactionFailed'));
     }
   };
 
+  // ✅ 신고 모달 열기/제출 + 백엔드 전송
   const handleReport = () => {
     setShowReportModal(true);
     setReportReason('');
@@ -1249,37 +1243,19 @@ const ChatRoom = () => {
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
-    const ABUSE_LABEL = t('chat.reportReasons.abuse');
-    const FRAUD_LABEL = t('chat.reportReasons.fraud');
-    const SPAM_LABEL  = t('chat.reportReasons.spam');
-    const OTHER_LABEL = t('chat.reportReasons.other');
-
     if (!reportReason) return;
-    const isOtherSelected = (
-        reportReason === OTHER_LABEL ||
-        reportReason === '기타' ||
-        reportReason.toString().toUpperCase() === 'OTHER' ||
-        reportReason === 'other'
-    );
-    if (isOtherSelected && !reportEtcText.trim()) return;
+    if (reportReason === '기타' && !reportEtcText.trim()) return;
     if (!otherUserId) { alert(t('chat.reportTargetMissing')); return; }
 
-    const reasonEnum = (() => {
-      const val = reportReason.toString().toUpperCase();
-      if (reportReason === ABUSE_LABEL || val === 'ABUSE' || reportReason === '욕설/비방') return 'ABUSE';
-      if (reportReason === FRAUD_LABEL || val === 'FRAUD' || reportReason === '사기/허위매물') return 'FRAUD';
-      if (reportReason === SPAM_LABEL  || val === 'SPAM'  || reportReason === '스팸/광고') return 'SPAM';
-      if (reportReason === OTHER_LABEL || val === 'OTHER' || reportReason === '기타' || reportReason === 'other') return 'OTHER';
-      return reportReason;
-    })();
+    const reasonText = reportReason === '기타' ? reportEtcText.trim() : reportReason;
 
     try {
       const payload = {
-        type: 'CHAT_ROOM',
+        type: 'CHAT_ROOM',                // 서버에서 채팅 신고로 구분
         targetId: Number(otherUserId),
-        chatRoomId: Number(roomId),
-        reason: reasonEnum,
-        ...(reasonEnum === 'OTHER' ? { detail: reportEtcText.trim() } : {})
+        chatRoomId: Number(roomId),        // ✅ 현재 채팅방 ID
+        reason: (reportReason === '기타' ? 'OTHER' : reasonText),
+        ...(reportReason === '기타' ? { detail: reportEtcText.trim() } : {})
       };
 
       const res = await fetch('/api/reports', {
@@ -1289,11 +1265,11 @@ const ChatRoom = () => {
       });
 
       if (!res.ok) {
-        const responseText = await res.text().catch(()=> '');
+        const t = await res.text().catch(()=> '');
         if (res.status === 409) {
           alert(t('chat.alreadyReported'));
         } else if (res.status === 400) {
-          alert(responseText || t('chat.invalidReport'));
+          alert(t || t('chat.invalidReport'));
         } else if (res.status === 401) {
           alert(t('chat.loginRequired'));
         } else if (res.status === 404) {
@@ -1305,17 +1281,21 @@ const ChatRoom = () => {
         return;
       }
 
+      // 성공
       setShowReportModal(false);
       setShowReportExitModal(true);
-    } catch {
+    } catch (err) {
       alert(t('chat.reportFailed'));
       setShowReportModal(false);
     }
   };
 
   const handleReportExit = () => { setShowReportExitModal(false); navigate('/chat'); };
+
   const handleBack = () => { navigate('/chat'); };
   const formatTime = (timestamp) => { const date = new Date(timestamp); return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); };
+
+  /* --------------------------- 스마트 예약 (날씨) -------------------------- */
 
   async function getCoords() {
     return new Promise((resolve) => {
@@ -1346,13 +1326,13 @@ const ChatRoom = () => {
         const sido = '서울';
         const r = await fetchWeeklyWeather({ lat, lng, sido });
         setWeeklyWeather(r);
-      } catch {
+      } catch (e) {
         setWeeklyWeather(null);
       } finally {
         setWeatherLoading(false);
       }
     })();
-  }, [showReserveModal, t]);
+  }, [showReserveModal]);
 
   const dateOptions = (weeklyWeather?.days || []).map(d => {
     const isoRaw = d.date;
@@ -1361,23 +1341,50 @@ const ChatRoom = () => {
     const label = dt.toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit', weekday:'short' });
     const pop = d.popAvg ?? 0;
     const weatherLabel = pop <= 20 ? '맑음' : pop <= 60 ? '구름' : '비';
-    return { date: label, iso, pop, best: d.best, am: d.popAm, pm: d.popPm, weather: weatherLabel };
+    return {
+      date: label, iso, pop, best: d.best,
+      am: d.popAm, pm: d.popPm, weather: weatherLabel
+    };
   });
 
+  /* ---------------------------------- UI 가드 ---------------------------------- */
   if (chatId !== undefined && !roomId) {
     return (
-        <div style={{ maxWidth: 720, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 12, background: '#fff' }}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{t('chat.invalidChatRoomTitle')}</div>
-          <div style={{ color: '#666', marginBottom: 16 }}>{t('chat.invalidChatRoomDescription')}</div>
+        <div
+            style={{
+              maxWidth: 720,
+              margin: '40px auto',
+              padding: 24,
+              border: '1px solid #eee',
+              borderRadius: 12,
+              background: '#fff',
+            }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            {t('chat.invalidChatRoomTitle')}
+          </div>
+          <div style={{ color: '#666', marginBottom: 16 }}>
+            {t('chat.invalidChatRoomDescription')}
+          </div>
           <button
               onClick={() => navigate('/chat')}
-              style={{ padding: '10px 14px', borderRadius: 8, border: 'none', background: '#111827', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#111827',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
           >
             {t('chat.goToChatList')}
           </button>
         </div>
     );
   }
+
+  /* ---------------------------------- JSX ---------------------------------- */
 
   return (
       <>
@@ -1401,8 +1408,9 @@ const ChatRoom = () => {
             </HeaderLeft>
 
             <HeaderRight style={{gap: 0}}>
+              {/* 신고 버튼 */}
               <ChatMenuButton
-                  onClick={() => { setShowReportModal(true); setReportReason(''); setReportEtcText(''); }}
+                  onClick={handleReport}
                   title={t('chat.getLabel.reportLong')}
                   onMouseEnter={() => setHovered('report')}
                   onMouseLeave={() => setHovered('')}
@@ -1411,6 +1419,7 @@ const ChatRoom = () => {
                 {getLabel('report')}
               </ChatMenuButton>
 
+              {/* 판매자 전용: 예약 수락/거절 */}
               {isSeller && isPending && (
                   <>
                     <ChatMenuButton
@@ -1436,6 +1445,7 @@ const ChatRoom = () => {
                   </>
               )}
 
+              {/* 예약/예약취소 */}
               {(isPending || isReserved) ? (
                   (isBuyer || isSeller) && (
                       <ChatMenuButton
@@ -1464,6 +1474,7 @@ const ChatRoom = () => {
                   )
               )}
 
+              {/* 거래 완료(판매자 전용) */}
               {isSeller && (
                   <ChatMenuButton
                       onClick={handleComplete}
@@ -1490,8 +1501,8 @@ const ChatRoom = () => {
 
           {/* 예약 취소 모달 */}
           {showCancelModal && (
-              <ModalOverlay>
-                <ModalBox>
+              <ModalOverlay onClick={()=>{ setShowCancelModal(false); setCancelReason(''); }}>
+                <ModalBox onClick={(e)=>e.stopPropagation()}>
                   <ModalTitle>{t('chat.cancelReservationTitle')}</ModalTitle>
                   <ModalTextarea
                       value={cancelReason}
@@ -1508,8 +1519,8 @@ const ChatRoom = () => {
 
           {/* 신고 모달 */}
           {showReportModal && (
-              <ModalOverlay>
-                <ModalBox as="form" onSubmit={handleReportSubmit}>
+              <ModalOverlay onClick={()=>setShowReportModal(false)}>
+                <ModalBox as="form" onClick={e=>e.stopPropagation()} onSubmit={handleReportSubmit}>
                   <ModalTitle>{t('chat.reportReasonTitle')}</ModalTitle>
 
                   <ReportRadio>
@@ -1540,6 +1551,7 @@ const ChatRoom = () => {
                     {t('chat.reportReasons.other')}
                   </ReportRadio>
 
+                  {/* ✅ '기타' 선택 시 상세 사유 입력 */}
                   {reportReason === 'other' && (
                       <ModalTextarea
                           value={reportEtcText}
@@ -1550,7 +1562,10 @@ const ChatRoom = () => {
 
                   <ModalActions>
                     <ModalButton data-variant="cancel" type="button" onClick={() => setShowReportModal(false)}>{t('common.cancel')}</ModalButton>
-                    <ModalButton type="submit" disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}>
+                    <ModalButton
+                        type="submit"
+                        disabled={!reportReason || (reportReason === '기타' && !reportEtcText.trim())}
+                    >
                       {t('common.submit')}
                     </ModalButton>
                   </ModalActions>
@@ -1560,8 +1575,8 @@ const ChatRoom = () => {
 
           {/* 신고 후 나가기 확인 */}
           {showReportExitModal && (
-              <ModalOverlay>
-                <ModalBox>
+              <ModalOverlay onClick={()=>setShowReportExitModal(false)}>
+                <ModalBox onClick={(e)=>e.stopPropagation()}>
                   <ModalTitle>{t('chat.reportSubmittedTitle')}</ModalTitle>
                   <ModalActions>
                     <ModalButton data-variant="cancel" onClick={() => setShowReportExitModal(false)}>{t('common.no')}</ModalButton>
@@ -1571,8 +1586,195 @@ const ChatRoom = () => {
               </ModalOverlay>
           )}
 
-          {/* 스마트 예약 모달 (UI 그대로) */}
-          {/* ... (예약 관련 JSX — 질문에 주신 그대로 유지) ... */}
+          {/* 스마트 예약 모달 */}
+          {showReserveModal && (
+              <ModalOverlay onClick={()=>setShowReserveModal(false)}>
+                <ReserveModalBox onClick={(e)=>e.stopPropagation()}>
+                  <ModalTitle>{t('chat.smartReserveTitle')}</ModalTitle>
+
+                  {/* 거래 방식 선택 */}
+                  <div style={{fontWeight:700, margin:'6px 0'}}>{t('chat.tradeType')}</div>
+                  <div style={{display:'flex', gap:8, margin:'6px 0 12px'}}>
+                    <button
+                        type="button"
+                        onClick={()=>setMeetType('on')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='on'?'#0b63d1':'#e5e7eb'), background:meetType==='on'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='on'?'#0b63d1':'#334155'}}
+                    ><FaUniversity/> {t('chat.onCampus')}</button>
+                    <button
+                        type="button"
+                        onClick={()=>setMeetType('off')}
+                        style={{padding:'8px 12px', borderRadius:999, border:'1px solid '+(meetType==='off'?'#0b63d1':'#e5e7eb'), background:meetType==='off'?'#eaf2ff':'#fff', fontWeight:800, color:meetType==='off'?'#0b63d1':'#334155'}}
+                    ><FaSubway/> {t('chat.offCampus')}</button>
+                  </div>
+
+                  {/* 판매자 설정 위치 */}
+                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'10px', marginBottom:12}}>
+                    <div style={{fontWeight:800, marginBottom:6}}>{t('chat.sellerLocation')}</div>
+                    {meetType==='on' ? (
+                        sellerDefault.oncampusPlaceCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaUniversity/>{ONCAMPUS_LABELS[sellerDefault.oncampusPlaceCode] || sellerDefault.oncampusPlaceCode}
+                      </span>
+                            : <span style={{color:'#64748b'}}>{t('chat.noSellerLocationOnCampus')}</span>
+                    ) : (
+                        sellerDefault.offcampusStationCode
+                            ? <span style={{display:'inline-flex',alignItems:'center',gap:6,background:'#eef5ff',border:'1px solid #cfe2ff',padding:'6px 10px',borderRadius:999,fontWeight:800,color:'#0b63d1'}}>
+                        <FaSubway/>{`${getLineByStation(sellerDefault.offcampusStationCode) || ''} · ${sellerDefault.offcampusStationCode}`}
+                      </span>
+                            : <span style={{color:'#64748b'}}>{t('chat.noSellerLocationOffCampus')}</span>
+                    )}
+                  </div>
+
+                  {/* 교내 / 교외 입력 + 중간지점 추천 */}
+                  {meetType === 'on' ? (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>{t('chat.buyerLocationOnCampus')}</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
+                          <select
+                              value={buyerCampusCode}
+                              onChange={e=>{ setBuyerCampusCode(e.target.value); setCampusSuggest(null); }}
+                              style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:200, fontWeight:700}}
+                          >
+                            <option value="">{t('chat.selectBuilding')}</option>
+                            {CAMPUS_OPTIONS.map(code => (
+                                <option key={code} value={code}>{ONCAMPUS_LABELS[code] || code}</option>
+                            ))}
+                          </select>
+
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.oncampusPlaceCode) return alert(t('chat.noSellerLocationOnCampus'));
+                                if(!buyerCampusCode) return alert(t('chat.selectBuyerLocationOnCampus'));
+                                const r = recommendOnCampus(sellerDefault.oncampusPlaceCode, buyerCampusCode);
+                                if(!r) return alert(t('chat.noPathFound'));
+                                setCampusSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
+                            <FaTrophy/> {t('chat.recommendMidpoint')}
+                          </button>
+                        </div>
+
+                        {campusSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                {t('chat.recommendedMidpoint')}: {campusSuggest.midLabel}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                {t('chat.shortestPath')}: {campusSuggest.path.map(c=>ONCAMPUS_LABELS[c]||c).join(' → ')}
+                              </div>
+                              <button type="button" onClick={()=>setSelectedPlace(`${t('chat.onCampus')} · ${campusSuggest.midLabel}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> {t('chat.useThisLocation')}
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  ) : (
+                      <>
+                        <div style={{fontWeight:700, marginBottom:8}}>{t('chat.buyerLocationOffCampus')}</div>
+                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:10, flexWrap:'wrap'}}>
+                          <select value={buyerLine} onChange={e=>{ setBuyerLine(e.target.value); setBuyerStation(''); setOffSuggest(null); }}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:160, fontWeight:700}}>
+                            <option value="">{t('chat.selectLine')}</option>
+                            {Object.keys(SUBWAY_MAP).map(line => <option key={line} value={line}>{line}</option>)}
+                          </select>
+                          <select value={buyerStation} onChange={e=>{ setBuyerStation(e.target.value); setOffSuggest(null); }} disabled={!buyerLine}
+                                  style={{padding:'10px', border:'1px solid #e5e7eb', borderRadius:8, minWidth:180, fontWeight:700}}>
+                            <option value="">{buyerLine ? t('chat.selectStation') : t('chat.selectLineFirst')}</option>
+                            {(buyerLine ? getUniqueStations(buyerLine) : []).map(st => <option key={st} value={st}>{st}</option>)}
+                          </select>
+                          <button
+                              type="button"
+                              onClick={()=>{
+                                if(!sellerDefault.offcampusStationCode) return alert(t('chat.noSellerLocationOffCampus'));
+                                if(!buyerStation) return alert(t('chat.selectBuyerStation'));
+                                const r = recommendOffCampus(sellerDefault.offcampusStationCode, buyerStation);
+                                if(!r) return alert(t('chat.noPathFound'));
+                                setOffSuggest(r);
+                              }}
+                              style={{padding:'10px 12px', borderRadius:8, border:'none', background:'#eef2f7', fontWeight:800, color:'#0b63d1'}}
+                          >
+                            <FaTrophy/> {t('chat.recommendMidpointStation')}
+                          </button>
+                        </div>
+
+                        {offSuggest && (
+                            <div style={{background:'#f1f5fe', border:'1px solid #dbeafe', padding:'12px', borderRadius:12, marginBottom:6}}>
+                              <div style={{fontWeight:800, color:'#0b63d1', marginBottom:6}}>
+                                {t('chat.recommendedMidpointStation')}: {getLineByStation(offSuggest.midStation) ? `${getLineByStation(offSuggest.midStation)} · ` : ''}{offSuggest.midStation}
+                              </div>
+                              <div style={{color:'#334155', marginBottom:8, fontSize:14}}>
+                                {t('chat.optimalPath')}: {offSuggest.path.join(' → ')}
+                              </div>
+                              <button type="button" onClick={()=>setSelectedPlace(`${t('chat.offCampus')} · ${getLineByStation(offSuggest.midStation) ? getLineByStation(offSuggest.midStation)+' · ' : ''}${offSuggest.midStation}`)}
+                                      style={{padding:'8px 12px', borderRadius:8, border:'none', background:'#0b63d1', color:'#fff', fontWeight:800}}>
+                                <FaMapMarkerAlt/> {t('chat.useThisLocation')}
+                              </button>
+                            </div>
+                        )}
+                      </>
+                  )}
+
+                  {/* 선택된 장소 */}
+                  <div style={{margin:'10px 0 14px', background:'#f8fafc', border:'1px dashed #cbd5e1', padding:'10px 12px', borderRadius:10}}>
+                    <div style={{fontWeight:800, color:'#0f172a'}}><FaMapMarkerAlt/> {t('chat.selectedLocation')}</div>
+                    <div style={{marginTop:6, color:'#334155'}}>{selectedPlace || t('chat.notSelectedYet')}</div>
+                  </div>
+
+                  {/* 추천 날짜 */}
+                  <div style={{marginBottom:'1.2rem', fontWeight:600, color:'#111'}}>{t('chat.recommendedDate')}</div>
+                  {weatherLoading && <div style={{color:'#555'}}>{t('chat.loadingWeather')}</div>}
+                  {!weatherLoading && (
+                      <DateList>
+                        {dateOptions.map(opt => {
+                          const h = Math.max(0, Math.min(100, opt.pop));
+                          return (
+                              <DateItem key={opt.iso} selected={selectedDate?.iso===opt.iso} onClick={()=>setSelectedDate(opt)}>
+                                <MiniBarWrap><MiniBar style={{height: `${h}%`}}/></MiniBarWrap>
+                                <div style={{display:'flex', flexDirection:'column', gap:4}}>
+                                  <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                    <span style={{fontWeight:700}}>{opt.date}</span>
+                                    {opt.best && <span style={{fontSize:11, color:'#fff', background:'#16a34a', padding:'2px 6px', borderRadius:999}}>{t('chat.recommended')}</span>}
+                                  </div>
+                                  <div style={{fontSize:13, color:'#374151'}}>
+                                    {opt.am!=null && opt.pm!=null
+                                        ? <>{t('chat.am')} {opt.am}% / {t('chat.pm')} {opt.pm}% ({t('chat.avg')} {opt.pop}%)</>
+                                        : <>{t('chat.precipitation')} {opt.pop}%</>}
+                                  </div>
+                                </div>
+                              </DateItem>
+                          );
+                        })}
+                      </DateList>
+                  )}
+                  {weeklyWeather?.recommendation && (
+                      <div style={{marginTop:'6px', fontWeight:600, color:'#111827'}}>{weeklyWeather.recommendation}</div>
+                  )}
+
+                  <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
+                    <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> {t('chat.routeGuidance')}</ModalButton>
+                    <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> {t('chat.sendReservationRequest')}</ModalButton>
+                    <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>{t('common.cancel')}</ModalButton>
+                  </div>
+
+                  {showRoute && (
+                      <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
+                        <b>{t('chat.estimatedRoute')}</b><br/>
+                        {t('chat.apiIntegration')}<br/>
+                        <span style={{fontSize:'0.95em'}}>{t('chat.myLocation')} → {selectedPlace || t('chat.noLocationSelected')} ({t('chat.estimatedTime')})</span>
+                      </div>
+                  )}
+
+                  {reserveConfirmed && (
+                      <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
+                        {t('chat.reservationRequestSent')}
+                      </div>
+                  )}
+                </ReserveModalBox>
+              </ModalOverlay>
+          )}
 
           <ChatMessages>
             {messages.length > 0 ? (
@@ -1634,6 +1836,7 @@ const ChatRoom = () => {
           </ChatInput>
         </ChatContainer>
 
+        {/* 전송 재시도 모달 */}
         {showRetryModal && (
             <RetryModalOverlay onClick={() => setShowRetryModal(false)}>
               <RetryModalBox onClick={e => e.stopPropagation()}>
@@ -1679,6 +1882,7 @@ const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
   );
 };
 
+/* --------------------------------- 비속어 --------------------------------- */
 function detectProfanity(text) {
   if (!text) return false;
   const bad = ['씨발','개새끼','병신','미친','fuck','shit','bitch','asshole','damn','hell'];
