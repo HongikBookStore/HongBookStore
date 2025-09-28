@@ -812,7 +812,8 @@
       "save": "Save"
     },
     "registrationDate": "Registration Date",
-    "viewCount": "Views"
+    "viewCount": "Views",
+    "cannotChatOwnPost": "You cannot start a chat on a post I wrote."
   },
   "userProfile": {
     "title": "User Profile #{{userId}}",
@@ -1305,5 +1306,6 @@
   "about": "approximately",
   "noOtherSell": "😅 There are no other books registered by the seller.",
   "searchingBooks": "I'm looking for a book.",
-  "flipPage": "I'm turning the page."
+  "flipPage": "I'm turning the page.",
+  "noPermission": "You do not have permission."
 } 

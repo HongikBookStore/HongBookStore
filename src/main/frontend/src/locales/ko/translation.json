@@ -566,7 +566,8 @@
       "save": "저장"
     },
     "registrationDate": "등록일",
-    "viewCount": "조회수"
+    "viewCount": "조회수",
+    "cannotChatOwnPost": "내가 작성한 게시글에는 채팅을 시작할 수 없습니다."
   },
   "userProfile": {
     "title": "사용자 프로필 #{{userId}}",
@@ -1306,5 +1307,6 @@
   "about": "약",
   "noOtherSell": "😅 판매자가 등록한 다른 책이 없어요.",
   "searchingBooks": "책을 찾고 있어요.",
-  "flipPage": "페이지를 넘기고 있어요."
+  "flipPage": "페이지를 넘기고 있어요.",
+  "noPermission": "권한이 없습니다."
 } 

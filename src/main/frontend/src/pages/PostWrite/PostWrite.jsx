@@ -1493,7 +1493,7 @@ const PostWrite = () => {
         alert(serverMessage || '로그인이 필요해! 다시 로그인해줘 🔐');
         navigate('/login');
       } else if (error.response?.status === 403) {
-        alert(serverMessage || '권한이 없어! 😥');
+        alert(serverMessage || t('noPermission'));
       } else if (error.response?.status === 400) {
         // 용량 초과, 잘못된 포맷 등 서버 메시지를 우선 표시
         alert(serverMessage || '입력 정보에 문제가 있어! 다시 확인해줘 📝');

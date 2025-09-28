@@ -801,7 +801,8 @@
       "save": "保存"
     },
     "registrationDate": "登録日",
-    "viewCount": "閲覧数"
+    "viewCount": "閲覧数",
+    "cannotChatOwnPost": "私が書いた投稿ではチャットを開始できません。"
   },
   "userProfile": {
     "title": "ユーザープロフィール #{{userId}}",
@@ -1282,5 +1283,6 @@
   "about": "約",
   "noOtherSell": "😅売り手が登録した他の本はありません。",
   "searchingBooks": "本を探しています。",
-  "flipPage": "ページをめくっています。"
+  "flipPage": "ページをめくっています。",
+  "noPermission": "権限がありません。"
 }
