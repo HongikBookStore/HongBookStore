@@ -287,22 +287,25 @@ export default function WantedDetail() {
     );
 
     /* ------------------------------ 삭제 ------------------------------ */
-    const openDelete = () => setShowDeleteModal(true);
+    const openDelete = () => {
+        setShowDeleteModal(true);
+    };
 
     const onDelete = async () => {
         stopWriting();
         setUnsavedChanges(false);
         try {
-            const headers = { ...getAuthHeader() };
+            const headers = {
+                ...getAuthHeader(),
+            };
+            // 일부 백엔드가 X-User-Id를 요구할 수 있으므로 보조 헤더 추가
             let userId = localStorage.getItem('userId');
-            if (!/^\d+$/.test(userId || '')) userId = '';
-            if (userId) headers['X-USER-ID'] = String(userId);
+            if (!userId) {
+                try { userId = JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch {}
+            }
+            if (userId) headers['X-User-Id'] = String(userId);
 
-            const res = await fetch(`/api/wanted/${id}`, {
-                method: 'DELETE',
-                headers,
-                credentials: 'include',   // ✅ 세션 쿠키 동봉
-            });
+            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
@@ -314,8 +317,8 @@ export default function WantedDetail() {
                 const d = await res.json().catch(() => null);
                 if (d?.message) message = d.message;
             } else {
-                const ttxt = await res.text().catch(() => '');
-                if (ttxt) message = ttxt;
+                const t = await res.text().catch(() => '');
+                if (t) message = t;
             }
             throw new Error(message);
         } catch (err) {
