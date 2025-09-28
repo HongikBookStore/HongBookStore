@@ -1,9 +1,10 @@
 // src/components/Comments/WantedComments.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useContext } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { FaReply, FaTrash, FaUser, FaClock } from 'react-icons/fa';
 import { displayMaskedName } from '../../utils/nameMask';
+import { AuthCtx } from '../../contexts/AuthContext';
 
 const Box = styled.div`
     margin-top: 18px;
@@ -14,7 +15,12 @@ const Box = styled.div`
 `;
 
 const Title = styled.h3`
-    margin: 0 0 12px 0; font-size: 1.15rem; color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.25rem;
+    margin: 0 0 12px 0;
+    color: #333;
 `;
 
 const EditorRow = styled.div`
@@ -49,24 +55,20 @@ const List = styled.ul`
 `;
 
 const Item = styled.li`
-    padding: 14px 0;
-    border-top: 1px solid #f1f3f5;
-    &:first-child { border-top: 0; }
-`;
-
-const RepliesList = styled.ul`
-    list-style: none;
-    margin: 10px 0 0 26px;
-    padding-left: 12px;
-    border-left: 3px solid #eef2f6;
+    border: 1px solid #eef2f6; border-radius: 12px; padding: 12px;
+    background: #fafcff; margin-bottom: 10px;
 `;
 
 const Meta = styled.div`
-    display: flex; gap: 10px; align-items: center; color: #6b7280; font-size: .9rem; margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: #6b7280; font-size: .9rem;
+`;
+
+const Name = styled.span`
+    display: inline-flex; align-items: center; gap: 6px;
 `;
 
 const Content = styled.div`
-    white-space: pre-wrap; color: ${p => p.$deleted ? '#9aa0a6' : '#222'};
+    color: ${p => p.$deleted ? '#9ca3af' : '#111'}; white-space: pre-wrap;
 `;
 
 const Actions = styled.div`
@@ -77,50 +79,11 @@ const ReplyBox = styled.div`
     margin-top: 10px; margin-left: 26px;
 `;
 
-/** ---- Robust current-user inference (JWT → user object → legacy localStorage) ---- */
-function parseJwt(token) {
-    try {
-        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-        return JSON.parse(decodeURIComponent(escape(atob(padded))));
-    } catch { return null; }
-}
-function toNum(v){ if (v==null) return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
-function getCurrentUserLocal() {
-    const token = localStorage.getItem('accessToken') || '';
-    let id = null, nickname = null;
-
-    // 1) JWT payload 우선
-    if (token) {
-        const p = parseJwt(token);
-        if (p) {
-            id = toNum(p.id ?? p.userId ?? p.uid ?? p.sub ?? null);
-            nickname = (p.nickname ?? p.name ?? p.preferred_username ?? null);
-        }
-    }
-    // 2) 저장된 user 객체 보조
-    if (id == null || !nickname) {
-        try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
-            if (id == null) id = toNum(u?.id);
-            if (!nickname) nickname = u?.nickname ?? u?.name ?? null;
-        } catch {}
-    }
-    // 3) 레거시 키 보조
-    if (id == null) id = toNum(localStorage.getItem('userId'));
-    if (!nickname) nickname = localStorage.getItem('nickname') || '익명';
-
-    return { id, nickname };
-}
-
 /* ----------------------- helpers ----------------------- */
 function authHeaders() {
     const token = localStorage.getItem('accessToken');
-    const me = getCurrentUserLocal();
     return {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(me.id != null ? { 'X-USER-ID': String(me.id) } : {}),
-        ...(me.nickname ? { 'X-USER-NICKNAME': me.nickname } : {}),
         'Content-Type': 'application/json',
     };
 }
@@ -133,53 +96,32 @@ function toJsonSafely(res) {
 
 function normalizeApiData(json) {
     if (!json) return [];
-    const arr = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
-    return arr;
+    const arr = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+    return arr.filter(Boolean);
 }
 
-function buildTree(list) {
+function buildTree(flat) {
     const byId = new Map();
-    list.forEach(c => {
-        byId.set(c.id, { ...c, children: [] });
-    });
     const roots = [];
-    list.forEach(c => {
-        const node = byId.get(c.id);
-        if (c.parentId) {
-            const p = byId.get(c.parentId);
-            if (p) p.children.push(node);
-            else roots.push(node);
+    flat.forEach(c => {
+        byId.set(c.id, { ...c, replies: [] });
+    });
+    flat.forEach(c => {
+        const cur = byId.get(c.id);
+        if (!cur) return;
+        if (cur.parentId) {
+            const p = byId.get(cur.parentId);
+            if (p) p.replies.push(cur);
+            else roots.push(cur);
         } else {
-            roots.push(node);
+            roots.push(cur);
         }
     });
     return roots;
 }
 
-/* 작성자(배우) 객체의 탈퇴 여부만 본다. 댓글 자체의 status/deleted는 사용하지 않음 */
 function isDeactivatedFromComment(c) {
-    const U = v => (v ?? '').toString().toUpperCase();
-
-    // 백엔드별 작성자 객체 후보들
-    const actors = [
-        c?.user, c?.author, c?.writer, c?.reviewer, c?.commenter,
-    ];
-
-    for (const a of actors) {
-        if (!a || typeof a !== 'object') continue;
-
-        const s = U(a.status || a.accountStatus || a.userStatus || a.authorStatus);
-        if (['DEACTIVATED', 'WITHDRAWN', 'WITHDRAW', 'DELETED'].includes(s)) return true;
-
-        if (
-            a.deactivated || a.isDeactivated || a.withdrawn || a.isWithdrawn ||
-            a.isDeleted || a.deletedUser || a.userDeleted || a.deleted
-        ) return true;
-
-        if (a.deactivatedAt || a.withdrawnAt || a.deletedAt) return true;
-    }
-
-    // top-level 이지만 '사용자 상태'를 의미하는 필드만 허용
+    const U = (v) => (v ?? '').toString().trim().toUpperCase();
     const topStatus = U(c?.userStatus || c?.authorStatus);
     if (['DEACTIVATED', 'WITHDRAWN', 'WITHDRAW', 'DELETED'].includes(topStatus)) return true;
     if (c?.userDeactivated || c?.authorDeactivated) return true;
@@ -210,52 +152,54 @@ function nameForComment(c, t) {
         c?.username ??
         c?.authorName ??
         c?.userName ??
-        c?.displayName ??
-        c?.user?.nickname ??
-        c?.author?.nickname ??
-        c?.user?.name ??
-        c?.author?.name ??
-        '';
+        c?.userNickname ??
+        c?.name ??
+        null;
 
-    const name = (raw || '').toString().trim();
-    if (!name) return t('common.anonymous') || '익명';
+    if (!raw) return t('common.anonymous');
 
-    if (looksAnonymousName(name, t)) return name; // 익명/익명1 그대로
-    const masked = displayMaskedName(name, false);
-    return masked || (t('common.anonymous') || '익명');
+    if (looksAnonymousName(raw, t)) return raw;
+
+    // 일반 닉네임/이름은 마스킹
+    return displayMaskedName(raw);
 }
 
-/* ----------------------- component ----------------------- */
 export default function WantedComments({ wantedId }) {
     const { t } = useTranslation();
     const [list, setList] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [text, setText] = useState('');
     const [textError, setTextError] = useState('');
     const [replyFor, setReplyFor] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replyError, setReplyError] = useState('');
-    const myId = getCurrentUserLocal().id;
+    const { user } = useContext(AuthCtx);
+    const myId = user?.id ?? null;
 
     const tree = useMemo(() => buildTree(list), [list]);
 
     async function fetchList() {
         setLoading(true);
         try {
-            const res = await fetch(`/api/wanted/${wantedId}/comments`, { headers: authHeaders() });
-            if (!res.ok) throw new Error(`목록 실패 (${res.status})`);
+            const res = await fetch(`/api/wanted/${wantedId}/comments`);
             const json = await toJsonSafely(res);
-            setList(normalizeApiData(json));
-        } catch {
+            if (!res.ok) throw new Error(json?.message || t('wantedComments.error.loadFailed'));
+            const arr = normalizeApiData(json);
+            setList(arr);
+        } catch (e) {
+            alert(e.message || t('wantedComments.error.loadFailed'));
             setList([]);
         } finally {
             setLoading(false);
         }
     }
 
-    useEffect(() => { fetchList(); }, [wantedId]);
+    useEffect(() => {
+        fetchList();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [wantedId]);
 
-    async function submitRoot() {
+    async function submit() {
         const body = { content: text.trim() };
         if (!body.content) return;
         try {
@@ -302,24 +246,24 @@ export default function WantedComments({ wantedId }) {
                 }
                 throw new Error(json?.message || t('wantedComments.error.replyFailed', { status: res.status }));
             }
-            setReplyFor(null);
             setReplyText('');
+            setReplyFor(null);
             await fetchList();
         } catch (e) {
             alert(e.message || t('wantedComments.error.replyFailed'));
         }
     }
 
-    async function remove(commentId) {
+    async function remove(id) {
         if (!window.confirm(t('wantedComments.confirmDelete'))) return;
         try {
-            const res = await fetch(`/api/wanted/${wantedId}/comments/${commentId}`, {
+            const res = await fetch(`/api/wanted/${wantedId}/comments/${id}`, {
                 method: 'DELETE',
                 headers: authHeaders(),
             });
             if (!res.ok && res.status !== 204) {
                 const json = await toJsonSafely(res);
-                throw new Error(json?.message || t('wantedComments.error.deleteFailed', { status: res.status }));
+                throw new Error(json?.message || t('wantedComments.error.deleteFailed'));
             }
             await fetchList();
         } catch (e) {
@@ -339,28 +283,10 @@ export default function WantedComments({ wantedId }) {
           <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
             <FaUser/>{displayName}
           </span>
-                    {created && (
-                        <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <FaClock/>{created.toLocaleString('ko-KR')}
-            </span>
-                    )}
+                    <span>
+            <FaClock/> {created ? created.toLocaleString() : ''}
+          </span>
                 </Meta>
-
-                {c.contentToxic && (
-                    <div style={{
-                        marginBottom: 6,
-                        display: 'inline-block',
-                        padding: '2px 6px',
-                        borderRadius: 6,
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        background: '#fff3cd',
-                        color: '#856404',
-                        border: '1px solid #ffeeba'
-                    }}>
-                        경고
-                    </div>
-                )}
 
                 <Content $deleted={c.deleted}>
                     {c.deleted ? t('wantedComments.deletedComment') : c.content}
@@ -396,10 +322,10 @@ export default function WantedComments({ wantedId }) {
                     </ReplyBox>
                 )}
 
-                {c.children && c.children.length > 0 && (
-                    <RepliesList>
-                        {c.children.map(ch => renderItem(ch))}
-                    </RepliesList>
+                {c.replies && c.replies.length > 0 && (
+                    <List>
+                        {c.replies.map(renderItem)}
+                    </List>
                 )}
             </Item>
         );
@@ -413,14 +339,11 @@ export default function WantedComments({ wantedId }) {
                 <Textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    placeholder={t('wantedComments.commentPlaceholder')}
+                    placeholder={t('wantedComments.placeholder')}
                 />
-                {textError && (
-                    <div style={{ color:'#dc3545', fontSize:'.9rem', marginTop: 6 }}>{textError}</div>
-                )}
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                    <Button $variant="primary" onClick={submitRoot}>{t('wantedComments.submit')}</Button>
-                    <Button onClick={() => setText('')}>{t('wantedComments.cancel')}</Button>
+                    <Button $variant="primary" onClick={submit}>{t('wantedComments.submit')}</Button>
+                    {textError && <div style={{ color:'#dc3545', fontSize:'.9rem' }}>{textError}</div>}
                 </div>
             </EditorRow>
 
