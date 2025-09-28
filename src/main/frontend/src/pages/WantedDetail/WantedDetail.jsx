@@ -150,6 +150,15 @@ function getAuthHeader() {
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function getXsrfTokenFromCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+    return m ? m[1] : null;
+}
+function xsrfHeader() {
+    const v = getXsrfTokenFromCookie();
+    return v ? { 'X-XSRF-TOKEN': v } : {};
+}
+
 // 상태 문자열을 UI 친화적으로 정규화 (상/중/하)
 function normalizeCondition(v, t) {
     const val = (v ?? '').toString().trim();
@@ -297,6 +306,7 @@ export default function WantedDetail() {
         try {
             const headers = {
                 ...getAuthHeader(),
+                ...xsrfHeader(),
             };
             // 일부 백엔드가 X-User-Id를 요구할 수 있으므로 보조 헤더 추가
             let userId = localStorage.getItem('userId');
@@ -305,7 +315,7 @@ export default function WantedDetail() {
             }
             if (userId) headers['X-User-Id'] = String(userId);
 
-            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers });
+            const res = await fetch(`/api/wanted/${id}`, { method: 'DELETE', headers, credentials: 'include',  });
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');

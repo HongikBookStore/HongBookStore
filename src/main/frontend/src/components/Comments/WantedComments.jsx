@@ -84,6 +84,15 @@ function normalizeBearer(raw) {
     return t;
 }
 
+function getXsrfTokenFromCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+    return m ? m[1] : null;
+}
+function xsrfHeader() {
+    const v = getXsrfTokenFromCookie();
+    return v ? { 'X-XSRF-TOKEN': v } : {};
+}
+
 // GET: 최소 헤더 + 쿠키 포함(세션 로그인 지원)
 function publicInit() {
     return { headers: { Accept: 'application/json' }, credentials: 'include' };
@@ -100,6 +109,7 @@ function authInit(bodyObj) {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(uid ? { 'X-USER-ID': uid } : {}), // 대문자, ASCII만
+        ...xsrfHeader(),
     };
 
     const init = {
