@@ -1,10 +1,9 @@
 // src/components/Comments/WantedComments.jsx
-import React, { useEffect, useMemo, useState, useContext } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { FaReply, FaTrash, FaUser, FaClock } from 'react-icons/fa';
 import { displayMaskedName } from '../../utils/nameMask';
-import { AuthCtx } from '../../contexts/AuthContext';
 
 const Box = styled.div`
     margin-top: 18px;
@@ -81,8 +80,12 @@ const ReplyBox = styled.div`
 /* ----------------------- helpers ----------------------- */
 function authHeaders() {
     const token = localStorage.getItem('accessToken');
+    const uid = localStorage.getItem('userId');
+    const nick = localStorage.getItem('nickname');
     return {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(uid ? { 'X-USER-ID': uid } : {}),
+        ...(nick ? { 'X-USER-NICKNAME': nick } : {}),
         'Content-Type': 'application/json',
     };
 }
@@ -190,9 +193,6 @@ function nameForComment(c, t) {
 /* ----------------------- component ----------------------- */
 export default function WantedComments({ wantedId }) {
     const { t } = useTranslation();
-    const { user } = useContext(AuthCtx);
-    const myId = user?.id ?? null;
-
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [text, setText] = useState('');
@@ -200,6 +200,11 @@ export default function WantedComments({ wantedId }) {
     const [replyFor, setReplyFor] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replyError, setReplyError] = useState('');
+    const myId = (() => {
+        const v = localStorage.getItem('userId');
+        if (!v) return null;
+        try { return Number(v); } catch { return null; }
+    })();
 
     const tree = useMemo(() => buildTree(list), [list]);
 
@@ -300,13 +305,13 @@ export default function WantedComments({ wantedId }) {
         return (
             <Item key={c.id}>
                 <Meta>
-                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                        <FaUser/>{displayName}
-                    </span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+            <FaUser/>{displayName}
+          </span>
                     {created && (
                         <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                            <FaClock/>{created.toLocaleString('ko-KR')}
-                        </span>
+              <FaClock/>{created.toLocaleString('ko-KR')}
+            </span>
                     )}
                 </Meta>
 
