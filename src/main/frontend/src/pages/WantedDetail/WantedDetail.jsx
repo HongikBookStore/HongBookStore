@@ -293,21 +293,31 @@ export default function WantedDetail() {
         stopWriting();
         setUnsavedChanges(false);
         try {
-            const headers = { ...getAuthHeader() };
-            let userId = localStorage.getItem('userId');
-            if (!/^\d+$/.test(userId || '')) userId = '';
-            if (userId) headers['X-USER-ID'] = String(userId);
+            // Authorization만, X-USER-ID 제거
+            const tokenRaw = localStorage.getItem('accessToken') || '';
+            const token = (() => {
+                let t = String(tokenRaw).trim();
+                if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1);
+                if (t.toLowerCase().startsWith('bearer ')) t = t.slice(7);
+                return t;
+            })();
+
+            const headers = {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            };
 
             const res = await fetch(`/api/wanted/${id}`, {
                 method: 'DELETE',
                 headers,
-                credentials: 'include',   // ✅ 세션 쿠키 동봉
+                credentials: 'include',   // 세션 쿠키 포함
             });
+
             if (res.status === 204) {
                 setShowDeleteModal(false);
                 navigate('/wanted');
                 return;
             }
+
             let message = `삭제 실패 (${res.status})`;
             const ct = res.headers.get('content-type') || '';
             if (ct.includes('application/json')) {
