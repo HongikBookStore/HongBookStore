@@ -3,18 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://hongbook-spring-534256318130.us-west1.run.app/api/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ],
-  "headers": [
-    {
-      "source": "/images/(.*\\.png)",
-      "headers": [
-        { "key": "Content-Type", "value": "image/png" }
-      ]
-    }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
