@@ -3,10 +3,11 @@
     {
       "source": "/api/:path*",
       "destination": "https://hongbook-spring-534256318130.us-west1.run.app/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html",
+      "missing": [{ "type": "filesystem" }]
     }
-  ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
