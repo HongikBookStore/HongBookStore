@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import '../../i18n.js';
 import styled from 'styled-components';
 import Header from '../../components/Header/Header.jsx';
-import naverLogo from '../../assets/naver.png';
-import kakaoLogo from '../../assets/kakao.png';
-import googleLogo from '../../assets/google.png';
+
 
 const RegisterContainer = styled.div`
   padding: 6rem 2rem 4rem;
