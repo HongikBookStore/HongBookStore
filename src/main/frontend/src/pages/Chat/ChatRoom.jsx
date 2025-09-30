@@ -1799,7 +1799,7 @@ const ChatRoom = () => {
                   rows={1}
                   hasProfanity={hasProfanity}
               />
-              <SendButton onClick={handleSendMessage} disabled={!newMessage.trim() || loading || !roomId}>
+              <SendButton onClick={handleSendMessage} disabled={!newMessage.trim() || loading || hasProfanity || !roomId}>
                 <FaPaperPlane />
               </SendButton>
             </InputContainer>
