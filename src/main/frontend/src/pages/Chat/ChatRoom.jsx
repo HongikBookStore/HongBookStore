@@ -945,6 +945,7 @@ const ChatRoom = () => {
           const msg = payload?.message || t('chat.profanityWarning');
           const d = payload?.data;
           const extra = d?.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? ", " + Math.round(d.malicious*100) + "%" : ''})` : '';
+          alert(msg + extra);
           setHasProfanity(true);
           setProfanityWarning(msg + extra);
           setTimeout(() => { setHasProfanity(false); setProfanityWarning(''); }, 6000);
