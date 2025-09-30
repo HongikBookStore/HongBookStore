@@ -746,7 +746,6 @@ const ChatRoom = () => {
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [showRoute, setShowRoute] = useState(false);
   const [reserveConfirmed, setReserveConfirmed] = useState(false);
 
   const width = useWindowWidth();
@@ -1737,18 +1736,9 @@ const ChatRoom = () => {
                   )}
 
                   <div style={{display:'flex', gap:'1rem', margin:'1.5rem 0 0 0', alignItems:'center'}}>
-                    <ModalButton onClick={()=>setShowRoute(v=>!v)}><FaRoute /> {t('chat.routeGuidance')}</ModalButton>
                     <ModalButton onClick={handleReserveConfirm}><FaCheckCircle /> {t('chat.sendReservationRequest')}</ModalButton>
                     <ModalButton data-variant="cancel" onClick={()=>setShowReserveModal(false)}>{t('common.cancel')}</ModalButton>
                   </div>
-
-                  {showRoute && (
-                      <div style={{marginTop:'1.2rem', background:'#f5f8ff', borderRadius:'1rem', padding:'1rem', color:'#333'}}>
-                        <b>{t('chat.estimatedRoute')}</b><br/>
-                        {t('chat.apiIntegration')}<br/>
-                        <span style={{fontSize:'0.95em'}}>{t('chat.myLocation')} → {selectedPlace || t('chat.noLocationSelected')} ({t('chat.estimatedTime')})</span>
-                      </div>
-                  )}
 
                   {reserveConfirmed && (
                       <div style={{marginTop:'1.2rem', background:'#eaf0ff', borderRadius:'1rem', padding:'1rem', color:'#2351e9', fontWeight:600}}>
