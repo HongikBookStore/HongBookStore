@@ -166,7 +166,22 @@
       "condition": "状態確認",
       "conditionMessage": "本の状態を確認したいです"
     },
-    "profanityWarning": "不適切な表現が含まれています",
+    "profanityWarning": "不適切な表現が検出されました。メッセージをもう一度ご確認ください。",
+    "profanityDetail": "検出された文: \"{{sentence}}\"（表現: '{{word}}'）",
+    "profanityProbability": "AI 判定「{{level}}」・不適切である可能性 約 {{malicious}}%",
+    "profanityLevelUnknown": "判定情報なし",
+    "profanityReason": {
+      "label": "検閲理由: {{reason}}",
+      "blocked": "不適切表現フィルター",
+      "disabled": "フィルター停止中（基本ポリシー適用）",
+      "blank": "空のメッセージは送信できません",
+      "unavailable": "モデレーションサービスが一時的に利用できません",
+      "error": "モデレーションサービスエラー"
+    },
+    "profanityProbabilityClean": "AI 判定で安全とみなす確率は約 {{clean}}%です",
+    "profanityFlaggedSegmentsHeading": "フィルターに引っかかった表現",
+    "profanityFlaggedUnknownWord": "表現情報なし",
+    "profanityFlaggedUnknownSentence": "文の情報は提供されていません",
     "alreadyReserved": "既に予約されています",
     "alreadySold": "既に売り切れです",
     "selectPlaceAndDate": "場所と日時を選択してください",

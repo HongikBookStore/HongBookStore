@@ -31,10 +31,11 @@ public class ModerationService {
                     r.predictionLevel(),
                     r.malicious(),
                     r.clean(),
-                    r.reason()
+                    r.reason(),
+                    r.text(),
+                    r.flaggedSegments()
             );
         }
         return r; // WARN 또는 BLOCK-허용
     }
 }
-

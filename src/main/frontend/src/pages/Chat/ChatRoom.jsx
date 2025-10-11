@@ -263,7 +263,58 @@ const RetryButton = styled.button`
 const ProfanityWarning = styled.div`
   background: #fff3cd; border: 1px solid #ffeaa7; color: #856404;
   padding: 8px 12px; border-radius: 8px; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+  display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem;
+`;
+
+const ProfanityWarningBody = styled.div`
+  display: flex; flex-direction: column; gap: 3px; line-height: 1.3;
+`;
+
+const ProfanityWarningMeta = styled.span`
+  font-size: 0.8rem; color: #6b4f00;
+`;
+
+const ProfanityFlagged = styled.div`
+  display: flex; flex-direction: column; gap: 4px; margin-top: 6px;
+`;
+
+const ProfanityFlaggedHeading = styled.span`
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5c4100;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+`;
+
+const ProfanityFlaggedList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ProfanityFlaggedItem = styled.li`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 240, 200, 0.35);
+  border-radius: 6px;
+  padding: 6px 8px;
+`;
+
+const ProfanityFlaggedWord = styled.span`
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #a36d00;
+`;
+
+const ProfanityFlaggedSentence = styled.span`
+  font-size: 0.8rem;
+  color: #6b4f00;
+  word-break: break-word;
+  white-space: pre-wrap;
 `;
 
 const MessageInput = styled.textarea`
@@ -740,8 +791,29 @@ const ChatRoom = () => {
   const [hovered, setHovered] = useState('');
   const [hasProfanity, setHasProfanity] = useState(false);
   const [profanityWarning, setProfanityWarning] = useState('');
+  const [profanityBaseMessage, setProfanityBaseMessage] = useState('');
+  const [profanityReasonMessage, setProfanityReasonMessage] = useState('');
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [retryMessageId, setRetryMessageId] = useState(null);
+  const [blockedMessage, setBlockedMessage] = useState('');
+  const [serverFlaggedSegments, setServerFlaggedSegments] = useState([]);
+  const [moderationStats, setModerationStats] = useState(null);
+
+  const moderationMessage = buildModerationStatsMessage(moderationStats, t);
+  const moderationCleanMessage = buildModerationCleanMessage(moderationStats, t);
+  const formattedFlaggedSegments = useMemo(
+      () => formatFlaggedSegments(serverFlaggedSegments, blockedMessage || newMessage, t),
+      [serverFlaggedSegments, blockedMessage, newMessage, t]
+  );
+  const flaggedSegmentsAvailable = formattedFlaggedSegments.length > 0;
+  const profanityNoticeActive = Boolean(
+      profanityWarning ||
+      moderationMessage ||
+      moderationCleanMessage ||
+      profanityBaseMessage ||
+      profanityReasonMessage ||
+      flaggedSegmentsAvailable
+  );
 
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -758,6 +830,7 @@ const ChatRoom = () => {
   const [sellerId, setSellerId] = useState(null);
 
   const stompClient = useRef(null);
+  const lastAttemptedMessageRef = useRef('');
   const { user } = useContext(AuthCtx);
   const currentUserId = user?.id;
 
@@ -942,13 +1015,35 @@ const ChatRoom = () => {
       stomp.subscribe('/user/queue/chat-errors', (frame) => {
         try {
           const payload = JSON.parse(frame.body);
-          const msg = payload?.message || t('chat.profanityWarning');
+          const serverMessage = payload?.message;
           const d = payload?.data;
-          const extra = d?.predictionLevel ? ` (${d.predictionLevel}${typeof d.malicious === 'number' ? ", " + Math.round(d.malicious*100) + "%" : ''})` : '';
-          alert(msg + extra);
+          const offendingText = typeof d?.offendingText === 'string' && d.offendingText.trim().length
+              ? d.offendingText
+              : (lastAttemptedMessageRef.current || '');
+          if (offendingText) {
+            setNewMessage(offendingText);
+            setBlockedMessage(offendingText);
+          }
+          const flagged = Array.isArray(d?.flagged) ? d.flagged : [];
+          setServerFlaggedSegments(flagged);
+          const detailFromServer = buildProfanityDetailFromSegments(flagged, offendingText, t);
+          const statsPayload = {
+            predictionLevel: d?.predictionLevel || '',
+            malicious: typeof d?.malicious === 'number' ? d.malicious : null,
+            clean: typeof d?.clean === 'number' ? d.clean : null
+          };
+          setModerationStats(statsPayload);
+          const detail = detailFromServer || buildProfanityDetailMessage(offendingText, t);
+          const baseMessage = serverMessage || t('chat.profanityWarning');
+          const reasonMessage = buildModerationReasonMessage(d?.reason, t);
+          const probabilityMessage = buildModerationStatsMessage(statsPayload, t);
+          const cleanProbabilityMessage = buildModerationCleanMessage(statsPayload, t);
+          const combinedParts = [baseMessage, reasonMessage, probabilityMessage, cleanProbabilityMessage, detail?.message].filter(Boolean);
+          alert(combinedParts.join('\n').trim());
           setHasProfanity(true);
-          setProfanityWarning(msg + extra);
-          setTimeout(() => { setHasProfanity(false); setProfanityWarning(''); }, 6000);
+          setProfanityBaseMessage(baseMessage);
+          setProfanityReasonMessage(reasonMessage);
+          setProfanityWarning(detail ? detail.message : '');
         } catch { /* ignore */ }
       });
       stompClient.current = stomp;
@@ -1034,24 +1129,42 @@ const ChatRoom = () => {
   const handleSendMessage = () => {
     if (!newMessage.trim() || !receiverId) return;
     if (hasProfanity) {
-      alert(profanityWarning || t('chat.profanityWarning'));
+      const warnParts = [
+        profanityBaseMessage,
+        profanityReasonMessage,
+        moderationMessage,
+        moderationCleanMessage,
+        profanityWarning
+      ].filter(Boolean);
+      const messageToShow = warnParts.length ? warnParts.join('\n') : t('chat.profanityWarning');
+      alert(messageToShow);
       return;
     }
     if (!roomId) return;
     const client = stompClient.current;
     if (!client || !client.connected) return;
 
+    const trimmed = newMessage.trim();
+    lastAttemptedMessageRef.current = trimmed;
+
     const msgPayload = {
       roomId,
       salePostId,
       senderId,
       receiverId,
-      message: newMessage.trim(),
+      message: trimmed,
       sentAt: new Date().toISOString()
     };
 
     client.send("/pub/chat.sendMessage", {}, JSON.stringify(msgPayload));
     setNewMessage('');
+    setBlockedMessage('');
+    setProfanityWarning('');
+    setProfanityBaseMessage('');
+    setProfanityReasonMessage('');
+    setHasProfanity(false);
+    setServerFlaggedSegments([]);
+    setModerationStats(null);
   };
 
   useEffect(() => {
@@ -1065,13 +1178,35 @@ const ChatRoom = () => {
   const handleMessageChange = (e) => {
     const text = e.target.value;
     setNewMessage(text);
-    if (detectProfanity(text)) {
-      setHasProfanity(true);
-      setProfanityWarning(t('chat.profanityWarning'));
-    } else {
-      setHasProfanity(false);
-      setProfanityWarning('');
+    if (serverFlaggedSegments.length) {
+      setServerFlaggedSegments([]);
     }
+    if (moderationStats) {
+      setModerationStats(null);
+    }
+    const detail = buildProfanityDetailMessage(text, t);
+    if (detail) {
+      setBlockedMessage(text);
+      setHasProfanity(true);
+      setProfanityBaseMessage(t('chat.profanityWarning'));
+      setProfanityReasonMessage('');
+      setProfanityWarning(detail.message);
+      return;
+    }
+    if (blockedMessage && text === blockedMessage) {
+      setHasProfanity(true);
+      setProfanityBaseMessage(t('chat.profanityWarning'));
+      setProfanityReasonMessage('');
+      setProfanityWarning('');
+      return;
+    }
+    if (blockedMessage && text !== blockedMessage) {
+      setBlockedMessage('');
+    }
+    setHasProfanity(false);
+    setProfanityWarning('');
+    setProfanityBaseMessage('');
+    setProfanityReasonMessage('');
   };
 
   const handleQuickAction = (action) => {
@@ -1784,10 +1919,35 @@ const ChatRoom = () => {
           </ChatMessages>
 
           <ChatInput>
-            {profanityWarning && (
+            {profanityNoticeActive && (
                 <ProfanityWarning>
                   <FaExclamationCircle />
-                  {profanityWarning}
+                  <ProfanityWarningBody>
+                    {profanityBaseMessage && <span>{profanityBaseMessage}</span>}
+                    {profanityWarning && <span>{profanityWarning}</span>}
+                    {profanityReasonMessage && (
+                        <ProfanityWarningMeta>{profanityReasonMessage}</ProfanityWarningMeta>
+                    )}
+                    {moderationMessage && (
+                        <ProfanityWarningMeta>{moderationMessage}</ProfanityWarningMeta>
+                    )}
+                    {moderationCleanMessage && (
+                        <ProfanityWarningMeta>{moderationCleanMessage}</ProfanityWarningMeta>
+                    )}
+                    {flaggedSegmentsAvailable && (
+                        <ProfanityFlagged>
+                          <ProfanityFlaggedHeading>{t('chat.profanityFlaggedSegmentsHeading')}</ProfanityFlaggedHeading>
+                          <ProfanityFlaggedList>
+                            {formattedFlaggedSegments.map((segment, index) => (
+                                <ProfanityFlaggedItem key={`${segment.start}-${index}`}>
+                                  <ProfanityFlaggedWord>{`${index + 1}. ${segment.word}`}</ProfanityFlaggedWord>
+                                  <ProfanityFlaggedSentence>{segment.sentence}</ProfanityFlaggedSentence>
+                                </ProfanityFlaggedItem>
+                            ))}
+                          </ProfanityFlaggedList>
+                        </ProfanityFlagged>
+                    )}
+                  </ProfanityWarningBody>
                 </ProfanityWarning>
             )}
             <InputContainer>
@@ -1855,11 +2015,148 @@ const MessageStatusIndicator = ({ status, isOwn, onRetry }) => {
   );
 };
 
+const PROFANITY_PATTERNS = [
+  /씨발/gi,
+  /개새끼/gi,
+  /병신/gi,
+  /미친/gi,
+  /fuck/gi,
+  /shit/gi,
+  /bitch/gi,
+  /asshole/gi,
+  /damn/gi,
+  /hell/gi
+];
+
 function detectProfanity(text) {
-  if (!text) return false;
-  const bad = ['씨발','개새끼','병신','미친','fuck','shit','bitch','asshole','damn','hell'];
-  const s = String(text).toLowerCase();
-  return bad.some(w => s.includes(w));
+  if (!text) return null;
+  const source = String(text);
+  for (const pattern of PROFANITY_PATTERNS) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(source);
+    if (match) {
+      const index = match.index;
+      const sentence = extractProfanitySentence(source, index);
+      pattern.lastIndex = 0;
+      return {
+        word: match[0],
+        sentence: sentence || source.trim(),
+        index
+      };
+    }
+  }
+  return null;
+}
+
+function extractProfanitySentence(text, index) {
+  if (!text) return '';
+  const separators = /[.!?\n\r\u2026\u3002\uff01\uff1f]/;
+  let start = index;
+  let end = index;
+
+  while (start > 0 && !separators.test(text[start - 1])) {
+    start -= 1;
+  }
+  while (end < text.length && !separators.test(text[end])) {
+    end += 1;
+  }
+
+  return text.slice(start, end).trim();
+}
+
+function formatPercentage(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const pct = value * 100;
+  if (!Number.isFinite(pct)) return null;
+  const rounded = Math.round(pct * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function buildProfanityDetailMessage(text, t) {
+  if (!text) return null;
+  const detection = detectProfanity(text);
+  if (!detection) return null;
+  return {
+    ...detection,
+    message: t('chat.profanityDetail', {
+      sentence: detection.sentence,
+      word: detection.word
+    })
+  };
+}
+
+function buildProfanityDetailFromSegments(segments, fallbackText, t) {
+  if (!Array.isArray(segments) || segments.length === 0) return null;
+  const first = segments[0] || {};
+  const sentenceCandidate = typeof first.sentence === 'string' && first.sentence.trim().length
+    ? first.sentence.trim()
+    : (fallbackText || '').trim();
+  const sentence = sentenceCandidate || (fallbackText || '');
+  const rawWord = typeof first.word === 'string' ? first.word.trim() : '';
+  const word = rawWord || (sentence || '...');
+  const detailSentence = sentence || t('chat.profanityWarning');
+  const detailWord = word || '...';
+  return {
+    word: detailWord,
+    sentence: detailSentence,
+    index: typeof first.start === 'number' ? first.start : 0,
+    message: t('chat.profanityDetail', {
+      sentence: detailSentence,
+      word: detailWord
+    })
+  };
+}
+
+function buildModerationReasonMessage(reason, t) {
+  const normalized = typeof reason === 'string' ? reason.trim().toLowerCase() : '';
+  const reasonKey = normalized ? `chat.profanityReason.${normalized}` : 'chat.profanityReason.blocked';
+  let resolved = t(reasonKey);
+  if (resolved === reasonKey) {
+    resolved = normalized || '';
+  }
+  if (!resolved) return '';
+  let labelled = t('chat.profanityReason.label', { reason: resolved });
+  if (labelled === 'chat.profanityReason.label') {
+    labelled = `Reason: ${resolved}`;
+  }
+  return labelled;
+}
+
+function buildModerationCleanMessage(stats, t) {
+  if (!stats || typeof stats.clean !== 'number') return '';
+  const cleanValue = formatPercentage(stats.clean);
+  if (cleanValue == null) return '';
+  return t('chat.profanityProbabilityClean', {
+    clean: cleanValue
+  });
+}
+
+function buildModerationStatsMessage(stats, t) {
+  if (!stats) return null;
+  const maliciousValue = formatPercentage(stats.malicious);
+  if (maliciousValue == null) return null;
+  const levelLabel = (stats.predictionLevel && String(stats.predictionLevel).trim()) || t('chat.profanityLevelUnknown');
+  return t('chat.profanityProbability', {
+    level: levelLabel,
+    malicious: maliciousValue
+  });
+}
+
+function formatFlaggedSegments(segments, fallbackText, t) {
+  if (!Array.isArray(segments) || segments.length === 0) return [];
+  const fallbackSentence = typeof fallbackText === 'string' && fallbackText.trim().length
+    ? fallbackText.trim()
+    : '';
+  return segments.map((segment, index) => {
+    const word = typeof segment?.word === 'string' && segment.word.trim().length
+      ? segment.word.trim()
+      : t('chat.profanityFlaggedUnknownWord');
+    const sentence = typeof segment?.sentence === 'string' && segment.sentence.trim().length
+      ? segment.sentence.trim()
+      : (fallbackSentence || t('chat.profanityFlaggedUnknownSentence'));
+    const start = typeof segment?.start === 'number' ? segment.start : index;
+    return { word, sentence, start };
+  });
 }
 
 export default ChatRoom;

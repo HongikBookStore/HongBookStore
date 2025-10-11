@@ -10,6 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -30,10 +31,10 @@ public class ToxicFilterClient {
 
     public Result check(String text) {
         if (!properties.isEnabled()) {
-            return Result.allowed(text, null, null, "disabled");
+            return Result.allowed(text, null, null, "disabled", List.of());
         }
         if (text == null || text.isBlank()) {
-            return Result.allowed(text, null, null, "blank");
+            return Result.allowed(text, null, null, "blank", List.of());
         }
         try {
             ResponseBody body = client.post()
@@ -50,7 +51,7 @@ public class ToxicFilterClient {
 
             if (body == null) {
                 // Fail-open: treat as allowed but mark reason
-                return Result.allowed(text, null, null, "unavailable");
+                return Result.allowed(text, null, null, "unavailable", List.of());
             }
 
             boolean block;
@@ -66,10 +67,13 @@ public class ToxicFilterClient {
 
             Double malicious = body.getProbabilities() != null ? body.getProbabilities().getMalicious() : null;
             Double clean = body.getProbabilities() != null ? body.getProbabilities().getClean() : null;
-            return new Result(text, pred, malicious, clean, block, null);
+            List<FlaggedSegment> flagged = body.getFlagged() != null ? body.getFlagged().stream()
+                    .map(f -> new FlaggedSegment(f.getWord(), f.getStart(), f.getEnd(), f.getSentence()))
+                    .toList() : List.of();
+            return new Result(text, pred, malicious, clean, block, null, flagged);
         } catch (Exception e) {
             log.warn("toxic-filter unexpected error: {}", e.toString());
-            return Result.allowed(text, null, null, "error");
+            return Result.allowed(text, null, null, "error", List.of());
         }
     }
 
@@ -90,7 +94,9 @@ public class ToxicFilterClient {
                     r.predictionLevel,
                     r.malicious,
                     r.clean,
-                    r.reason
+                    r.reason,
+                    r.text,
+                    r.flaggedSegments
             );
         }
     }
@@ -105,12 +111,16 @@ public class ToxicFilterClient {
             Double malicious,
             Double clean,
             boolean blocked,
-            String reason) {
+            String reason,
+            List<FlaggedSegment> flaggedSegments) {
 
-        public static Result allowed(String text, Double malicious, Double clean, String reason) {
-                return new Result(text, "비속어 아님", malicious, clean, false, reason);
+        public static Result allowed(String text, Double malicious, Double clean, String reason, List<FlaggedSegment> flagged) {
+                return new Result(text, "비속어 아님", malicious, clean, false, reason, flagged);
             }
         }
+
+    public record FlaggedSegment(String word, Integer start, Integer end, String sentence) {
+    }
 
     @Getter
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -121,12 +131,22 @@ public class ToxicFilterClient {
         private String predictionLevel;
 
         private Probabilities probabilities;
+        private List<FlaggedDto> flagged;
 
         @Getter
         @JsonIgnoreProperties(ignoreUnknown = true)
         static class Probabilities {
             private Double malicious;
             private Double clean;
+        }
+
+        @Getter
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        static class FlaggedDto {
+            private String word;
+            private Integer start;
+            private Integer end;
+            private String sentence;
         }
     }
 }

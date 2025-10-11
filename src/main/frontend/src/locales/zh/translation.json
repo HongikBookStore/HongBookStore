@@ -166,7 +166,22 @@
       "condition": "状态确认",
       "conditionMessage": "我想确认书籍状态"
     },
-    "profanityWarning": "包含不当用语",
+    "profanityWarning": "检测到可能不当的用语，请重新检查消息。",
+    "profanityDetail": "检测到的句子：\"{{sentence}}\"（词语：'{{word}}'）",
+    "profanityProbability": "AI 判定“{{level}}”，不当用语概率约 {{malicious}}%",
+    "profanityLevelUnknown": "暂无判定信息",
+    "profanityReason": {
+      "label": "屏蔽原因：{{reason}}",
+      "blocked": "不当用语过滤策略",
+      "disabled": "过滤器已停用（使用默认策略）",
+      "blank": "空消息无法发送",
+      "unavailable": "审核服务暂时不可用",
+      "error": "审核服务出错"
+    },
+    "profanityProbabilityClean": "AI 评估这条消息安全的概率约 {{clean}}%",
+    "profanityFlaggedSegmentsHeading": "被标记的内容",
+    "profanityFlaggedUnknownWord": "未提供具体词语",
+    "profanityFlaggedUnknownSentence": "未提供相关句子",
     "alreadyReserved": "已预订",
     "alreadySold": "已售完",
     "selectPlaceAndDate": "请选择地点和日期",

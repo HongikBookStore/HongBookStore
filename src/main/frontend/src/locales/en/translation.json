@@ -161,7 +161,22 @@
       "condition": "Check Condition",
       "conditionMessage": "I want to check the book condition"
     },
-    "profanityWarning": "Inappropriate language detected",
+    "profanityWarning": "We detected wording that might be inappropriate. Please review your message.",
+    "profanityDetail": "Flagged sentence: \"{{sentence}}\" (expression: '{{word}}').",
+    "profanityProbability": "AI assessment '{{level}}' · about a {{malicious}}% chance of inappropriate language",
+    "profanityLevelUnknown": "No prediction info",
+    "profanityReason": {
+      "label": "Reason for moderation: {{reason}}",
+      "blocked": "Profanity filter policy",
+      "disabled": "Filter disabled (default policy applied)",
+      "blank": "Empty message was blocked",
+      "unavailable": "Moderation service temporarily unavailable",
+      "error": "Moderation service error"
+    },
+    "profanityProbabilityClean": "Model estimates about {{clean}}% chance the message is safe",
+    "profanityFlaggedSegmentsHeading": "Flagged passages",
+    "profanityFlaggedUnknownWord": "Expression not provided",
+    "profanityFlaggedUnknownSentence": "No sentence detail available",
     "alreadyReserved": "Already reserved",
     "alreadySold": "Already sold out",
     "selectPlaceAndDate": "Please select place and date",

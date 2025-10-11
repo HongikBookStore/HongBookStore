@@ -1014,7 +1014,22 @@
       "condition": "상태확인",
       "conditionMessage": "책 상태를 확인하고 싶습니다"
     },
-    "profanityWarning": "부적절한 표현이 포함되어 있습니다",
+    "profanityWarning": "메시지에 부적절한 표현이 감지되었어요. 다시 작성해 주세요.",
+    "profanityDetail": "감지된 문장: \"{{sentence}}\" (표현: '{{word}}')",
+    "profanityProbability": "AI 판정 '{{level}}' · 부적절할 확률 약 {{malicious}}%",
+    "profanityLevelUnknown": "판정 정보 없음",
+    "profanityReason": {
+      "label": "검열 사유: {{reason}}",
+      "blocked": "비속어 차단 정책",
+      "disabled": "필터 비활성화 (기본 정책 적용)",
+      "blank": "빈 메시지는 전송할 수 없어요",
+      "unavailable": "모더레이션 서비스가 일시적으로 응답하지 않아요",
+      "error": "모더레이션 서비스 오류"
+    },
+    "profanityProbabilityClean": "AI는 이 메시지가 적절할 확률을 약 {{clean}}%로 추정해요",
+    "profanityFlaggedSegmentsHeading": "필터에 걸린 표현",
+    "profanityFlaggedUnknownWord": "표현 정보 없음",
+    "profanityFlaggedUnknownSentence": "문장 정보가 제공되지 않았어요",
     "alreadyReserved": "이미 예약되었습니다",
     "alreadySold": "이미 판매완료되었습니다",
     "selectPlaceAndDate": "장소와 날짜를 선택해주세요",

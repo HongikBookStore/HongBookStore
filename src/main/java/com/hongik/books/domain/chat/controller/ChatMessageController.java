@@ -67,7 +67,13 @@ public class ChatMessageController {
         } catch (com.hongik.books.common.exception.ModerationException ex) {
             if (principal != null) {
                 var data = new ModerationErrorDTO(
-                        ex.getField(), ex.getPredictionLevel(), ex.getMalicious(), ex.getClean(), ex.getReason()
+                        ex.getField(),
+                        ex.getPredictionLevel(),
+                        ex.getMalicious(),
+                        ex.getClean(),
+                        ex.getReason(),
+                        ex.getOffendingText() != null ? ex.getOffendingText() : dto.getMessage(),
+                        ex.getFlaggedSegments()
                 );
                 var payload = new ApiResponse<>(false, ex.getMessage(), data);
                 template.convertAndSendToUser(principal.getName(), "/queue/chat-errors", payload);

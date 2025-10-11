@@ -70,7 +70,9 @@ public class GlobalExceptionHandler {
                 ex.getPredictionLevel(),
                 ex.getMalicious(),
                 ex.getClean(),
-                ex.getReason()
+                ex.getReason(),
+                ex.getOffendingText(),
+                ex.getFlaggedSegments()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(false, ex.getMessage(), data));
