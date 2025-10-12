@@ -1367,7 +1367,7 @@ const ChatRoom = () => {
 
       setMessages(prev => ([
         ...prev,
-        { id: Date.now(), type: 'system', message: t('chat.transactionCompleted'), sentAt: new Date().toISOString() }
+        { id: Date.now(), type: 'system', message: t('chat.systemMessage.transactionCompleted'), sentAt: new Date().toISOString() }
       ]));
     } catch (e) {
       alert(t('chat.transactionCompleteFailed'));
