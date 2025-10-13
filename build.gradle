@@ -80,7 +80,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
 
     // GCP Cloud Storage
-    implementation platform("com.google.cloud:spring-cloud-gcp-dependencies:7.1.0")
+    implementation platform("com.google.cloud:spring-cloud-gcp-dependencies:7.4.0")
     implementation 'com.google.cloud:spring-cloud-gcp-starter'
     implementation 'com.google.cloud:spring-cloud-gcp-starter-storage'
 
