@@ -4,6 +4,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import com.google.cloud.storage.Storage;
@@ -19,7 +20,8 @@ import java.util.UUID;
  */
 @Component
 @RequiredArgsConstructor
-public class GcpStorageUtil {
+@ConditionalOnProperty(name = "app.storage.mode", havingValue = "gcp")
+public class GcpStorageUtil implements ImageStorage {
     private final Storage storage; // GCP Storage에 대한 의존성 주입
 
     // application.yml의 spring.cloud.gcp.storage.bucket-name 값을 주입
@@ -34,6 +36,7 @@ public class GcpStorageUtil {
      * @return 업로드된 파일의 공개 URL
      * @throws IOException 파일 처리 중 예외 발생 시
      */
+    @Override
     public String uploadImage(MultipartFile file, String directory) throws IOException {
         // 1. 파일의 확장자를 포함한 고유한 파일 이름 생성 (UUID 사용)
         String originalFileName = file.getOriginalFilename();
@@ -60,6 +63,7 @@ public class GcpStorageUtil {
      * GCP Cloud Storage에서 이미지를 삭제
      * @param imageUrl 삭제할 이미지의 전체 URL
      */
+    @Override
     public void deleteImage(String imageUrl) {
         // 전체 URL에서 객체 이름(파일 경로)만 추출
         // 예: "https://storage.googleapis.com/버킷이름/book-covers/파일이름.jpg" -> "book-covers/파일이름.jpg"
@@ -75,6 +79,7 @@ public class GcpStorageUtil {
      * @param directory 업로드 디렉터리 (ex. "profile-images")
      * @return 업로드된 GCS 공개 URL
      */
+    @Override
     public String uploadImageFromUrl(String imageUrl, String directory) throws IOException {
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IOException("Empty image URL");

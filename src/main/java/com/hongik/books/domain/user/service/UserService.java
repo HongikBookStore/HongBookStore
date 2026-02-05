@@ -1,6 +1,6 @@
 package com.hongik.books.domain.user.service;
 
-import com.hongik.books.common.util.GcpStorageUtil;
+import com.hongik.books.common.util.ImageStorage;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.common.dto.ApiResponse;
 import com.hongik.books.domain.user.dto.StudentVerificationRequestDTO;
@@ -26,7 +26,7 @@ import java.util.UUID;
 public class UserService {
     private final UserRepository userRepository;
     private final MailService mailService;
-    private final GcpStorageUtil gcpStorageUtil;
+    private final ImageStorage imageStorage;
 
     @Value("${email.verification.expiration-hours:24}")
     private int verificationExpirationHours;
@@ -154,7 +154,7 @@ public class UserService {
     public String updateProfileImage(Long userId, MultipartFile imageFile) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
-        String url = gcpStorageUtil.uploadImage(imageFile, "profile-images");
+        String url = imageStorage.uploadImage(imageFile, "profile-images");
         user.setProfileImagePath(url);
         userRepository.save(user);
         return url;

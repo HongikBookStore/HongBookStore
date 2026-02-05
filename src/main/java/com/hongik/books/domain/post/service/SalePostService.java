@@ -1,6 +1,6 @@
 package com.hongik.books.domain.post.service;
 
-import com.hongik.books.common.util.GcpStorageUtil;
+import com.hongik.books.common.util.ImageStorage;
 import com.hongik.books.domain.book.domain.Book;
 import com.hongik.books.domain.book.repository.BookRepository;
 import com.hongik.books.domain.post.domain.PostImage;
@@ -43,7 +43,7 @@ public class SalePostService {
     private final SalePostRepository salePostRepository;
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
-    private final GcpStorageUtil gcpStorageUtil;
+    private final ImageStorage imageStorage;
     private final ChatRoomRepository chatRoomRepository;
     private final com.hongik.books.moderation.toxic.ToxicFilterClient toxicFilterClient;
     private final ModerationService moderationService;
@@ -260,7 +260,7 @@ public class SalePostService {
     public void deleteSalePost(Long postId, Long userId) {
         SalePost salePost = findSalePostById(postId);
         validatePostOwner(salePost, userId);
-        salePost.getPostImages().forEach(image -> gcpStorageUtil.deleteImage(image.getImageUrl()));
+        salePost.getPostImages().forEach(image -> imageStorage.deleteImage(image.getImageUrl()));
         salePostRepository.delete(salePost);
     }
 
@@ -329,7 +329,7 @@ public class SalePostService {
                 throw new IllegalArgumentException("이미지는 최대 3장까지 업로드할 수 있습니다.");
             }
             for (MultipartFile imageFile : imageFiles) {
-                String imageUrl = gcpStorageUtil.uploadImage(imageFile, "post-images");
+                String imageUrl = imageStorage.uploadImage(imageFile, "post-images");
                 PostImage postImage = PostImage.builder()
                         .salePost(salePost)
                         .imageUrl(imageUrl)

@@ -102,6 +102,7 @@ spring:
     gcp:
       project-id: ${GCP_PROJECT_ID}  # .env 파일의 GCP_PROJECT_ID 값을 사용
       storage:
+        enabled: ${GCP_STORAGE_ENABLED:false}
         bucket-name: ${GCP_BUCKET_NAME} # .env 파일의 GCP_BUCKET_NAME 값을 사용
       credentials:
         # 운영(GCE/Cloud Run 등)에서는 ADC(Application Default Credentials)를 권장
@@ -141,22 +142,6 @@ logging:
   level:
     root: info
 
-### Swagger ###
-springdoc:
-  default-consumes-media-type: application/json
-  default-produces-media-type: application/json
-  api-docs:
-    groups:
-      enabled: true
-  swagger-ui:
-    operations-sorter: alpha # alpha(알파벳 오름차순), method(HTTP 메소드순)
-    tags-sorter: alpha # 태그 정렬 기준
-    path: /swagger-ui.html # html 문서 접속 경로
-    disable-swagger-default-url: true
-    doc-expansion: none # tag, operation 펼치는 방식
-  paths-to-match:
-    - /**
-
 ### Forwarded headers (behind Load Balancer) ###
 server:
   port: ${PORT:8080}
@@ -181,6 +166,13 @@ app:
   cors:
     # 쉼표로 구분된 오리진 목록. 운영에서 Vercel/도메인으로 교체
     allowed-origins: ${ALLOWED_ORIGINS:https://hong-book-store.vercel.app,http://localhost:5173}
+  storage:
+    # local | gcp
+    mode: ${STORAGE_MODE:local}
+    local:
+      base-dir: ${LOCAL_STORAGE_BASE_DIR:./uploads}
+      public-url-base: ${LOCAL_STORAGE_PUBLIC_URL_BASE:/uploads}
+      public-origin: ${LOCAL_STORAGE_PUBLIC_ORIGIN:http://localhost:8080}
 
 ### Naver Map ###
 naver:
@@ -236,7 +228,7 @@ spring:
       storage:
         bucket-name: ${GCP_BUCKET_NAME}
       credentials:
-        location: classpath:gcp-service-account-key.json
+        location: ${GCP_CREDENTIALS_LOCATION:}
   jpa:
     hibernate:
       ddl-auto: update

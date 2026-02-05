@@ -5,7 +5,7 @@ import com.hongik.books.security.oauth.info.OAuth2UserInfoFactory;
 import com.hongik.books.domain.user.domain.User;
 import com.hongik.books.domain.user.domain.UserRole;
 import com.hongik.books.domain.user.repository.UserRepository;
-import com.hongik.books.common.util.GcpStorageUtil;
+import com.hongik.books.common.util.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,7 +26,7 @@ import java.util.Collections;
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final UserRepository userRepository;
-    private final GcpStorageUtil gcpStorageUtil;
+    private final ImageStorage imageStorage;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -135,7 +135,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private String tryUploadProviderImage(String providerUrl) {
         if (providerUrl == null || providerUrl.isBlank()) return null;
         try {
-            return gcpStorageUtil.uploadImageFromUrl(providerUrl, "profile-images");
+            return imageStorage.uploadImageFromUrl(providerUrl, "profile-images");
         } catch (Exception e) {
             log.warn("Failed to upload provider image to GCS: {}", e.getMessage());
             return null;

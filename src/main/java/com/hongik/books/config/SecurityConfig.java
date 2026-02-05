@@ -58,11 +58,10 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // --- 누구나 접근 가능한 API ---
                         .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
                                 "/ws-stomp/**",
                                 "/actuator/health",
                                 "/actuator/health/**",
+                                "/uploads/**",
                                 "/api/directions/**",
                                 "/api/notifications/stream", // 👈 추가
                                 "/", "/login", "/oauth2/**", "/error"

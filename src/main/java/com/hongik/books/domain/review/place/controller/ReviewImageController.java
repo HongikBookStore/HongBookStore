@@ -1,6 +1,6 @@
 package com.hongik.books.domain.review.place.controller;
 
-import com.hongik.books.common.util.GcpStorageUtil;
+import com.hongik.books.common.util.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +16,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ReviewImageController {
 
-    private final GcpStorageUtil gcpStorageUtil;
+    private final ImageStorage imageStorage;
 
     @PostMapping(value = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadReviewPhotos(
@@ -37,7 +37,7 @@ public class ReviewImageController {
             for (MultipartFile f : files) {
                 if (f.isEmpty()) continue;
                 // 기존 게시글 업로드와 동일하게 유틸 재사용. 폴더만 리뷰 전용으로.
-                String url = gcpStorageUtil.uploadImage(f, "review-photos");
+                String url = imageStorage.uploadImage(f, "review-photos");
                 urls.add(url);
             }
             return ResponseEntity.ok(Map.of("urls", urls));
